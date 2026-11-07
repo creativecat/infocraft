@@ -12,6 +12,7 @@ Digitale Informatik-Werkstatt für den bayerischen LehrplanPLUS (Gymnasium): SQL
 | HTML-Werkstatt (WYSIWYG-Editor mit Sofortvorschau, Vorlagen) | 6 | fertig (Basis) |
 | Quiz-Arena (Quiz anlegen, austellen, spielen, Ergebnisse) | 6 | in Arbeit (Basis fertig) |
 | Prüfungen & Schularbeiten (Gruppen mit Vorlagen, BE, Sperre, Korrektur, API-Vorschläge) | 6 | fertig (Basis) |
+| Klassendiagramme (Mermaid-Editor, Auto-Erzeugung aus Java/Python/SQL, PNG-Export) | 6 | fertig (Basis) |
 | Wiki & Präsentationen | 6 | geplant |
 
 Schülerinnen und Schüler sehen nur die Bereiche, die laut LehrplanPLUS für ihre Klassenstufe relevant sind. Ausgeteilte Inhalte (z. B. Datenbanken) bleiben auch darunter sichtbar.
@@ -25,6 +26,7 @@ Schülerinnen und Schüler sehen nur die Bereiche, die laut LehrplanPLUS für ih
 - **Aufgabenpool:** Aufgaben anlegen und austeilen, Schülerinnen und Schüler sehen nur Aufgaben bis zu ihrer Jahrgangsstufe.
 - **Quiz-Arena:** Quiz mit vier Antworten pro Frage anlegen, an Klassen oder Einzelne austellen. Spielen mit sofortigem Feedback, Bestwertungen und Ergebnisliste für Lehrkräfte.
 - **Prüfungsmodus:** Prüfungen und Schularbeiten mit Gruppen und einer Vorlage pro Gruppe, Teilaufgaben mit BE und Musterlösung. Während der Prüfung sind für Teilnehmende alle anderen Bereiche gesperrt (Server-Umleitung und reduzierte Oberfläche), Eingaben speichern automatisch. Korrektur manuell oder anonymisiert per API; Vorschläge müssen gegengeprüft werden. Nach der Herausgabe: Punkte, Note, Feedback und der Vergleich eigene Lösung vs. Musterlösung.
+- **Klassendiagramme:** Klassendiagramme selbst zeichnen (Mermaid-Editor mit Live-Vorschau) und jederzeit zwischenspeichern. Automatisch erzeugt InfoCraft Diagramme aus Java- und Python-Skripten (Klassen, Attribute, Methoden, Sichtbarkeiten, Vererbung) und aus den Tabellen einer SQL-Datenbank (Spalten, Primärschlüssel, Fremdschlüssel-Beziehungen). Jedes Diagramm lässt sich als PNG exportieren. Lehrkräfte können das automatische Erzeugen pro Klasse deaktivieren; selbst zeichnen bleibt für Schülerinnen und Schüler immer möglich.
 - **Präsentationsmodus:** Ansicht per Klick vergrößern.
 
 ## Schnellstart (lokal)
@@ -99,7 +101,7 @@ Erwartete Antwort:
 
 ## Qualitätssicherung
 
-GitHub Actions prüft jeden Push mit PHP 8.3 und 8.5: Syntax, Migration (inkl. Idempotenz) und Smoke-Tests über HTTP (Login, Werkstatt-Seiten, SQL-Ausführung, Rechtevergabe, Stufen-Filterung, Quiz-Runden, kompletter Prüfungs-Durchlauf mit Sperre, Abgabe, Korrektur, API-Korrektur und Herausgabe).
+GitHub Actions prüft jeden Push mit PHP 8.3 und 8.5: Syntax, Migration (inkl. Idempotenz) und Smoke-Tests über HTTP (Login, Werkstatt-Seiten, SQL-Ausführung, Rechtevergabe, Stufen-Filterung, Quiz-Runden, kompletter Prüfungs-Durchlauf mit Sperre, Abgabe, Korrektur, API-Korrektur und Herausgabe; Klassendiagramme: Anlegen, Speichern, Auto-Erzeugung aus Java/Python/SQL, Lehrer-Schalter pro Klasse und Löschen).
 
 ## Dokumentation
 
