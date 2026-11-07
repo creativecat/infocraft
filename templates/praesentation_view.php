@@ -61,8 +61,8 @@
   var fullBtn = document.getElementById('slide-full');
   var counter = document.getElementById('slide-counter');
   var current = 0;
-  // Sync mit dem Moderatorenbildschirm (gleiches Browser-Fenster-Paar, gleiche Origin):
-  // Dieser Modus sendet {typ:'pos'}, der Moderator sendet {typ:'goto'}.
+  // Sync mit dem Steuerfenster für Lehrkräfte (gleiches Browser-Fenster-Paar, gleiche Origin):
+  // Dieser Modus sendet {typ:'pos'}, das Steuerfenster sendet {typ:'goto'}.
   var remote = false;
   var channel = null;
   if (stage.dataset && typeof BroadcastChannel !== 'undefined') {
