@@ -1,7 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Infocraft;
+namespace Infocraft\Models;
+
+use Infocraft\Database;
 
 final class SchoolClass
 {

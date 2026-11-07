@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Infocraft;
+namespace Infocraft\Models;
 
+use Infocraft\Database;
 use RuntimeException;
 
 final class User
