@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * InfoCraft-Start: Konfiguration, Autoloader, Session.
+ * InfoCraft-Start: Konfiguration, Autoloader, Hilfsfunktionen, Session.
  * Komplett composer-frei, damit es auf jedem Webspace läuft (PHP 8.3+).
  */
 
@@ -31,6 +31,9 @@ spl_autoload_register(static function (string $class): void {
         require $file;
     }
 });
+
+// Globale Hilfsfunktionen (Funktionen werden nicht automatisch geladen, anders als Klassen).
+require INFOCRAFT_ROOT . '/src/Support.php';
 
 \Infocraft\Config::init($config);
 
