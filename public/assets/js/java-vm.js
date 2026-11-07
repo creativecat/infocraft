@@ -3537,7 +3537,7 @@
    * Dazu aus der Online-IDE übernommen: Arc (Kreisbogen) und Sector (Kreissektor).
    */
   var GFX_CLASSES = Object.create(null);
-  var GFCL = ['World', 'Color', 'Alignment', 'Circle', 'Ellipse', 'Rectangle', 'RoundedRectangle', 'Text', 'Triangle', 'Line', 'Polygon', 'Bitmap', 'Turtle', 'Group', 'Actor', 'Shape', 'FilledShape', 'Button', 'Textfield', 'Checkbox', 'Radiobutton', 'Arc', 'Sector'];
+  var GFCL = ['World', 'Color', 'Alignment', 'Circle', 'Ellipse', 'Rectangle', 'RoundedRectangle', 'Text', 'Triangle', 'Line', 'Polygon', 'Bitmap', 'Turtle', 'Group', 'Actor', 'Shape', 'FilledShape', 'Button', 'Textfield', 'Checkbox', 'Radiobutton', 'Arc', 'Sector', 'Punkt'];
   var gfci;
   for (gfci = 0; gfci < GFCL.length; gfci++) { GFX_CLASSES[GFCL[gfci]] = 1; }
 
@@ -3562,11 +3562,12 @@
   GFX_KIND_OF.Radiobutton = 'radiobutton';
   GFX_KIND_OF.Arc = 'arc';
   GFX_KIND_OF.Sector = 'sector';
+  GFX_KIND_OF.Punkt = 'point';
 
   var GFX_SHAPE_KINDS = Object.create(null);
   var GFX_FILLED_KINDS = Object.create(null);
-  var GS = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'line', 'polygon', 'bitmap', 'turtle', 'button', 'textfield', 'checkbox', 'radiobutton', 'arc', 'sector'];
-  var GFILLED = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'polygon', 'bitmap', 'arc', 'sector'];
+  var GS = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'line', 'polygon', 'bitmap', 'turtle', 'button', 'textfield', 'checkbox', 'radiobutton', 'arc', 'sector', 'point'];
+  var GFILLED = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'polygon', 'bitmap', 'arc', 'sector', 'point'];
   var gsi;
   for (gsi = 0; gsi < GS.length; gsi++) { GFX_SHAPE_KINDS[GS[gsi]] = 1; }
   for (gsi = 0; gsi < GFILLED.length; gsi++) { GFX_FILLED_KINDS[GFILLED[gsi]] = 1; }
@@ -3788,6 +3789,11 @@
       g.y = args.length > 1 ? gfxNum(args, 1, 'Circle', ctx, line) : 0;
       g.r = args.length > 2 ? gfxNum(args, 2, 'Circle', ctx, line) : 10;
       if (g.r < 0) { throw rt(ctx, line, 'Der Radius von Circle darf nicht negativ sein.', 'new Circle(400, 300, 100) zeichnet einen Kreis mit Mittelpunkt (400, 300) und Radius 100.'); }
+    } else if (kind === 'point') {
+      g.x = args.length > 0 ? gfxNum(args, 0, 'Punkt', ctx, line) : 0;
+      g.y = args.length > 1 ? gfxNum(args, 1, 'Punkt', ctx, line) : 0;
+      g.d = args.length > 2 ? gfxNum(args, 2, 'Punkt', ctx, line) : 10;
+      if (g.d < 0) { throw rt(ctx, line, 'Der Durchmesser von Punkt darf nicht negativ sein.', 'z. B. new Punkt(400, 300) zeichnet einen Punkt mit Durchmesser 10, new Punkt(400, 300, 20) mit Durchmesser 20.'); }
     } else if (kind === 'ellipse') {
       g.x = args.length > 0 ? gfxNum(args, 0, 'Ellipse', ctx, line) : 0;
       g.y = args.length > 1 ? gfxNum(args, 1, 'Ellipse', ctx, line) : 0;
@@ -3945,7 +3951,7 @@
   function gfxAttach(obj, baseName, args, vm, ctx, line) {
     var kind = GFX_KIND_OF[baseName];
     if (!kind || kind === 'world' || kind === 'color') {
-      throw rt(ctx, line, 'Von ' + baseName + ' kann nicht geerbt werden.', 'Erlaubte Basisklassen: Actor, Circle, Ellipse, Rectangle, RoundedRectangle, Text, Triangle, Line, Polygon, Bitmap, Turtle, Group, Arc, Sector.');
+      throw rt(ctx, line, 'Von ' + baseName + ' kann nicht geerbt werden.', 'Erlaubte Basisklassen: Actor, Circle, Ellipse, Rectangle, RoundedRectangle, Text, Triangle, Line, Polygon, Bitmap, Turtle, Group, Arc, Sector, Punkt.');
     }
     if (kind === 'group') {
       obj.g = { kind: 'group', members: [], dead: false, ref: obj };
@@ -4030,6 +4036,7 @@
     var f = g.scaleF || 1;
     var bb;
     if (g.kind === 'circle') { bb = { x: g.x - g.r, y: g.y - g.r, w: 2 * g.r, h: 2 * g.r }; }
+    else if (g.kind === 'point') { bb = { x: g.x - (g.d || 10) / 2, y: g.y - (g.d || 10) / 2, w: g.d || 10, h: g.d || 10 }; }
     else if (g.kind === 'arc' || g.kind === 'sector') {
       var arR = g.kind === 'arc' ? Math.max(g.ri || 0, g.ra || 0) : (g.r || 0);
       var arIn = g.kind === 'arc' ? Math.min(g.ri || 0, g.ra || 0) : 0;
@@ -4127,7 +4134,7 @@
     var mx = g.mirrorX ? -1 : 1;
     var my = g.mirrorY ? -1 : 1;
     var cx, cy;
-    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'arc' || g.kind === 'sector') { cx = g.x; cy = g.y; }
+    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'arc' || g.kind === 'sector' || g.kind === 'point') { cx = g.x; cy = g.y; }
     else if (g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') { cx = g.x + g.w / 2; cy = g.y + g.h / 2; }
     else if (g.kind === 'text') { cx = g.x; cy = g.y; }
     else if (g.kind === 'triangle') { cx = (g.p1x + g.p2x + g.p3x) / 3; cy = (g.p1y + g.p2y + g.p3y) / 3; }
@@ -4141,9 +4148,10 @@
     ctx2d.beginPath();
     var doFill = g.fill !== null && g.fill !== undefined;
     var doStroke = g.border !== null && g.border !== undefined;
-    if (g.kind === 'circle' || g.kind === 'ellipse') {
-      var rx = g.kind === 'circle' ? g.r : g.rx;
-      var ry = g.kind === 'circle' ? g.r : g.ry;
+    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'point') {
+      var pr = g.kind === 'point' ? Math.max(0.5, (g.d || 10) / 2) : null;
+      var rx = g.kind === 'circle' ? g.r : (pr !== null ? pr : g.rx);
+      var ry = g.kind === 'circle' ? g.r : (pr !== null ? pr : g.ry);
       if (ctx2d.ellipse) { ctx2d.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); }
       else { ctx2d.arc(0, 0, rx, 0, Math.PI * 2); }
     } else if (g.kind === 'rectangle' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') {
@@ -4705,7 +4713,7 @@
     return { x: (minx + maxx) / 2, y: (miny + maxy) / 2 };
   }
   function gfxMoveShape(g, dx, dy) {
-    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'text' || g.kind === 'turtle' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton' || g.kind === 'arc' || g.kind === 'sector') {
+    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'point' || g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'text' || g.kind === 'turtle' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton' || g.kind === 'arc' || g.kind === 'sector') {
       g.x = (g.x || 0) + dx;
       g.y = (g.y || 0) + dy;
       if (g.kind === 'turtle' && g.pen) { g.path.push([g.x, g.y]); }

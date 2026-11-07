@@ -764,6 +764,58 @@ t('GfxVererbungSuper', {
   if (Math.round(V.gfxSnapshot()[0].x) !== 61) { throw new Error('act() nach Vererbung: ' + JSON.stringify(V.gfxSnapshot()[0])); }
 });
 
+/* --- Punkt: eigener kleiner Punkt als Figur (zeichnen, bewegen, erben) --- */
+t('GfxPunkt', {
+  'Punkte.java': [
+    'Punkt p = new Punkt(10, 20);',
+    'p.move(3, 4);',
+    'Punkt q = new Punkt(50, 60, 24);',
+    'q.setFillColor(Color.red);',
+    'q.scale(2, 50, 60);',
+    'System.out.println(p.getX());',
+    'System.out.println(p.getY());'
+  ].join(NL)
+}, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '13.0' + NL + '24.0' + NL, 'Position nach move');
+  var snap = V.gfxSnapshot();
+  if (snap.length !== 2) { throw new Error('zwei Punkte erwartet: ' + JSON.stringify(snap)); }
+  var p = null, q = null;
+  snap.forEach(function (s) { if (s.kind === 'point' && s.d === 10) { p = s; } if (s.kind === 'point' && s.d === 24) { q = s; } });
+  if (!p || Math.round(p.x) !== 13 || Math.round(p.y) !== 24) { throw new Error('Punkt nach move: ' + JSON.stringify(p)); }
+  if (!q) { throw new Error('Punkt mit Durchmesser 24 fehlt: ' + JSON.stringify(snap)); }
+  if (q.fill !== 'rgb(255, 0, 0)') { throw new Error('Fuellfarbe: ' + JSON.stringify(q)); }
+  if (q.scaleF !== 2) { throw new Error('Streckung: ' + JSON.stringify(q)); }
+});
+t('GfxPunktVererbung', {
+  'Fliese.java': [
+    'class Fliese extends Punkt {',
+    '    Fliese() { super(50, 50, 8); setFillColor(Color.green); }',
+    '    void act() { move(1, 1); }',
+    '}',
+    'Fliese f = new Fliese();',
+    'f.move(10, 0);',
+    'System.out.println(f.getX());'
+  ].join(NL)
+}, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '60.0' + NL, 'Position nach super-Konstruktor und move');
+  var s = V.gfxSnapshot()[0];
+  if (s.kind !== 'point' || s.d !== 8) { throw new Error('Punkt-Erbstück: ' + JSON.stringify(s)); }
+  if (s.fill !== 'rgb(0, 128, 0)') { throw new Error('Fuellung im Konstruktor: ' + JSON.stringify(s)); }
+  V.gfxTick();
+  var s2 = V.gfxSnapshot()[0];
+  if (Math.round(s2.x) !== 61 || Math.round(s2.y) !== 51) { throw new Error('act() nach Vererbung: ' + JSON.stringify(s2)); }
+});
+t('GfxPunktFehler', {
+  'PunktNeg.java': [
+    'Punkt p = new Punkt(0, 0, -3);'
+  ].join(NL)
+}, r => {
+  if (r.ok) { throw new Error('negativer Durchmesser sollte einen Fehler geben'); }
+  if (r.errors.length === 0 || r.errors[0].message.indexOf('Durchmesser') === -1) { throw new Error('Durchmesser-Fehlermeldung: ' + JSON.stringify(r.errors)); }
+});
+
 /* --- Einzelschritt (stepLimit) --- */
 t('StepLimitPausiert', {
   'Step.java': [

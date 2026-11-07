@@ -144,6 +144,7 @@ Color.darkGray · Color.brown · Color.purple</pre></td><td>Fertige Farben. Übe
                         <summary>⭐ Figuren anlegen: Circle, Rectangle, Text u. a.</summary>
                         <table>
                             <tr><td><pre class="code">Circle c = new Circle(100, 200, 30);</pre></td><td>Kreis an Position (100|200) mit Radius 30.</td></tr>
+                            <tr><td><pre class="code">Punkt p = new Punkt(100, 200);</pre></td><td>Punkt an Position (100|200). Optionaler 3. Parameter: Durchmesser in Pixeln, z. B. <code>new Punkt(100, 200, 20)</code>.</td></tr>
                             <tr><td><pre class="code">Ellipse e = new Ellipse(100, 200, 40, 20);</pre></td><td>Ellipse mit Radius horizontal (40) und vertikal (20).</td></tr>
                             <tr><td><pre class="code">Rectangle r = new Rectangle(50, 60, 80, 40);</pre></td><td>Rechteck an Position (50|60), Breite 80, Höhe 40.</td></tr>
                             <tr><td><pre class="code">RoundedRectangle rr = new RoundedRectangle(50, 60, 80, 40, 15);</pre></td><td>Rechteck mit abgerundeten Ecken (Ecken-Radius 15).</td></tr>
