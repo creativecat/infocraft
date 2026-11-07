@@ -1,11 +1,11 @@
 /**
  * InfoCraft Java-Simulation: LEXER + PARSER (Teil 1 von 2)
- * Eigener Java-Subset-Interpreter, laeuft komplett im Browser (keine Server-
+ * Eigener Java-Subset-Interpreter, läuft komplett im Browser (keine Server-
  * Kompilierung). Ein Dateipaar pro Klasse, mehrere Dateien pro Projekt.
  *
- * Fehlerkultur: Jede Meldung (kind syntax/compile/runtime/stderr) traegt
- * Datei + Zeile und eine deutsche Hilfestellung (hint) fuer Schuelerinnen
- * und Schueler. Es5-Styles, damit aeltere Schulgerte mitkommen.
+ * Fehlerkultur: Jede Meldung (kind syntax/compile/runtime/stderr) trägt
+ * Datei + Zeile und eine deutsche Hilfestellung (hint) für Schülerinnen
+ * und Schüler. Es5-Styles, damit ältere Schulgerte mitkommen.
  */
 (function (global) {
   'use strict';
@@ -23,7 +23,7 @@
   PRIMS.int = 'int'; PRIMS.long = 'int'; PRIMS.short = 'int'; PRIMS.byte = 'int';
   PRIMS.double = 'double'; PRIMS.float = 'double'; PRIMS.boolean = 'boolean'; PRIMS.char = 'char';
 
-  /* Operatoren: laengere zuerst, damit <= vor < gelesen wird. */
+  /* Operatoren: längere zuerst, damit <= vor < gelesen wird. */
   var OPS = ['<=', '>=', '==', '!=', '&&', '||', '++', '--',
     '+=', '-=', '*=', '/=', '%=', '<', '>', '+', '-', '*', '/', '%', '=', '!', '?', ':'];
   var PUNCT = Object.create(null);
@@ -65,20 +65,20 @@
         if (!closed) { fail('Der Kommentar ab Zeile ' + cl + ' wird nie geschlossen (fehlendes Stern-Schrägstrich).', 'Schreibe am Ende des Kommentars Stern-Schrägstrich: ' + '*/' + ' statt nur *.'); return null; }
         continue;
       }
-      /* Annotationen (@Override) ueberspringen */
+      /* Annotationen (@Override) überspringen */
       if (c === '@') {
         i++;
         while (i < n && /[A-Za-z0-9_]/.test(src.charAt(i))) { i++; }
         continue;
       }
-      /* Bezeichner und Schluesselwoerter */
+      /* Bezeichner und Schlüsselwörter */
       if (/[A-Za-z_]/.test(c)) {
         var id = '';
         while (i < n && /[A-Za-z0-9_]/.test(src.charAt(i))) { id += src.charAt(i); i++; }
         toks.push(KEYWORDS[id] ? { k: 'kw', v: id, line: line } : { k: 'id', v: id, line: line });
         continue;
       }
-      /* Zahlen: 42 oder 3.14 (keine Exponenten noetig), Hex 0xff8000 */
+      /* Zahlen: 42 oder 3.14 (keine Exponenten nötig), Hex 0xff8000 */
       if (/[0-9]/.test(c)) {
         var num = '';
         var isDbl = false;
@@ -112,7 +112,7 @@
           code = esc === 'n' ? 10 : (esc === 't' ? 9 : (esc === 'r' ? 13 : (esc === '0' ? 0 : (esc === String.fromCharCode(92) ? 92 : (esc === "'" ? 39 : (esc === '"' ? 34 : esc.charCodeAt(0)))))));
         }
         i++;
-        if (src.charAt(i) !== "'") { fail('Ein char besteht aus genau einem Zeichen.', "Beispiel: 'a' (mit einfachen Hochkommata). Fuer Text nutze doppelte: \"abc\""); return null; }
+        if (src.charAt(i) !== "'") { fail('Ein char besteht aus genau einem Zeichen.', "Beispiel: 'a' (mit einfachen Hochkommata). Für Text nutze doppelte: \"abc\""); return null; }
         i++;
         toks.push({ k: 'char', v: code, line: cl2 });
         continue;
@@ -136,7 +136,7 @@
           s += d;
           i++;
         }
-        if (!closed2) { fail('Der String ab Zeile ' + sl + ' wird nie geschlossen (fehlendes Anfuehrungszeichen).', 'Jeder String beginnt und endet mit doppelten Anfuehrungszeichen.'); return null; }
+        if (!closed2) { fail('Der String ab Zeile ' + sl + ' wird nie geschlossen (fehlendes Anführungszeichen).', 'Jeder String beginnt und endet mit doppelten Anführungszeichen.'); return null; }
         toks.push({ k: 'str', v: s, line: sl });
         continue;
       }
@@ -149,7 +149,7 @@
         if (src.substr(i, OPS[oi].length) === OPS[oi]) { found = OPS[oi]; break; }
       }
       if (found) { toks.push({ k: 'op', v: found, line: line }); i += found.length; continue; }
-      fail('Unerwartetes Zeichen: ' + c, 'Dieses Zeichen gehoert nicht zu Java. Pruefe Tastatur-Layout und Sonderzeichen.');
+      fail('Unerwartetes Zeichen: ' + c, 'Dieses Zeichen gehört nicht zu Java. Prüfe Tastatur-Layout und Sonderzeichen.');
       return null;
     }
     toks.push({ k: 'eof', v: '', line: line });
@@ -196,7 +196,7 @@
       while (at('p', ';')) { next(); }
     }
 
-    /* package/import-Zeilen ueberspringen (sinnt leer, aber harmlos) */
+    /* package/import-Zeilen überspringen (sinnt leer, aber harmlos) */
     function skipImports() {
       while (at('id', 'package') || at('id', 'import')) {
         next();
@@ -220,9 +220,9 @@
       var stmts = [];
       skipSemi();
       while (!at('eof')) {
-        if (at('kw', 'interface')) { err('interface wird noch nicht unterstuetzt.', 'Nutze class (die Simulation kennt erst Klassen ohne interfaces).'); }
-        if (at('kw', 'enum')) { err('enum wird noch nicht unterstuetzt.', 'Nutze eine class mit konstanten Werten als statische Felder.'); }
-        if (at('kw', 'record')) { err('record wird noch nicht unterstuetzt.', 'Nutze eine normale class mit Konstruktor und Attributen.'); }
+        if (at('kw', 'interface')) { err('interface wird noch nicht unterstützt.', 'Nutze class (die Simulation kennt erst Klassen ohne interfaces).'); }
+        if (at('kw', 'enum')) { err('enum wird noch nicht unterstützt.', 'Nutze eine class mit konstanten Werten als statische Felder.'); }
+        if (at('kw', 'record')) { err('record wird noch nicht unterstützt.', 'Nutze eine normale class mit Konstruktor und Attributen.'); }
         if (at('kw', 'class') || at('kw', 'public') || at('kw', 'private') || at('kw', 'protected') || at('kw', 'static') || at('kw', 'final') || at('kw', 'abstract')) {
           classes.push(parseClass());
         } else {
@@ -235,8 +235,8 @@
     }
 
     function parseClass() {
-      var mods = parseModifiers(); /* Sichtbarkeit merken, Rest ist fuer die Simulation irrelevant */
-      if (!at('kw', 'class')) { err('Erwartet: class, gefunden: ' + describe(peek()), 'In einer Datei duerfen mehrere Klassen stehen (public class Name { ... }), und auch Anweisungen direkt ohne Klasse, z. B.: Test t = new Test();'); }
+      var mods = parseModifiers(); /* Sichtbarkeit merken, Rest ist für die Simulation irrelevant */
+      if (!at('kw', 'class')) { err('Erwartet: class, gefunden: ' + describe(peek()), 'In einer Datei dürfen mehrere Klassen stehen (public class Name { ... }), und auch Anweisungen direkt ohne Klasse, z. B.: Test t = new Test();'); }
       next(); /* class */
       if (!at('id')) { err('Nach class folgt der Name der Klasse.', 'z. B. public class Auto { ... }'); }
       var nameTok = next();
@@ -246,12 +246,12 @@
         if (!at('id')) { err('Nach extends folgt der Name der Oberklasse.', 'z. B. class Hund extends Tier'); }
         cls.parent = next().v;
       }
-      if (at('kw', 'implements')) { err('implements wird noch nicht unterstuetzt.', 'Die Simulation kennt erst Vererbung mit extends.'); }
-      expectP('{', '{', 'Nach dem Klassennamen kommt die oeffnende geschweifte Klammer.');
+      if (at('kw', 'implements')) { err('implements wird noch nicht unterstützt.', 'Die Simulation kennt erst Vererbung mit extends.'); }
+      expectP('{', '{', 'Nach dem Klassennamen kommt die öffnende geschweifte Klammer.');
       while (!at('p', '}') && !at('eof')) {
         parseMember(cls);
       }
-      expectP('}', '}', 'Die Klasse braucht eine schliessende geschweifte Klammer am Ende.');
+      expectP('}', '}', 'Die Klasse braucht eine schließende geschweifte Klammer am Ende.');
       return cls;
     }
 
@@ -285,19 +285,19 @@
         cls.ctors.push({ params: parseParams(), visibility: mods.visibility, body: parseBlock(), line: t.line });
         return;
       }
-      /* Attribute und Methoden mit Rueckgabetyp */
+      /* Attribute und Methoden mit Rückgabetyp */
       if (t.k === 'kw' && PRIMS[t.v]) {
         addTyped(cls, parseType(true), mods, t);
         return;
       }
       if (t.k === 'id') {
         var ty = parseType(true);
-        if (!ty) { err('Unverstaendliches Klassenmitglied.', 'Erwartet: Attribut (Typ name;), Konstruktor (Name(...)) oder Methode (Typ name(...)).'); }
+        if (!ty) { err('Unverständliches Klassenmitglied.', 'Erwartet: Attribut (Typ name;), Konstruktor (Name(...)) oder Methode (Typ name(...)).'); }
         if (!at('id')) { err('Nach dem Typ ' + ty.name + ' folgt ein Name.', 'z. B. ' + ty.name + ' attribut; oder ' + ty.name + ' methode() { ... }'); }
         addTyped(cls, ty, mods, t);
         return;
       }
-      err('Unverstaendliches Klassenmitglied.', 'Erwartet: Attribut (Typ name;), Konstruktor (Name(...)) oder Methode (Typ name(...)).');
+      err('Unverständliches Klassenmitglied.', 'Erwartet: Attribut (Typ name;), Konstruktor (Name(...)) oder Methode (Typ name(...)).');
     }
 
     function addTyped(cls, ty, mods, t0) {
@@ -334,7 +334,7 @@
           expectP(']', ']', 'Array-Typ: hinter dem Namen der Klasse kommt [] wie in String[].');
           dims++;
         }
-        if (dims > 1) { err('Mehrdimensionale Arrays werden noch nicht unterstuetzt.', 'Nutze eindimensionale Arrays wie int[].'); }
+        if (dims > 1) { err('Mehrdimensionale Arrays werden noch nicht unterstützt.', 'Nutze eindimensionale Arrays wie int[].'); }
       }
       return { name: name, arr: dims > 0 };
     }
@@ -352,7 +352,7 @@
         if (at('p', ',')) { next(); continue; }
         break;
       }
-      expectP(')', ')', 'Die Parameterliste endet mit einer schliessenden Klammer.');
+      expectP(')', ')', 'Die Parameterliste endet mit einer schließenden Klammer.');
       return params;
     }
 
@@ -362,7 +362,7 @@
       while (!at('p', '}') && !at('eof')) {
         body.push(parseStatement());
       }
-      expectP('}', '}', 'Der Rumpf endet mit einer schliessenden geschweiften Klammer.');
+      expectP('}', '}', 'Der Rumpf endet mit einer schließenden geschweiften Klammer.');
       return body;
     }
 
@@ -390,8 +390,8 @@
       }
       if (at('kw', 'break')) { next(); expectP(';', ';', 'Nach break kommt ein Semikolon.'); return { type: 'break', line: t.line }; }
       if (at('kw', 'continue')) { next(); expectP(';', ';', 'Nach continue kommt ein Semikolon.'); return { type: 'continue', line: t.line }; }
-      if (at('kw', 'switch')) { err('switch wird noch nicht unterstuetzt.', 'Nutze if / else if / else statt switch.'); }
-      if (at('kw', 'try') || at('kw', 'throw')) { err('try/catch und throw werden noch nicht unterstuetzt.', 'Pruefe Werte vorher mit if, statt Ausnahmen zu werfen.'); }
+      if (at('kw', 'switch')) { err('switch wird noch nicht unterstützt.', 'Nutze if / else if / else statt switch.'); }
+      if (at('kw', 'try') || at('kw', 'throw')) { err('try/catch und throw werden noch nicht unterstützt.', 'Prüfe Werte vorher mit if, statt Ausnahmen zu werfen.'); }
       /* Deklaration? */
       if (isTypeStart(peek(), peek(1), peek(2))) {
         var ty = parseType(true);
@@ -421,7 +421,7 @@
       var t = next();
       expectP('(', '(', 'Hinter if kommt die Bedingung in runden Klammern: if (...) { ... }');
       var cond = parseExpr();
-      expectP(')', ')', 'Die if-Bedingung endet mit einer schliessenden Klammer.');
+      expectP(')', ')', 'Die if-Bedingung endet mit einer schließenden Klammer.');
       var then = parseStatement();
       var els = null;
       if (at('kw', 'else')) { next(); els = parseStatement(); }
@@ -432,7 +432,7 @@
       var t = next();
       expectP('(', '(', 'Hinter while kommt die Bedingung in runden Klammern.');
       var cond = parseExpr();
-      expectP(')', ')', 'Die while-Bedingung endet mit einer schliessenden Klammer.');
+      expectP(')', ')', 'Die while-Bedingung endet mit einer schließenden Klammer.');
       var body = parseStatement();
       return { type: 'while', cond: cond, body: body, line: t.line };
     }
@@ -444,7 +444,7 @@
       next();
       expectP('(', '(', 'Hinter while kommt die Bedingung in runden Klammern.');
       var cond = parseExpr();
-      expectP(')', ')', 'Die Bedingung endet mit einer schliessenden Klammer.');
+      expectP(')', ')', 'Die Bedingung endet mit einer schließenden Klammer.');
       expectP(';', ';', 'do-while endet mit einem Semikolon.');
       return { type: 'dowhile', body: body, cond: cond, line: t.line };
     }
@@ -477,12 +477,12 @@
       expectP(';', ';', 'Im for-Kopf stehen Semikolons: for (start; bedingung; weiter).');
       var upd = null;
       if (!at('p', ')')) { upd = parseExpr(); }
-      expectP(')', ')', 'Der for-Kopf endet mit einer schliessenden Klammer.');
+      expectP(')', ')', 'Der for-Kopf endet mit einer schließenden Klammer.');
       var body = parseStatement();
       return { type: 'for', init: init, cond: cond, upd: upd, body: body, line: t.line };
     }
 
-    /* ---------- Ausdruecke ---------- */
+    /* ---------- Ausdrücke ---------- */
     function parseExpr() { return parseAssign(); }
 
     function parseAssign() {
@@ -613,7 +613,7 @@
         if (at('p', '[')) {
           next();
           var idx = parseExpr();
-          expectP(']', ']', 'Hinter dem Index kommt eine schliessende eckige Klammer.');
+          expectP(']', ']', 'Hinter dem Index kommt eine schließende eckige Klammer.');
           e = { type: 'index', target: e, index: idx, line: t.line };
           continue;
         }
@@ -636,7 +636,7 @@
         if (at('p', ',')) { next(); continue; }
         break;
       }
-      expectP(')', ')', 'Der Methodenaufruf endet mit einer schliessenden Klammer.');
+      expectP(')', ')', 'Der Methodenaufruf endet mit einer schließenden Klammer.');
       return args;
     }
 
@@ -681,7 +681,7 @@
       if (at('p', '(')) {
         next();
         var inner = parseExpr();
-        expectP(')', ')', 'Der geklammerte Ausdruck endet mit einer schliessenden Klammer.');
+        expectP(')', ')', 'Der geklammerte Ausdruck endet mit einer schließenden Klammer.');
         return inner;
       }
       if (at('kw', 'new')) {
@@ -693,7 +693,7 @@
           if (at('p', ']')) {
             next();
             var items2 = [];
-            expectP('{', '{', 'new int[] {1, 2} startet mit einer oeffnenden geschweiften Klammer.');
+            expectP('{', '{', 'new int[] {1, 2} startet mit einer öffnenden geschweiften Klammer.');
             if (!at('p', '}')) {
               for (;;) {
                 items2.push(parseExpr());
@@ -705,7 +705,7 @@
             return { type: 'arrlit', elem: ty.name, items: items2, line: t.line };
           }
           var size = parseExpr();
-          expectP(']', ']', 'Hinter der Array-Groesse kommt eine schliessende eckige Klammer.');
+          expectP(']', ']', 'Hinter der Array-Größe kommt eine schließende eckige Klammer.');
           return { type: 'newarr', elem: ty.name, size: size, line: t.line };
         }
         expectP('(', '(', 'Hinter new kommt der Aufruf des Konstruktors: new Klassenname(...)');
@@ -717,7 +717,7 @@
             if (at('p', ',')) { next(); continue; }
             break;
           }
-          expectP(')', ')', 'Der Konstruktor-Aufruf endet mit einer schliessenden Klammer.');
+          expectP(')', ')', 'Der Konstruktor-Aufruf endet mit einer schließenden Klammer.');
         }
         return { type: 'new', cls: ty.name, args: args2, line: t.line };
       }
@@ -728,10 +728,10 @@
         }
         return { type: 'name', v: t.v, line: t.line };
       }
-      err('Unerwartet: ' + describe(t), 'Hier steht etwas, das nicht als Ausdruck lesbar ist. Pruefe Klammern und Semikolons in den Zeilen davor.');
+      err('Unerwartet: ' + describe(t), 'Hier steht etwas, das nicht als Ausdruck lesbar ist. Prüfe Klammern und Semikolons in den Zeilen davor.');
     }
 
-    /* Objektkonsole: Anweisungen ohne umgebende Klasse lesen (kein main noetig). */
+    /* Objektkonsole: Anweisungen ohne umgebende Klasse lesen (kein main nötig). */
     function parseReplBody() {
       skipImports();
       skipSemi();
@@ -788,8 +788,8 @@
   var files0 = Object.create(null);
 
   /* ================= run(files) ================= */
-  /* Gemeinsame Vorarbeit fuer run() und openSession(): alle Dateien lexen,
-   * parsen und uebersetzen. Liefert {ok, classes, classMap, errors, fileNames}. */
+  /* Gemeinsame Vorarbeit für run() und openSession(): alle Dateien lexen,
+   * parsen und übersetzen. Liefert {ok, classes, classMap, errors, fileNames}. */
   function compileAll(files) {
     var errors = [];
     var classes = [];
@@ -814,14 +814,14 @@
         var parsed = new Parser(fname, toks, perrs).parseUnit();
         for (var pj = 0; pj < parsed.classes.length; pj++) {
           if (classMap[parsed.classes[pj].name]) {
-            errors.push(JError('compile', fname, parsed.classes[pj].line, 'Die Klasse ' + parsed.classes[pj].name + ' existiert doppelt.', 'Jede Klasse darf nur einmal definiert werden (auch ueber mehrere Dateien hinweg).'));
+            errors.push(JError('compile', fname, parsed.classes[pj].line, 'Die Klasse ' + parsed.classes[pj].name + ' existiert doppelt.', 'Jede Klasse darf nur einmal definiert werden (auch über mehrere Dateien hinweg).'));
             return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames, toplevel: toplevel };
           }
           parsed.classes[pj].srcFile = fname;
           classes.push(parsed.classes[pj]);
           classMap[parsed.classes[pj].name] = parsed.classes[pj];
         }
-        /* Anweisungen direkt in der Datei (Reihenfolge ueber Dateien wahren) */
+        /* Anweisungen direkt in der Datei (Reihenfolge über Dateien wahren) */
         for (var sj = 0; sj < parsed.stmts.length; sj++) {
           parsed.stmts[sj].srcFile = fname;
           toplevel.push(parsed.stmts[sj]);
@@ -888,8 +888,8 @@
           invokeMethod(mainFound.cls, mainFound.m, null, [{ t: 'array', elem: 'String', arr: [] }], vm);
         }
       }
-      /* Ohne main-Methode kein Fehler mehr: Das Projekt laesst sich dann
-       * interaktiv ueber die Objektkonsole bedienen (Objekte erzeugen,
+      /* Ohne main-Methode kein Fehler mehr: Das Projekt lässt sich dann
+       * interaktiv über die Objektkonsole bedienen (Objekte erzeugen,
        * Methoden aufrufen, Objektdiagramm). */
     } catch (e) {
       if (e && e.pause) { vm.paused = true; vm.pauseFile = e.file || ''; vm.pauseLine = e.line || 0; }
@@ -925,10 +925,10 @@
   }
 
   /* ================= Objektkonsole (interaktive Sitzung) =================
-   * Nach dem Ausfuehren bleibt das Programm "lebendig": In der Objektkonsole
-   * lassen sich Objekte erzeugen, Methoden aufrufen und Ausdruecke auswerten.
+   * Nach dem Ausführen bleibt das Programm "lebendig": In der Objektkonsole
+   * lassen sich Objekte erzeugen, Methoden aufrufen und Ausdrücke auswerten.
    * Alle erzeugten Objekte zeigt das Objektdiagramm. Eine main-Methode ist
-   * dafuer nicht noetig (und wird in den Startpaketen bewusst nicht benutzt).
+   * dafür nicht nötig (und wird in den Startpaketen bewusst nicht benutzt).
    */
   /* Anweisungen direkt in der Datei ausfuehren (ohne umgebende Klasse),
    * z. B. Objekte erzeugen: Test t = new Test();  Fehler landen in errors. */
@@ -939,7 +939,7 @@
       var ctx2 = { file: st.srcFile || '', line: st.line || 1, cls: null, thisVal: null, vm: vm, captureExpr: true };
       try {
         execBlock([st], env, ctx2);
-        /* Rueckgabewerte landen nicht im Nirvana: Ein blosser Methodenaufruf
+        /* Rückgabewerte landen nicht im Nirvana: Ein blosser Methodenaufruf
          * am Datei-Ende zeigt sein Ergebnis in der Ausgabe (wie die Objektkonsole). */
         if (st.type === 'exprstat' && ctx2.lastExprVal && ctx2.lastExprVal.t !== 'void') {
           var tv = ctx2.lastExprVal;
@@ -949,7 +949,7 @@
       } catch (e) {
         if (e && e.jerr) { errors.push(e.jerr); return; }
         if (e && (e.ctrl === 'return' || e.ctrl === 'break' || e.ctrl === 'continue')) {
-          errors.push(JError('syntax', ctx2.file, st.line || 1, 'return, break und continue gehoeren in Methoden und Schleifen deiner Klasse.', 'Direkt in der Datei stehen normale Anweisungen, z. B.: Test t = new Test();'));
+          errors.push(JError('syntax', ctx2.file, st.line || 1, 'return, break und continue gehören in Methoden und Schleifen deiner Klasse.', 'Direkt in der Datei stehen normale Anweisungen, z. B.: Test t = new Test();'));
           return;
         }
         throw e;
@@ -1006,7 +1006,7 @@
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === '_';
   }
 
-  /* Variablen der Sitzung mit Objekt-Referenzen (fuer Namenszuordnung im Diagramm). */
+  /* Variablen der Sitzung mit Objekt-Referenzen (für Namenszuordnung im Diagramm). */
   function varPairsOf(env) {
     var pairs = [];
     var name;
@@ -1019,7 +1019,7 @@
     return pairs;
   }
 
-  /* Wert fuer das Objektdiagramm beschreiben (ruft keinen Schuelercode auf). */
+  /* Wert für das Objektdiagramm beschreiben (ruft keinen Schülercode auf). */
   function reprVal(v, pairs, regs) {
     if (!v || v.t === 'null') { return 'null'; }
     if (v.t === 'String') { return '"' + v.v + '"'; }
@@ -1081,7 +1081,7 @@
     return {
       label: m.name + '(',
       insert: m.name + '(',
-      hint: 'Methode (' + ps.join(', ') + ') zurueck: ' + (m.ret && m.ret.void ? 'void' : typeName(m.ret))
+      hint: 'Methode (' + ps.join(', ') + ') zurück: ' + (m.ret && m.ret.void ? 'void' : typeName(m.ret))
     };
   }
 
@@ -1089,7 +1089,7 @@
   var REPL_KEYWORDS = ['new', 'int', 'double', 'boolean', 'char', 'if', 'while', 'for', 'return', 'true', 'false', 'null'];
   var BUILTIN_CLASSES = ['System', 'Math', 'Integer', 'Double', 'String', 'Datenbank'];
 
-  /* Empfaenger vor einem abschliessenden Punkt ermitteln (auch System.out.). */
+  /* Empfänger vor einem abschließenden Punkt ermitteln (auch System.out.). */
   function dotReceiver(t, dotIdx) {
     var r = dotIdx - 1;
     while (r >= 0 && isIdentChar(t.charAt(r))) { r--; }
@@ -1146,7 +1146,7 @@
       } catch (e) {
         if (e && e.jerr) { res.errors.push(e.jerr); }
         else if (e && (e.ctrl === 'return' || e.ctrl === 'break' || e.ctrl === 'continue')) {
-          res.errors.push(JError('syntax', 'Objektkonsole', ctx.line, 'return, break und continue gehoeren in Methoden und Schleifen deiner Klasse.', 'In der Objektkonsole schreibst du Anweisungen direkt auf, z. B. auto.fahren();'));
+          res.errors.push(JError('syntax', 'Objektkonsole', ctx.line, 'return, break und continue gehören in Methoden und Schleifen deiner Klasse.', 'In der Objektkonsole schreibst du Anweisungen direkt auf, z. B. auto.fahren();'));
         }
         else { throw e; }
         res.output = vm.out.slice(outStart).join('');
@@ -1173,7 +1173,7 @@
       return res;
     };
 
-    /* Autovervollstaendung: {from: Einfuegeposition, items: [{label, insert, hint}]} */
+    /* Autovervollständigung: {from: Einfügeposition, items: [{label, insert, hint}]} */
     s.complete = function (text) {
       var t = String(text == null ? '' : text);
       var end = t.length;
@@ -1189,7 +1189,7 @@
       var w = end - 1;
       while (w >= 0 && isIdentChar(t.charAt(w))) { w--; }
       var word = t.substring(w + 1, end);
-      /* Punkt vor dem Wort: Mitglieder des Empfaengers anbieten (auch mitten im Wort) */
+      /* Punkt vor dem Wort: Mitglieder des Empfängers anbieten (auch mitten im Wort) */
       if (w >= 0 && t.charAt(w) === '.') {
         var recv = dotReceiver(t, w);
         if (recv !== '') {
@@ -1216,7 +1216,7 @@
         items.push({ label: BUILTIN_CLASSES[i], insert: BUILTIN_CLASSES[i], hint: 'eingebaute Klasse' });
       }
       for (i = 0; i < REPL_KEYWORDS.length; i++) {
-        items.push({ label: REPL_KEYWORDS[i], insert: REPL_KEYWORDS[i], hint: 'Schluesselwort' });
+        items.push({ label: REPL_KEYWORDS[i], insert: REPL_KEYWORDS[i], hint: 'Schlüsselwort' });
       }
       var out = [];
       for (i = 0; i < items.length; i++) {
@@ -1250,7 +1250,7 @@
           return out;
         }
         if (v.t === 'array') {
-          out.push({ label: 'length', insert: 'length', hint: 'Laenge des Arrays (ohne Klammern)' });
+          out.push({ label: 'length', insert: 'length', hint: 'Länge des Arrays (ohne Klammern)' });
           return out;
         }
         return out;
@@ -1313,14 +1313,14 @@
     return s;
   }
 
-  /* Vorab-Pruefung nicht unterstuetzter Sprachelemente mit klarer Meldung. */
+  /* Vorab-Prüfung nicht unterstützter Sprachelemente mit klarer Meldung. */
   function precheck(files) {
     var checks = [
-      [/Scanner/, 'Scanner (Tastatur-Eingaben) wird noch nicht unterstuetzt.', 'Die Simulation unterstuetzt noch keine Eingaben. Arbeite mit festen Werten im Programm.'],
-      [/\bArrayList\b|\bList\b/, 'ArrayList und List werden noch nicht unterstuetzt.', 'Nutze Arrays, z. B. int[] zahlen = new int[5];'],
-      [/\bHashMap\b|\bMap\b|\bHashSet\b|\bSet\b/, 'HashMap, Map, HashSet und Set werden noch nicht unterstuetzt.', 'Nutze Arrays, um mehrere Werte zu speichern.'],
-      [/\bswitch\b/, 'switch wird noch nicht unterstuetzt.', 'Nutze if / else if / else statt switch.'],
-      [/\btry\b|\bcatch\b|\bfinally\b|\bthrow\b|\bthrows\b/, 'try/catch/throw (Ausnahmebehandlung) wird noch nicht unterstuetzt.', 'Pruefe Werte vorher mit if, statt Ausnahmen zu werfen.']
+      [/Scanner/, 'Scanner (Tastatur-Eingaben) wird noch nicht unterstützt.', 'Die Simulation unterstützt noch keine Eingaben. Arbeite mit festen Werten im Programm.'],
+      [/\bArrayList\b|\bList\b/, 'ArrayList und List werden noch nicht unterstützt.', 'Nutze Arrays, z. B. int[] zahlen = new int[5];'],
+      [/\bHashMap\b|\bMap\b|\bHashSet\b|\bSet\b/, 'HashMap, Map, HashSet und Set werden noch nicht unterstützt.', 'Nutze Arrays, um mehrere Werte zu speichern.'],
+      [/\bswitch\b/, 'switch wird noch nicht unterstützt.', 'Nutze if / else if / else statt switch.'],
+      [/\btry\b|\bcatch\b|\bfinally\b|\bthrow\b|\bthrows\b/, 'try/catch/throw (Ausnahmebehandlung) wird noch nicht unterstützt.', 'Prüfe Werte vorher mit if, statt Ausnahmen zu werfen.']
     ];
     var names = [];
     var n;
@@ -1352,7 +1352,7 @@
         var m = re.exec(lines[li]);
         while (m) {
           if (!classMap[m[1]] && !GFX_CLASSES[m[1]]) {
-            errors.push(JError('compile', names[ni], li + 1, 'Zeile ' + (li + 1) + ': Unbekannte Klasse ' + m[1] + ' bei new.', 'Lege eine Datei ' + m[1] + '.java mit der Klasse ' + m[1] + ' an (oder pruefe die Schreibweise).'));
+            errors.push(JError('compile', names[ni], li + 1, 'Zeile ' + (li + 1) + ': Unbekannte Klasse ' + m[1] + ' bei new.', 'Lege eine Datei ' + m[1] + '.java mit der Klasse ' + m[1] + ' an (oder prüfe die Schreibweise).'));
             return false;
           }
           m = re.exec(lines[li]);
@@ -1372,11 +1372,11 @@
       var base = cls.srcFile;
       if (base.length > 5 && base.slice(base.length - 5) === '.java') { base = base.slice(0, base.length - 5); }
       if (cls.name !== base) {
-        /* Bei mehreren Klassen in einer Datei ist der Name frei waehlbar
+        /* Bei mehreren Klassen in einer Datei ist der Name frei wählbar
          * (z. B. Ober- und Unterklasse in einer Datei); nur bei einer einzigen
          * Klasse pro Datei gilt die Schul-Konvention Name == Dateiname. */
         if (perFile[cls.srcFile] === 1) {
-          errors.push(JError('compile', cls.srcFile, cls.line, 'Die Klasse ' + cls.name + ' heisst anders als die Datei ' + cls.srcFile + '.',
+          errors.push(JError('compile', cls.srcFile, cls.line, 'Die Klasse ' + cls.name + ' heißt anders als die Datei ' + cls.srcFile + '.',
             'In Java muss der Name der (einzigen) Klasse genau dem Dateinamen entsprechen: ' + cls.name + '.java'));
           return false;
         }
@@ -1442,7 +1442,7 @@
   function newEnv(parent) { return { vars: {}, parent: parent }; }
 
   /* Objektnamen merken: Wird ein Objekt einer Variablen zugewiesen (Deklaration,
-   * Parameter oder Zuweisung), landet der Name im Objekt-Diagramm - auch fuer
+   * Parameter oder Zuweisung), landet der Name im Objekt-Diagramm - auch für
    * Objekte, die in main oder Methoden erzeugt wurden. */
   function recordObjName(vm, val, name) {
     if (!vm || !vm.objects || !val || val.t !== 'ref' || !val.obj) { return; }
@@ -1466,7 +1466,7 @@
     return null;
   }
 
-  /* Typpruefung bei Zuweisung (deutsche Hilfestellung statt Compiler-Kauderwelsch). */
+  /* Typprüfung bei Zuweisung (deutsche Hilfestellung statt Compiler-Kauderwelsch). */
   /* Ist val.cls eine Unterklasse von target? (Vererbung: Hund ist ein Tier) */
   function classIsA(clsName, targetName) {
     var cc = RUN_CLASS_MAP[clsName] || (GFX_CLASSES[clsName] ? { name: clsName, parent: null } : null);
@@ -1504,7 +1504,7 @@
     }
     if (t === 'String') {
       if (val.t === 'String' || val.t === 'null') { return; }
-      throw rt(ctx, line, 'String passt nicht zu ' + val.t + '.', targetName + ' ist als String deklariert: Der Wert muss Text in Anfuehrungszeichen sein (oder null).');
+      throw rt(ctx, line, 'String passt nicht zu ' + val.t + '.', targetName + ' ist als String deklariert: Der Wert muss Text in Anführungszeichen sein (oder null).');
     }
     if (t && !isPrimType(t)) {
       if (val.t === 'null') { return; }
@@ -1513,7 +1513,7 @@
     }
   }
 
-  /* Attribut-Deklaration in der Klassenhierarchie suchen (fuer die Typpruefung
+  /* Attribut-Deklaration in der Klassenhierarchie suchen (für die Typprüfung
    * bei Attribut-Zuweisungen: nur Attribute der Klasse, keine GFX-internen Werte). */
   function findFieldDef(cls, name) {
     var c = cls;
@@ -1563,7 +1563,7 @@
       if (cls.ctors[i].params.length === args.length) { ctor = cls.ctors[i]; break; }
     }
     if (!ctor && args.length > 0) {
-      throw rt(ctx, cls.line, 'Kein Konstruktor von ' + cls.name + ' nimmt ' + args.length + ' Argument(e).', 'Es gibt keinen Konstruktor mit dieser Parameterzahl. Ergaenze einen Konstruktor ' + cls.name + '(...) oder passe den new-Aufruf an.');
+      throw rt(ctx, cls.line, 'Kein Konstruktor von ' + cls.name + ' nimmt ' + args.length + ' Argument(e).', 'Es gibt keinen Konstruktor mit dieser Parameterzahl. Ergänze einen Konstruktor ' + cls.name + '(...) oder passe den new-Aufruf an.');
     }
     if (ctor) { execCtor(cls, ctor, obj, args, newEnv(null)); }
     else { initFieldsOf(cls, obj, newEnv(null), ctx); }
@@ -1602,7 +1602,7 @@
     vm.depth++;
     if (vm.depth > MAX_DEPTH) {
       vm.depth--;
-      throw rt({ file: mcls.srcFile, line: m.line }, m.line, 'StackOverflow: zu viele verschachtelte Aufrufe.', 'Vermutlich fehlt die Abbruchbedingung der Rekursion: pruefe, wann die Methode aufhoeren muss (z. B. if (n <= 0) return ...).');
+      throw rt({ file: mcls.srcFile, line: m.line }, m.line, 'StackOverflow: zu viele verschachtelte Aufrufe.', 'Vermutlich fehlt die Abbruchbedingung der Rekursion: prüfe, wann die Methode aufhören muss (z. B. if (n <= 0) return ...).');
     }
     var ctx = { file: mcls.srcFile, line: m.line, cls: mcls, thisVal: thisVal, vm: vm };
     var env = newEnv(null);
@@ -1624,16 +1624,16 @@
         if (!m.ret.void) {
           if (!e.v || e.v.t === 'void') {
             vm.depth--;
-            throw rt(ctx, m.line, 'Die Methode ' + m.name + ' muss einen Wert vom Typ ' + typeName(m.ret) + ' zurueckgeben.', 'Jeder Weg durch die Methode braucht ein return wert; mit einem passenden Wert.');
+            throw rt(ctx, m.line, 'Die Methode ' + m.name + ' muss einen Wert vom Typ ' + typeName(m.ret) + ' zurückgeben.', 'Jeder Weg durch die Methode braucht ein return wert; mit einem passenden Wert.');
           }
-          checkAssign(ctx, { type: m.ret }, e.v, m.line, 'Der Rueckgabewert von ' + m.name);
+          checkAssign(ctx, { type: m.ret }, e.v, m.line, 'Der Rückgabewert von ' + m.name);
           result = e.v;
           vm.depth--;
           return result;
         }
         if (e.v && e.v.t !== 'void') {
           vm.depth--;
-          throw rt(ctx, m.line, 'Die Methode ' + m.name + ' ist void und darf keinen Wert zurueckgeben.', 'Bei void-Methoden steht nur return; ohne Wert (oder gar kein return).');
+          throw rt(ctx, m.line, 'Die Methode ' + m.name + ' ist void und darf keinen Wert zurückgeben.', 'Bei void-Methoden steht nur return; ohne Wert (oder gar kein return).');
         }
         vm.depth--;
         return result;
@@ -1643,15 +1643,15 @@
     }
     vm.depth--;
     if (!m.ret.void) {
-      throw rt(ctx, m.line, 'Die Methode ' + m.name + ' erreicht ihr Ende ohne return.', 'Jeder Weg durch eine Methode mit Rueckgabetyp braucht ein return wert; – auch am Ende der Methode oder im else-Zweig.');
+      throw rt(ctx, m.line, 'Die Methode ' + m.name + ' erreicht ihr Ende ohne return.', 'Jeder Weg durch eine Methode mit Rückgabetyp braucht ein return wert; – auch am Ende der Methode oder im else-Zweig.');
     }
     return result;
   }
 
   /* ===== Anweisungen ===== */
-  /* Einzelschritt: Zaehlt ausgefuehrte "Blatt"-Anweisungen (Deklarationen und
+  /* Einzelschritt: Zählt ausgeführte "Blatt"-Anweisungen (Deklarationen und
    * Ausdrucks-Anweisungen). Ist ein stepLimit gesetzt, stoppt das Programm
-   * davor und meldet die Zeile, die als Naechstes dran waere. */
+   * davor und meldet die Zeile, die als Nächstes dran wäre. */
   function stepGate(ctx, st) {
     var vm = ctx && ctx.vm ? ctx.vm : null;
     if (!vm || vm.stepLimit === null || vm.stepLimit === undefined) { return; }
@@ -1665,7 +1665,7 @@
   function step(ctx) {
     ctx.vm.steps++;
     if (ctx.vm.steps > MAX_STEPS) {
-      throw rt(ctx, ctx.line, 'Das Programm macht sehr viele Schritte (Endlosschleife?).', 'Pruefe, ob deine Schleifen-Variable im Rumpf wirklich geaendert wird und die Bedingung irgendwann false wird.');
+      throw rt(ctx, ctx.line, 'Das Programm macht sehr viele Schritte (Endlosschleife?).', 'Prüfe, ob deine Schleifen-Variable im Rumpf wirklich geändert wird und die Bedingung irgendwann false wird.');
     }
   }
 
@@ -1675,12 +1675,12 @@
     var i;
     for (i = 0; i < ctx.vm.out.length; i++) { len += ctx.vm.out[i].length; }
     if (len > MAX_OUTPUT) {
-      throw rt(ctx, ctx.line, 'Das Programm produziert zu viel Ausgabe.', 'Vermutlich laeuft eine Schleife zu oft oder ohne Ende. Begrenze die Ausgaben.');
+      throw rt(ctx, ctx.line, 'Das Programm produziert zu viel Ausgabe.', 'Vermutlich läuft eine Schleife zu oft oder ohne Ende. Begrenze die Ausgaben.');
     }
   }
 
   function stderrOut(ctx, line, text) {
-    ctx.vm.errCards.push({ kind: 'stderr', file: ctx.file, line: line, message: text, hint: 'System.err schreibt in die Fehlerkonsole. Fuer normale Ausgaben nutze System.out.println(...).' });
+    ctx.vm.errCards.push({ kind: 'stderr', file: ctx.file, line: line, message: text, hint: 'System.err schreibt in die Fehlerkonsole. Für normale Ausgaben nutze System.out.println(...).' });
   }
 
   function execBlock(body, env, ctx) {
@@ -1756,7 +1756,7 @@
     }
     if (st.type === 'break') { throw { ctrl: 'break' }; }
     if (st.type === 'continue') { throw { ctrl: 'continue' }; }
-    throw rt(ctx, st.line, 'Interne Anweisung nicht unterstuetzt: ' + st.type, '');
+    throw rt(ctx, st.line, 'Interne Anweisung nicht unterstützt: ' + st.type, '');
   }
 
   /* ===== javaStr: Wert in Text umwandeln (println und String-Plus) ===== */
@@ -1785,12 +1785,12 @@
       return v.cls + '@InfoCraft';
     }
     if (v.t === 'void') {
-      throw rt(ctx, line, 'Die Methode gibt nichts (void) zurueck und kann nicht als Wert verwendet werden.', 'Rufe die void-Methode allein auf oder nutze eine Methode mit Rueckgabetyp.');
+      throw rt(ctx, line, 'Die Methode gibt nichts (void) zurück und kann nicht als Wert verwendet werden.', 'Rufe die void-Methode allein auf oder nutze eine Methode mit Rückgabetyp.');
     }
     return String(v.v);
   }
 
-  /* ===== Ausdruecke ===== */
+  /* ===== Ausdrücke ===== */
   function evalExpr(e, env, ctx) {
     step(ctx);
     if (!e) { throw rt(ctx, ctx.line, 'Interner Fehler: leerer Ausdruck.', ''); }
@@ -1804,7 +1804,7 @@
       case 'null': return NULLV;
       case 'void': return VOIDV;
       case 'this':
-        if (!ctx.thisVal || ctx.thisVal.t !== 'ref') { throw rt(ctx, e.line, 'this steht hier nicht zur Verfuegung.', 'this nutzt man in Objektmethoden und Konstruktoren.'); }
+        if (!ctx.thisVal || ctx.thisVal.t !== 'ref') { throw rt(ctx, e.line, 'this steht hier nicht zur Verfügung.', 'this nutzt man in Objektmethoden und Konstruktoren.'); }
         return ctx.thisVal;
       case 'name': return lookupName(e, env, ctx);
       case 'cond': {
@@ -1841,7 +1841,7 @@
             for (gi2 = 0; gi2 < e.args.length; gi2++) { ga.push(evalExpr(e.args[gi2], env, ctx)); }
             return gfxNew(e.cls, ga, ctx, e.line);
           }
-          throw rt(ctx, e.line, 'Unbekannte Klasse ' + e.cls + '.', 'Es gibt keine Klasse ' + e.cls + '. Pruefe die Schreibweise oder lege die Klasse an.');
+          throw rt(ctx, e.line, 'Unbekannte Klasse ' + e.cls + '.', 'Es gibt keine Klasse ' + e.cls + '. Prüfe die Schreibweise oder lege die Klasse an.');
         }
         var aargs = [];
         var ai;
@@ -1850,8 +1850,8 @@
       }
       case 'newarr': {
         var sz = evalExpr(e.size, env, ctx);
-        if (sz.t !== 'int') { throw rt(ctx, e.line, 'Die Array-Groesse muss int sein.', 'z. B. new int[10]'); }
-        if (sz.v < 0) { throw rt(ctx, e.line, 'NegativeArraySizeException: Das Array soll Groesse ' + sz.v + ' haben.', 'Die Groesse eines Arrays darf nicht negativ sein.'); }
+        if (sz.t !== 'int') { throw rt(ctx, e.line, 'Die Array-Größe muss int sein.', 'z. B. new int[10]'); }
+        if (sz.v < 0) { throw rt(ctx, e.line, 'NegativeArraySizeException: Das Array soll Größe ' + sz.v + ' haben.', 'Die Größe eines Arrays darf nicht negativ sein.'); }
         var arr = [];
         var dv = e.elem === 'int' ? mkInt(0) : (e.elem === 'double' ? mkDbl(0) : (e.elem === 'boolean' ? FALSE : (e.elem === 'char' ? mkChar(0) : NULLV)));
         for (ai = 0; ai < sz.v; ai++) { arr.push(dv); }
@@ -1877,7 +1877,7 @@
       }
       case 'cast': return evalCast(e, env, ctx);
       case 'call': return evalCall(e, env, ctx);
-      case 'super': throw rt(ctx, e.line, 'super ist nur fuer super(...) oder super.methode(...) gedacht.', 'z. B. super.getFarbe() oder im Konstruktor: super(name).');
+      case 'super': throw rt(ctx, e.line, 'super ist nur für super(...) oder super.methode(...) gedacht.', 'z. B. super.getFarbe() oder im Konstruktor: super(name).');
     }
     throw rt(ctx, e.line, 'Interner Fehler im Ausdruck: ' + e.type, '');
   }
@@ -1895,7 +1895,7 @@
       }
       c = c.parent ? RUN_CLASS_MAP[c.parent] : null;
     }
-    throw rt(ctx, e.line, 'Die Variable ' + e.v + ' ist nicht bekannt.', 'Pruefe die Schreibweise (Java unterscheidet Gross-/Kleinschreibung) und ob ' + e.v + ' deklariert ist (int ' + e.v + ' = ...).');
+    throw rt(ctx, e.line, 'Die Variable ' + e.v + ' ist nicht bekannt.', 'Prüfe die Schreibweise (Java unterscheidet Groß-/Kleinschreibung) und ob ' + e.v + ' deklariert ist (int ' + e.v + ' = ...).');
   }
 
   function resolveLValue(e, env, ctx) {
@@ -1937,15 +1937,15 @@
         }
         c = c.parent ? RUN_CLASS_MAP[c.parent] : null;
       }
-      throw rt(ctx, e.line, 'Die Variable ' + e.v + ' ist nicht bekannt.', 'Pruefe die Schreibweise (Java unterscheidet Gross-/Kleinschreibung) und ob ' + e.v + ' deklariert ist.');
+      throw rt(ctx, e.line, 'Die Variable ' + e.v + ' ist nicht bekannt.', 'Prüfe die Schreibweise (Java unterscheidet Groß-/Kleinschreibung) und ob ' + e.v + ' deklariert ist.');
     }
     if (e.type === 'field') {
       var target = evalExpr(e.target, env, ctx);
-      if (target.t === 'null') { throw rt(ctx, e.line, 'NullPointerException: Das Objekt fuer ' + '.' + e.name + ' ist null.', 'Das Objekt wurde vermutlich noch nicht mit new erzeugt oder eine Methode hat null zurueckgegeben.'); }
-      if (target.t !== 'ref') { throw rt(ctx, e.line, 'Vor .' + e.name + ' steht kein Objekt.', 'Attribute erreicht man ueber ein Objekt, z. B. auto.farbe'); }
+      if (target.t === 'null') { throw rt(ctx, e.line, 'NullPointerException: Das Objekt für ' + '.' + e.name + ' ist null.', 'Das Objekt wurde vermutlich noch nicht mit new erzeugt oder eine Methode hat null zurückgegeben.'); }
+      if (target.t !== 'ref') { throw rt(ctx, e.line, 'Vor .' + e.name + ' steht kein Objekt.', 'Attribute erreicht man über ein Objekt, z. B. auto.farbe'); }
       var o2 = target.obj;
       if (!Object.prototype.hasOwnProperty.call(o2.f, e.name)) {
-        throw rt(ctx, e.line, 'Das Attribut ' + e.name + ' gehoert nicht zur Klasse ' + target.cls + '.', 'Pruefe Schreibweise und Gross-/Kleinschreibung und ob die Klasse ein Attribut ' + e.name + ' hat.');
+        throw rt(ctx, e.line, 'Das Attribut ' + e.name + ' gehört nicht zur Klasse ' + target.cls + '.', 'Prüfe Schreibweise und Groß-/Kleinschreibung und ob die Klasse ein Attribut ' + e.name + ' hat.');
       }
       var fDef = RUN_CLASS_MAP[target.cls] ? findFieldDef(RUN_CLASS_MAP[target.cls], e.name) : null;
       return {
@@ -1963,7 +1963,7 @@
       var idx = evalExpr(e.index, env, ctx);
       if (idx.t !== 'int') { throw rt(ctx, e.line, 'Der Array-Index muss int sein.', 'z. B. zahlen[0] oder zahlen[i]'); }
       if (idx.v < 0 || idx.v >= targetArr.arr.length) {
-        throw rt(ctx, e.line, 'ArrayIndexOutOfBoundsException: Index ' + idx.v + ', das Array hat ' + targetArr.arr.length + ' Element(e).', 'Gueltige Indizes gehen von 0 bis ' + (targetArr.arr.length - 1) + '. Pruefe die Schleifen-Grenzen (i < laenge, nicht <=).');
+        throw rt(ctx, e.line, 'ArrayIndexOutOfBoundsException: Index ' + idx.v + ', das Array hat ' + targetArr.arr.length + ' Element(e).', 'Gültige Indizes gehen von 0 bis ' + (targetArr.arr.length - 1) + '. Prüfe die Schleifen-Grenzen (i < länge, nicht <=).');
       }
       var theArr = targetArr.arr;
       var theIdx = idx.v;
@@ -1977,10 +1977,10 @@
 
   function resolveField(e, target, ctx) {
     if (e.name === 'length' && target.t === 'array') { return mkInt(target.arr.length); }
-    if (target.t === 'null') { throw rt(ctx, e.line, 'NullPointerException: Das Objekt fuer .' + e.name + ' ist null.', 'Erzeuge das Objekt mit new, bevor du darauf zugreifst.'); }
+    if (target.t === 'null') { throw rt(ctx, e.line, 'NullPointerException: Das Objekt für .' + e.name + ' ist null.', 'Erzeuge das Objekt mit new, bevor du darauf zugreifst.'); }
     if (target.t !== 'ref') { throw rt(ctx, e.line, 'Vor .' + e.name + ' steht kein Objekt.', ''); }
     if (!Object.prototype.hasOwnProperty.call(target.obj.f, e.name)) {
-      throw rt(ctx, e.line, 'Das Attribut ' + e.name + ' gehoert nicht zur Klasse ' + target.cls + '.', 'Pruefe Schreibweise und Gross-/Kleinschreibung und ob die Klasse ein Attribut ' + e.name + ' hat.');
+      throw rt(ctx, e.line, 'Das Attribut ' + e.name + ' gehört nicht zur Klasse ' + target.cls + '.', 'Prüfe Schreibweise und Groß-/Kleinschreibung und ob die Klasse ein Attribut ' + e.name + ' hat.');
     }
     return target.obj.f[e.name];
   }
@@ -2020,18 +2020,18 @@
       throw rt(ctx, e.line, '(boolean) funktioniert nur mit boolean-Werten.', '');
     }
     if (v.t === 'null' || v.t === 'ref') { return v; }
-    throw rt(ctx, e.line, 'Dieser Cast wird nicht unterstuetzt.', '');
+    throw rt(ctx, e.line, 'Dieser Cast wird nicht unterstützt.', '');
   }
 
   function evalBin(e, env, ctx) {
     var op = e.op;
     if (op === '&&' || op === '||') {
       var l = evalExpr(e.l, env, ctx);
-      if (!requireBool(ctx, l, e.line, op)) { throw rt(ctx, e.line, 'Der linke Teil von ' + op + ' muss boolean sein.', 'Mit ' + op + ' verknuepfst du Bedingungen, z. B. if (x > 0 && x < 10).'); }
+      if (!requireBool(ctx, l, e.line, op)) { throw rt(ctx, e.line, 'Der linke Teil von ' + op + ' muss boolean sein.', 'Mit ' + op + ' verknüpfst du Bedingungen, z. B. if (x > 0 && x < 10).'); }
       if (op === '&&' && !l.v) { return FALSE; }
       if (op === '||' && l.v) { return TRUE; }
       var r = evalExpr(e.r, env, ctx);
-      if (!requireBool(ctx, r, e.line, op)) { throw rt(ctx, e.line, 'Der rechte Teil von ' + op + ' muss boolean sein.', 'Mit ' + op + ' verknuepfst du Bedingungen, z. B. if (x > 0 && x < 10).'); }
+      if (!requireBool(ctx, r, e.line, op)) { throw rt(ctx, e.line, 'Der rechte Teil von ' + op + ' muss boolean sein.', 'Mit ' + op + ' verknüpfst du Bedingungen, z. B. if (x > 0 && x < 10).'); }
       return r.v ? TRUE : FALSE;
     }
     var lv = evalExpr(e.l, env, ctx);
@@ -2050,10 +2050,10 @@
     }
     if (op === '+' || op === '-' || op === '*' || op === '/' || op === '%') {
       if (lv.t === 'null' || rv.t === 'null') {
-        throw rt(ctx, line, 'NullPointerException: Ein Operand von ' + op + ' ist null (kein Objekt).', 'Objekte muessen mit new erzeugt werden, bevor man mit ihnen rechnet.');
+        throw rt(ctx, line, 'NullPointerException: Ein Operand von ' + op + ' ist null (kein Objekt).', 'Objekte müssen mit new erzeugt werden, bevor man mit ihnen rechnet.');
       }
-      if (lv.t !== 'int' && lv.t !== 'double' && lv.t !== 'char') { throw rt(ctx, line, 'Mit ' + op + ' kann man nicht auf ' + lv.t + ' rechnen.', 'Links und rechts muessen Zahlen (oder Strings fuer +) stehen.'); }
-      if (rv.t !== 'int' && rv.t !== 'double' && rv.t !== 'char') { throw rt(ctx, line, 'Mit ' + op + ' kann man nicht auf ' + rv.t + ' rechnen.', 'Links und rechts muessen Zahlen (oder Strings fuer +) stehen.'); }
+      if (lv.t !== 'int' && lv.t !== 'double' && lv.t !== 'char') { throw rt(ctx, line, 'Mit ' + op + ' kann man nicht auf ' + lv.t + ' rechnen.', 'Links und rechts müssen Zahlen (oder Strings für +) stehen.'); }
+      if (rv.t !== 'int' && rv.t !== 'double' && rv.t !== 'char') { throw rt(ctx, line, 'Mit ' + op + ' kann man nicht auf ' + rv.t + ' rechnen.', 'Links und rechts müssen Zahlen (oder Strings für +) stehen.'); }
       var bothInt = (lv.t === 'int' || lv.t === 'char') && (rv.t === 'int' || rv.t === 'char');
       var a = lv.v;
       var b = rv.v;
@@ -2062,7 +2062,7 @@
       if (op === '*') { return bothInt ? mkInt(a * b) : mkDbl(a * b); }
       if (op === '/') {
         if (bothInt) {
-          if (b === 0) { throw rt(ctx, line, 'ArithmeticException: Division durch 0 (int).', 'Eine Ganzzahl-Division durch 0 ist in Java nicht erlaubt. Pruefe den Teiler.'); }
+          if (b === 0) { throw rt(ctx, line, 'ArithmeticException: Division durch 0 (int).', 'Eine Ganzzahl-Division durch 0 ist in Java nicht erlaubt. Prüfe den Teiler.'); }
           return mkInt(Math.trunc(a / b));
         }
         return mkDbl(a / b);
@@ -2086,7 +2086,7 @@
       if (op === '<=') { return mkBool(x <= y); }
       return mkBool(x >= y);
     }
-    throw rt(ctx, line, 'Operation ' + op + ' wird nicht unterstuetzt.', '');
+    throw rt(ctx, line, 'Operation ' + op + ' wird nicht unterstützt.', '');
   }
 
   function primEq(lv, rv, ctx, line, op) {
@@ -2139,14 +2139,14 @@
       var fm = findMethod(ctx.cls, name, args.length);
       if (fm) {
         if (fm.m.isStatic) { return invokeMethod(fm.cls, fm.m, null, args, ctx.vm); }
-        if (!ctx.thisVal || ctx.thisVal.t !== 'ref') { throw rt(ctx, e.line, 'Die Methode ' + name + ' braucht ein Objekt.', 'Die Methode ist nicht static; rufe sie ueber ein Objekt auf oder schreibe static davor.'); }
+        if (!ctx.thisVal || ctx.thisVal.t !== 'ref') { throw rt(ctx, e.line, 'Die Methode ' + name + ' braucht ein Objekt.', 'Die Methode ist nicht static; rufe sie über ein Objekt auf oder schreibe static davor.'); }
         return invokeMethod(fm.cls, fm.m, ctx.thisVal, args, ctx.vm);
       }
       /* Eigene Klasse erbt von einer Grafik-Klasse: move, act, isKeyDown u. a. */
       if (ctx.thisVal && ctx.thisVal.t === 'ref' && ctx.thisVal.obj && ctx.thisVal.obj.g) {
         return gfxMethodCall(ctx.thisVal, name, args, ctx, e.line);
       }
-      throw rt(ctx, e.line, 'Die Methode ' + name + ' mit ' + args.length + ' Parameter(n) ist nicht bekannt.', 'Pruefe Schreibweise und Gross-/Kleinschreibung, die Parameterzahl und ob die Methode ueberhaupt existiert.');
+      throw rt(ctx, e.line, 'Die Methode ' + name + ' mit ' + args.length + ' Parameter(n) ist nicht bekannt.', 'Prüfe Schreibweise und Groß-/Kleinschreibung, die Parameterzahl und ob die Methode überhaupt existiert.');
     }
 
     var target = e.target;
@@ -2164,7 +2164,7 @@
         if (sm.m.isStatic) { return invokeMethod(sm.cls, sm.m, null, args, ctx.vm); }
         throw rt(ctx, e.line, 'Die Methode ' + name + ' ist nicht static und braucht ein Objekt von ' + scls.name + '.', 'Erzeuge zuerst ein Objekt: ' + scls.name + ' obj = new ' + scls.name + '(...);');
       }
-      throw rt(ctx, e.line, 'Die Klasse ' + target.v + ' hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Pruefe Schreibweise und Parameterzahl.');
+      throw rt(ctx, e.line, 'Die Klasse ' + target.v + ' hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Prüfe Schreibweise und Parameterzahl.');
     }
 
     /* Builtins */
@@ -2181,7 +2181,7 @@
       if (!ctx.cls || !ctx.cls.parent || !RUN_CLASS_MAP[ctx.cls.parent]) { throw rt(ctx, e.line, 'super.methode() geht nur, wenn die Klasse extends hat.', ''); }
       var supCls = RUN_CLASS_MAP[ctx.cls.parent];
       var supm = findMethod(supCls, name, args.length);
-      if (!supm) { throw rt(ctx, e.line, 'Die Oberklasse ' + supCls.name + ' hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Pruefe Schreibweise und Parameterzahl.'); }
+      if (!supm) { throw rt(ctx, e.line, 'Die Oberklasse ' + supCls.name + ' hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Prüfe Schreibweise und Parameterzahl.'); }
       return invokeMethod(supm.cls, supm.m, ctx.thisVal, args, ctx.vm);
     }
 
@@ -2190,11 +2190,11 @@
     if (recv.t === 'String') { return stringCall(recv, name, args, ctx, e.line); }
     if (recv.t === 'array') {
       if (name === 'length' && args.length === 0) { return mkInt(recv.arr.length); }
-      throw rt(ctx, e.line, 'Arrays haben keine Methode ' + name + '.', 'Die Laenge bekommt man mit array.length (ohne Klammern).');
+      throw rt(ctx, e.line, 'Arrays haben keine Methode ' + name + '.', 'Die Länge bekommt man mit array.length (ohne Klammern).');
     }
-    if (recv.t === 'null') { throw rt(ctx, e.line, 'NullPointerException: Der Aufruf ' + name + '(...) laeuft auf null.', 'Das Objekt wurde vermutlich noch nicht mit new erzeugt. Pruefe auch Rueckgaben anderer Methoden.'); }
+    if (recv.t === 'null') { throw rt(ctx, e.line, 'NullPointerException: Der Aufruf ' + name + '(...) läuft auf null.', 'Das Objekt wurde vermutlich noch nicht mit new erzeugt. Prüfe auch Rückgaben anderer Methoden.'); }
     if (recv.t !== 'ref') { throw rt(ctx, e.line, 'Vor .' + name + '(...) steht kein Objekt.', ''); }
-    /* Grafik-Objekte (auch eigene Unterklassen): eigene Ueberschreibungen
+    /* Grafik-Objekte (auch eigene Unterklassen): eigene Überschreibungen
      * gewinnen, danach kommt die eingebaute Grafik-API. */
     if (recv.obj && recv.obj.g) {
       var gUser = RUN_CLASS_MAP[recv.cls];
@@ -2205,7 +2205,7 @@
     var objCls = RUN_CLASS_MAP[recv.cls];
     var vm0 = findMethod(objCls, name, args.length);
     if (!vm0) {
-      throw rt(ctx, e.line, 'Die Klasse ' + recv.cls + ' hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Pruefe Schreibweise und Gross-/Kleinschreibung, die Parameterzahl und ob die Methode existiert.');
+      throw rt(ctx, e.line, 'Die Klasse ' + recv.cls + ' hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Prüfe Schreibweise und Groß-/Kleinschreibung, die Parameterzahl und ob die Methode existiert.');
     }
     return invokeMethod(vm0.cls, vm0.m, recv, args, ctx.vm);
   }
@@ -2213,7 +2213,7 @@
   /* ===== System / Math / Integer / Double / String ===== */
   function systemCall(stream, fname, args, ctx, line) {
     if (fname !== 'println' && fname !== 'print') {
-      throw rt(ctx, line, 'System.' + stream + '.' + fname + ' ist nicht unterstuetzt.', 'Nutze System.out.println(...), System.out.print(...), System.err.println(...) oder System.err.print(...).');
+      throw rt(ctx, line, 'System.' + stream + '.' + fname + ' ist nicht unterstützt.', 'Nutze System.out.println(...), System.out.print(...), System.err.println(...) oder System.err.print(...).');
     }
     var text = '';
     if (args.length === 1) { text = javaStr(args[0], ctx, line); }
@@ -2248,7 +2248,7 @@
     if (name === 'ceil' && vals.length === 1) { return mkDbl(Math.ceil(vals[0])); }
     if (name === 'round' && vals.length === 1) { return mkInt(Math.round(vals[0])); }
     if (name === 'random' && vals.length === 0) { return mkDbl(Math.random()); }
-    throw rt(ctx, line, 'Math.' + name + ' wird nicht unterstuetzt (oder falsche Parameterzahl).', 'Verfuegbar: abs, max, min, pow, sqrt, floor, ceil, round, random, PI, E.');
+    throw rt(ctx, line, 'Math.' + name + ' wird nicht unterstützt (oder falsche Parameterzahl).', 'Verfügbar: abs, max, min, pow, sqrt, floor, ceil, round, random, PI, E.');
   }
 
   function integerCall(name, args, ctx, line) {
@@ -2267,7 +2267,7 @@
     }
     if (name === 'MAX_VALUE') { return mkInt(2147483647); }
     if (name === 'MIN_VALUE') { return mkInt(-2147483648); }
-    throw rt(ctx, line, 'Integer.' + name + ' wird nicht unterstuetzt.', 'Verfuegbar: parseInt, toString, MAX_VALUE, MIN_VALUE.');
+    throw rt(ctx, line, 'Integer.' + name + ' wird nicht unterstützt.', 'Verfügbar: parseInt, toString, MAX_VALUE, MIN_VALUE.');
   }
 
   function doubleCall(name, args, ctx, line) {
@@ -2280,16 +2280,16 @@
       }
       return mkDbl(parseFloat(args[0].v));
     }
-    throw rt(ctx, line, 'Double.' + name + ' wird nicht unterstuetzt.', 'Verfuegbar: parseDouble.');
+    throw rt(ctx, line, 'Double.' + name + ' wird nicht unterstützt.', 'Verfügbar: parseDouble.');
   }
 
   function stringStaticCall(name, args, ctx, line) {
     if (name === 'valueOf' && args.length === 1) { return mkStr(javaStr(args[0], ctx, line)); }
-    throw rt(ctx, line, 'String.' + name + ' wird nicht unterstuetzt.', 'Verfuegbar: String.valueOf(...).');
+    throw rt(ctx, line, 'String.' + name + ' wird nicht unterstützt.', 'Verfügbar: String.valueOf(...).');
   }
 
   /* ===== Datenbank: eingebaute Mini-SQL-Datenbank (im Speicher, pro Lauf neu) =====
-   * Fuer Schuelerinnen und Schueler: Tabellen anlegen, befuellen und abfragen,
+   * Für Schülerinnen und Schüler: Tabellen anlegen, befüllen und abfragen,
    * ganz ohne Installation. SQL-Kenntnisse aus der SQL-Werkstatt lassen sich
    * so direkt im Java-Programm nutzen.
    */
@@ -2353,7 +2353,7 @@
     }
     var alle = [];
     for (i = 0; i < table.cols.length; i++) { alle.push(table.cols[i].name); }
-    throw rt(ctx, line, 'Die Spalte ' + name + ' gibt es in der Tabelle ' + table.name + ' nicht.', 'Verfuegbare Spalten: ' + alle.join(', '));
+    throw rt(ctx, line, 'Die Spalte ' + name + ' gibt es in der Tabelle ' + table.name + ' nicht.', 'Verfügbare Spalten: ' + alle.join(', '));
   }
 
   /* Teilt an Kommas auf oberster Ebene, ignoriert Kommas in 'Texten' und Klammern. */
@@ -2384,7 +2384,7 @@
     return parts;
   }
 
-  /* Sucht ein Schluesselwort (WHERE, ORDER BY, LIMIT) ausserhalb von 'Texten'
+  /* Sucht ein Schlüsselwort (WHERE, ORDER BY, LIMIT) ausserhalb von 'Texten'
    * und liefert [davor, danach] oder null. */
   function dbCutWord(s, word) {
     var w = word.toLowerCase();
@@ -2410,7 +2410,7 @@
     return null;
   }
 
-  /* String-Literal: '...' mit verdoppeltem Anfuehrungszeichen '' als Escape. */
+  /* String-Literal: '...' mit verdoppeltem Anführungszeichen '' als Escape. */
   function dbParseString(raw) {
     var out = '';
     var i;
@@ -2434,19 +2434,19 @@
     if (im && im[0] === s) { return { t: 'int', v: parseInt(s, 10) }; }
     var dm = /^-?[0-9]+\.[0-9]+/.exec(s);
     if (dm && dm[0] === s) { return { t: 'double', v: parseFloat(s) }; }
-    throw rt(ctx, line, 'Der Wert ' + dbStrip(raw) + ' ist kein gueltiger SQL-Wert.', 'Text gehoert in einfache Anfuehrungszeichen: ' + "'Anna'" + '. Zahlen schreibt man ohne: 12 oder 1.5');
+    throw rt(ctx, line, 'Der Wert ' + dbStrip(raw) + ' ist kein gültiger SQL-Wert.', 'Text gehört in einfache Anführungszeichen: ' + "'Anna'" + '. Zahlen schreibt man ohne: 12 oder 1.5');
   }
 
   var DB_WHERE_TOK = /'(?:[^']|'')*'|<=|>=|<>|!=|[A-Za-z_][A-Za-z0-9_]*|[0-9]+(?:\.[0-9]+)?|[=<>]/g;
 
-  /* WHERE in Gruppen zerlegen: OR trennt Gruppen, AND verknuepft innerhalb. */
+  /* WHERE in Gruppen zerlegen: OR trennt Gruppen, AND verknüpft innerhalb. */
   function dbParseWhere(cond, table, ctx, line) {
     var toks = [];
     var m;
     DB_WHERE_TOK.lastIndex = 0;
     while ((m = DB_WHERE_TOK.exec(cond))) { toks.push(m[0]); }
     if (toks.length === 0) {
-      throw rt(ctx, line, 'Die WHERE-Bedingung ist unvollstaendig.', 'z. B. WHERE name = ' + "'Anna'" + ' oder WHERE punkte > 10');
+      throw rt(ctx, line, 'Die WHERE-Bedingung ist unvollständig.', 'z. B. WHERE name = ' + "'Anna'" + ' oder WHERE punkte > 10');
     }
     var groups = [[]];
     var i = 0;
@@ -2465,7 +2465,7 @@
         continue;
       }
       if (i + 2 >= toks.length) {
-        throw rt(ctx, line, 'Der Vergleich bei WHERE ist unvollstaendig.', 'Jeder Vergleich hat die Form spalte OP wert, z. B. punkte > 10.');
+        throw rt(ctx, line, 'Der Vergleich bei WHERE ist unvollständig.', 'Jeder Vergleich hat die Form spalte OP wert, z. B. punkte > 10.');
       }
       var op = toks[i + 1].toUpperCase();
       if (op !== '=' && op !== '!=' && op !== '<>' && op !== '<' && op !== '>' && op !== '<=' && op !== '>=' && op !== 'LIKE') {
@@ -2480,7 +2480,7 @@
       i += 3;
     }
     if (groups[groups.length - 1].length === 0) {
-      throw rt(ctx, line, 'Der WHERE-Teil ist unvollstaendig.', 'z. B. WHERE name = ' + "'Anna'");
+      throw rt(ctx, line, 'Der WHERE-Teil ist unvollständig.', 'z. B. WHERE name = ' + "'Anna'");
     }
     return groups;
   }
@@ -2545,7 +2545,7 @@
     return false;
   }
 
-  /* Ausfuehren von CREATE TABLE / INSERT / UPDATE / DELETE / DROP TABLE. */
+  /* Ausführen von CREATE TABLE / INSERT / UPDATE / DELETE / DROP TABLE. */
   function dbExec(sqlText, ctx, line) {
     var sql = dbStrip(String(sqlText).replace(/^\s+/, ''));
     var km = /^\s*([A-Za-z]+)/.exec(sql);
@@ -2562,7 +2562,7 @@
         throw rt(ctx, line, 'CREATE TABLE verstehe ich nicht.', 'Form: CREATE TABLE name (spalte TYP, ...) – z. B. CREATE TABLE schueler (name TEXT, punkte INT)');
       }
       if (dbTables()[m[1].toLowerCase()]) {
-        throw rt(ctx, line, 'Die Tabelle ' + m[1] + ' existiert bereits.', 'Waehle einen anderen Namen oder loesche sie vorher: DROP TABLE ' + m[1]);
+        throw rt(ctx, line, 'Die Tabelle ' + m[1] + ' existiert bereits.', 'Wähle einen anderen Namen oder lösche sie vorher: DROP TABLE ' + m[1]);
       }
       var colParts = dbSplitTop(m[2]);
       var cols = [];
@@ -2593,7 +2593,7 @@
     if (kw === 'INSERT') {
       m = dbFull(/^\s*INSERT\s+INTO\s+([A-Za-z_][A-Za-z0-9_]*)\s*(\([^)]*\)\s*)?VALUES\s+([\s\S]*)/i, sql);
       if (!m) {
-        throw rt(ctx, line, 'INSERT verstehe ich nicht.', 'Form: INSERT INTO tabelle VALUES (wert, ...) – Text in einfachen Anfuehrungszeichen.');
+        throw rt(ctx, line, 'INSERT verstehe ich nicht.', 'Form: INSERT INTO tabelle VALUES (wert, ...) – Text in einfachen Anführungszeichen.');
       }
       table = dbFindTable(m[1], ctx, line);
       var targetCols = null;
@@ -2609,7 +2609,7 @@
         var tp = tupParts[ti].trim();
         var tm = /^\(([\s\S]*)\)/.exec(tp);
         if (!tm) {
-          throw rt(ctx, line, 'Werte bei INSERT muessen in Klammern stehen.', 'z. B. INSERT INTO ' + table.name + ' VALUES (' + "'Anna'" + ', 12)');
+          throw rt(ctx, line, 'Werte bei INSERT müssen in Klammern stehen.', 'z. B. INSERT INTO ' + table.name + ' VALUES (' + "'Anna'" + ', 12)');
         }
         var lits = dbSplitTop(tm[1]);
         var useCols = targetCols;
@@ -2621,7 +2621,7 @@
           for (i = 0; i < table.cols.length; i++) { useCols.push(i); }
         }
         if (lits.length !== useCols.length) {
-          throw rt(ctx, line, 'INSERT hat ' + lits.length + ' Wert(e), erwartet werden aber ' + useCols.length + '.', 'Anzahl der Werte und Spalten muss uebereinstimmen.');
+          throw rt(ctx, line, 'INSERT hat ' + lits.length + ' Wert(e), erwartet werden aber ' + useCols.length + '.', 'Anzahl der Werte und Spalten muss übereinstimmen.');
         }
         var row = [];
         for (i = 0; i < table.cols.length; i++) { row.push({ t: 'null', v: null }); }
@@ -2634,11 +2634,11 @@
           if (kind === 'int') {
             if (val.t === 'double') { val = { t: 'int', v: Math.trunc(val.v) }; }
             else if (val.t === 'String') {
-              throw rt(ctx, line, 'In die Spalte ' + colName + ' (INT) gehoert eine Zahl ohne Anfuehrungszeichen.', 'z. B. 12 statt ' + "'" + val.v + "'");
+              throw rt(ctx, line, 'In die Spalte ' + colName + ' (INT) gehört eine Zahl ohne Anführungszeichen.', 'z. B. 12 statt ' + "'" + val.v + "'");
             }
           } else if (kind === 'text') {
             if (val.t === 'int' || val.t === 'double') {
-              throw rt(ctx, line, 'In die Spalte ' + colName + ' (TEXT) gehoert ein Text in einfachen Anfuehrungszeichen.', "z. B. 'Anna' statt " + val.v);
+              throw rt(ctx, line, 'In die Spalte ' + colName + ' (TEXT) gehört ein Text in einfachen Anführungszeichen.', "z. B. 'Anna' statt " + val.v);
             }
           }
           row[colIdx] = val;
@@ -2702,9 +2702,9 @@
       return;
     }
     if (kw === 'SELECT') {
-      throw rt(ctx, line, 'SELECT gehoert in Datenbank.abfrage(...), nicht in ausfuehren(...).', 'z. B. System.out.println(Datenbank.abfrage("SELECT * FROM tabelle"));');
+      throw rt(ctx, line, 'SELECT gehört in Datenbank.abfrage(...), nicht in ausfuehren(...).', 'z. B. System.out.println(Datenbank.abfrage("SELECT * FROM tabelle"));');
     }
-    throw rt(ctx, line, 'Den SQL-Befehl ' + kw + ' unterstuetzt die Mini-Datenbank nicht.', 'Verfuegbar: CREATE TABLE, INSERT INTO, UPDATE, DELETE FROM, DROP TABLE, SELECT.');
+    throw rt(ctx, line, 'Den SQL-Befehl ' + kw + ' unterstützt die Mini-Datenbank nicht.', 'Verfügbar: CREATE TABLE, INSERT INTO, UPDATE, DELETE FROM, DROP TABLE, SELECT.');
   }
 
   /* SELECT ausfuehren: Spalten, WHERE, ORDER BY, LIMIT, COUNT(*). */
@@ -2757,7 +2757,7 @@
     if (colSpec === '*') {
       for (i = 0; i < table.cols.length; i++) { selCols.push({ name: table.cols[i].name, idx: i }); }
       if (table.cols.length === 0) {
-        throw rt(ctx, line, 'Die Tabelle ' + table.name + ' hat keine Spalten.', 'Pruefe das CREATE TABLE.');
+        throw rt(ctx, line, 'Die Tabelle ' + table.name + ' hat keine Spalten.', 'Prüfe das CREATE TABLE.');
       }
     } else {
       var namesList = dbSplitTop(colSpec);
@@ -2877,7 +2877,7 @@
       }
       return mkStr(alle.length === 0 ? '(noch keine Tabellen)' : alle.join(', '));
     }
-    throw rt(ctx, line, 'Datenbank.' + name + ' wird nicht unterstuetzt.', 'Verfuegbar: ausfuehren(sql), abfrage(sql), anzahl(sql), wert(sql), tabellen().');
+    throw rt(ctx, line, 'Datenbank.' + name + ' wird nicht unterstützt.', 'Verfügbar: ausfuehren(sql), abfrage(sql), anzahl(sql), wert(sql), tabellen().');
   }
 
   function stringCall(recv, name, args, ctx, line) {
@@ -2893,18 +2893,18 @@
     if (name === 'length' && args.length === 0) { return mkInt(s.length); }
     if (name === 'charAt' && args.length === 1) {
       var idx = wantIdx(0, 'charAt');
-      if (idx < 0 || idx >= s.length) { throw rt(ctx, line, 'StringIndexOutOfBoundsException: charAt(' + idx + '), aber der String hat ' + s.length + ' Zeichen.', 'Gueltige Indizes: 0 bis ' + (s.length - 1) + '.'); }
+      if (idx < 0 || idx >= s.length) { throw rt(ctx, line, 'StringIndexOutOfBoundsException: charAt(' + idx + '), aber der String hat ' + s.length + ' Zeichen.', 'Gültige Indizes: 0 bis ' + (s.length - 1) + '.'); }
       return mkChar(s.charCodeAt(idx));
     }
     if (name === 'substring' && args.length === 1) {
       var b = wantIdx(0, 'substring');
-      if (b < 0 || b > s.length) { throw rt(ctx, line, 'StringIndexOutOfBoundsException: substring(' + b + ') bei Laenge ' + s.length + '.', 'Der Start-Index muss zwischen 0 und ' + s.length + ' liegen.'); }
+      if (b < 0 || b > s.length) { throw rt(ctx, line, 'StringIndexOutOfBoundsException: substring(' + b + ') bei Länge ' + s.length + '.', 'Der Start-Index muss zwischen 0 und ' + s.length + ' liegen.'); }
       return mkStr(s.substring(b));
     }
     if (name === 'substring' && args.length === 2) {
       var b2 = wantIdx(0, 'substring');
       var e2 = wantIdx(1, 'substring');
-      if (b2 < 0 || e2 > s.length || b2 > e2) { throw rt(ctx, line, 'StringIndexOutOfBoundsException: substring(' + b2 + ', ' + e2 + ') bei Laenge ' + s.length + '.', 'Es gilt 0 <= Anfang <= Ende <= ' + s.length + '.'); }
+      if (b2 < 0 || e2 > s.length || b2 > e2) { throw rt(ctx, line, 'StringIndexOutOfBoundsException: substring(' + b2 + ', ' + e2 + ') bei Länge ' + s.length + '.', 'Es gilt 0 <= Anfang <= Ende <= ' + s.length + '.'); }
       return mkStr(s.substring(b2, e2));
     }
     if (name === 'indexOf' && args.length >= 1) {
@@ -2934,13 +2934,13 @@
       if (s === o) { return mkInt(0); }
       return mkInt(s < o ? -1 : 1);
     }
-    throw rt(ctx, line, 'Die String-Methode ' + name + ' (mit ' + args.length + ' Parametern) wird nicht unterstuetzt.', 'Verfuegbar: length, charAt, substring, indexOf, equals, equalsIgnoreCase, contains, startsWith, endsWith, toUpperCase, toLowerCase, trim, replace, isEmpty, compareTo.');
+    throw rt(ctx, line, 'Die String-Methode ' + name + ' (mit ' + args.length + ' Parametern) wird nicht unterstützt.', 'Verfügbar: length, charAt, substring, indexOf, equals, equalsIgnoreCase, contains, startsWith, endsWith, toUpperCase, toLowerCase, trim, replace, isEmpty, compareTo.');
   }
 
   /* ================= Grafik-Fenster (API angelehnt an learnj / OnlineIDE) =================
-   * Ein eigenes Fenster mit XY-Feld, in dem Schuelerinnen und Schueler Figuren
+   * Ein eigenes Fenster mit XY-Feld, in dem Schülerinnen und Schüler Figuren
    * platzieren, bewegen, drehen, animieren und auf Maus und Tastatur reagieren
-   * lassen koennen. Alles laeuft im Browser auf einem Canvas - kein Server.
+   * lassen können. Alles läuft im Browser auf einem Canvas - kein Server.
    * Klassen: World, Color, Alignment, Circle, Ellipse, Rectangle, RoundedRectangle,
    * Text, Triangle, Line, Polygon, Bitmap, Turtle, Group, Actor sowie die
    * GUI-Elemente Button, Textfield, Checkbox, Radiobutton.
@@ -2978,7 +2978,7 @@
   for (gsi = 0; gsi < GS.length; gsi++) { GFX_SHAPE_KINDS[GS[gsi]] = 1; }
   for (gsi = 0; gsi < GFILLED.length; gsi++) { GFX_FILLED_KINDS[GFILLED[gsi]] = 1; }
 
-  /* Voreinstellungen (per Shape.setDefaultVisibility / FilledShape.setDefault... aenderbar) */
+  /* Voreinstellungen (per Shape.setDefaultVisibility / FilledShape.setDefault... änderbar) */
   var GFX_DEFAULTS = { visible: true, fill: '#0000ff', border: null, borderWidth: 1 };
   var GFX_KEYS = Object.create(null);
   var GFX_ONERROR = null;
@@ -3000,7 +3000,7 @@
   function gfxStr(args, i, what, ctx, line) {
     var v = args[i];
     if (!v || v.t !== 'String') {
-      throw rt(ctx, line, what + ' braucht einen String an Position ' + (i + 1) + '.', 'Setze den Text in Anfuehrungszeichen, z. B. ' + what + '("Hallo").');
+      throw rt(ctx, line, what + ' braucht einen String an Position ' + (i + 1) + '.', 'Setze den Text in Anführungszeichen, z. B. ' + what + '("Hallo").');
     }
     return v.v;
   }
@@ -3019,11 +3019,11 @@
   COLOR_TABLE.black = '#000000'; COLOR_TABLE.gray = '#808080'; COLOR_TABLE.grey = '#808080';
   COLOR_TABLE.lightGray = '#d3d3d3'; COLOR_TABLE.darkGray = '#404040';
   COLOR_TABLE.brown = '#a52a2a'; COLOR_TABLE.purple = '#800080';
-  /* Kleingeschriebene Alias-Keys: Lookups laufen ueber den klein geschriebenen Namen */
+  /* Kleingeschriebene Alias-Keys: Lookups laufen über den klein geschriebenen Namen */
   COLOR_TABLE.lightgray = '#d3d3d3'; COLOR_TABLE.darkgray = '#404040';
 
   function colorToRgb(v, ctx, line) {
-    /* Liefert [r, g, b, a] oder null (bei null-Uebergabe: nichts fuellen). */
+    /* Liefert [r, g, b, a] oder null (bei null-Übergabe: nichts füllen). */
     if (!v || v.t === 'null') { return null; }
     if (v.t === 'String') {
       var s = v.v;
@@ -3035,7 +3035,7 @@
         if (hx.length === 6) {
           return [parseInt(hx.slice(0, 2), 16), parseInt(hx.slice(2, 4), 16), parseInt(hx.slice(4, 6), 16), 1];
         }
-        throw rt(ctx, line, 'Die Farbe ' + s + ' ist keine gueltige Hex-Zahl.', 'Schreibe sie als #rrggbb, z. B. "#ff8000".');
+        throw rt(ctx, line, 'Die Farbe ' + s + ' ist keine gültige Hex-Zahl.', 'Schreibe sie als #rrggbb, z. B. "#ff8000".');
       }
       var low = s.toLowerCase();
       if (low.slice(0, 4) === 'rgb(' && s.slice(-1) === ')') {
@@ -3055,7 +3055,7 @@
     if (v.t === 'ref' && v.obj && v.obj.g && v.obj.g.kind === 'color') {
       return [v.obj.g.r, v.obj.g.g2, v.obj.g.b, v.obj.g.a];
     }
-    throw rt(ctx, line, 'Diese Farbe wird nicht unterstuetzt.', 'Erlaubt sind Color-Konstanten (Color.red), "#ff8000", rgb(255,128,0), rgba(...,0.3) oder new Color(255, 128, 0).');
+    throw rt(ctx, line, 'Diese Farbe wird nicht unterstützt.', 'Erlaubt sind Color-Konstanten (Color.red), "#ff8000", rgb(255,128,0), rgba(...,0.3) oder new Color(255, 128, 0).');
   }
   function rgbCss(rgbv) {
     if (!rgbv) { return null; }
@@ -3071,11 +3071,11 @@
     if (clsName === 'Color') {
       var low = String(name).toLowerCase();
       if (COLOR_TABLE[low]) { return mkColorRef(colorToRgb(mkStr(COLOR_TABLE[low]), ctx, line)); }
-      throw rt(ctx, line, 'Color.' + name + ' gibt es nicht.', 'Verfuegbare Farben: red, green, blue, yellow, orange, pink, magenta, cyan, white, black, gray, lightGray, darkGray, brown, purple.');
+      throw rt(ctx, line, 'Color.' + name + ' gibt es nicht.', 'Verfügbare Farben: red, green, blue, yellow, orange, pink, magenta, cyan, white, black, gray, lightGray, darkGray, brown, purple.');
     }
     if (clsName === 'Alignment') {
       if (name === 'left' || name === 'center' || name === 'right') { return mkStr(name); }
-      throw rt(ctx, line, 'Alignment.' + name + ' gibt es nicht.', 'Verfuegbare Werte: Alignment.left, Alignment.center, Alignment.right.');
+      throw rt(ctx, line, 'Alignment.' + name + ' gibt es nicht.', 'Verfügbare Werte: Alignment.left, Alignment.center, Alignment.right.');
     }
     return null;
   }
@@ -3100,7 +3100,7 @@
       GFX_DEFAULTS.borderWidth = gfxNum(args, 0, 'setDefaultBorderWidth', ctx, line);
       return VOIDV;
     }
-    throw rt(ctx, line, clsName + '.' + name + ' gibt es nicht.', 'Verfuegbar: Shape.setDefaultVisibility(...), FilledShape.setDefaultFillColor(...), FilledShape.setDefaultBorderColor(...), FilledShape.setDefaultBorderWidth(...).');
+    throw rt(ctx, line, clsName + '.' + name + ' gibt es nicht.', 'Verfügbar: Shape.setDefaultVisibility(...), FilledShape.setDefaultFillColor(...), FilledShape.setDefaultBorderColor(...), FilledShape.setDefaultBorderWidth(...).');
   }
 
   /* ---------- Fenster (DOM), einmalig angelegt, wiederverwendet ---------- */
@@ -3126,7 +3126,7 @@
     var close = document.createElement('button');
     close.className = 'gfx-close';
     close.type = 'button';
-    close.setAttribute('title', 'Grafik-Fenster schliessen');
+    close.setAttribute('title', 'Grafik-Fenster schließen');
     close.textContent = String.fromCharCode(215);
     title.appendChild(label);
     title.appendChild(close);
@@ -3274,7 +3274,7 @@
     } else if (kind === 'world') {
       g.w = args.length > 0 ? gfxNum(args, 0, 'World', ctx, line) : 800;
       g.h = args.length > 1 ? gfxNum(args, 1, 'World', ctx, line) : 600;
-      if (g.w <= 0 || g.h <= 0) { throw rt(ctx, line, 'Die Groesse des Grafik-Fensters muss positiv sein.', 'z. B. new World(800, 600)'); }
+      if (g.w <= 0 || g.h <= 0) { throw rt(ctx, line, 'Die Größe des Grafik-Fensters muss positiv sein.', 'z. B. new World(800, 600)'); }
       g.bg = '#ffffff';
       g.cursor = 'default';
     }
@@ -3705,7 +3705,7 @@
     var g = recv.obj.g;
     var vm = ctx.vm;
     if (!g) { throw rt(ctx, line, 'Die Klasse ' + recv.cls + ' hat keine Methode ' + name + '.', ''); }
-    if (g.dead) { throw rt(ctx, line, 'Dieses Objekt wurde schon mit destroy() zerstoert.', 'Lege ein neues Objekt an, z. B. mit new.'); }
+    if (g.dead) { throw rt(ctx, line, 'Dieses Objekt wurde schon mit destroy() zerstört.', 'Lege ein neues Objekt an, z. B. mit new.'); }
 
     if (g.kind === 'world') {
       if (name === 'getWidth' && args.length === 0) { return mkDbl(g.w); }
@@ -3722,7 +3722,7 @@
         if (st && st.canvas && st.canvas.style) { st.canvas.style.cursor = g.cursor; }
         return VOIDV;
       }
-      throw rt(ctx, line, 'World hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Verfuegbar: getWidth, getHeight, setBackgroundColor, setCursor.');
+      throw rt(ctx, line, 'World hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Verfügbar: getWidth, getHeight, setBackgroundColor, setCursor.');
     }
     if (g.kind === 'group') {
       if (name === 'add' && args.length === 1) { gfxGroupAdd(g, args[0], ctx, line); gfxRedraw(vm); return VOIDV; }
@@ -3788,7 +3788,7 @@
       if (name === 'getWorld' && args.length === 0) { return vm.gfx.worldRef; }
       if (name === 'setVisible' && args.length === 1) { g.visible = gfxBool(args, 0, 'setVisible', ctx, line); gfxRedraw(vm); return VOIDV; }
       if (name === 'setAlpha' && args.length === 1) { g.alpha = gfxNum(args, 0, 'setAlpha', ctx, line); gfxRedraw(vm); return VOIDV; }
-      throw rt(ctx, line, 'Group hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Verfuegbar: add, move, rotate, scale, setVisible, setAlpha, getCollidingShapes, getCollisionPairs, destroy, getWorld.');
+      throw rt(ctx, line, 'Group hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Verfügbar: add, move, rotate, scale, setVisible, setAlpha, getCollidingShapes, getCollisionPairs, destroy, getWorld.');
     }
 
     if (GFX_SHAPE_KINDS[g.kind]) {
@@ -3936,7 +3936,7 @@
         if (name === 'setColor' && args.length === 3) {
           var bx = Math.floor(gfxNum(args, 0, 'setColor', ctx, line));
           var by = Math.floor(gfxNum(args, 1, 'setColor', ctx, line));
-          if (bx < 0 || by < 0 || bx >= g.cols || by >= g.rows) { throw rt(ctx, line, 'setColor: Der Punkt (' + bx + ', ' + by + ') liegt ausserhalb der Bitmap (' + g.cols + ' x ' + g.rows + ').', 'Gueltig sind x: 0..' + (g.cols - 1) + ' und y: 0..' + (g.rows - 1) + '.'); }
+          if (bx < 0 || by < 0 || bx >= g.cols || by >= g.rows) { throw rt(ctx, line, 'setColor: Der Punkt (' + bx + ', ' + by + ') liegt ausserhalb der Bitmap (' + g.cols + ' x ' + g.rows + ').', 'Gültig sind x: 0..' + (g.cols - 1) + ' und y: 0..' + (g.rows - 1) + '.'); }
           g.cells[by * g.cols + bx] = rgbCss(colorToRgb(args[2], ctx, line));
           gfxRedraw(vm);
           return VOIDV;
@@ -3971,7 +3971,7 @@
         if (name === 'getX' && args.length === 0) { return mkDbl(g.x); }
         if (name === 'getY' && args.length === 0) { return mkDbl(g.y); }
       }
-      /* Positionen abfragen (praaktisch fuer Spiele) */
+      /* Positionen abfragen (praaktisch für Spiele) */
       if (name === 'getX' && args.length === 0) { return mkDbl(g.x); }
       if (name === 'getY' && args.length === 0) { return mkDbl(g.y); }
     }
@@ -4027,7 +4027,7 @@
     }
   }
   function gfxScaleShape(g, fac, pivot) {
-    if (fac <= 0) { throw rt(null, 0, 'Der Streckungsfaktor muss groesser als 0 sein.', ''); }
+    if (fac <= 0) { throw rt(null, 0, 'Der Streckungsfaktor muss größer als 0 sein.', ''); }
     g.scaleF = (g.scaleF || 1) * fac;
     if (pivot) {
       var c = gfxShapeCenter(g);
@@ -4037,7 +4037,7 @@
     }
   }
 
-  /* Aufraeumen zwischen zwei Laeufen */
+  /* Aufräumen zwischen zwei Läufen */
   function gfxResetRun() {
     gfxStopLoop();
     if (RUN_VM && RUN_VM.gfx) {
@@ -4068,7 +4068,7 @@
     if (g.cells) { o.cellsCount = g.cells.length; }
     return o;
   }
-  /* Momentaufnahme aller Figuren (fuer Tests und Einzelschritt-Anzeige) */
+  /* Momentaufnahme aller Figuren (für Tests und Einzelschritt-Anzeige) */
   function gfxSnapshot() {
     var out = [];
     if (!RUN_VM || !RUN_VM.gfx) { return out; }
@@ -4082,9 +4082,9 @@
     while (n > 0 && (s.charAt(n - 1) === ' ' || s.charAt(n - 1) === String.fromCharCode(9))) { n--; }
     return s.slice(0, n);
   }
-  /* ---------- Automatisches Formatieren (Einruecken/Ausruecken) ----------
-   * Zustandsmaschine ueber Strings, Zeichen und Kommentare: Innerhalb
-   * von "..." und '...' sowie hinter // und in /* ... * / Klammern zaehlen nicht. */
+  /* ---------- Automatisches Formatieren (Einrücken/Ausrücken) ----------
+   * Zustandsmaschine über Strings, Zeichen und Kommentare: Innerhalb
+   * von "..." und '...' sowie hinter // und in /* ... * / Klammern zählen nicht. */
   function indentOf(n) {
     var s = '';
     var i2;
@@ -4106,7 +4106,7 @@
         continue;
       }
       var t = line.replace(/^[ \t]+/, '');
-      /* fuehrende schliessende Klammern gehoeren eine Ebene tiefer */
+      /* führende schließende Klammern gehören eine Ebene tiefer */
       var leadClose = 0;
       var k = 0;
       while (k < t.length && (t.charAt(k) === '}' || t.charAt(k) === ')')) {
@@ -4114,7 +4114,7 @@
         k++;
       }
       out.push(indentOf(Math.max(0, depth - leadClose)) + t);
-      /* Netto-Klammern zaehlen, Strings/Zeichen/Kommentare auslassen */
+      /* Netto-Klammern zählen, Strings/Zeichen/Kommentare auslassen */
       var inStr = false, inChr = false, inLineC = false, inBlk = false;
       var j2;
       for (j2 = 0; j2 < t.length; j2++) {
@@ -4154,7 +4154,7 @@
     var fileRows = document.querySelectorAll('.ide-file[data-file-row]');
     var i;
     /* Datei im Editor anzeigen: das hidden-Attribut steuert die Sichtbarkeit der Panes,
-     * active nur fuer die Optik von Tab und Zeile. */
+     * active nur für die Optik von Tab und Zeile. */
     function selectFile(id) {
       var j;
       for (j = 0; j < tabs.length; j++) { tabs[j].classList.remove('active'); }
@@ -4218,7 +4218,7 @@
       card.className = 'err-card' + (er.kind === 'stderr' ? ' err-stderr' : '');
       var head = document.createElement('div');
       head.className = 'err-head';
-      var kindLabel = er.kind === 'stderr' ? 'System.err' : (er.kind === 'syntax' ? 'Syntaxfehler' : (er.kind === 'compile' ? 'Uebersetzungsproblem' : 'Laufzeitfehler'));
+      var kindLabel = er.kind === 'stderr' ? 'System.err' : (er.kind === 'syntax' ? 'Syntaxfehler' : (er.kind === 'compile' ? 'Übersetzungsproblem' : 'Laufzeitfehler'));
       var where = er.file ? (er.file + (er.line ? ':' + er.line : '')) : '';
       head.textContent = kindLabel + (where ? ' (' + where + ')' : '');
       card.appendChild(head);
@@ -4246,7 +4246,7 @@
     }
 
     /* ---------- Zeilennummern neben dem Editor (Gutter) ----------
-     * Fuer jede Datei ein schmales Feld mit den Nummern der Zeilen. Fehlerzeilen
+     * Für jede Datei ein schmales Feld mit den Nummern der Zeilen. Fehlerzeilen
      * werden rot markiert, die Zeile des Einzelschritts gelb. */
     var stepInfo = document.getElementById('java-step-info');
     var stepBtn = document.getElementById('java-step');
@@ -4322,7 +4322,7 @@
       if (rec && rec.cells[line - 1]) { rec.cells[line - 1].className = 'ln-cell ln-cur'; }
     }
 
-    /* ---------- Editor-Hilfen: Tab, Einruecken, Auto-Einzug ---------- */
+    /* ---------- Editor-Hilfen: Tab, Einrücken, Auto-Einzug ---------- */
     function fireInput(ta) {
       var ev = null;
       if (typeof document !== 'undefined' && document.createEvent) {
@@ -4401,7 +4401,7 @@
     function typeCloseBrace(ta) {
       var s = ta.selectionStart;
       var b = lineBounds(ta, s, ta.selectionEnd);
-      /* Bereits vorhandene schliessende Klammer ueberspringen statt verdoppeln */
+      /* Bereits vorhandene schließende Klammer überspringen statt verdoppeln */
       if (ta.value.charAt(s) === '}') {
         if (ta.setSelectionRange) { ta.setSelectionRange(s + 1, s + 1); }
         return;
@@ -4413,7 +4413,7 @@
         if (before.charAt(q) !== ' ' && before.charAt(q) !== String.fromCharCode(9)) { onlyWs = false; break; }
       }
       if (onlyWs && before.length >= 4) {
-        /* Automatisch gesetzten Einzug (4 Spaces) wieder zuruecknehmen */
+        /* Automatisch gesetzten Einzug (4 Spaces) wieder zurücknehmen */
         var cut = 4;
         setRange(ta, b.text.slice(0, s - cut) + '}' + b.text.slice(ta.selectionEnd), null, null);
         if (ta.setSelectionRange) { ta.setSelectionRange(s - cut + 1, s - cut + 1); }
@@ -4422,10 +4422,10 @@
       insertAt(ta, '}');
     }
 
-    /* ---------- Klammer-Automatik: ( [ { schliessen sich sofort ----------
+    /* ---------- Klammer-Automatik: ( [ { schließen sich sofort ----------
      * Der Cursor steht zwischen dem Paar, damit schneller getippt werden kann.
-     * Eine { am Zeilenende oeffnet gleich einen eingerueckten Block mit
-     * schliessender Klammer darunter - Klammerfehler werden so verhindert. */
+     * Eine { am Zeilenende öffnet gleich einen eingerückten Block mit
+     * schließender Klammer darunter - Klammerfehler werden so verhindert. */
     function wrapSelection(ta, open, close) {
       var s = ta.selectionStart;
       var epos = ta.selectionEnd;
@@ -4450,13 +4450,13 @@
       var afterOnLine = b.text.slice(s, b.le);
       var rest = afterOnLine.replace(/ /g, '').replace(/\t/g, '');
       var trimmed = trimRightWs(before);
-      /* Auswahl, mitten in der Zeile oder leere Zeile: nur paarweise schliessen */
+      /* Auswahl, mitten in der Zeile oder leere Zeile: nur paarweise schließen */
       if (s !== epos || trimmed === '' || rest !== '') {
         wrapSelection(ta, '{', '}');
         return;
       }
-      /* { am Ende einer Zeile oeffnet den Block: Cursor in eine neue Zeile
-       * mit Einzug, die schliessende Klammer steht gleich mit darunter. */
+      /* { am Ende einer Zeile öffnet den Block: Cursor in eine neue Zeile
+       * mit Einzug, die schließende Klammer steht gleich mit darunter. */
       var ind = currentIndent(before);
       var pre = ' ';
       var lastCh = before.charAt(before.length - 1);
@@ -4468,7 +4468,7 @@
     }
     function typeOverClose(ta, close) {
       var s = ta.selectionStart;
-      /* Bereits vorhandene schliessende Klammer ueberspringen statt verdoppeln */
+      /* Bereits vorhandene schließende Klammer überspringen statt verdoppeln */
       if (ta.value.charAt(s) === close) {
         if (ta.setSelectionRange) { ta.setSelectionRange(s + 1, s + 1); }
         return;
@@ -4494,11 +4494,11 @@
     if (fmtBtn) {
       fmtBtn.addEventListener('click', function () {
         var n = formatAllFiles();
-        if (stepInfo) { stepInfo.textContent = n > 0 ? 'Code formatiert (' + n + ' Datei(en) angepasst).' : 'Code war schon sauber eingerueckt.'; }
+        if (stepInfo) { stepInfo.textContent = n > 0 ? 'Code formatiert (' + n + ' Datei(en) angepasst).' : 'Code war schon sauber eingerückt.'; }
       });
     }
 
-    /* ---------- Einzelschritt: Anweisung fuer Anweisung ---------- */
+    /* ---------- Einzelschritt: Anweisung für Anweisung ---------- */
     var stepCount = 0;
     var lastPaused = false;
     function showResult(res) {
@@ -4506,7 +4506,7 @@
       if (consoleEl) {
         if (res.output !== '') { consoleEl.textContent = res.output; }
         else if (res.paused) { consoleEl.textContent = '(bis zu diesem Schritt: noch keine Ausgabe)'; }
-        else if (res.ok && !res.ranMain) { consoleEl.textContent = 'Kein main noetig: Erzeuge dir Objekte in der Objektkonsole (Tab oben).'; }
+        else if (res.ok && !res.ranMain) { consoleEl.textContent = 'Kein main nötig: Erzeuge dir Objekte in der Objektkonsole (Tab oben).'; }
         else if (res.ok) { consoleEl.textContent = '(keine Ausgabe)'; }
         else { consoleEl.textContent = ''; }
       }
@@ -4564,7 +4564,7 @@
     }
     function doStep() {
       clearLineMarks();
-      /* Nach einem kompletten Lauf vorn anfangen, nach einer Pause weiterzaehlen */
+      /* Nach einem kompletten Lauf vorn anfangen, nach einer Pause weiterzählen */
       if (!lastPaused) { stepCount = 0; }
       var res;
       try {
@@ -4575,15 +4575,15 @@
       showResult(res);
       if (!res.ok) {
         gfxStopLoop();
-        if (stepInfo) { stepInfo.textContent = 'Schritt nicht moeglich: Der Code enthaelt Fehler.'; }
+        if (stepInfo) { stepInfo.textContent = 'Schritt nicht möglich: Der Code enthält Fehler.'; }
         return;
       }
       if (res.paused) {
-        if (stepInfo) { stepInfo.textContent = 'Schritt ' + stepCount + ' ausgefuehrt - als Naechstes Zeile ' + res.pauseLine + (res.pauseFile ? ' (' + res.pauseFile + ')' : '') + '. Klick fuer den naechsten Schritt.'; }
+        if (stepInfo) { stepInfo.textContent = 'Schritt ' + stepCount + ' ausgeführt - als Nächstes Zeile ' + res.pauseLine + (res.pauseFile ? ' (' + res.pauseFile + ')' : '') + '. Klick für den nächsten Schritt.'; }
         showPane('out');
         renderClasses();
       } else {
-        if (stepInfo) { stepInfo.textContent = 'Schritt ' + stepCount + ' ausgefuehrt - das Programm ist damit komplett durchgelaufen.'; }
+        if (stepInfo) { stepInfo.textContent = 'Schritt ' + stepCount + ' ausgeführt - das Programm ist damit komplett durchgelaufen.'; }
         afterRun(res);
       }
     }
@@ -4596,7 +4596,7 @@
       } catch (e) { internalError(e); return; }
       stepCount = res.leafSteps || 0;
       showResult(res);
-      if (stepInfo) { stepInfo.textContent = res.ok ? 'Programm bis zum Ende ausgefuehrt (' + stepCount + ' Schritte).' : ''; }
+      if (stepInfo) { stepInfo.textContent = res.ok ? 'Programm bis zum Ende ausgeführt (' + stepCount + ' Schritte).' : ''; }
       afterRun(res);
     }
     if (stepBtn) { stepBtn.addEventListener('click', doStep); }
@@ -4669,14 +4669,14 @@
         return;
       }
       var names = session.classNames();
-      if (names.length === 0) { replHint.textContent = 'Dieses Projekt enthaelt noch keine Klasse.'; return; }
+      if (names.length === 0) { replHint.textContent = 'Dieses Projekt enthält noch keine Klasse.'; return; }
       replHint.textContent = 'Klassen: ' + names.join(', ') + '. Beispiel: ' + names[0] + ' a = new ' + names[0] + '(...); danach a.methode();';
     }
 
     runBtn.addEventListener('click', doRun);
 
     /* Klassendiagramm direkt in der IDE (Idee von BlueJ): live aus dem Code gelesen,
-     * ohne das Programm auszufuehren. Parse-Fehler stoeren nicht: Der lesbare Stand
+     * ohne das Programm auszuführen. Parse-Fehler stören nicht: Der lesbare Stand
      * wird gezeigt. */
     var classBox = document.getElementById('java-classes');
     function collectFiles() {
@@ -4749,7 +4749,7 @@
           rows = rows + '<div class="uml-row">' + visMark(mt.visibility) + escapeHtml(mt.name) + '(' + mp.join(', ') + ')' + ret + '</div>';
         }
         if (rows === '') { rows = '<div class="uml-row uml-empty">(noch ohne Attribute und Methoden)</div>'; }
-        /* Notiz nur fuer Eltern ausserhalb des Projekts (z.B. Grafik-Basisklassen) */
+        /* Notiz nur für Eltern ausserhalb des Projekts (z.B. Grafik-Basisklassen) */
         var parentNote = (cls.parent && kids[cls.parent] === undefined) ? '<div class="uml-parent">↳ erbt von ' + escapeHtml(cls.parent) + '</div>' : '';
         var box = '<div class="uml-class"><div class="uml-name">' + escapeHtml(cls.name) + '</div><div class="uml-sec">' + rows + '</div>' + parentNote + '</div>';
         var kidNames = kids[clsName] || [];
@@ -4764,7 +4764,7 @@
       var html = '';
       var r;
       for (r = 0; r < roots.length; r++) { html = html + '<div class="uml-root">' + nodeHtml(roots[r], 0) + '</div>'; }
-      if (!comp.ok) { html = html + '<p class="muted">Achtung: Der Code enthaelt noch Fehler - das Diagramm zeigt den bisher lesbaren Stand.</p>'; }
+      if (!comp.ok) { html = html + '<p class="muted">Achtung: Der Code enthält noch Fehler - das Diagramm zeigt den bisher lesbaren Stand.</p>'; }
       classBox.innerHTML = html;
     }
     var classTimer = null;
@@ -4778,17 +4778,15 @@
     renderClasses();
 
     /* ---------- Automatisch speichern ----------
-     * Jede Aenderung im Editor oder Titel landet ohne Speichern-Klick auf dem
-     * Server (entprellt). Vor dem Anlegen einer neuen Datei oder dem Loeschen
+     * Jede Änderung im Editor landet ohne Speichern-Klick auf dem
+     * Server (entprellt). Vor dem Anlegen einer neuen Datei oder dem Löschen
      * wird zwingend gespeichert - so geht nichts mehr versehentlich verloren. */
     var saveForm = document.getElementById('code-save-form');
     var saveInfo = document.getElementById('java-save-info');
     var autoTimer = null;
     var savedSnap = null;
     function collectSaveSnap() {
-      var snap = { title: '', files: {} };
-      var titleEl = saveForm ? saveForm.querySelector('input[name="title"]') : null;
-      if (titleEl) { snap.title = titleEl.value; }
+      var snap = { files: {} };
       var panes5 = document.querySelectorAll('[data-file-pane]');
       var k3;
       for (k3 = 0; k3 < panes5.length; k3++) {
@@ -4801,7 +4799,6 @@
     function isDirty() {
       if (!savedSnap) { return false; }
       var now = collectSaveSnap();
-      if (now.title !== savedSnap.title) { return true; }
       var key;
       for (key in savedSnap.files) {
         if (Object.prototype.hasOwnProperty.call(savedSnap.files, key) && savedSnap.files[key] !== now.files[key]) { return true; }
@@ -4812,8 +4809,6 @@
       var params = new URLSearchParams();
       var csrfEl = saveForm ? saveForm.querySelector('input[name="csrf"]') : null;
       if (csrfEl) { params.append('csrf', csrfEl.value); }
-      var titleEl = saveForm ? saveForm.querySelector('input[name="title"]') : null;
-      if (titleEl) { params.append('title', titleEl.value); }
       var panes5 = document.querySelectorAll('[data-file-pane]');
       var k3;
       for (k3 = 0; k3 < panes5.length; k3++) {
@@ -4823,27 +4818,35 @@
       }
       return params.toString();
     }
+    /* Dezenter Speicher-Status: nur sichtbar, wenn gerade etwas passiert -
+     * kein dauerhaft präsenter Text in der Leiste. */
+    function saveFlash(text, isError) {
+      if (!saveInfo) { return; }
+      saveInfo.textContent = text;
+      saveInfo.className = 'save-status' + (isError ? ' save-err' : '');
+    }
     function autoSave() {
       if (!saveForm || typeof fetch !== 'function' || typeof URLSearchParams !== 'function') { return null; }
       var action = saveForm.getAttribute('action');
       if (!action) { return null; }
       return fetch(action, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: buildSaveBody(), keepalive: true }).then(function () {
         savedSnap = collectSaveSnap();
-        if (saveInfo) { saveInfo.textContent = 'Alle Aenderungen automatisch gespeichert.'; }
+        var d = new Date();
+        var hh = (d.getHours() < 10 ? '0' : '') + d.getHours();
+        var mi = (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
+        saveFlash('✓ automatisch gespeichert um ' + hh + ':' + mi + ' Uhr', false);
       }).catch(function () {
-        if (saveInfo) { saveInfo.textContent = 'Automatisches Speichern fehlgeschlagen - bitte Speichern klicken.'; }
+        saveFlash('⚠ Speichern fehlgeschlagen – bitte prüfen, ob du noch online bist.', true);
       });
     }
     function autoSaveSoon() {
       if (!saveForm || typeof fetch !== 'function') { return; }
-      if (saveInfo) { saveInfo.textContent = 'Speichert automatisch ...'; }
+      saveFlash('Speichert …', false);
       if (autoTimer) { clearTimeout(autoTimer); }
       autoTimer = setTimeout(autoSave, 700);
     }
     if (saveForm && typeof fetch === 'function') {
       savedSnap = collectSaveSnap();
-      var titleEl2 = saveForm.querySelector('input[name="title"]');
-      if (titleEl2) { titleEl2.addEventListener('input', autoSaveSoon); }
       var pe3;
       for (pe3 = 0; pe3 < paneAreas.length; pe3++) { paneAreas[pe3].addEventListener('input', autoSaveSoon); }
       var guardForms = [];
@@ -4874,7 +4877,7 @@
       }
     }
 
-    /* Strg + Enter fuehrt aus; Tab rueckt ein, Enter rueckt automatisch ein */
+    /* Strg + Enter führt aus; Tab rückt ein, Enter rückt automatisch ein */
     var pe;
     for (pe = 0; pe < panes.length; pe++) {
       (function (pane) {
@@ -4882,12 +4885,13 @@
         if (!ta2) { return; }
         ta2.addEventListener('keydown', function (e) {
           if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); doRun(); return; }
-          /* AltGr meldet sich in Chrome/Windows als Strg+Alt - die Klammer-
-           * Automatik muss fuer eckige und geschweifte Klammern trotzdem
-           * greifen. Nur reine Strg- oder reine Alt-Kombis ueberspringen wir. */
+          /* AltGr meldet sich je nach Browser anders: Chrome/Windows als
+           * Strg+Alt, Firefox/Windows nur als Alt, macOS als Option (altKey).
+           * Deshalb stören wir uns nur an Cmd (metaKey) und reinem Strg
+           * (z. B. Strg+Tab). Reines Alt lassen wir durch - dahinter
+           * steckt fast immer AltGr bzw. die Optionstaste. */
           if (e.metaKey) { return; }
           if (e.ctrlKey && !e.altKey) { return; }
-          if (e.altKey && !e.ctrlKey) { return; }
           if (e.key === 'Tab') {
             e.preventDefault();
             if (e.shiftKey) { outdentSelection(ta2); }
@@ -4900,10 +4904,24 @@
           if (e.key === ')' || e.key === ']') { e.preventDefault(); typeOverClose(ta2, e.key); return; }
           if (e.key === '}') { e.preventDefault(); typeCloseBrace(ta2); return; }
         });
+        /* Fänger für alle Fälle, in denen keydown das Zeichen nicht meldet
+         * (z. B. AltGr-Kombis je nach Treiber, Mobile-Tastaturen): Das
+         * beforeinput-Ereignis kommt direkt vor dem Einfügen. Läuft die
+         * Automatik oben schon (preventDefault), feuert beforeinput gar
+         * nicht - doppelt eingefügt wird also nichts. */
+        ta2.addEventListener('beforeinput', function (ev) {
+          if (!ev || !ev.preventDefault) { return; }
+          if (ev.inputType === 'insertLineBreak') { ev.preventDefault(); enterNewline(ta2); return; }
+          if (ev.inputType !== 'insertText' || typeof ev.data !== 'string') { return; }
+          if (ev.data === '(' || ev.data === '[') { ev.preventDefault(); typeOpenBracket(ta2, ev.data); return; }
+          if (ev.data === '{') { ev.preventDefault(); typeOpenBrace(ta2); return; }
+          if (ev.data === ')' || ev.data === ']') { ev.preventDefault(); typeOverClose(ta2, ev.data); return; }
+          if (ev.data === '}') { ev.preventDefault(); typeCloseBrace(ta2); return; }
+        });
       })(panes[pe]);
     }
 
-    /* Objektkonsole mit Autovervollstaendung */
+    /* Objektkonsole mit Autovervollständigung */
     var acItems = [];
     var acSel = -1;
     var acTouched = false;
@@ -4942,7 +4960,7 @@
       var it = acItems[idx];
       var caret = replIn.selectionStart;
       var text = replIn.value;
-      /* Einfuegepunkt an der AKTUELLEN Cursor-Position frisch berechnen
+      /* Einfügepunkt an der AKTUELLEN Cursor-Position frisch berechnen
        * (nicht den beim Tippen gemerkten acFrom verwenden: Der Cursor kann
        * inzwischen woanders stehen, z. B. nach einem Mausklick). */
       var from = caret;
@@ -4957,7 +4975,7 @@
       var wordEnd = caret;
       while (wordEnd < text.length && isIdentChar(text.charAt(wordEnd))) { wordEnd++; }
       if (text.substring(from, wordEnd) === it.insert) {
-        /* Wort steht schon vollstaendig da: nur Vorschlaege schliessen, Cursor bleibt, wo er ist. */
+        /* Wort steht schon vollständig da: nur Vorschläge schließen, Cursor bleibt, wo er ist. */
         acHide();
         replIn.focus();
         return;
@@ -4972,9 +4990,9 @@
       if (!session || !replIn || !acBox) { acHide(); return; }
       var caret = replIn.selectionStart;
       var head = replIn.value.substring(0, caret);
-      /* Nach abgeschlossener Anweisung (;, }, )) keine Vorschlaege mehr:
-       * dort beginnt kein Bezeichner, und die Box wuerde nur beim Tab-Druck
-       * den Cursor verschieben oder Text anhaengen. */
+      /* Nach abgeschlossener Anweisung (;, }, )) keine Vorschläge mehr:
+       * dort beginnt kein Bezeichner, und die Box würde nur beim Tab-Druck
+       * den Cursor verschieben oder Text anhängen. */
       var lw = head.length - 1;
       while (lw >= 0 && (head.charAt(lw) === ' ' || head.charAt(lw) === String.fromCharCode(9))) { lw--; }
       if (lw >= 0 && (head.charAt(lw) === ';' || head.charAt(lw) === '}' || head.charAt(lw) === ')')) { acHide(); return; }
@@ -5005,7 +5023,7 @@
           e.preventDefault();
           var input = replIn.value;
           if (!session) {
-            /* Noch keine Session: Eingabe NICHT loeschen, damit nichts verloren geht. */
+            /* Noch keine Session: Eingabe NICHT löschen, damit nichts verloren geht. */
             updateReplHint();
             return;
           }

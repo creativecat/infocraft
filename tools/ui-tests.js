@@ -320,10 +320,6 @@ var csrfInput = new FakeEl('input');
 csrfInput.setAttribute('name', 'csrf');
 csrfInput.value = 'token123';
 saveForm.appendChild(csrfInput);
-var titleInput = new FakeEl('input');
-titleInput.setAttribute('name', 'title');
-titleInput.value = 'Mein Projekt';
-saveForm.appendChild(titleInput);
 doc.register(saveForm, 'code-save-form');
 var saveInfo = new FakeEl('span');
 doc.register(saveInfo, 'java-save-info');
@@ -588,16 +584,20 @@ setTimeout(function () {
         ok(fetchCalls[fetchCalls.length - 1].url === '/werkstatt/code/7', 'T24b speichert an die Projekt-Adresse');
         var body = String(fetchCalls[fetchCalls.length - 1].opts.body);
         ok(body.indexOf('files%5B11%5D') !== -1 && body.indexOf('csrf=token123') !== -1, 'T24c Body enthaelt Dateien und CSRF-Token');
+        ok(body.indexOf('title=') === -1, 'T24d kein Titel-Feld mehr im Speicher-Body (Titel steht im Kopf)');
       } else {
         ok(false, 'T24b speichert an die Projekt-Adresse');
         ok(false, 'T24c Body enthaelt Dateien und CSRF-Token');
+        ok(false, 'T24d kein Titel-Feld mehr im Speicher-Body (Titel steht im Kopf)');
       }
-      ok(saveInfo.textContent.indexOf('gespeichert') !== -1, 'T24d Statusmeldet das automatische Speichern');
+      ok(saveInfo.textContent.indexOf('gespeichert') !== -1, 'T24e Status meldet das automatische Speichern');
+      ok(saveInfo.textContent.indexOf('✓') !== -1, 'T24f Status zeigt dezent mit Haekchen und Uhrzeit');
+      ok(saveInfo.className.indexOf('save-err') === -1, 'T24g Erfolg ohne Fehler-Optik');
 
       /* T25: Neue Datei anlegen speichert zuerst - nichts geht verloren. */
       newFileForm._submitted = 0;
-      titleInput.value = 'Mein geaenderter Titel';
-      titleInput.dispatch('input');
+      taE.value = taE.value + NLt + 'int nochEineZeile = 2;';
+      taE.dispatch('input');
       var prevented = false;
       newFileForm.dispatch('submit', { preventDefault: function () { prevented = true; } });
       ok(prevented, 'T25a Absenden wird kurz aufgehalten, bis gespeichert ist');
@@ -631,6 +631,31 @@ setTimeout(function () {
           taE.dispatch('keydown', { key: '{', ctrlKey: true, altKey: true });
           ok(taE.value === '    public void test() {' + NLt + '        ' + NLt + '    }', 'T27b Block-Oeffnung funktioniert trotz AltGr');
 
+          /* T27c/d: Firefox und macOS melden AltGr/Option nur als altKey. */
+          taE.value = 'int y = 2';
+          taE.dispatch('input');
+          taE.setSelectionRange(9, 9);
+          taE.dispatch('keydown', { key: '[', altKey: true });
+          ok(taE.value === 'int y = 2[]', 'T27c eckige Klammer schliesst sich auch bei reinem Alt (Firefox/macOS)');
+          taE.value = 'int z = 3';
+          taE.dispatch('input');
+          taE.setSelectionRange(9, 9);
+          taE.dispatch('keydown', { key: '{', altKey: true });
+          ok(taE.value === 'int z = 3 {' + NLt + '    ' + NLt + '}', 'T27d geschweifte Klammer oeffnet den Block auch bei reinem Alt');
+
+          /* T27e/f: beforeinput-Faenger fuer Faelle, in denen keydown das
+           * Zeichen nicht meldet (Treiber, Mobile, ungewoehnliche Layouts). */
+          taE.value = 'int w = 4';
+          taE.dispatch('input');
+          taE.setSelectionRange(9, 9);
+          taE.dispatch('beforeinput', { inputType: 'insertText', data: '[' });
+          ok(taE.value === 'int w = 4[]', 'T27e beforeinput-Faenger schliesst eckige Klammer');
+          taE.value = 'System.out.println()';
+          taE.dispatch('input');
+          taE.setSelectionRange(19, 19);
+          taE.dispatch('beforeinput', { inputType: 'insertText', data: ')' });
+          ok(taE.value === 'System.out.println()' && taE.selectionStart === 20, 'T27f beforeinput-Faenger ueberspringt schliessende Klammer');
+
           /* T28: Objekte aus dem Java-Programm erscheinen mit Namen im Objekte-Fenster. */
           taE.value = 'class Auto {' + NLt +
             '  public String marke;' + NLt +
@@ -643,6 +668,18 @@ setTimeout(function () {
           var objsTxt = objBox.textOf();
           ok(objsTxt.indexOf('a : Auto') !== -1, 'T28a Objekt aus dem Programm steht mit Namen im Objekte-Fenster');
           ok(objsTxt.indexOf(': Auto') === -1 || objsTxt.indexOf('a : Auto') !== -1, 'T28b kein kaputter Doppelpunkt-Name mehr');
+
+          /* T29: Meldungen der IDE nutzen echte Umlaute statt ae/oe/ue. */
+          taE.value = 'class Auto {' + NLt +
+            '  public String marke;' + NLt +
+            '}' + NLt +
+            'Auto a = new Auto();' + NLt +
+            'a.tueren;';
+          taE.dispatch('input');
+          runBtn.dispatch('click');
+          var errTxt = errBox.textOf();
+          ok(errTxt.indexOf('gehört') !== -1, 'T29a Fehlermeldung schreibt gehört mit echtem ö');
+          ok(errTxt.indexOf('gehoert') === -1, 'T29b keine Ersatz-Schreibung mehr in der Meldung');
 
           console.log('');
           if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }

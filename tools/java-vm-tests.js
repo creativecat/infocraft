@@ -336,7 +336,7 @@ t('DbFehlerFehlendeAnfuehrungszeichen', { 'Main.java': mainOf(
   '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT)");' + NL +
   '        Datenbank.ausfuehren("INSERT INTO s VALUES (Anna)");') }, r => {
   err1(r, 'runtime');
-  if (r.errors[0].message.indexOf('gueltiger SQL-Wert') < 0) { throw new Error('Literal-Fehlermeldung erwartet'); }
+  if (r.errors[0].message.indexOf('gültiger SQL-Wert') < 0) { throw new Error('Literal-Fehlermeldung erwartet'); }
 });
 t('DbFehlerMethodeUnbekannt', { 'Main.java': mainOf(
   '        Datenbank.speichern("irgendwas");') }, r => {
@@ -706,7 +706,7 @@ t('GfxDefaultsUndDestroy', {
   if (snap.length !== 1 || snap[0].visible !== false || snap[0].fill !== 'rgb(0, 128, 0)') {
     throw new Error('Voreinstellungen: ' + JSON.stringify(snap));
   }
-  if (r.errors.length === 0 || r.errors[0].message.indexOf('zerstoert') === -1) { throw new Error('destroy-Fehlermeldung: ' + JSON.stringify(r.errors)); }
+  if (r.errors.length === 0 || r.errors[0].message.indexOf('zerstört') === -1) { throw new Error('destroy-Fehlermeldung: ' + JSON.stringify(r.errors)); }
 });
 t('GfxActUndTastatur', {
   'Auto.java': [
@@ -880,6 +880,14 @@ t('ObjektNameAusMain',
     }
     eq(byMarke['"BMW"'], 'a', 'Objekt aus Deklaration heisst a');
     eq(byMarke['"Audi"'], 'b', 'Objekt aus spaeter Zuweisung heisst b');
+  });
+
+t('MeldungenMitUmlauten',
+  { 'Auto.java': 'public class Auto {' + NL + '    public String marke;' + NL + '}' + NL + 'Auto a = new Auto();' + NL + 'a.tueren;' },
+  function (r) {
+    eq(r.ok, false, 'Fehler erwartet');
+    if (r.errors[0].message.indexOf('gehört') === -1) { throw new Error('Umlaut in Meldung erwartet: ' + r.errors[0].message); }
+    if (r.errors[0].message.indexOf('gehoert') !== -1) { throw new Error('Ersatz-Schreibung gefunden: ' + r.errors[0].message); }
   });
 
 console.log('');

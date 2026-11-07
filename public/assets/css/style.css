@@ -424,9 +424,14 @@ body.sidebar-hidden .sidebar { display: none; }
 .nassi-loop > * + * { border-top: 1px solid var(--text); }
 
 /* ===== Code-Werkstatt: Java-IDE (Dateien links, Editor Mitte, Konsole rechts) ===== */
-.ide-savebar { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 14px; }
-.ide-savebar .ide-title { flex: 1; min-width: 220px; margin: 0; }
-.ide-savebar .btn { margin-bottom: 6px; }
+.ide-savebar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.ide-savebar .btn { margin-bottom: 0; }
+.save-status {
+    font-size: 0.82rem; color: var(--muted); margin-left: auto;
+    opacity: 0.9; transition: opacity 0.3s ease;
+}
+.save-status:empty { opacity: 0; }
+.save-status.save-err { color: #b91c1c; font-weight: 600; }
 
 /* Java-Projektseiten nutzen die volle Breite (Dateien, Editor, Konsole nebeneinander) */
 .content:has(.ide) { max-width: none; }
@@ -532,7 +537,6 @@ body.sidebar-hidden .sidebar { display: none; }
 }
 .console-errors-box .java-errors { border: none; background: none; border-radius: 0; padding: 0; }
 .console-errors-box .btn { margin-top: 8px; }
-#java-save-info { font-size: 0.82rem; }
 
 /* Objektkonsole (interaktiv, mit Autovervollstaendung) */
 .repl-log { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; max-height: 40vh; overflow: auto; }
