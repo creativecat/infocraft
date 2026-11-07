@@ -828,6 +828,43 @@ t('StepLimitPausiert', {
   }
 })();
 
+/* --- Typ-Pruefung: Datentypen bei Attributen und Variablen werden jetzt erzwungen --- */
+t('TypAttributIntKeinString',
+  { 'Auto.java': 'public class Auto {' + NL + '    private int speed;' + NL + '    public void setze() { speed = "schnell"; }' + NL + '}' + NL + 'Auto a = new Auto();' + NL + 'a.setze();' },
+  function (r) { eq(r.ok, false, 'Fehler erwartet'); if (r.errors.length === 0) { throw new Error('Fehlerliste leer'); } if (r.errors[0].message.indexOf('int passt nicht zu String') === -1) { throw new Error('Meldung: ' + r.errors[0].message); } });
+
+t('TypAttributStringKeinInt',
+  { 'Auto.java': 'public class Auto {' + NL + '    private String name;' + NL + '}' + NL + 'Auto a = new Auto();' + NL + 'a.name = 42;' },
+  function (r) { eq(r.ok, false, 'Fehler erwartet'); if (r.errors[0].message.indexOf('String passt nicht zu int') === -1) { throw new Error('Meldung: ' + r.errors[0].message); } });
+
+t('TypParamUndReturn',
+  { 'Auto.java': 'public class Auto {' + NL + '    public void fahren(int km) { System.out.println(km); }' + NL + '    public String getName() { return 42; }' + NL + '}' + NL + 'Auto a = new Auto();' + NL + 'a.fahren("zehn");' },
+  function (r) { eq(r.ok, false, 'Fehler erwartet'); if (r.errors[0].message.indexOf('int passt nicht zu String') === -1) { throw new Error('Meldung: ' + r.errors[0].message); } });
+
+t('TypReturnPruefung',
+  { 'Auto.java': 'public class Auto {' + NL + '    public String getName() { return 42; }' + NL + '}' + NL + 'Auto a = new Auto();' + NL + 'a.getName();' },
+  function (r) { eq(r.ok, false, 'Fehler erwartet'); if (r.errors[0].message.indexOf('String passt nicht zu int') === -1) { throw new Error('Meldung: ' + r.errors[0].message); } });
+
+t('TypVererbungPasst',
+  { 'Tier.java': 'public class Tier {' + NL + '    protected String name;' + NL + '    public void gibLaut() { System.out.println(name); }' + NL + '}' + NL + 'public class Hund extends Tier {' + NL + '    public Hund(String n) { name = n; }' + NL + '}' + NL + 'Tier t = new Hund("Bello");' + NL + 't.gibLaut();' },
+  function (r) { eq(r.ok, true, 'Unterklasse ist ein Tier'); eq(r.output, 'Bello' + NL, 'Ausgabe'); });
+
+t('TypFremdeKlasseAbgelehnt',
+  { 'A.java': 'public class A {' + NL + '}' + NL + 'public class B {' + NL + '}' + NL + 'A a = new B();' },
+  function (r) { eq(r.ok, false, 'Fehler erwartet'); if (r.errors[0].message.indexOf('A passt nicht zu B') === -1) { throw new Error('Meldung: ' + r.errors[0].message); } });
+
+t('ZweiPublicKlassenEineDatei',
+  { 'Tier.java': 'public class Tier {' + NL + '    protected String name;' + NL + '    public Tier(String n) { name = n; }' + NL + '    public void gibLaut() { System.out.println("Tier " + name); }' + NL + '}' + NL + 'public class Hund extends Tier {' + NL + '    public Hund(String n) { super(n); }' + NL + '    public void gibLaut() { System.out.println("Wuff, sagt " + name); }' + NL + '}' + NL + 'Hund h = new Hund("Bello");' + NL + 'h.gibLaut();' },
+  function (r) { eq(r.ok, true, 'mehrere public-Klassen pro Datei erlaubt'); eq(r.output, 'Wuff, sagt Bello' + NL, 'Ausgabe'); });
+
+t('DateiEndeRueckgabe',
+  { 'Auto.java': 'public class Auto {' + NL + '    public int plus(int a, int b) { return a + b; }' + NL + '    public void sagHallo() { System.out.println("Hallo!"); }' + NL + '}' + NL + 'Auto a = new Auto();' + NL + 'a.sagHallo();' + NL + 'a.plus(2, 3);' },
+  function (r) { eq(r.ok, true, 'lauf ok'); eq(r.output, 'Hallo!' + NL + 'Ergebnis: 5   (int)' + NL, 'Rueckgabe erscheint in der Ausgabe'); });
+
+t('VoidReturnMitWertAbgelehnt',
+  { 'Auto.java': 'public class Auto {' + NL + '    public void test() { return 42; }' + NL + '}' + NL + 'Auto a = new Auto();' + NL + 'a.test();' },
+  function (r) { eq(r.ok, false, 'Fehler erwartet'); });
+
 console.log('');
 console.log(failed === 0 ? ('Alle ' + count + ' Tests bestanden.') : (failed + ' von ' + count + ' Tests fehlgeschlagen.'));
 process.exit(failed === 0 ? 0 : 1);

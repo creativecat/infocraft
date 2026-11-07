@@ -936,9 +936,16 @@
     var i2;
     for (i2 = 0; i2 < comp.toplevel.length; i2++) {
       var st = comp.toplevel[i2];
-      var ctx2 = { file: st.srcFile || '', line: st.line || 1, cls: null, thisVal: null, vm: vm };
+      var ctx2 = { file: st.srcFile || '', line: st.line || 1, cls: null, thisVal: null, vm: vm, captureExpr: true };
       try {
         execBlock([st], env, ctx2);
+        /* Rueckgabewerte landen nicht im Nirvana: Ein blosser Methodenaufruf
+         * am Datei-Ende zeigt sein Ergebnis in der Ausgabe (wie die Objektkonsole). */
+        if (st.type === 'exprstat' && ctx2.lastExprVal && ctx2.lastExprVal.t !== 'void') {
+          var tv = ctx2.lastExprVal;
+          var tname = tv.t === 'ref' ? tv.cls : (tv.t === 'array' ? (tv.elem + '[]') : tv.t);
+          output(ctx2, 'Ergebnis: ' + javaStr(tv, ctx2, st.line || 1) + '   (' + tname + ')' + NL);
+        }
       } catch (e) {
         if (e && e.jerr) { errors.push(e.jerr); return; }
         if (e && (e.ctrl === 'return' || e.ctrl === 'break' || e.ctrl === 'continue')) {
@@ -1365,11 +1372,12 @@
       var base = cls.srcFile;
       if (base.length > 5 && base.slice(base.length - 5) === '.java') { base = base.slice(0, base.length - 5); }
       if (cls.name !== base) {
-        if (perFile[cls.srcFile] === 1 || cls.isPublic) {
+        /* Bei mehreren Klassen in einer Datei ist der Name frei waehlbar
+         * (z. B. Ober- und Unterklasse in einer Datei); nur bei einer einzigen
+         * Klasse pro Datei gilt die Schul-Konvention Name == Dateiname. */
+        if (perFile[cls.srcFile] === 1) {
           errors.push(JError('compile', cls.srcFile, cls.line, 'Die Klasse ' + cls.name + ' heisst anders als die Datei ' + cls.srcFile + '.',
-            perFile[cls.srcFile] === 1
-              ? 'In Java muss der Name der (einzigen) Klasse genau dem Dateinamen entsprechen: ' + cls.name + '.java'
-              : 'Bei mehreren Klassen in einer Datei muss die public-Klasse wie die Datei heissen (oder schreibe class ' + cls.name + ' ohne public)'));
+            'In Java muss der Name der (einzigen) Klasse genau dem Dateinamen entsprechen: ' + cls.name + '.java'));
           return false;
         }
       }
@@ -1425,7 +1433,9 @@
     for (var j = 0; j < cls.fields.length; j++) {
       var sf = cls.fields[j];
       if (!sf.isStatic) { continue; }
-      vm.statics[cls.name][sf.name] = sf.init ? evalExpr(sf.init, newEnv(null), ctx) : defaultVal(sf.type);
+      var sv = sf.init ? evalExpr(sf.init, newEnv(null), ctx) : defaultVal(sf.type);
+      if (sf.init) { checkAssign(ctx, { type: sf.type }, sv, sf.line || ctx.line, sf.name); }
+      vm.statics[cls.name][sf.name] = sv;
     }
   }
 
@@ -1443,6 +1453,17 @@
   }
 
   /* Typpruefung bei Zuweisung (deutsche Hilfestellung statt Compiler-Kauderwelsch). */
+  /* Ist val.cls eine Unterklasse von target? (Vererbung: Hund ist ein Tier) */
+  function classIsA(clsName, targetName) {
+    var cc = RUN_CLASS_MAP[clsName] || (GFX_CLASSES[clsName] ? { name: clsName, parent: null } : null);
+    var hop = 0;
+    while (cc && hop < 32) {
+      if (cc.name === targetName) { return true; }
+      cc = cc.parent ? (RUN_CLASS_MAP[cc.parent] || (GFX_CLASSES[cc.parent] ? { name: cc.parent, parent: null } : null)) : null;
+      hop++;
+    }
+    return false;
+  }
   function checkAssign(ctx, slot, val, line, targetName) {
     var t = slot.type ? slot.type.name : null;
     var isArr = slot.type ? slot.type.arr : false;
@@ -1467,10 +1488,29 @@
       if (val.t === 'char' || val.t === 'int') { return; }
       throw rt(ctx, line, 'char passt nicht zu ' + val.t + '.', 'Der Wert muss ein einzelnes Zeichen oder ein Zeichencode (int) sein.');
     }
-    if (isArr || (t && !isPrimType(t))) {
-      if (val.t === 'null' || val.t === 'ref' || val.t === 'array' || val.t === 'String') { return; }
-      throw rt(ctx, line, (t || 'Referenz') + ' passt nicht zu ' + val.t + '.', 'Der Wert muss ein Objekt oder null sein.');
+    if (t === 'String') {
+      if (val.t === 'String' || val.t === 'null') { return; }
+      throw rt(ctx, line, 'String passt nicht zu ' + val.t + '.', targetName + ' ist als String deklariert: Der Wert muss Text in Anfuehrungszeichen sein (oder null).');
     }
+    if (t && !isPrimType(t)) {
+      if (val.t === 'null') { return; }
+      if (val.t === 'ref' && classIsA(val.cls, t)) { return; }
+      throw rt(ctx, line, (t || 'Referenz') + ' passt nicht zu ' + (val.t === 'ref' ? val.cls : val.t) + '.', 'Der Wert muss ein ' + t + '-Objekt sein (oder eine Unterklasse davon bzw. null).');
+    }
+  }
+
+  /* Attribut-Deklaration in der Klassenhierarchie suchen (fuer die Typpruefung
+   * bei Attribut-Zuweisungen: nur Attribute der Klasse, keine GFX-internen Werte). */
+  function findFieldDef(cls, name) {
+    var c = cls;
+    var hop = 0;
+    while (c && hop < 32) {
+      var i;
+      for (i = 0; i < c.fields.length; i++) { if (c.fields[i].name === name) { return c.fields[i]; } }
+      c = c.parent ? (RUN_CLASS_MAP[c.parent] || null) : null;
+      hop++;
+    }
+    return null;
   }
 
   function instanceFieldsOf(cls) {
@@ -1490,7 +1530,9 @@
     for (var i = 0; i < cls.fields.length; i++) {
       var f = cls.fields[i];
       if (f.isStatic) { continue; }
-      obj.f[f.name] = f.init ? evalExpr(f.init, env, ctx) : defaultVal(f.type);
+      var fv = f.init ? evalExpr(f.init, env, ctx) : defaultVal(f.type);
+      if (f.init) { checkAssign(ctx, { type: f.type }, fv, f.line || ctx.line, f.name); }
+      obj.f[f.name] = fv;
     }
   }
 
@@ -1523,7 +1565,10 @@
   function execCtor(cls, ctor, obj, args, env) {
     var ctx = { file: cls.srcFile, line: ctor.line, cls: cls, thisVal: { t: 'ref', cls: obj.cls, obj: obj }, vm: RUN_VM };
     var i;
-    for (i = 0; i < ctor.params.length; i++) { envDeclare(env, ctor.params[i].name, ctor.params[i].type, args[i]); }
+    for (i = 0; i < ctor.params.length; i++) {
+      checkAssign(ctx, { type: ctor.params[i].type }, args[i], ctor.line, 'Der Parameter ' + ctor.params[i].name);
+      envDeclare(env, ctor.params[i].name, ctor.params[i].type, args[i]);
+    }
     /* implizites super(), ausser der Rumpf startet mit super(...) oder this(...) */
     var first = ctor.body.length > 0 ? ctor.body[0] : null;
     var explicit = first && first.type === 'exprstat' && first.expr.type === 'call' && first.expr.target &&
@@ -1548,13 +1593,34 @@
     var ctx = { file: mcls.srcFile, line: m.line, cls: mcls, thisVal: thisVal, vm: vm };
     var env = newEnv(null);
     var i;
-    for (i = 0; i < m.params.length; i++) { envDeclare(env, m.params[i].name, m.params[i].type, args[i]); }
+    try {
+      for (i = 0; i < m.params.length; i++) {
+        checkAssign(ctx, { type: m.params[i].type }, args[i], m.line, 'Der Parameter ' + m.params[i].name);
+        envDeclare(env, m.params[i].name, m.params[i].type, args[i]);
+      }
+    } catch (e2) {
+      vm.depth--;
+      throw e2;
+    }
     var result = VOIDV;
     try {
       execBlock(m.body, env, ctx);
     } catch (e) {
       if (e && e.ctrl === 'return') {
-        if (!m.ret.void) { result = e.v; }
+        if (!m.ret.void) {
+          if (!e.v || e.v.t === 'void') {
+            vm.depth--;
+            throw rt(ctx, m.line, 'Die Methode ' + m.name + ' muss einen Wert vom Typ ' + typeName(m.ret) + ' zurueckgeben.', 'Jeder Weg durch die Methode braucht ein return wert; mit einem passenden Wert.');
+          }
+          checkAssign(ctx, { type: m.ret }, e.v, m.line, 'Der Rueckgabewert von ' + m.name);
+          result = e.v;
+          vm.depth--;
+          return result;
+        }
+        if (e.v && e.v.t !== 'void') {
+          vm.depth--;
+          throw rt(ctx, m.line, 'Die Methode ' + m.name + ' ist void und darf keinen Wert zurueckgeben.', 'Bei void-Methoden steht nur return; ohne Wert (oder gar kein return).');
+        }
         vm.depth--;
         return result;
       }
@@ -1829,18 +1895,26 @@
       }
       if (ctx.thisVal && ctx.thisVal.t === 'ref' && Object.prototype.hasOwnProperty.call(ctx.thisVal.obj.f, e.v)) {
         var obj = ctx.thisVal.obj;
+        var selfDef = RUN_CLASS_MAP[ctx.thisVal.cls] ? findFieldDef(RUN_CLASS_MAP[ctx.thisVal.cls], e.v) : null;
         return {
           get: function () { return obj.f[e.v]; },
-          set: function (nv) { obj.f[e.v] = nv; }
+          set: function (nv) {
+            if (selfDef) { checkAssign(ctx, { type: selfDef.type }, nv, e.line, e.v); }
+            obj.f[e.v] = nv;
+          }
         };
       }
       var c = ctx.cls;
       while (c) {
         if (ctx.vm.statics[c.name] && Object.prototype.hasOwnProperty.call(ctx.vm.statics[c.name], e.v)) {
           var st = ctx.vm.statics[c.name];
+          var stDef = findFieldDef(c, e.v);
           return {
             get: function () { return st[e.v]; },
-            set: function (nv) { st[e.v] = nv; }
+            set: function (nv) {
+              if (stDef) { checkAssign(ctx, { type: stDef.type }, nv, e.line, e.v); }
+              st[e.v] = nv;
+            }
           };
         }
         c = c.parent ? RUN_CLASS_MAP[c.parent] : null;
@@ -1855,9 +1929,13 @@
       if (!Object.prototype.hasOwnProperty.call(o2.f, e.name)) {
         throw rt(ctx, e.line, 'Das Attribut ' + e.name + ' gehoert nicht zur Klasse ' + target.cls + '.', 'Pruefe Schreibweise und Gross-/Kleinschreibung und ob die Klasse ein Attribut ' + e.name + ' hat.');
       }
+      var fDef = RUN_CLASS_MAP[target.cls] ? findFieldDef(RUN_CLASS_MAP[target.cls], e.name) : null;
       return {
         get: function () { return o2.f[e.name]; },
-        set: function (nv) { o2.f[e.name] = nv; }
+        set: function (nv) {
+          if (fDef) { checkAssign(ctx, { type: fDef.type }, nv, e.line, target.cls + '.' + e.name); }
+          o2.f[e.name] = nv;
+        }
       };
     }
     if (e.type === 'index') {
@@ -4305,6 +4383,11 @@
     function typeCloseBrace(ta) {
       var s = ta.selectionStart;
       var b = lineBounds(ta, s, ta.selectionEnd);
+      /* Bereits vorhandene schliessende Klammer ueberspringen statt verdoppeln */
+      if (ta.value.charAt(s) === '}') {
+        if (ta.setSelectionRange) { ta.setSelectionRange(s + 1, s + 1); }
+        return;
+      }
       var before = b.text.slice(b.ls, s);
       var onlyWs = true;
       var q;
@@ -4319,6 +4402,60 @@
         return;
       }
       insertAt(ta, '}');
+    }
+
+    /* ---------- Klammer-Automatik: ( [ { schliessen sich sofort ----------
+     * Der Cursor steht zwischen dem Paar, damit schneller getippt werden kann.
+     * Eine { am Zeilenende oeffnet gleich einen eingerueckten Block mit
+     * schliessender Klammer darunter - Klammerfehler werden so verhindert. */
+    function wrapSelection(ta, open, close) {
+      var s = ta.selectionStart;
+      var epos = ta.selectionEnd;
+      var text = ta.value;
+      if (s !== epos) {
+        var sel = text.slice(s, epos);
+        setRange(ta, text.slice(0, s) + open + sel + close + text.slice(epos), null, null);
+        if (ta.setSelectionRange) { ta.setSelectionRange(s + 1, s + 1 + sel.length); }
+        return;
+      }
+      setRange(ta, text.slice(0, s) + open + close + text.slice(s), null, null);
+      if (ta.setSelectionRange) { ta.setSelectionRange(s + 1, s + 1); }
+    }
+    function typeOpenBracket(ta, open) {
+      wrapSelection(ta, open, open === '(' ? ')' : ']');
+    }
+    function typeOpenBrace(ta) {
+      var s = ta.selectionStart;
+      var epos = ta.selectionEnd;
+      var b = lineBounds(ta, s, s);
+      var before = b.text.slice(b.ls, s);
+      var afterOnLine = b.text.slice(s, b.le);
+      var rest = afterOnLine.replace(/ /g, '').replace(/\t/g, '');
+      var trimmed = trimRightWs(before);
+      /* Auswahl, mitten in der Zeile oder leere Zeile: nur paarweise schliessen */
+      if (s !== epos || trimmed === '' || rest !== '') {
+        wrapSelection(ta, '{', '}');
+        return;
+      }
+      /* { am Ende einer Zeile oeffnet den Block: Cursor in eine neue Zeile
+       * mit Einzug, die schliessende Klammer steht gleich mit darunter. */
+      var ind = currentIndent(before);
+      var pre = ' ';
+      var lastCh = before.charAt(before.length - 1);
+      if (lastCh === ' ' || lastCh === String.fromCharCode(9)) { pre = ''; }
+      var ins = pre + '{' + NL + ind + '    ' + NL + ind + '}';
+      setRange(ta, b.text.slice(0, s) + ins + b.text.slice(s), null, null);
+      var np = s + pre.length + 1 + NL.length + ind.length + 4;
+      if (ta.setSelectionRange) { ta.setSelectionRange(np, np); }
+    }
+    function typeOverClose(ta, close) {
+      var s = ta.selectionStart;
+      /* Bereits vorhandene schliessende Klammer ueberspringen statt verdoppeln */
+      if (ta.value.charAt(s) === close) {
+        if (ta.setSelectionRange) { ta.setSelectionRange(s + 1, s + 1); }
+        return;
+      }
+      insertAt(ta, close);
     }
 
     function formatAllFiles() {
@@ -4373,7 +4510,6 @@
         var b = badge();
         if (b) { b.textContent = '1'; }
         if (stepInfo) { stepInfo.textContent = 'Das Programm wurde angehalten: Fehler im laufenden Grafik-Fenster.'; }
-        showPane('errors');
       };
       gfxStartLoop();
     }
@@ -4381,7 +4517,6 @@
       renderClasses();
       if (!res.ok) {
         gfxStopLoop();
-        showPane('errors');
         return;
       }
       if (res.paused) {
@@ -4422,7 +4557,6 @@
       showResult(res);
       if (!res.ok) {
         gfxStopLoop();
-        showPane('errors');
         if (stepInfo) { stepInfo.textContent = 'Schritt nicht moeglich: Der Code enthaelt Fehler.'; }
         return;
       }
@@ -4598,6 +4732,103 @@
     }
     renderClasses();
 
+    /* ---------- Automatisch speichern ----------
+     * Jede Aenderung im Editor oder Titel landet ohne Speichern-Klick auf dem
+     * Server (entprellt). Vor dem Anlegen einer neuen Datei oder dem Loeschen
+     * wird zwingend gespeichert - so geht nichts mehr versehentlich verloren. */
+    var saveForm = document.getElementById('code-save-form');
+    var saveInfo = document.getElementById('java-save-info');
+    var autoTimer = null;
+    var savedSnap = null;
+    function collectSaveSnap() {
+      var snap = { title: '', files: {} };
+      var titleEl = saveForm ? saveForm.querySelector('input[name="title"]') : null;
+      if (titleEl) { snap.title = titleEl.value; }
+      var panes5 = document.querySelectorAll('[data-file-pane]');
+      var k3;
+      for (k3 = 0; k3 < panes5.length; k3++) {
+        var nm3 = panes5[k3].getAttribute('data-file-name');
+        var ta4 = panes5[k3].querySelector('textarea');
+        if (nm3 && ta4) { snap.files[nm3] = ta4.value; }
+      }
+      return snap;
+    }
+    function isDirty() {
+      if (!savedSnap) { return false; }
+      var now = collectSaveSnap();
+      if (now.title !== savedSnap.title) { return true; }
+      var key;
+      for (key in savedSnap.files) {
+        if (Object.prototype.hasOwnProperty.call(savedSnap.files, key) && savedSnap.files[key] !== now.files[key]) { return true; }
+      }
+      return false;
+    }
+    function buildSaveBody() {
+      var params = new URLSearchParams();
+      var csrfEl = saveForm ? saveForm.querySelector('input[name="csrf"]') : null;
+      if (csrfEl) { params.append('csrf', csrfEl.value); }
+      var titleEl = saveForm ? saveForm.querySelector('input[name="title"]') : null;
+      if (titleEl) { params.append('title', titleEl.value); }
+      var panes5 = document.querySelectorAll('[data-file-pane]');
+      var k3;
+      for (k3 = 0; k3 < panes5.length; k3++) {
+        var fid = panes5[k3].getAttribute('data-file-pane');
+        var ta4 = panes5[k3].querySelector('textarea');
+        if (fid && ta4) { params.append('files[' + fid + ']', ta4.value); }
+      }
+      return params.toString();
+    }
+    function autoSave() {
+      if (!saveForm || typeof fetch !== 'function' || typeof URLSearchParams !== 'function') { return null; }
+      var action = saveForm.getAttribute('action');
+      if (!action) { return null; }
+      return fetch(action, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: buildSaveBody(), keepalive: true }).then(function () {
+        savedSnap = collectSaveSnap();
+        if (saveInfo) { saveInfo.textContent = 'Alle Aenderungen automatisch gespeichert.'; }
+      }).catch(function () {
+        if (saveInfo) { saveInfo.textContent = 'Automatisches Speichern fehlgeschlagen - bitte Speichern klicken.'; }
+      });
+    }
+    function autoSaveSoon() {
+      if (!saveForm || typeof fetch !== 'function') { return; }
+      if (saveInfo) { saveInfo.textContent = 'Speichert automatisch ...'; }
+      if (autoTimer) { clearTimeout(autoTimer); }
+      autoTimer = setTimeout(autoSave, 700);
+    }
+    if (saveForm && typeof fetch === 'function') {
+      savedSnap = collectSaveSnap();
+      var titleEl2 = saveForm.querySelector('input[name="title"]');
+      if (titleEl2) { titleEl2.addEventListener('input', autoSaveSoon); }
+      var pe3;
+      for (pe3 = 0; pe3 < paneAreas.length; pe3++) { paneAreas[pe3].addEventListener('input', autoSaveSoon); }
+      var guardForms = [];
+      var selList = ['form.ide-side-new', 'form.ide-file-del'];
+      var si;
+      for (si = 0; si < selList.length; si++) {
+        var gfList = document.querySelectorAll(selList[si]);
+        var gf3;
+        for (gf3 = 0; gf3 < gfList.length; gf3++) { guardForms.push(gfList[gf3]); }
+      }
+      var gf2;
+      for (gf2 = 0; gf2 < guardForms.length; gf2++) {
+        (function (frm) {
+          frm.addEventListener('submit', function (ev) {
+            if (!isDirty()) { return; }
+            if (ev && ev.preventDefault) { ev.preventDefault(); }
+            var p = autoSave();
+            var go = function () { if (frm.submit) { frm.submit(); } };
+            if (p && typeof p.then === 'function') { p.then(go, go); }
+            else { setTimeout(go, 400); }
+          });
+        })(guardForms[gf2]);
+      }
+      if (typeof window !== 'undefined' && window.addEventListener) {
+        window.addEventListener('beforeunload', function () {
+          if (isDirty()) { autoSave(); }
+        });
+      }
+    }
+
     /* Strg + Enter fuehrt aus; Tab rueckt ein, Enter rueckt automatisch ein */
     var pe;
     for (pe = 0; pe < panes.length; pe++) {
@@ -4614,6 +4845,9 @@
             return;
           }
           if (e.key === 'Enter') { e.preventDefault(); enterNewline(ta2); return; }
+          if (e.key === '(' || e.key === '[') { e.preventDefault(); typeOpenBracket(ta2, e.key); return; }
+          if (e.key === '{') { e.preventDefault(); typeOpenBrace(ta2); return; }
+          if (e.key === ')' || e.key === ']') { e.preventDefault(); typeOverClose(ta2, e.key); return; }
           if (e.key === '}') { e.preventDefault(); typeCloseBrace(ta2); return; }
         });
       })(panes[pe]);

@@ -269,13 +269,11 @@ var tabOut = consoleTab('out', 'Ausgabe', true);
 var tabClasses = consoleTab('classes', 'Klassen', false);
 var tabRepl = consoleTab('repl', 'Objektkonsole', false);
 var tabObjects = consoleTab('objects', 'Objekte', false);
-var tabErrors = consoleTab('errors', 'Fehlerkonsole', false);
 var tabApi = consoleTab('api', 'API-Hilfe', false);
 var paneOut = consolePane('out', true);
 var paneClasses = consolePane('classes', false);
 var paneRepl = consolePane('repl', false);
 var paneObjects = consolePane('objects', false);
-var paneErrors = consolePane('errors', false);
 var paneApi = consolePane('api', false);
 
 var runBtn = new FakeEl('button');
@@ -313,6 +311,37 @@ doc.register(classBox, 'java-classes');
 classBox.className = 'umldiag';
 var clearBtn = new FakeEl('button');
 doc.register(clearBtn, 'java-clear');
+
+/* ---------- Savebar und Autosave (wie templates/code_project.php) ---------- */
+var saveForm = new FakeEl('form');
+saveForm.className = 'ide-savebar';
+saveForm.setAttribute('action', '/werkstatt/code/7');
+var csrfInput = new FakeEl('input');
+csrfInput.setAttribute('name', 'csrf');
+csrfInput.value = 'token123';
+saveForm.appendChild(csrfInput);
+var titleInput = new FakeEl('input');
+titleInput.setAttribute('name', 'title');
+titleInput.value = 'Mein Projekt';
+saveForm.appendChild(titleInput);
+doc.register(saveForm, 'code-save-form');
+var saveInfo = new FakeEl('span');
+doc.register(saveInfo, 'java-save-info');
+var newFileForm = new FakeEl('form');
+newFileForm.className = 'ide-side-new';
+newFileForm.setAttribute('action', '/werkstatt/code/7/datei');
+newFileForm._submitted = 0;
+newFileForm.submit = function () { newFileForm._submitted++; };
+doc.body.appendChild(newFileForm);
+var delFileForm = new FakeEl('form');
+delFileForm.className = 'ide-file-del';
+delFileForm.setAttribute('action', '/werkstatt/code/7/datei/12/loeschen');
+doc.body.appendChild(delFileForm);
+var fetchCalls = [];
+global.fetch = function (url, opts) {
+  fetchCalls.push({ url: url, opts: opts });
+  return Promise.resolve({ ok: true });
+};
 
 /* ---------- java-vm.js laden: wireUi() laeuft sofort ---------- */
 global.document = doc;
@@ -516,8 +545,70 @@ setTimeout(function () {
       ok(shapes.length === 1 && shapes[0].text === 'geklickt', 'T20b Klick loest onChange aus (Text geaendert)');
     }
 
-    console.log('');
-    if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }
-    else { console.log(failures.length + ' UI-Tests fehlgeschlagen.'); process.exit(1); }
+    /* T21: Klammer-Automatik: ( schliesst sofort ), Cursor steht dazwischen. */
+    var taE = pane1.querySelector('textarea');
+    taE.value = 'System.out.println';
+    taE.dispatch('input');
+    taE.setSelectionRange(18, 18);
+    taE.dispatch('keydown', { key: '(' });
+    ok(taE.value === 'System.out.println()', 'T21a runde Klammer schliesst sich sofort');
+    ok(taE.selectionStart === 19 && taE.selectionEnd === 19, 'T21b Cursor steht zwischen den Klammern');
+
+    /* T22: { am Zeilenende oeffnet den Block: Cursor in neue Zeile mit Einzug,
+     * schliessende Klammer steht gleich mit darunter. */
+    taE.value = '    public void begruessen()';
+    taE.dispatch('input');
+    taE.setSelectionRange(28, 28);
+    taE.dispatch('keydown', { key: '{' });
+    var expBody = '    public void begruessen() {' + NLt + '        ' + NLt + '    }';
+    ok(taE.value === expBody, 'T22a Block wird auf drei Zeilen geoeffnet (ist: ' + JSON.stringify(taE.value) + ')');
+    ok(taE.selectionStart === 30 + NLt.length + 8, 'T22b Cursor steht in der neuen Zeile hinter dem Einzug');
+    taE.value = 'int x = 1';
+    taE.dispatch('input');
+    taE.setSelectionRange(9, 9);
+    taE.dispatch('keydown', { key: '[' });
+    ok(taE.value === 'int x = 1[]', 'T22c eckige Klammer schliesst sich sofort');
+
+    /* T23: Tippt man die schliessende Klammer, wird die vorhandene uebersprungen. */
+    taE.value = 'System.out.println()';
+    taE.dispatch('input');
+    taE.setSelectionRange(19, 19);
+    taE.dispatch('keydown', { key: ')' });
+    ok(taE.value === 'System.out.println()', 'T23a schliessende Klammer wird nicht verdoppelt');
+    ok(taE.selectionStart === 20, 'T23b Cursor springt hinter die vorhandene Klammer');
+
+    /* T24/T25: Automatisches Speichern bei jeder Aenderung. */
+    fetchCalls.length = 0;
+    var before = fetchCalls.length;
+    taE.value = 'class A {}';
+    taE.dispatch('input');
+    setTimeout(function () {
+      ok(fetchCalls.length === before + 1, 'T24a nach Tippen wird automatisch gespeichert (ein fetch)');
+      if (fetchCalls.length > 0) {
+        ok(fetchCalls[fetchCalls.length - 1].url === '/werkstatt/code/7', 'T24b speichert an die Projekt-Adresse');
+        var body = String(fetchCalls[fetchCalls.length - 1].opts.body);
+        ok(body.indexOf('files%5B11%5D') !== -1 && body.indexOf('csrf=token123') !== -1, 'T24c Body enthaelt Dateien und CSRF-Token');
+      } else {
+        ok(false, 'T24b speichert an die Projekt-Adresse');
+        ok(false, 'T24c Body enthaelt Dateien und CSRF-Token');
+      }
+      ok(saveInfo.textContent.indexOf('gespeichert') !== -1, 'T24d Statusmeldet das automatische Speichern');
+
+      /* T25: Neue Datei anlegen speichert zuerst - nichts geht verloren. */
+      newFileForm._submitted = 0;
+      titleInput.value = 'Mein geaenderter Titel';
+      titleInput.dispatch('input');
+      var prevented = false;
+      newFileForm.dispatch('submit', { preventDefault: function () { prevented = true; } });
+      ok(prevented, 'T25a Absenden wird kurz aufgehalten, bis gespeichert ist');
+      setTimeout(function () {
+        ok(newFileForm._submitted === 1, 'T25b nach dem Speichern wird die neue Datei angelegt');
+        ok(fetchCalls.length >= 2, 'T25c vorher wurde der aktuelle Code gesichert');
+
+        console.log('');
+        if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }
+        else { console.log(failures.length + ' UI-Tests fehlgeschlagen.'); process.exit(1); }
+      }, 200);
+    }, 900);
   }, 700);
 }, 700);

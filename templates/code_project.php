@@ -16,6 +16,7 @@
         <label class="field ide-title"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
         <button class="btn btn-primary" type="submit">💾 Speichern</button>
         <button class="btn btn-ghost" type="button" id="java-format" title="Rückt deinen Java-Code automatisch ein: 4 Leerzeichen pro Ebene, sauber eingerückt und ausgerückt.">🧹 Formatieren</button>
+        <span class="muted" id="java-save-info" title="Dein Code wird bei jeder Änderung automatisch gespeichert – auch ohne Speichern-Klick.">Änderungen werden automatisch gespeichert.</span>
     </form>
     <div class="ide">
         <aside class="ide-side">
@@ -62,22 +63,21 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
             </details>
         </div>
         <div class="ide-console">
+            <div class="console-run">
+                <button class="btn btn-primary" id="run-java" type="button">▶ Ausführen</button>
+                <button class="btn btn-ghost" id="java-step" type="button" title="Führt genau eine Anweisung aus und zeigt in den Zeilennummern, welche Zeile als Nächstes dran ist.">👣 Einzelschritt</button>
+                <button class="btn btn-ghost" id="java-run-rest" type="button" title="Lässt dein Programm vom Pausenpunkt an bis zum Ende laufen.">⏩ Weiter</button>
+                <span class="muted">Strg + Enter funktioniert auch. Dein Programm läuft komplett in deinem Browser.</span>
+            </div>
+            <div id="java-step-info" class="step-info"></div>
             <div class="console-tabs" role="tablist">
                 <button type="button" class="console-tab active" data-ctab="out">▶ Ausgabe</button>
                 <button type="button" class="console-tab" data-ctab="classes">📐 Klassen</button>
                 <button type="button" class="console-tab" data-ctab="repl">🧪 Objektkonsole</button>
                 <button type="button" class="console-tab" data-ctab="objects">🧩 Objekte <span class="err-badge" id="java-obj-badge">0</span></button>
-                <button type="button" class="console-tab" data-ctab="errors">🚨 Fehlerkonsole <span class="err-badge" id="java-error-badge">0</span></button>
                 <button type="button" class="console-tab" data-ctab="api">📖 API-Hilfe</button>
             </div>
             <div class="console-pane" data-cpane="out">
-                <div class="console-run">
-                    <button class="btn btn-primary" id="run-java" type="button">▶ Ausführen</button>
-                    <button class="btn btn-ghost" id="java-step" type="button" title="Führt genau eine Anweisung aus und zeigt in den Zeilennummern, welche Zeile als Nächstes dran ist.">👣 Einzelschritt</button>
-                    <button class="btn btn-ghost" id="java-run-rest" type="button" title="Lässt dein Programm vom Pausenpunkt an bis zum Ende laufen.">⏩ Weiter</button>
-                    <span class="muted">Strg + Enter funktioniert auch. Dein Programm läuft komplett in deinem Browser.</span>
-                </div>
-                <div id="java-step-info" class="step-info"></div>
                 <pre id="java-console" class="code ide-console-out">Noch nichts ausgeführt.</pre>
             </div>
             <div class="console-pane" data-cpane="classes" hidden>
@@ -276,8 +276,9 @@ rb.setSelected(true);</pre></td><td>Auswahlknopf, <code>rb.isSelected()</code> f
                 <p class="muted">Jedes <code>new</code> landet hier: Alle Objekte deines Programms mit ihren Attributwerten – dein Objektdiagramm neben dem Klassendiagramm.</p>
                 <div id="java-objects" class="objdiag">Noch keine Objekte.</div>
             </div>
-            <div class="console-pane" data-cpane="errors" hidden>
-                <div class="java-errors" id="java-errors"></div>
+            <div class="console-errors-box" id="java-errors-box">
+                <div class="console-errors-head">🚨 Fehlerkonsole <span class="err-badge" id="java-error-badge">0</span></div>
+                <div class="java-errors" id="java-errors">Noch nichts ausgeführt – hier erscheinen Fehler mit Datei, Zeile und Tipp.</div>
                 <button class="btn btn-ghost" id="java-clear" type="button">Leeren</button>
             </div>
         </div>
