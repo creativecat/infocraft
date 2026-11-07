@@ -11,6 +11,7 @@ Digitale Informatik-Werkstatt für den bayerischen LehrplanPLUS (Gymnasium): SQL
 | Aufgaben / Meine Aufgaben | 6 | in Arbeit (Basis fertig) |
 | HTML-Werkstatt (WYSIWYG-Editor mit Sofortvorschau, Vorlagen) | 6 | fertig (Basis) |
 | Quiz-Arena (Quiz anlegen, austellen, spielen, Ergebnisse) | 6 | in Arbeit (Basis fertig) |
+| Prüfungen & Schularbeiten (Gruppen mit Vorlagen, BE, Sperre, Korrektur, API-Vorschläge) | 6 | fertig (Basis) |
 | Wiki & Präsentationen | 6 | geplant |
 
 Schülerinnen und Schüler sehen nur die Bereiche, die laut LehrplanPLUS für ihre Klassenstufe relevant sind. Ausgeteilte Inhalte (z. B. Datenbanken) bleiben auch darunter sichtbar.
@@ -23,6 +24,7 @@ Schülerinnen und Schüler sehen nur die Bereiche, die laut LehrplanPLUS für ih
 - **Code-Werkstatt:** Projekte anlegen, in Ordnern per Drag & Drop sortieren, von Lehrkräften an Klassen oder Einzelne austellen. Python-Programme laufen direkt im Browser (Pyodide), es wird kein Code auf dem Server ausgeführt.
 - **Aufgabenpool:** Aufgaben anlegen und austeilen, Schülerinnen und Schüler sehen nur Aufgaben bis zu ihrer Jahrgangsstufe.
 - **Quiz-Arena:** Quiz mit vier Antworten pro Frage anlegen, an Klassen oder Einzelne austellen. Spielen mit sofortigem Feedback, Bestwertungen und Ergebnisliste für Lehrkräfte.
+- **Prüfungsmodus:** Prüfungen und Schularbeiten mit Gruppen und einer Vorlage pro Gruppe, Teilaufgaben mit BE und Musterlösung. Während der Prüfung sind für Teilnehmende alle anderen Bereiche gesperrt (Server-Umleitung und reduzierte Oberfläche), Eingaben speichern automatisch. Korrektur manuell oder anonymisiert per API; Vorschläge müssen gegengeprüft werden. Nach der Herausgabe: Punkte, Note, Feedback und der Vergleich eigene Lösung vs. Musterlösung.
 - **Präsentationsmodus:** Ansicht per Klick vergrößern.
 
 ## Schnellstart (lokal)
@@ -51,15 +53,53 @@ Passwort jeweils **demo1234**. Ein-Klick-Anmeldung auf der Login-Seite, wenn dem
 ## Installation auf Webspace (PHP 8.3+, auch 8.5)
 
 1. Dateien hochladen, DocumentRoot der Domain auf public/ zeigen lassen.
-2. config/config.example.php nach config/config.php kopieren und anpassen (Treiber sqlite oder mysql, demo_mode, ggf. SSO).
+2. config/config.example.php nach config/config.php kopieren und anpassen (Treiber sqlite oder mysql, demo_mode, ggf. SSO, optional exam.api für die anonymisierte API-Korrektur).
 3. Einmalig php tools/migrate.php ausführen (Schema + Beispieldaten).
 4. Für MySQL: sql/schema.mysql.sql liegt bei, alternativ einfach die Migration laufen lassen.
 
 Ohne Composer, ohne Node-Build: nur PHP mit PDO.
 
+## Prüfungsmodus und API-Korrektur
+
+Prüfungen und Schularbeiten durchlaufen vier Phasen:
+
+1. **Vorbereitung:** Gruppen bilden, pro Gruppe eine Vorlage aus der eigenen Werkstatt wählen, Teilaufgaben mit BE (Bewertungseinheiten) und Musterlösung anlegen.
+2. **Durchführung:** Beim Start bekommt jedes Gruppenmitglied eine eigene Arbeitskopie der Vorlage. Bei Prüfungen (nicht bei Schularbeiten) sind alle anderen Bereiche gesperrt: Der Server leitet Teilnehmende auf die Prüfung um, die Navigation ist reduziert. Eingaben speichern automatisch, ein Live-Monitor zeigt der Lehrkraft Beginn und Abgabe.
+3. **Korrektur:** Manuell je Arbeit oder mit einem Klick anonymisiert über eine API. Die API sieht nur Pseudonyme (Arbeit A, Arbeit B, ...), nie Namen. Vorschläge zählen erst, wenn die Lehrkraft sie gegengeprüft und gespeichert hat; erst dann kann herausgegeben werden.
+4. **Herausgabe:** Schülerinnen und Schüler sehen erreichte BE, Note (Notenschlüssel: ab 92/81/67/50/30 Prozent die Noten 1 bis 5, sonst 6), Feedback der Lehrkraft und den direkten Vergleich zwischen eigener Lösung und Musterlösung. Dasselbe Feedback-Format gilt auch für Schularbeiten ohne Sperre.
+
+Konfiguration der API-Korrektur in config/config.php (optional, siehe config.example.php):
+
+```json
+'exam' => [
+    'api' => [
+        'mode' => 'json',   // json: bewertet direkt, chat: Chat-Endpunkt (OpenAI-kompatibel)
+        'url' => 'https://beispiel.example/korrektur',
+        'key' => 'token',   // optional, wird als Authorization: Bearer gesendet
+        'model' => '...',   // nur für mode chat
+    ],
+],
+```
+
+Anfrage (anonymisiert, ohne Namen):
+
+```json
+{
+  "exam": {"title": "HTML-Pruefung", "kind": "pruefung"},
+  "tasks": [{"position": 1, "be": 4, "sample_solution": "Musterloesung"}],
+  "works": [{"pseudonym": "Arbeit A", "answers": [{"position": 1, "answer": "..."}], "material": "Projektinhalt, gekuerzt"}]
+}
+```
+
+Erwartete Antwort:
+
+```json
+{"results": [{"pseudonym": "Arbeit A", "tasks": [{"position": 1, "be": 3.5, "feedback": "Fast perfekt"}]}]}
+```
+
 ## Qualitätssicherung
 
-GitHub Actions prüft jeden Push mit PHP 8.3 und 8.5: Syntax, Migration (inkl. Idempotenz) und Smoke-Tests über HTTP (Login, Werkstatt-Seiten, SQL-Ausführung, Rechtevergabe, Stufen-Filterung, Quiz-Runden).
+GitHub Actions prüft jeden Push mit PHP 8.3 und 8.5: Syntax, Migration (inkl. Idempotenz) und Smoke-Tests über HTTP (Login, Werkstatt-Seiten, SQL-Ausführung, Rechtevergabe, Stufen-Filterung, Quiz-Runden, kompletter Prüfungs-Durchlauf mit Sperre, Abgabe, Korrektur, API-Korrektur und Herausgabe).
 
 ## Dokumentation
 

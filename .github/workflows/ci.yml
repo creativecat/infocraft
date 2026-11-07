@@ -79,7 +79,66 @@ jobs:
           CODE_QMANAGE=$(curl -sS -o qmanage.html -w "%{http_code}" -b cookies4.txt http://127.0.0.1:8080/quiz/$QID)
           grep -q "Neue Frage" qmanage.html && QMANAGE_OK=1 || QMANAGE_OK=0
           CODE_QRES=$(curl -sS -o qres.html -w "%{http_code}" -b cookies4.txt http://127.0.0.1:8080/quiz/$QID/ergebnisse)
-          echo "login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK py:$CODE_PYED/$PY_RUN_OK query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE/$EMMA_HTML lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK qmanage:$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES"
+          # Prüfungsmodus: kompletter Durchlauf (Vorbereitung, Sperre, Abgabe, Korrektur, Herausgabe)
+          STEFAN=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'stefan.schmidt'")
+          curl -sS -o login5.html -c cookies5.txt http://127.0.0.1:8080/login
+          CSRF8=$(grep -o 'value="[a-f0-9]*"' login5.html | head -n1 | cut -d'"' -f2)
+          CODE_STEFAN=$(curl -sS -L -o stefan_home.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "user_id=$STEFAN" http://127.0.0.1:8080/login/demo)
+          CODE_EXAM=$(curl -sS -o exams.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt http://127.0.0.1:8080/pruefungen)
+          grep -q "Neue Prüfung oder Schularbeit anlegen" exams.html && EX_OVER_OK=1 || EX_OVER_OK=0
+          CODE_EXCREATE=$(curl -sS -L -o excreate.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Pruefung HTML" -d "kind=pruefung" -d "level=6" http://127.0.0.1:8080/pruefungen/anlegen)
+          EXID=$(sqlite3 "$DB" "SELECT id FROM exams WHERE title = 'CI Pruefung HTML'")
+          [ -n "$EXID" ] && EX_CREATE_OK=1 || EX_CREATE_OK=0
+          CODE_EXGROUP=$(curl -sS -L -o exgroup.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "name=Gruppe A" http://127.0.0.1:8080/pruefungen/$EXID/gruppe)
+          GID=$(sqlite3 "$DB" "SELECT id FROM exam_groups WHERE exam_id = $EXID")
+          CODE_EXMEMBER=$(curl -sS -L -o exmember.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "group_id=$GID" -d "user_id=$LENA" http://127.0.0.1:8080/pruefungen/$EXID/mitglied)
+          grep -q "Lena Müller" exmember.html && EX_MEMBER_OK=1 || EX_MEMBER_OK=0
+          CODE_EXPROJ=$(curl -sS -L -o exproj.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Vorlage HTML" -d "type=html" http://127.0.0.1:8080/werkstatt/code/projekt)
+          PROJ=$(sqlite3 "$DB" "SELECT id FROM projects WHERE title = 'CI Vorlage HTML' AND owner_id = $STEFAN")
+          CODE_EXTPL=$(curl -sS -L -o extpl.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "group_id=$GID" -d "project_id=$PROJ" http://127.0.0.1:8080/pruefungen/$EXID/vorlage)
+          grep -q "Vorlage: CI Vorlage HTML" extpl.html && EX_TPL_OK=1 || EX_TPL_OK=0
+          CODE_EXTASK1=$(curl -sS -L -o extask1.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=Ueberschrift" -d "be=4" -d "description=Schreibe eine passende Ueberschrift" --data-urlencode "sample_solution=h1 Ueberschrift als HTML" http://127.0.0.1:8080/pruefungen/$EXID/aufgabe)
+          CODE_EXTASK2=$(curl -sS -L -o extask2.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=Absatz" -d "be=4" -d "description=Schreibe einen kurzen Text" --data-urlencode "sample_solution=p Kurzer Text" http://127.0.0.1:8080/pruefungen/$EXID/aufgabe)
+          grep -q "8 BE" extask2.html && EX_TASKS_OK=1 || EX_TASKS_OK=0
+          CODE_EXSTART=$(curl -sS -L -o exstart.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/start)
+          grep -q "Live-Monitor" exstart.html && EX_START_OK=1 || EX_START_OK=0
+          CODE_EXHOME=$(curl -sS -L -o exlock_home.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/)
+          grep -q "Prüfungsmodus aktiv" exlock_home.html && LOCK_OK=1 || LOCK_OK=0
+          CODE_EXQUIZ=$(curl -sS -L -o exlock_quiz.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/quiz)
+          grep -q "gesperrt" exlock_quiz.html && LOCK_REDIRECT_OK=1 || LOCK_REDIRECT_OK=0
+          CODE_EXWORK=$(curl -sS -o ex_work.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/pruefungen/$EXID/arbeit)
+          grep -q "Endgültig abgeben" ex_work.html && EX_WORK_OK=1 || EX_WORK_OK=0
+          CSRF9=$(grep -o 'value="[a-f0-9]*"' ex_work.html | head -n1 | cut -d'"' -f2)
+          T1=$(sqlite3 "$DB" "SELECT id FROM exam_tasks WHERE exam_id = $EXID ORDER BY position LIMIT 1")
+          T2=$(sqlite3 "$DB" "SELECT id FROM exam_tasks WHERE exam_id = $EXID ORDER BY position LIMIT 1 OFFSET 1")
+          CODE_EXSAVE=$(curl -sS -o exsave.json -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF9" -d "task_id=$T1" --data-urlencode "answer=Meine Ueberschrift steht" http://127.0.0.1:8080/pruefungen/$EXID/antwort)
+          grep -q '"ok":true' exsave.json && EXSAVE_OK=1 || EXSAVE_OK=0
+          CODE_EXSUBMIT=$(curl -sS -L -o exsubmit.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF9" http://127.0.0.1:8080/pruefungen/$EXID/abgeben)
+          grep -q "abgegeben" exsubmit.html && EX_SUBMIT_OK=1 || EX_SUBMIT_OK=0
+          CODE_EXEND=$(curl -sS -L -o exend.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/ende)
+          grep -q "API-Korrektur" exend.html && EX_END_OK=1 || EX_END_OK=0
+          CODE_EXCORRECT=$(curl -sS -o ex_correct.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/pruefungen/$EXID/korrektur/$LENA)
+          grep -q "Musterlösung" ex_correct.html && EX_CORRECT_OK=1 || EX_CORRECT_OK=0
+          CODE_EXGRADE=$(curl -sS -L -o exgrade.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "user_id=$LENA" -d "be_$T1=3" -d "be_$T2=2" --data-urlencode "comment_$T1=Fast perfekt" http://127.0.0.1:8080/pruefungen/$EXID/bewertung)
+          grep -q "Fast perfekt" exgrade.html && EX_GRADE_OK=1 || EX_GRADE_OK=0
+          CODE_EXAPI=$(curl -sS -L -o exapi.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/api-korrektur)
+          grep -q "nicht konfiguriert" exapi.html && EX_API_OK=1 || EX_API_OK=0
+          CODE_EXRELEASE=$(curl -sS -L -o exrelease.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/herausgeben)
+          grep -q "Herausgegeben" exrelease.html && EX_RELEASE_OK=1 || EX_RELEASE_OK=0
+          CODE_EXRESULT=$(curl -sS -o exresult.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/pruefungen/$EXID/ergebnis)
+          grep -q "Musterlösung" exresult.html && EX_RESULT_OK=1 || EX_RESULT_OK=0
+          grep -q "Fast perfekt" exresult.html && EX_FEEDBACK_OK=1 || EX_FEEDBACK_OK=0
+          CODE_EXUNLOCK=$(curl -sS -o exunlock.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/)
+          grep -q "Prüfungsmodus aktiv" exunlock.html && EX_UNLOCK_OK=0 || EX_UNLOCK_OK=1
+          JONAS=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'jonas.wagner'")
+          curl -sS -o login6.html -c cookies6.txt http://127.0.0.1:8080/login
+          CSRF10=$(grep -o 'value="[a-f0-9]*"' login6.html | head -n1 | cut -d'"' -f2)
+          CODE_JONAS=$(curl -sS -L -o jonas_home.html -w "%{http_code}" -b cookies6.txt -c cookies6.txt -d "csrf=$CSRF10" -d "user_id=$JONAS" http://127.0.0.1:8080/login/demo)
+          grep -q "Prüfungsmodus aktiv" jonas_home.html && JONAS_LOCK_OK=1 || JONAS_LOCK_OK=0
+          ARBEIT=$(sqlite3 "$DB" "SELECT id FROM exams WHERE kind = 'arbeit'")
+          CODE_ARBEITRES=$(curl -sS -o arbeit_res.html -w "%{http_code}" -b cookies2.txt http://127.0.0.1:8080/pruefungen/$ARBEIT/ergebnis)
+          grep -q "Musterlösung" arbeit_res.html && ARBEIT_RES_OK=1 || ARBEIT_RES_OK=0
+          echo "login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK py:$CODE_PYED/$PY_RUN_OK query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE/$EMMA_HTML lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK qmanage:$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES exam:$CODE_STEFAN/$CODE_EXAM/$EX_OVER_OK/$EX_CREATE_OK/$EX_MEMBER_OK/$EX_TPL_OK/$EX_TASKS_OK/$CODE_EXSTART/$EX_START_OK/$LOCK_OK/$LOCK_REDIRECT_OK/$CODE_EXWORK/$EX_WORK_OK/$CODE_EXSAVE/$EXSAVE_OK/$EX_SUBMIT_OK/$EX_END_OK/$EX_CORRECT_OK/$EX_GRADE_OK/$EX_API_OK/$EX_RELEASE_OK/$EX_RESULT_OK/$EX_FEEDBACK_OK/$EX_UNLOCK_OK/$CODE_JONAS/$JONAS_LOCK_OK/$CODE_ARBEITRES/$ARBEIT_RES_OK"
           FAILED=0
           [ "$CODE_LOGIN" = "200" ] || FAILED=1
           [ "$CODE_DEMO" = "200" ] || FAILED=1
@@ -113,9 +172,38 @@ jobs:
           [ "$CODE_QMANAGE" = "200" ] || FAILED=1
           [ "$QMANAGE_OK" = "1" ] || FAILED=1
           [ "$CODE_QRES" = "200" ] || FAILED=1
+          [ "$CODE_STEFAN" = "200" ] || FAILED=1
+          [ "$CODE_EXAM" = "200" ] || FAILED=1
+          [ "$EX_OVER_OK" = "1" ] || FAILED=1
+          [ "$EX_CREATE_OK" = "1" ] || FAILED=1
+          [ "$EX_MEMBER_OK" = "1" ] || FAILED=1
+          [ "$EX_TPL_OK" = "1" ] || FAILED=1
+          [ "$EX_TASKS_OK" = "1" ] || FAILED=1
+          [ "$CODE_EXSTART" = "200" ] || FAILED=1
+          [ "$EX_START_OK" = "1" ] || FAILED=1
+          [ "$CODE_EXHOME" = "200" ] || FAILED=1
+          [ "$LOCK_OK" = "1" ] || FAILED=1
+          [ "$LOCK_REDIRECT_OK" = "1" ] || FAILED=1
+          [ "$CODE_EXWORK" = "200" ] || FAILED=1
+          [ "$EX_WORK_OK" = "1" ] || FAILED=1
+          [ "$CODE_EXSAVE" = "200" ] || FAILED=1
+          [ "$EXSAVE_OK" = "1" ] || FAILED=1
+          [ "$EX_SUBMIT_OK" = "1" ] || FAILED=1
+          [ "$EX_END_OK" = "1" ] || FAILED=1
+          [ "$EX_CORRECT_OK" = "1" ] || FAILED=1
+          [ "$EX_GRADE_OK" = "1" ] || FAILED=1
+          [ "$EX_API_OK" = "1" ] || FAILED=1
+          [ "$EX_RELEASE_OK" = "1" ] || FAILED=1
+          [ "$EX_RESULT_OK" = "1" ] || FAILED=1
+          [ "$EX_FEEDBACK_OK" = "1" ] || FAILED=1
+          [ "$EX_UNLOCK_OK" = "1" ] || FAILED=1
+          [ "$CODE_JONAS" = "200" ] || FAILED=1
+          [ "$JONAS_LOCK_OK" = "1" ] || FAILED=1
+          [ "$CODE_ARBEITRES" = "200" ] || FAILED=1
+          [ "$ARBEIT_RES_OK" = "1" ] || FAILED=1
           if [ "$FAILED" = "0" ]; then
             echo "Alle Smoke-Tests bestanden."
           else
-            echo "::error::DIAG | login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK py:$CODE_PYED/$PY_RUN_OK quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK/$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES | errors: $(grep 'InfoCraft:' server.log | head -n 5 | tr '\n' ' ')"
+            echo "::error::DIAG | login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK py:$CODE_PYED/$PY_RUN_OK quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK/$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES exam:$CODE_STEFAN/$CODE_EXAM/$EX_OVER_OK/$EX_CREATE_OK/$EX_MEMBER_OK/$EX_TPL_OK/$EX_TASKS_OK/$CODE_EXSTART/$EX_START_OK/$LOCK_OK/$LOCK_REDIRECT_OK/$CODE_EXWORK/$EX_WORK_OK/$CODE_EXSAVE/$EXSAVE_OK/$EX_SUBMIT_OK/$EX_END_OK/$EX_CORRECT_OK/$EX_GRADE_OK/$EX_API_OK/$EX_RELEASE_OK/$EX_RESULT_OK/$EX_FEEDBACK_OK/$EX_UNLOCK_OK/$CODE_JONAS/$JONAS_LOCK_OK/$CODE_ARBEITRES/$ARBEIT_RES_OK | errors: $(grep 'InfoCraft:' server.log | head -n 5 | tr '\n' ' ')"
             exit 1
           fi

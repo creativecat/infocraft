@@ -1,4 +1,5 @@
 <?php /** @var \Infocraft\Models\Exam $exam */ ?>
+<div data-exam-save="<?= url('pruefungen/' . $exam->id . '/antwort') ?>">
 <section class="panel">
     <div class="panel-head">
         <h3><?= e($exam->title) ?> <span class="pill"><?= $exam->kind === 'pruefung' ? '🔒 Prüfung' : '📄 Schularbeit' ?></span></h3>
@@ -45,3 +46,4 @@
     <p>Vielen Dank! Sobald die Lehrkraft korrigiert und die Ergebnisse herausgibt, siehst du hier dein Ergebnis mit der Musterlösung im Vergleich.</p>
 </div>
 <?php endif; ?>
+</div>

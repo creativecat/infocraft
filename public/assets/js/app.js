@@ -236,12 +236,17 @@
       e.returnValue = '';
     }
   });
-  // Automatisches Speichern der Teilaufgaben-Antworten.
-  var saveUrl = body.getAttribute('data-exam-save');
-  var csrf = body.getAttribute('data-csrf');
-  if (!saveUrl || !csrf) {
+})();
+// Automatisches Speichern der Teilaufgaben-Antworten (Prüfungen und Schularbeiten).
+// Der Endpunkt inklusive Prüfungs-ID steht am Aufgabenbereich (data-exam-save).
+(function () {
+  'use strict';
+  var host = document.querySelector('[data-exam-save]');
+  var csrf = document.body.getAttribute('data-csrf');
+  if (!host || !csrf) {
     return;
   }
+  var saveUrl = host.getAttribute('data-exam-save');
   document.querySelectorAll('textarea.ex-answer').forEach(function (area) {
     var taskId = area.getAttribute('data-task');
     var status = document.getElementById('ex-status-' + taskId);

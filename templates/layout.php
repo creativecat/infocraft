@@ -39,7 +39,7 @@ $examLock = $user !== null && $user->role === 'student' ? \Infocraft\Models\Exam
     <link rel="stylesheet" href="<?= url('assets/css/style.css') ?>">
     <link rel="icon" href="<?= url('assets/img/favicon.svg') ?>" type="image/svg+xml">
 </head>
-<body data-csrf="<?= e(csrf_token()) ?>" data-exam-save="<?= url('pruefungen/antwort') ?>"<?= $examLock !== null ? ' data-exam-lock="1"' : '' ?>>
+<body data-csrf="<?= e(csrf_token()) ?>"<?= $examLock !== null ? ' data-exam-lock="1"' : '' ?>>
 <div class="app">
     <aside class="sidebar" id="sidebar">
         <a class="brand" href="<?= url('/') ?>" title="InfoCraft">
