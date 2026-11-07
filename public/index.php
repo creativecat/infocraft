@@ -11,10 +11,10 @@ if (PHP_SAPI === 'cli-server') {
 
 require __DIR__ . '/../src/bootstrap.php';
 
-use Infocraft\AdminController;
-use Infocraft\AuthController;
-use Infocraft\HomeController;
-use Infocraft\ModuleController;
+use Infocraft\Controllers\AdminController;
+use Infocraft\Controllers\AuthController;
+use Infocraft\Controllers\HomeController;
+use Infocraft\Controllers\ModuleController;
 use Infocraft\Router;
 
 // Basispfad, falls InfoCraft in einem Unterverzeichnis installiert ist.
