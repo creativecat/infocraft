@@ -170,3 +170,50 @@
     });
   }
 })();
+/* InfoCraft Phase 4: Python direkt im Browser ausführen (Pyodide) */
+(function () {
+  'use strict';
+
+  var runBtn = document.getElementById('run-python');
+  var editor = document.getElementById('code-editor');
+  var output = document.getElementById('code-output');
+  if (!runBtn || !editor || !output) { return; }
+
+  var pyodidePromise = null;
+
+  function ensurePyodide() {
+    if (pyodidePromise) { return pyodidePromise; }
+    pyodidePromise = new Promise(function (resolve, reject) {
+      if (window.loadPyodide) { resolve(window.loadPyodide()); return; }
+      var script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
+      script.onload = function () { resolve(window.loadPyodide()); };
+      script.onerror = function () { reject(new Error('Pyodide konnte nicht geladen werden (Internetverbindung nötig).')); };
+      document.head.appendChild(script);
+    });
+    return pyodidePromise;
+  }
+
+  function run() {
+    output.textContent = 'Python wird geladen ... (beim ersten Start kann das etwas dauern)';
+    ensurePyodide().then(function (pyodide) {
+      var lines = [];
+      pyodide.setStdout({ batched: function (text) { lines.push(text); } });
+      pyodide.setStderr({ batched: function (text) { lines.push(text); } });
+      output.textContent = 'Programm läuft ...';
+      return pyodide.runPythonAsync(editor.value).then(function () {
+        output.textContent = lines.length > 0 ? lines.join('\n') : '(keine Ausgabe)';
+      });
+    }).catch(function (err) {
+      output.textContent = 'Fehler:\n' + (err && err.message ? err.message : String(err));
+    });
+  }
+
+  runBtn.addEventListener('click', run);
+  editor.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      run();
+    }
+  });
+})();

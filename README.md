@@ -7,7 +7,7 @@ Digitale Informatik-Werkstatt für den bayerischen LehrplanPLUS (Gymnasium): SQL
 | Bereich | Ab Jahrgangsstufe | Status |
 | --- | --- | --- |
 | SQL-Werkstatt (Shop, Instagram, Dateninsel-Adventure) | 9 | fertig (Basis) |
-| Code-Werkstatt (Projekte, Ordner, Austeilen; IDE folgt) | 6 | in Arbeit |
+| Code-Werkstatt (Projekte, Ordner, Austeilen; Python läuft im Browser) | 6 | in Arbeit (Python fertig) |
 | Aufgaben / Meine Aufgaben | 6 | in Arbeit (Basis fertig) |
 | HTML-Werkstatt (WYSIWYG-Editor mit Sofortvorschau, Vorlagen) | 6 | fertig (Basis) |
 | Quiz-Arena | 6 | geplant |
@@ -20,7 +20,7 @@ Schülerinnen und Schüler sehen nur die Bereiche, die laut LehrplanPLUS für ih
 - **Rollen und Anmeldung:** SSO über Microsoft 365 (docs/sso-m365.md) oder CSV-Import mit minimalen Daten (Vorname, Nachname, Klasse, Rolle).
 - **OTP-Passwörter:** Neue Konten und Passwort-Resets erzeugen immer Einmalpasswörter nach der Satzbaulogik (Merksatz: "Apfel, Berg, Katze und Wolke" ergibt z. B. Abkw42!). Lehrkräfte können OTPs für einzelne Personen oder ganze Klassen erzeugen.
 - **SQL-Werkstatt:** Lehrkräfte teilen Datenbankvorlagen an Klassen aus, mit Rechten pro Person: nur lesen, lesen und schreiben oder Tabellen anlegen. Jede Person arbeitet an ihrer eigenen Kopie, ER-Diagramme (Mermaid) und Missionen inklusive.
-- **Code-Werkstatt:** Projekte anlegen, in Ordnern per Drag & Drop sortieren, von Lehrkräften an Klassen oder Einzelne austellen.
+- **Code-Werkstatt:** Projekte anlegen, in Ordnern per Drag & Drop sortieren, von Lehrkräften an Klassen oder Einzelne austellen. Python-Programme laufen direkt im Browser (Pyodide), es wird kein Code auf dem Server ausgeführt.
 - **Aufgabenpool:** Aufgaben anlegen und austeilen, Schülerinnen und Schüler sehen nur Aufgaben bis zu ihrer Jahrgangsstufe.
 - **Präsentationsmodus:** Ansicht per Klick vergrößern.
 

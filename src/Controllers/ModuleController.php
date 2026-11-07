@@ -49,7 +49,8 @@ final class ModuleController
                 'features' => [
                     'Projekte anlegen und in Ordnern per Drag & Drop verwalten',
                     'Projekte und Vorlagen durch Lehrkräfte an Klassen oder Einzelne austeilen',
-                    'Online-IDE für Java und Python folgt (Phase 4)',
+                    'Python-Programme direkt im Browser ausführen (Pyodide, ohne Server)',
+                    'Java-Ausführung und Auto-Vervollständigung folgen',
                 ],
                 'lehrplan' => 'Algorithmen und Programmieren: Grundlagen, Kontrollstrukturen, Methoden.',
             ],
