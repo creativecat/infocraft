@@ -27,6 +27,8 @@
 <?php
 $navModules = Infocraft\Controllers\ModuleController::visible($user);
 $isTeacher = $user !== null && ($user->role === 'teacher' || $user->role === 'admin');
+// Prüfungsmodus: laufende Prüfung dieser Schülerin/dieses Schülers (sonst null)
+$examLock = $user !== null && $user->role === 'student' ? \Infocraft\Models\Exam::lockForUser($user->id) : null;
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -37,7 +39,7 @@ $isTeacher = $user !== null && ($user->role === 'teacher' || $user->role === 'ad
     <link rel="stylesheet" href="<?= url('assets/css/style.css') ?>">
     <link rel="icon" href="<?= url('assets/img/favicon.svg') ?>" type="image/svg+xml">
 </head>
-<body data-csrf="<?= e(csrf_token()) ?>">
+<body data-csrf="<?= e(csrf_token()) ?>" data-exam-save="<?= url('pruefungen/antwort') ?>"<?= $examLock !== null ? ' data-exam-lock="1"' : '' ?>>
 <div class="app">
     <aside class="sidebar" id="sidebar">
         <a class="brand" href="<?= url('/') ?>" title="InfoCraft">
@@ -45,6 +47,10 @@ $isTeacher = $user !== null && ($user->role === 'teacher' || $user->role === 'ad
             <span class="brand-name">Info<strong>Craft</strong></span>
         </a>
         <nav class="nav">
+            <?php if ($examLock !== null): ?>
+            <div class="nav-sep">Prüfung läuft</div>
+            <a href="<?= url('pruefungen') ?>" class="nav-item active" title="Deine Prüfung"><span class="nav-icon">🔒</span><span class="nav-label">Deine Prüfung</span></a>
+            <?php else: ?>
             <a href="<?= url('/') ?>" class="nav-item<?= $active === 'home' ? ' active' : '' ?>" title="Start"><span class="nav-icon">🏠</span><span class="nav-label">Start</span></a>
             <div class="nav-sep">Werkstatt</div>
             <?php foreach ($navModules as $module): ?>
@@ -59,6 +65,7 @@ $isTeacher = $user !== null && ($user->role === 'teacher' || $user->role === 'ad
             <a href="<?= url('admin/users') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="Nutzer"><span class="nav-icon">👥</span><span class="nav-label">Nutzer</span></a>
             <a href="<?= url('admin/import') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="CSV-Import"><span class="nav-icon">📥</span><span class="nav-label">CSV-Import</span></a>
             <?php endif; ?>
+            <?php endif; ?>
         </nav>
         <div class="sidebar-foot"><span class="pill">LehrplanPLUS Bayern</span></div>
     </aside>
@@ -69,7 +76,9 @@ $isTeacher = $user !== null && ($user->role === 'teacher' || $user->role === 'ad
                 <h1 class="topbar-title"><?= e($title) ?></h1>
             </div>
             <div class="topbar-actions">
+                <?php if ($examLock === null): ?>
                 <button id="present-toggle" class="btn btn-ghost" type="button">🖥️ Präsentieren</button>
+                <?php endif; ?>
                 <?php if ($user !== null): ?>
                 <div class="user-chip">
                     <span class="user-name"><?= e($user->fullName()) ?></span>
@@ -80,6 +89,9 @@ $isTeacher = $user !== null && ($user->role === 'teacher' || $user->role === 'ad
             </div>
         </header>
         <main class="content">
+            <?php if ($examLock !== null): ?>
+            <div class="exam-lock-banner">🔒 <strong>Prüfungsmodus aktiv:</strong> <?= e($examLock['title']) ?>. Alle anderen Bereiche sind gesperrt.</div>
+            <?php endif; ?>
             <?php foreach (flash_all() as $flashMessage): ?>
             <div class="flash flash-<?= e($flashMessage['type']) ?>"><?= e($flashMessage['message']) ?></div>
             <?php endforeach; ?>

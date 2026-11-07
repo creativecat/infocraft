@@ -14,6 +14,7 @@ require __DIR__ . '/../src/bootstrap.php';
 use Infocraft\Controllers\AdminController;
 use Infocraft\Controllers\AuthController;
 use Infocraft\Controllers\CodeController;
+use Infocraft\Controllers\ExamController;
 use Infocraft\Controllers\HomeController;
 use Infocraft\Controllers\HtmlController;
 use Infocraft\Controllers\ModuleController;
@@ -79,6 +80,26 @@ $router->get('/quiz/{id}/spielen', [QuizController::class, 'play']);
 $router->post('/quiz/{id}/antwort', [QuizController::class, 'answer']);
 $router->get('/quiz/{id}/ergebnis', [QuizController::class, 'result']);
 
+// Prüfungen & Schularbeiten: Vorbereitung, Durchführung mit Sperre, Korrektur, Herausgabe
+$router->get('/pruefungen', [ExamController::class, 'index']);
+$router->post('/pruefungen/anlegen', [ExamController::class, 'create']);
+$router->get('/pruefungen/{id}', [ExamController::class, 'manage']);
+$router->post('/pruefungen/{id}/gruppe', [ExamController::class, 'addGroup']);
+$router->post('/pruefungen/{id}/mitglied', [ExamController::class, 'addMember']);
+$router->post('/pruefungen/{id}/vorlage', [ExamController::class, 'setTemplate']);
+$router->post('/pruefungen/{id}/aufgabe', [ExamController::class, 'addTask']);
+$router->post('/pruefungen/{id}/start', [ExamController::class, 'start']);
+$router->post('/pruefungen/{id}/ende', [ExamController::class, 'end']);
+$router->get('/pruefungen/{id}/korrektur', [ExamController::class, 'correction']);
+$router->get('/pruefungen/{id}/korrektur/{userId}', [ExamController::class, 'correct']);
+$router->post('/pruefungen/{id}/bewertung', [ExamController::class, 'saveGrading']);
+$router->post('/pruefungen/{id}/api-korrektur', [ExamController::class, 'apiCorrection']);
+$router->post('/pruefungen/{id}/herausgeben', [ExamController::class, 'release']);
+$router->get('/pruefungen/{id}/arbeit', [ExamController::class, 'work']);
+$router->post('/pruefungen/{id}/antwort', [ExamController::class, 'saveAnswer']);
+$router->post('/pruefungen/{id}/abgeben', [ExamController::class, 'submit']);
+$router->get('/pruefungen/{id}/ergebnis', [ExamController::class, 'result']);
+
 // Aufgabenpool (Lehrkräfte) bzw. Meine Aufgaben (Schülerinnen und Schüler)
 $router->get('/aufgaben', [TaskController::class, 'index']);
 $router->post('/aufgaben/anlegen', [TaskController::class, 'create']);
@@ -99,6 +120,10 @@ if (BASE_PATH !== '' && str_starts_with($path, BASE_PATH)) {
 if ($path === '') {
     $path = '/';
 }
+
+// Prüfungsmodus: Schülerinnen und Schüler mit laufender Prüfung werden auf
+// die Prüfung umgeleitet, alle anderen Bereiche sind gesperrt.
+Infocraft\Controllers\ExamController::guard($path);
 
 try {
     $router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', $path);
