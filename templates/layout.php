@@ -76,7 +76,7 @@ $examLock = $user !== null && $user->role === 'student' ? \Infocraft\Models\Exam
                 <h1 class="topbar-title"><?= e($title) ?></h1>
             </div>
             <div class="topbar-actions">
-                <?php if ($examLock === null): ?>
+                <?php if ($examLock === null && $isTeacher): ?>
                 <button id="present-toggle" class="btn btn-ghost" type="button">🖥️ Präsentieren</button>
                 <?php endif; ?>
                 <?php if ($user !== null): ?>

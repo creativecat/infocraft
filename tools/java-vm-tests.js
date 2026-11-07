@@ -201,8 +201,13 @@ t('UnbekannteKlasseBeiNew', { 'Main.java': mainOf('        Auto a = new Auto();'
 t('OberklasseFehlt', { 'Main.java': 'public class Main extends Fehlt {' + NL + '    public static void main(String[] args) { }' + NL + '}' }, r => {
   err1(r, 'compile');
 });
+/* Ohne main kein Fehler mehr: Stattdessen laesst sich das Projekt ueber die
+ * Objektkonsole interaktiv bedienen (Session wird mitgeliefert). */
 t('MainFehlt', { 'NurSo.java': 'public class NurSo {' + NL + '    public int x = 1;' + NL + '}' }, r => {
-  err1(r, 'compile');
+  eq(r.ok, true, 'ok');
+  eq(r.ranMain, false, 'ranMain');
+  if (!r.session) { throw new Error('Session erwartet, damit Objektkonsole nutzbar ist'); }
+  if (r.session.hasMain) { throw new Error('hasMain sollte false sein'); }
 });
 t('ScannerHinweis', { 'Main.java': 'import java.util.Scanner;' + NL + 'public class Main {' + NL + '    public static void main(String[] args) {' + NL + '        Scanner sc = new Scanner(System.in);' + NL + '    }' + NL + '}' }, r => {
   err1(r, 'compile');
@@ -336,6 +341,166 @@ t('DbFehlerFehlendeAnfuehrungszeichen', { 'Main.java': mainOf(
 t('DbFehlerMethodeUnbekannt', { 'Main.java': mainOf(
   '        Datenbank.speichern("irgendwas");') }, r => {
   err1(r, 'runtime');
+});
+
+/* --- Objektkonsole: interaktive Sitzung (Objekte erzeugen, Methoden, Objektdiagramm) --- */
+function sesOk(name, files, check) {
+  count++;
+  var open;
+  try {
+    open = V.openSession(files);
+  } catch (e) {
+    failed++;
+    console.log('FAIL ' + name + ' -> openSession stuerzt ab: ' + (e && e.message ? e.message : String(e)));
+    return;
+  }
+  try {
+    if (!open.ok || !open.session) { throw new Error('Sitzung sollte aufgehen, errors=' + JSON.stringify(open.errors)); }
+    check(open.session);
+    console.log('ok   ' + name);
+  } catch (e) {
+    failed++;
+    console.log('FAIL ' + name + ' -> ' + e.message);
+  }
+}
+
+function labelsOf(compl) {
+  var labels = [];
+  var i;
+  for (i = 0; i < compl.items.length; i++) { labels.push(compl.items[i].label); }
+  return labels;
+}
+
+var AUTO_JAVA = 'public class Auto {' + NL +
+  '    private String marke;' + NL +
+  '    private int km;' + NL +
+  '    public Auto(String markeStart) {' + NL +
+  '        marke = markeStart;' + NL +
+  '        km = 0;' + NL +
+  '    }' + NL +
+  '    public String getMarke() { return marke; }' + NL +
+  '    public void fahren(int strecke) {' + NL +
+  '        km = km + strecke;' + NL +
+  '        System.out.println(marke + " faehrt " + strecke + " km");' + NL +
+  '    }' + NL +
+  '    public int getKm() { return km; }' + NL +
+  '}';
+
+sesOk('SessionObjektErzeugen', { 'Auto.java': AUTO_JAVA }, s => {
+  var r1 = s.evalLine('Auto a = new Auto("BMW");');
+  if (r1.errors.length > 0) { throw new Error('Fehler beim Objekt erzeugen: ' + JSON.stringify(r1.errors)); }
+  var objs = s.objects();
+  if (objs.length !== 1) { throw new Error('1 Objekt erwartet, ' + objs.length); }
+  if (objs[0].name !== 'a' || objs[0].cls !== 'Auto') { throw new Error('Objekt-Name/Klasse falsch: ' + JSON.stringify(objs[0])); }
+  var f = objs[0].fields;
+  if (f.length !== 2 || f[0].name !== 'marke' || f[0].text !== '"BMW"') { throw new Error('Felder falsch: ' + JSON.stringify(f)); }
+  var names = s.classNames();
+  if (names.length !== 1 || names[0] !== 'Auto') { throw new Error('classNames falsch: ' + JSON.stringify(names)); }
+});
+
+sesOk('SessionMethodeUndErgebnis', { 'Auto.java': AUTO_JAVA }, s => {
+  s.evalLine('Auto a = new Auto("BMW");');
+  var r = s.evalLine('a.getMarke()');
+  if (r.errors.length > 0) { throw new Error('Fehler: ' + JSON.stringify(r.errors)); }
+  if (r.result !== 'BMW' || r.resultType !== 'String') { throw new Error('Ergebnis falsch: ' + JSON.stringify(r.result) + '/' + r.resultType); }
+  var r2 = s.evalLine('a.fahren(100);');
+  if (r2.output.indexOf('faehrt 100') < 0) { throw new Error('Ausgabe fehlt: ' + JSON.stringify(r2.output)); }
+  var r3 = s.evalLine('a.getKm()');
+  if (r3.result !== '100') { throw new Error('km erwartet 100, erhalten ' + JSON.stringify(r3.result)); }
+});
+
+sesOk('SessionZustandsaenderung', { 'Auto.java': AUTO_JAVA }, s => {
+  s.evalLine('Auto a = new Auto("BMW");');
+  s.evalLine('a.fahren(40);');
+  var objs = s.objects();
+  if (objs[0].fields[1].text !== '40') { throw new Error('km=40 erwartet im Objektdiagramm: ' + JSON.stringify(objs[0].fields)); }
+});
+
+sesOk('SessionOhneSemikolonUndRechnen', { 'Auto.java': AUTO_JAVA }, s => {
+  var r = s.evalLine('2 + 3 * 4');
+  if (r.result !== '14') { throw new Error('14 erwartet, ' + JSON.stringify(r.result)); }
+  s.evalLine('int x = 5;');
+  var r2 = s.evalLine('x * 2');
+  if (r2.result !== '10') { throw new Error('10 erwartet, ' + JSON.stringify(r2.result)); }
+});
+
+sesOk('SessionFehlerMitHilfe', { 'Auto.java': AUTO_JAVA }, s => {
+  s.evalLine('Auto a = new Auto("BMW");');
+  var r = s.evalLine('a.hupen();');
+  if (r.errors.length !== 1) { throw new Error('1 Fehler erwartet'); }
+  if (r.errors[0].hint.length < 5) { throw new Error('Hilfestellung fehlt'); }
+  var r2 = s.evalLine('int ;');
+  if (r2.errors.length !== 1) { throw new Error('Syntaxfehler erwartet'); }
+});
+
+sesOk('SessionAutocomplete', { 'Auto.java': AUTO_JAVA }, s => {
+  s.evalLine('Auto a = new Auto("BMW");');
+  var c1 = s.complete('a.');
+  var labels = labelsOf(c1);
+  if (labels.indexOf('getMarke(') < 0 || labels.indexOf('marke') < 0 || labels.indexOf('fahren(') < 0) {
+    throw new Error('Mitglieder fehlen: ' + JSON.stringify(labels));
+  }
+  var c2 = s.complete('Aut');
+  labels = labelsOf(c2);
+  if (labels.indexOf('Auto') < 0) { throw new Error('Klassenname fehlt: ' + JSON.stringify(labels)); }
+  if (c2.from !== 0) { throw new Error('from=0 erwartet'); }
+  var c3 = s.complete('a.fa');
+  labels = labelsOf(c3);
+  if (labels.length !== 1 || labels[0] !== 'fahren(') { throw new Error('fahren( erwartet: ' + JSON.stringify(labels)); }
+  var c4 = s.complete('Auto.');
+  labels = labelsOf(c4);
+  if (labels.indexOf('new Auto(') < 0) { throw new Error('Konstruktor-Vorschlag fehlt: ' + JSON.stringify(labels)); }
+  var c5 = s.complete('System.out.');
+  labels = labelsOf(c5);
+  if (labels.indexOf('println(') < 0) { throw new Error('println fehlt: ' + JSON.stringify(labels)); }
+  var c6 = s.complete('Datenbank.');
+  labels = labelsOf(c6);
+  if (labels.indexOf('abfrage(') < 0) { throw new Error('abfrage fehlt: ' + JSON.stringify(labels)); }
+});
+
+sesOk('SessionVerweiseZwischenObjekten', { 'Hund.java':
+  'public class Hund {' + NL +
+  '    private String name;' + NL +
+  '    private Hund freund;' + NL +
+  '    public Hund(String nameStart) { name = nameStart; }' + NL +
+  '    public void freundSetzen(Hund freundNeu) { freund = freundNeu; }' + NL +
+  '    public Hund getFreund() { return freund; }' + NL +
+  '}' }, s => {
+  s.evalLine('Hund a = new Hund("Bello");');
+  s.evalLine('Hund b = new Hund("Rex");');
+  s.evalLine('a.freundSetzen(b);');
+  var objs = s.objects();
+  if (objs.length !== 2) { throw new Error('2 Objekte erwartet'); }
+  if (objs[0].name !== 'a' || objs[1].name !== 'b') { throw new Error('Namen falsch: ' + objs[0].name + '/' + objs[1].name); }
+  var freundText = null;
+  var i;
+  for (i = 0; i < objs[0].fields.length; i++) { if (objs[0].fields[i].name === 'freund') { freundText = objs[0].fields[i].text; } }
+  if (freundText !== 'b : Hund') { throw new Error('Verweis erwartet b : Hund, erhalten ' + JSON.stringify(freundText)); }
+  var r = s.evalLine('a.getFreund()');
+  if (r.resultType !== 'Hund') { throw new Error('resultType Hund erwartet: ' + r.resultType); }
+});
+
+t('SessionNachMainLauf', {
+  'Auto.java': AUTO_JAVA,
+  'Programm.java': 'public class Programm {' + NL +
+    '    public static void main(String[] args) {' + NL +
+    '        Auto eins = new Auto("VW");' + NL +
+    '        Auto zwei = new Auto("Audi");' + NL +
+    '        eins.fahren(10);' + NL +
+    '    }' + NL +
+    '}'
+}, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.ranMain, true, 'ranMain');
+  if (!r.session) { throw new Error('Session erwartet'); }
+  if (r.session.hasMain !== true) { throw new Error('hasMain erwartet'); }
+  var objs = r.session.objects();
+  if (objs.length !== 2) { throw new Error('2 Objekte aus main erwartet, ' + objs.length); }
+  var r2 = r.session.evalLine('Auto drei = new Auto("Opel");');
+  if (r2.errors.length > 0) { throw new Error('Objektkonsole nach main sollte funktionieren'); }
+  if (r.session.objects().length !== 3) { throw new Error('3 Objekte erwartet'); }
+  var r3 = r.session.evalLine('drei.getMarke()');
+  if (r3.result !== 'Opel') { throw new Error('Opel erwartet: ' + JSON.stringify(r3.result)); }
 });
 
 console.log('');

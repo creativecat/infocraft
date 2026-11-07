@@ -341,7 +341,13 @@ final class CodeController
             return "<!DOCTYPE html>\n<html lang=\"de\">\n<head>\n  <title>" . $title . "</title>\n</head>\n<body>\n  <h1>" . $title . "</h1>\n  <p>Hier entsteht deine Seite.</p>\n</body>\n</html>\n";
         }
         if ($language === 'java') {
-            return "public class " . preg_replace('/[^A-Za-z0-9]/', '', $title) . " {\n    public static void main(String[] args) {\n        System.out.println(\"Hallo InfoCraft!\");\n    }\n}\n";
+            $name = preg_replace('/[^A-Za-z0-9]/', '', $title);
+            if ($name === '') {
+                $name = 'MeineKlasse';
+            }
+            /* Bewusst ohne main-Methode: Schuelerinnen und Schueler erzeugen sich
+             * Objekte in der Objektkonsole und rufen Methoden auf (Objektdiagramm). */
+            return "public class " . $name . " {\n    private String name;\n\n    public " . $name . "(String nameStart) {\n        name = nameStart;\n    }\n\n    public String getName() {\n        return name;\n    }\n\n    public void vorstellen() {\n        System.out.println(\"Ich bin \" + name);\n    }\n}\n";
         }
         return "# " . $title . "\nprint(\"Hallo InfoCraft!\")\n";
     }

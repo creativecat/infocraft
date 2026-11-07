@@ -718,7 +718,19 @@
       err('Unerwartet: ' + describe(t), 'Hier steht etwas, das nicht als Ausdruck lesbar ist. Pruefe Klammern und Semikolons in den Zeilen davor.');
     }
 
-    return { parseUnit: parseUnit };
+    /* Objektkonsole: Anweisungen ohne umgebende Klasse lesen (kein main noetig). */
+    function parseReplBody() {
+      skipImports();
+      skipSemi();
+      var body = [];
+      while (!at('eof')) {
+        body.push(parseStatement());
+        skipSemi();
+      }
+      return body;
+    }
+
+    return { parseUnit: parseUnit, parseReplBody: parseReplBody };
   }
 
   /* ================= Interpreter (Teil 2) ================= */
@@ -763,11 +775,10 @@
   var files0 = Object.create(null);
 
   /* ================= run(files) ================= */
-  function run(files) {
-    files0 = files;
+  /* Gemeinsame Vorarbeit fuer run() und openSession(): alle Dateien lexen,
+   * parsen und uebersetzen. Liefert {ok, classes, classMap, errors, fileNames}. */
+  function compileAll(files) {
     var errors = [];
-    var out = [];
-    var errCards = [];
     var classes = [];
     var classMap = Object.create(null);
     var fileNames = [];
@@ -775,7 +786,7 @@
     for (k in files) { if (Object.prototype.hasOwnProperty.call(files, k)) { fileNames.push(k); } }
 
     var pre = precheck(files);
-    if (pre) { errors.push(pre); return finish(); }
+    if (pre) { errors.push(pre); return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames }; }
 
     for (var fi = 0; fi < fileNames.length; fi++) {
       var fname = fileNames[fi];
@@ -783,14 +794,14 @@
       var toks = lex(fname, files[fname], perrs);
       if (!toks || perrs.length) {
         if (perrs.length) { errors.push(perrs[0]); }
-        return finish();
+        return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames };
       }
       try {
         var parsed = new Parser(fname, toks, perrs).parseUnit();
         for (var pj = 0; pj < parsed.length; pj++) {
           if (classMap[parsed[pj].name]) {
             errors.push(JError('compile', fname, parsed[pj].line, 'Die Klasse ' + parsed[pj].name + ' existiert doppelt.', 'Jede Klasse darf nur einmal definiert werden (auch ueber mehrere Dateien hinweg).'));
-            return finish();
+            return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames };
           }
           parsed[pj].srcFile = fname;
           classes.push(parsed[pj]);
@@ -799,54 +810,419 @@
       } catch (e) {
         if (perrs.length) { errors.push(perrs[0]); }
         else { throw e; }
-        return finish();
+        return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames };
       }
-      if (perrs.length) { errors.push(perrs[0]); return finish(); }
+      if (perrs.length) { errors.push(perrs[0]); return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames }; }
     }
 
-    if (!compileChecks(classes, classMap, errors)) { return finish(); }
+    if (!compileChecks(classes, classMap, errors)) {
+      return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames };
+    }
+    return { ok: true, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames };
+  }
 
-    RUN_CLASS_MAP = classMap;
+  function run(files) {
+    files0 = files;
+    var errors = [];
+    var out = [];
+    var errCards = [];
+    var comp = compileAll(files);
+    errors = comp.errors;
+    if (!comp.ok) { return finish(null, false); }
+
+    RUN_CLASS_MAP = comp.classMap;
     RUN_DB = Object.create(null);
     var vm = {
       out: out,
       errCards: errCards,
       statics: Object.create(null),
       steps: 0,
-      depth: 0
+      depth: 0,
+      objects: []
     };
     RUN_VM = vm;
 
+    var mainFound = null;
     try {
       var ci;
-      for (ci = 0; ci < classes.length; ci++) { initStatics(classes[ci], vm); }
-      var mainFound = null;
-      for (ci = 0; ci < classes.length; ci++) {
-        var mm = findMethod(classes[ci], 'main', 1);
+      for (ci = 0; ci < comp.classes.length; ci++) { initStatics(comp.classes[ci], vm); }
+      for (ci = 0; ci < comp.classes.length; ci++) {
+        var mm = findMethod(comp.classes[ci], 'main', 1);
         if (mm && mm.m.isStatic) { mainFound = mm; break; }
       }
-      if (!mainFound) {
-        errors.push(JError('compile', classes.length ? classes[0].srcFile : fileNames[0], 1, 'Kein Startpunkt gefunden.', 'Das Programm braucht eine Methode: public static void main(String[] args)'));
-        return finish();
+      if (mainFound) {
+        invokeMethod(mainFound.cls, mainFound.m, null, [{ t: 'array', elem: 'String', arr: [] }], vm);
       }
-      invokeMethod(mainFound.cls, mainFound.m, null, [{ t: 'array', elem: 'String', arr: [] }], vm);
+      /* Ohne main-Methode kein Fehler mehr: Das Projekt laesst sich dann
+       * interaktiv ueber die Objektkonsole bedienen (Objekte erzeugen,
+       * Methoden aufrufen, Objektdiagramm). */
     } catch (e) {
       if (e && e.jerr) { errors.push(e.jerr); }
       else if (e && e.ctrl) { }
       else { throw e; }
     }
 
-    return finish();
+    return finish(makeSession(comp, vm), !!mainFound);
 
-    function finish() {
+    function finish(session, ranMain) {
       var all = [];
       var ei;
       for (ei = 0; ei < errors.length; ei++) { all.push(errors[ei]); }
       for (ei = 0; ei < errCards.length; ei++) { all.push(errCards[ei]); }
       var ok = true;
       for (ei = 0; ei < all.length; ei++) { if (all[ei].kind !== 'stderr') { ok = false; } }
-      return { output: out.join(''), errors: all, ok: ok };
+      return { output: out.join(''), errors: all, ok: ok, session: session, ranMain: !!ranMain };
     }
+  }
+
+  /* ================= Objektkonsole (interaktive Sitzung) =================
+   * Nach dem Ausfuehren bleibt das Programm "lebendig": In der Objektkonsole
+   * lassen sich Objekte erzeugen, Methoden aufrufen und Ausdruecke auswerten.
+   * Alle erzeugten Objekte zeigt das Objektdiagramm. Eine main-Methode ist
+   * dafuer nicht noetig (und wird in den Startpaketen bewusst nicht benutzt).
+   */
+  function openSession(files) {
+    var comp = compileAll(files);
+    if (!comp.ok) { return { ok: false, errors: comp.errors, session: null }; }
+    var out = [];
+    var errCards = [];
+    RUN_CLASS_MAP = comp.classMap;
+    RUN_DB = Object.create(null);
+    var vm = { out: out, errCards: errCards, statics: Object.create(null), steps: 0, depth: 0, objects: [] };
+    RUN_VM = vm;
+    try {
+      for (var ci = 0; ci < comp.classes.length; ci++) { initStatics(comp.classes[ci], vm); }
+    } catch (e) {
+      if (e && e.jerr) { return { ok: false, errors: [e.jerr], session: null }; }
+      throw e;
+    }
+    var initErrs = [];
+    for (var ei = 0; ei < errCards.length; ei++) { initErrs.push(errCards[ei]); }
+    return { ok: true, errors: initErrs, session: makeSession(comp, vm) };
+  }
+
+  function sessionMainClassName(comp) {
+    for (var ci = 0; ci < comp.classes.length; ci++) {
+      var mm = findMethod(comp.classes[ci], 'main', 1);
+      if (mm && mm.m.isStatic) { return comp.classes[ci].name; }
+    }
+    return null;
+  }
+
+  function typeName(ty) {
+    if (!ty) { return '?'; }
+    return ty.name + (ty.arr ? '[]' : '');
+  }
+
+  function isIdentChar(c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === '_';
+  }
+
+  /* Variablen der Sitzung mit Objekt-Referenzen (fuer Namenszuordnung im Diagramm). */
+  function varPairsOf(env) {
+    var pairs = [];
+    var name;
+    for (name in env.vars) {
+      if (Object.prototype.hasOwnProperty.call(env.vars, name)) {
+        var slot = env.vars[name];
+        if (slot.val && slot.val.t === 'ref') { pairs.push({ obj: slot.val.obj, name: name, type: slot.val.cls }); }
+      }
+    }
+    return pairs;
+  }
+
+  /* Wert fuer das Objektdiagramm beschreiben (ruft keinen Schuelercode auf). */
+  function reprVal(v, pairs, regs) {
+    if (!v || v.t === 'null') { return 'null'; }
+    if (v.t === 'String') { return '"' + v.v + '"'; }
+    if (v.t === 'int' || v.t === 'double') { return String(v.v); }
+    if (v.t === 'boolean') { return v.v ? 'true' : 'false'; }
+    if (v.t === 'char') { return "'" + String.fromCharCode(v.v) + "'"; }
+    if (v.t === 'array') {
+      var parts = [];
+      var i;
+      for (i = 0; i < v.arr.length && i < 4; i++) { parts.push(reprVal(v.arr[i], pairs, regs)); }
+      if (v.arr.length > 4) { parts.push('...'); }
+      return v.elem + '[] [' + parts.join(', ') + ']';
+    }
+    if (v.t === 'ref') {
+      var nm = null;
+      var id = null;
+      var j;
+      for (j = 0; j < pairs.length; j++) { if (pairs[j].obj === v.obj) { nm = pairs[j].name; } }
+      for (j = 0; j < regs.length; j++) { if (regs[j].obj === v.obj) { id = regs[j].id; } }
+      return (nm ? nm : ('Objekt ' + id)) + ' : ' + v.cls;
+    }
+    return String(v.v);
+  }
+
+  function objectsSnapshotOf(comp, vm, env) {
+    var pairs = varPairsOf(env);
+    var list = [];
+    var i, j;
+    for (i = 0; i < vm.objects.length; i++) {
+      var reg = vm.objects[i];
+      var varName = null;
+      for (j = 0; j < pairs.length; j++) { if (pairs[j].obj === reg.obj) { varName = pairs[j].name; } }
+      var cls = comp.classMap[reg.cls];
+      var fields = [];
+      var flds = cls ? instanceFieldsOf(cls) : [];
+      for (j = 0; j < flds.length; j++) {
+        var fname = flds[j].name;
+        if (Object.prototype.hasOwnProperty.call(reg.obj.f, fname)) {
+          fields.push({ name: fname, text: reprVal(reg.obj.f[fname], pairs, vm.objects) });
+        }
+      }
+      list.push({ id: reg.id, cls: reg.cls, name: varName, fields: fields });
+    }
+    return list;
+  }
+
+  function classChainOf(cls, classMap) {
+    var chain = [];
+    var c = cls;
+    var guard = 0;
+    while (c && guard < 30) { chain.unshift(c); c = c.parent ? classMap[c.parent] : null; guard++; }
+    return chain;
+  }
+
+  function methodItem(m) {
+    var ps = [];
+    var i;
+    for (i = 0; i < m.params.length; i++) { ps.push(typeName(m.params[i].type) + ' ' + m.params[i].name); }
+    return {
+      label: m.name + '(',
+      insert: m.name + '(',
+      hint: 'Methode (' + ps.join(', ') + ') zurueck: ' + (m.ret && m.ret.void ? 'void' : typeName(m.ret))
+    };
+  }
+
+  var STRING_METHODS = ['length()', 'charAt(', 'substring(', 'indexOf(', 'equals(', 'equalsIgnoreCase(', 'contains(', 'startsWith(', 'toUpperCase()', 'toLowerCase()', 'trim()', 'replace(', 'isEmpty()'];
+  var REPL_KEYWORDS = ['new', 'int', 'double', 'boolean', 'char', 'if', 'while', 'for', 'return', 'true', 'false', 'null'];
+  var BUILTIN_CLASSES = ['System', 'Math', 'Integer', 'Double', 'String', 'Datenbank'];
+
+  /* Empfaenger vor einem abschliessenden Punkt ermitteln (auch System.out.). */
+  function dotReceiver(t, dotIdx) {
+    var r = dotIdx - 1;
+    while (r >= 0 && isIdentChar(t.charAt(r))) { r--; }
+    var ident = t.substring(r + 1, dotIdx);
+    if ((ident === 'out' || ident === 'err') && r >= 1 && t.charAt(r) === '.') {
+      var r2 = r - 1;
+      while (r2 >= 0 && isIdentChar(t.charAt(r2))) { r2--; }
+      if (t.substring(r2 + 1, r) === 'System') { return 'System.' + ident; }
+    }
+    return ident;
+  }
+
+  function makeSession(comp, vm) {
+    var env = newEnv(null);
+    var classMap = comp.classMap;
+    var s = { vm: vm, hasMain: sessionMainClassName(comp) !== null };
+
+    s.classNames = function () {
+      var names = [];
+      for (var i = 0; i < comp.classes.length; i++) { names.push(comp.classes[i].name); }
+      return names;
+    };
+
+    s.objects = function () { return objectsSnapshotOf(comp, vm, env); };
+
+    s.evalLine = function (input) {
+      var line = String(input == null ? '' : input);
+      line = line.trim();
+      var res = { output: '', errors: [], result: null, resultType: null, objects: [] };
+      if (line === '') { res.objects = s.objects(); return res; }
+      var lastCh = line.charAt(line.length - 1);
+      if (lastCh !== ';' && lastCh !== '{' && lastCh !== '}') { line += ';'; }
+      var perrs = [];
+      var toks = lex('Objektkonsole', line, perrs);
+      if (!toks || perrs.length) {
+        if (perrs.length) { res.errors.push(perrs[0]); }
+        res.objects = s.objects();
+        return res;
+      }
+      var stmts = [];
+      try { stmts = new Parser('Objektkonsole', toks, perrs).parseReplBody(); }
+      catch (e) {
+        if (e && e.stop && e.jerr) { res.errors.push(e.jerr); res.objects = s.objects(); return res; }
+        throw e;
+      }
+      if (stmts.length === 0) { res.objects = s.objects(); return res; }
+      RUN_CLASS_MAP = classMap;
+      RUN_VM = vm;
+      var ctx = { file: 'Objektkonsole', line: 1, cls: null, thisVal: null, vm: vm, captureExpr: true };
+      var outStart = vm.out.length;
+      var errStart = vm.errCards.length;
+      try {
+        execBlock(stmts, env, ctx);
+      } catch (e) {
+        if (e && e.jerr) { res.errors.push(e.jerr); }
+        else if (e && (e.ctrl === 'return' || e.ctrl === 'break' || e.ctrl === 'continue')) {
+          res.errors.push(JError('syntax', 'Objektkonsole', ctx.line, 'return, break und continue gehoeren in Methoden und Schleifen deiner Klasse.', 'In der Objektkonsole schreibst du Anweisungen direkt auf, z. B. auto.fahren();'));
+        }
+        else { throw e; }
+        res.output = vm.out.slice(outStart).join('');
+        res.objects = s.objects();
+        return res;
+      }
+      var last = stmts[stmts.length - 1];
+      if (last && last.type === 'exprstat' && ctx.lastExprVal) {
+        var v = ctx.lastExprVal;
+        if (v.t !== 'void') {
+          try {
+            res.result = javaStr(v, ctx, ctx.line);
+            res.resultType = v.t === 'ref' ? v.cls : (v.t === 'array' ? (v.elem + '[]') : v.t);
+          } catch (e2) {
+            if (e2 && e2.jerr) { res.errors.push(e2.jerr); }
+            else { throw e2; }
+          }
+        }
+      }
+      res.output = vm.out.slice(outStart).join('');
+      var newErrs = vm.errCards.slice(errStart);
+      for (var ei = 0; ei < newErrs.length; ei++) { res.errors.push(newErrs[ei]); }
+      res.objects = s.objects();
+      return res;
+    };
+
+    /* Autovervollstaendung: {from: Einfuegeposition, items: [{label, insert, hint}]} */
+    s.complete = function (text) {
+      var t = String(text == null ? '' : text);
+      var end = t.length;
+      var i, j;
+      var lastNonWs = -1;
+      for (i = end - 1; i >= 0; i--) {
+        var ch = t.charAt(i);
+        if (ch !== ' ' && ch !== String.fromCharCode(9) && ch !== NL) { lastNonWs = i; break; }
+      }
+      if (lastNonWs >= 0 && t.charAt(lastNonWs) === '.') {
+        return { from: end, items: memberItems(dotReceiver(t, lastNonWs)) };
+      }
+      var w = end - 1;
+      while (w >= 0 && isIdentChar(t.charAt(w))) { w--; }
+      var word = t.substring(w + 1, end);
+      /* Punkt vor dem Wort: Mitglieder des Empfaengers anbieten (auch mitten im Wort) */
+      if (w >= 0 && t.charAt(w) === '.') {
+        var recv = dotReceiver(t, w);
+        if (recv !== '') {
+          var mems = memberItems(recv);
+          var mout = [];
+          var mi;
+          for (mi = 0; mi < mems.length; mi++) {
+            if (word === '' || mems[mi].label.indexOf(word) === 0) { mout.push(mems[mi]); }
+          }
+          return { from: w + 1, items: mout.slice(0, 40) };
+        }
+      }
+      var items = [];
+      var name;
+      for (name in env.vars) {
+        if (Object.prototype.hasOwnProperty.call(env.vars, name)) {
+          items.push({ label: name, insert: name, hint: 'Variable: ' + typeName(env.vars[name].type) });
+        }
+      }
+      for (i = 0; i < comp.classes.length; i++) {
+        items.push({ label: comp.classes[i].name, insert: comp.classes[i].name, hint: 'Klasse' });
+      }
+      for (i = 0; i < BUILTIN_CLASSES.length; i++) {
+        items.push({ label: BUILTIN_CLASSES[i], insert: BUILTIN_CLASSES[i], hint: 'eingebaute Klasse' });
+      }
+      for (i = 0; i < REPL_KEYWORDS.length; i++) {
+        items.push({ label: REPL_KEYWORDS[i], insert: REPL_KEYWORDS[i], hint: 'Schluesselwort' });
+      }
+      var out = [];
+      for (i = 0; i < items.length; i++) {
+        if (word === '' || items[i].label.indexOf(word) === 0) { out.push(items[i]); }
+      }
+      return { from: w + 1, items: out.slice(0, 40) };
+    };
+
+    function memberItems(recv) {
+      var out = [];
+      var i, j;
+      if (recv === '') { return out; }
+      var slot = envFind(env, recv);
+      if (slot && slot.val) {
+        var v = slot.val;
+        if (v.t === 'ref') {
+          var chain = classChainOf(classMap[v.cls], classMap);
+          for (i = 0; i < chain.length; i++) {
+            var cls = chain[i];
+            for (j = 0; j < cls.fields.length; j++) {
+              if (!cls.fields[j].isStatic) { out.push({ label: cls.fields[j].name, insert: cls.fields[j].name, hint: 'Attribut: ' + typeName(cls.fields[j].type) }); }
+            }
+            for (j = 0; j < cls.methods.length; j++) {
+              if (!cls.methods[j].isStatic) { out.push(methodItem(cls.methods[j])); }
+            }
+          }
+          return out;
+        }
+        if (v.t === 'String') {
+          for (i = 0; i < STRING_METHODS.length; i++) { out.push({ label: STRING_METHODS[i], insert: STRING_METHODS[i], hint: 'String-Methode' }); }
+          return out;
+        }
+        if (v.t === 'array') {
+          out.push({ label: 'length', insert: 'length', hint: 'Laenge des Arrays (ohne Klammern)' });
+          return out;
+        }
+        return out;
+      }
+      if (classMap[recv]) {
+        var cls2 = classMap[recv];
+        var chain2 = classChainOf(cls2, classMap);
+        for (i = 0; i < chain2.length; i++) {
+          for (j = 0; j < chain2[i].fields.length; j++) {
+            if (chain2[i].fields[j].isStatic) { out.push({ label: chain2[i].fields[j].name, insert: chain2[i].fields[j].name, hint: 'Klassen-Attribut: ' + typeName(chain2[i].fields[j].type) }); }
+          }
+          for (j = 0; j < chain2[i].methods.length; j++) {
+            if (chain2[i].methods[j].isStatic) { out.push(methodItem(chain2[i].methods[j])); }
+          }
+        }
+        for (i = 0; i < cls2.ctors.length; i++) {
+          var ps = [];
+          for (j = 0; j < cls2.ctors[i].params.length; j++) { ps.push(typeName(cls2.ctors[i].params[j].type)); }
+          out.push({ label: 'new ' + recv + '(', insert: 'new ' + recv + '(', hint: 'Konstruktor (' + ps.join(', ') + ')' });
+        }
+        return out;
+      }
+      if (recv === 'System.out' || recv === 'System.err') {
+        out.push({ label: 'println(', insert: 'println(', hint: 'Ausgabe mit Zeilenumbruch' });
+        out.push({ label: 'print(', insert: 'print(', hint: 'Ausgabe ohne Zeilenumbruch' });
+        return out;
+      }
+      if (recv === 'System') {
+        out.push({ label: 'out.println(', insert: 'out.println(', hint: 'Normale Ausgabe' });
+        out.push({ label: 'err.println(', insert: 'err.println(', hint: 'Ausgabe in die Fehlerkonsole' });
+        return out;
+      }
+      if (recv === 'Math') {
+        var ms = ['abs(', 'max(', 'min(', 'pow(', 'sqrt(', 'floor(', 'ceil(', 'round(', 'random()', 'PI', 'E'];
+        for (i = 0; i < ms.length; i++) { out.push({ label: ms[i], insert: ms[i], hint: 'Math' }); }
+        return out;
+      }
+      if (recv === 'Integer') {
+        var is = ['parseInt(', 'toString(', 'MAX_VALUE', 'MIN_VALUE'];
+        for (i = 0; i < is.length; i++) { out.push({ label: is[i], insert: is[i], hint: 'Integer' }); }
+        return out;
+      }
+      if (recv === 'Double') {
+        var ds = ['parseDouble(', 'toString('];
+        for (i = 0; i < ds.length; i++) { out.push({ label: ds[i], insert: ds[i], hint: 'Double' }); }
+        return out;
+      }
+      if (recv === 'String') {
+        out.push({ label: 'valueOf(', insert: 'valueOf(', hint: 'String' });
+        return out;
+      }
+      if (recv === 'Datenbank') {
+        var dbs = ['ausfuehren(', 'abfrage(', 'anzahl(', 'wert(', 'tabellen()'];
+        for (i = 0; i < dbs.length; i++) { out.push({ label: dbs[i], insert: dbs[i], hint: 'Datenbank (SQL direkt in Java)' }); }
+        return out;
+      }
+      return out;
+    }
+
+    return s;
   }
 
   /* Vorab-Pruefung nicht unterstuetzter Sprachelemente mit klarer Meldung. */
@@ -1027,6 +1403,8 @@
   function instantiate(cls, args, vm) {
     var ctx = { file: cls.srcFile, line: cls.line, cls: cls, thisVal: null, vm: vm };
     var obj = { cls: cls.name, f: {} };
+    /* Objekt-Registry: alle erzeugten Objekte landen im Objektdiagramm. */
+    if (vm && vm.objects) { vm.objects.push({ id: vm.objects.length + 1, cls: cls.name, obj: obj }); }
     var allFields = instanceFieldsOf(cls);
     var af;
     for (af = 0; af < allFields.length; af++) { obj.f[allFields[af].name] = defaultVal(allFields[af].type); }
@@ -1133,7 +1511,11 @@
       }
       return;
     }
-    if (st.type === 'exprstat') { evalExpr(st.expr, env, ctx); return; }
+    if (st.type === 'exprstat') {
+      var ev = evalExpr(st.expr, env, ctx);
+      if (ctx.captureExpr) { ctx.lastExprVal = ev; }
+      return;
+    }
     if (st.type === 'if') {
       var c = evalExpr(st.cond, env, ctx);
       if (requireBool(ctx, c, st.line, 'if')) { execStmt(st.then, env, ctx); }
@@ -2334,8 +2716,139 @@
     if (!runBtn) { return; }
     var consoleEl = document.getElementById('java-console');
     var errBox = document.getElementById('java-errors');
+    var replLog = document.getElementById('java-repl-log');
+    var replIn = document.getElementById('java-repl-in');
+    var replHint = document.getElementById('java-repl-hint');
+    var acBox = document.getElementById('java-repl-ac');
+    var objBox = document.getElementById('java-objects');
+    var objCount = document.getElementById('java-obj-badge');
     function badge() { return document.getElementById('java-error-badge'); }
-    runBtn.addEventListener('click', function () {
+
+    var session = null;
+
+    /* Konsolen-Tabs rechts: Ausgabe / Objektkonsole / Objekte / Fehlerkonsole */
+    var ctabs = document.querySelectorAll('[data-ctab]');
+    var cpanes = document.querySelectorAll('[data-cpane]');
+    function showPane(name) {
+      var i2;
+      for (i2 = 0; i2 < ctabs.length; i2++) {
+        if (ctabs[i2].getAttribute('data-ctab') === name) { ctabs[i2].classList.add('active'); }
+        else { ctabs[i2].classList.remove('active'); }
+      }
+      for (i2 = 0; i2 < cpanes.length; i2++) {
+        if (cpanes[i2].getAttribute('data-cpane') === name) { cpanes[i2].removeAttribute('hidden'); }
+        else { cpanes[i2].setAttribute('hidden', 'hidden'); }
+      }
+    }
+    var ti;
+    for (ti = 0; ti < ctabs.length; ti++) {
+      (function (btn) {
+        btn.addEventListener('click', function () { showPane(btn.getAttribute('data-ctab')); });
+      })(ctabs[ti]);
+    }
+
+    function renderErrCard(box, er) {
+      var card = document.createElement('div');
+      card.className = 'err-card' + (er.kind === 'stderr' ? ' err-stderr' : '');
+      var head = document.createElement('div');
+      head.className = 'err-head';
+      var kindLabel = er.kind === 'stderr' ? 'System.err' : (er.kind === 'syntax' ? 'Syntaxfehler' : (er.kind === 'compile' ? 'Uebersetzungsproblem' : 'Laufzeitfehler'));
+      var where = er.file ? (er.file + (er.line ? ':' + er.line : '')) : '';
+      head.textContent = kindLabel + (where ? ' (' + where + ')' : '');
+      card.appendChild(head);
+      var msg = document.createElement('div');
+      msg.className = 'err-msg';
+      msg.textContent = er.message;
+      card.appendChild(msg);
+      if (er.hint) {
+        var hint = document.createElement('div');
+        hint.className = 'err-hint';
+        hint.textContent = 'Tipp: ' + er.hint;
+        card.appendChild(hint);
+      }
+      box.appendChild(card);
+    }
+
+    function showErrors(list) {
+      if (!errBox) { return; }
+      errBox.innerHTML = '';
+      if (list.length === 0) {
+        errBox.innerHTML = '<div class="err-card err-ok">Alles fehlerfrei durchgelaufen.</div>';
+        return;
+      }
+      for (var h = 0; h < list.length; h++) { renderErrCard(errBox, list[h]); }
+    }
+
+    /* Objektdiagramm: alle erzeugten Objekte mit ihren Attributwerten */
+    function renderObjects() {
+      if (!objBox) { return; }
+      var list = session ? session.objects() : [];
+      if (objCount) { objCount.textContent = String(list.length); }
+      objBox.innerHTML = '';
+      if (list.length === 0) {
+        objBox.appendChild(document.createTextNode('Noch keine Objekte. Erzeuge eines in der Objektkonsole, z. B. Auto a = new Auto("BMW");'));
+        return;
+      }
+      for (var i2 = 0; i2 < list.length; i2++) {
+        var o = list[i2];
+        var box = document.createElement('div');
+        box.className = 'obj-box';
+        var head = document.createElement('div');
+        head.className = 'obj-head';
+        head.textContent = (o.name ? o.name + ' : ' : ': ') + o.cls + '  (Objekt ' + o.id + ')';
+        box.appendChild(head);
+        for (var j2 = 0; j2 < o.fields.length; j2++) {
+          var row = document.createElement('div');
+          row.className = 'obj-field';
+          row.textContent = o.fields[j2].name + ' = ' + o.fields[j2].text;
+          box.appendChild(row);
+        }
+        objBox.appendChild(box);
+      }
+    }
+
+    function replLine(input, res) {
+      if (!replLog) { return; }
+      var wrap = document.createElement('div');
+      wrap.className = 'repl-line';
+      var inLine = document.createElement('div');
+      inLine.className = 'repl-in-line';
+      inLine.textContent = '> ' + input;
+      wrap.appendChild(inLine);
+      if (res.output !== '') {
+        var out = document.createElement('pre');
+        out.className = 'repl-out';
+        out.textContent = res.output;
+        wrap.appendChild(out);
+      }
+      if (res.result !== null) {
+        var rline = document.createElement('div');
+        rline.className = 'repl-res';
+        rline.textContent = '= ' + res.result + '   (' + res.resultType + ')';
+        wrap.appendChild(rline);
+      }
+      for (var i3 = 0; i3 < res.errors.length; i3++) {
+        var card = document.createElement('div');
+        card.className = 'err-card';
+        card.textContent = res.errors[i3].message + (res.errors[i3].hint ? '  Tipp: ' + res.errors[i3].hint : '');
+        wrap.appendChild(card);
+      }
+      replLog.appendChild(wrap);
+      replLog.scrollTop = replLog.scrollHeight;
+    }
+
+    function updateReplHint() {
+      if (!replHint) { return; }
+      if (!session) {
+        replHint.textContent = 'Erst ▶ Ausführen klicken, dann kannst du hier Objekte erzeugen und Methoden aufrufen.';
+        return;
+      }
+      var names = session.classNames();
+      if (names.length === 0) { replHint.textContent = 'Dieses Projekt enthaelt noch keine Klasse.'; return; }
+      replHint.textContent = 'Klassen: ' + names.join(', ') + '. Beispiel: ' + names[0] + ' a = new ' + names[0] + '(...); danach a.methode();';
+    }
+
+    function doRun() {
       var files = {};
       var panes2 = document.querySelectorAll('[data-file-pane]');
       var k;
@@ -2352,49 +2865,133 @@
         if (errBox) { errBox.innerHTML = '<div class="err-card">Interner Fehler der Simulation: ' + escapeHtml(e && e.message ? e.message : String(e)) + '</div>'; }
         return;
       }
-      if (consoleEl) { consoleEl.textContent = res.output; }
-      if (errBox) {
-        errBox.innerHTML = '';
-        if (res.errors.length === 0) {
-          errBox.innerHTML = '<div class="err-card err-ok">Alles fehlerfrei durchgelaufen.</div>';
-        } else {
-          var h;
-          for (h = 0; h < res.errors.length; h++) {
-            var er = res.errors[h];
-            var card = document.createElement('div');
-            card.className = 'err-card' + (er.kind === 'stderr' ? ' err-stderr' : '');
-            var head = document.createElement('div');
-            head.className = 'err-head';
-            var kindLabel = er.kind === 'stderr' ? 'System.err' : (er.kind === 'syntax' ? 'Syntaxfehler' : (er.kind === 'compile' ? 'Uebersetzungsproblem' : 'Laufzeitfehler'));
-            var where = er.file ? (er.file + (er.line ? ':' + er.line : '')) : '';
-            head.textContent = kindLabel + (where ? ' (' + where + ')' : '');
-            card.appendChild(head);
-            var msg = document.createElement('div');
-            msg.className = 'err-msg';
-            msg.textContent = er.message;
-            card.appendChild(msg);
-            if (er.hint) {
-              var hint = document.createElement('div');
-              hint.className = 'err-hint';
-              hint.textContent = 'Tipp: ' + er.hint;
-              card.appendChild(hint);
-            }
-            errBox.appendChild(card);
-          }
-        }
+      session = res.session || null;
+      if (consoleEl) {
+        if (res.output !== '') { consoleEl.textContent = res.output; }
+        else if (res.ok && !res.ranMain) { consoleEl.textContent = 'Kein main noetig: Erzeuge dir Objekte in der Objektkonsole (Tab oben).'; }
+        else if (res.ok) { consoleEl.textContent = '(keine Ausgabe)'; }
+        else { consoleEl.textContent = ''; }
       }
+      showErrors(res.errors);
       var b = badge();
       if (b) { b.textContent = res.errors.length === 0 ? '0' : String(res.errors.length); }
-    });
+      renderObjects();
+      updateReplHint();
+      if (!res.ok) { showPane('errors'); }
+      else if (!res.ranMain) { showPane('repl'); }
+      else { showPane('out'); }
+    }
+    runBtn.addEventListener('click', doRun);
+
+    /* Strg + Enter fuehrt aus, egal welcher Editor fokussiert ist */
+    var pe;
+    for (pe = 0; pe < panes.length; pe++) {
+      (function (pane) {
+        var ta2 = pane.querySelector('textarea');
+        if (!ta2) { return; }
+        ta2.addEventListener('keydown', function (e) {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); doRun(); }
+        });
+      })(panes[pe]);
+    }
+
+    /* Objektkonsole mit Autovervollstaendung */
+    var acItems = [];
+    var acSel = -1;
+    var acTouched = false;
+    var acFrom = 0;
+    function acHide() {
+      if (acBox) { acBox.setAttribute('hidden', 'hidden'); }
+      acItems = [];
+      acSel = -1;
+      acTouched = false;
+    }
+    function acRender() {
+      if (!acBox) { return; }
+      acBox.innerHTML = '';
+      if (acItems.length === 0) { acBox.setAttribute('hidden', 'hidden'); return; }
+      acBox.removeAttribute('hidden');
+      for (var i4 = 0; i4 < acItems.length; i4++) {
+        (function (idx) {
+          var it = acItems[idx];
+          var row = document.createElement('div');
+          row.className = 'ac-item' + (idx === acSel ? ' sel' : '');
+          var lab = document.createElement('span');
+          lab.className = 'ac-label';
+          lab.textContent = it.label;
+          var hintEl = document.createElement('span');
+          hintEl.className = 'ac-hint';
+          hintEl.textContent = it.hint || '';
+          row.appendChild(lab);
+          row.appendChild(hintEl);
+          row.addEventListener('mousedown', function (ev) { ev.preventDefault(); acPick(idx); });
+          acBox.appendChild(row);
+        })(i4);
+      }
+    }
+    function acPick(idx) {
+      if (!replIn || !acItems[idx]) { acHide(); return; }
+      var it = acItems[idx];
+      var caret = replIn.selectionStart;
+      var text = replIn.value;
+      var head = text.substring(0, acFrom);
+      replIn.value = head + it.insert + text.substring(caret);
+      var newCaret = head.length + it.insert.length;
+      replIn.setSelectionRange(newCaret, newCaret);
+      acHide();
+      replIn.focus();
+    }
+    function acUpdate() {
+      if (!session || !replIn || !acBox) { acHide(); return; }
+      var caret = replIn.selectionStart;
+      var head = replIn.value.substring(0, caret);
+      var compl = session.complete(head);
+      acFrom = compl.from;
+      acItems = compl.items.slice(0, 8);
+      acSel = -1;
+      acTouched = false;
+      acRender();
+    }
+    if (replIn) {
+      replIn.addEventListener('input', acUpdate);
+      replIn.addEventListener('keyup', function (e) {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { acUpdate(); }
+      });
+      replIn.addEventListener('blur', function () { acHide(); });
+      replIn.addEventListener('keydown', function (e) {
+        var visible = acItems.length > 0 && acBox && !acBox.hasAttribute('hidden');
+        if (visible) {
+          if (e.key === 'ArrowDown') { e.preventDefault(); acSel = (acSel + 1) % acItems.length; acTouched = true; acRender(); return; }
+          if (e.key === 'ArrowUp') { e.preventDefault(); acSel = (acSel - 1 + acItems.length) % acItems.length; acTouched = true; acRender(); return; }
+          if (e.key === 'Tab') { e.preventDefault(); acPick(acSel >= 0 ? acSel : 0); return; }
+          if (e.key === 'Escape') { acHide(); return; }
+          if (e.key === 'Enter' && acTouched && acSel >= 0) { e.preventDefault(); acPick(acSel); return; }
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          var input = replIn.value;
+          replIn.value = '';
+          acHide();
+          if (!session) { return; }
+          var res = session.evalLine(input);
+          replLine(input, res);
+          renderObjects();
+        }
+      });
+    }
+
     var clearBtn = document.getElementById('java-clear');
     if (clearBtn) {
       clearBtn.addEventListener('click', function () {
         if (consoleEl) { consoleEl.textContent = ''; }
         if (errBox) { errBox.innerHTML = ''; }
+        if (replLog) { replLog.innerHTML = ''; }
         var b = badge();
         if (b) { b.textContent = '0'; }
       });
     }
+    renderObjects();
+    updateReplHint();
   }
 
   function escapeHtml(s) {
@@ -2402,7 +2999,7 @@
   }
 
   global.InfoCraftJavaVM = {
-    lex: lex, JError: JError, Parser: Parser, run: run, NL: NL
+    lex: lex, JError: JError, Parser: Parser, run: run, openSession: openSession, NL: NL
   };
   if (typeof module !== 'undefined' && module.exports) { module.exports = global.InfoCraftJavaVM; }
   if (typeof document !== 'undefined') { wireUi(); }
