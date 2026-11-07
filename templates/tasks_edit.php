@@ -1,5 +1,5 @@
 <?php
-/** @var \Infocraft\Models\Task $task @var \Infocraft\Models\TaskTopic[] $topics @var \Infocraft\Models\TaskMaterial[] $materials @var array<int, array{id:int,title:string,done:int}> $todos */
+/** @var \Infocraft\Models\Task $task @var \Infocraft\Models\TaskTopic[] $topics @var \Infocraft\Models\TaskMaterial[] $materials @var list<\Infocraft\Models\TaskTodo> $todos */
 $typeLabels = ['allgemein' => 'Allgemein', 'sql' => 'SQL', 'html' => 'HTML', 'code' => 'Java/Python', 'quiz' => 'Quiz'];
 $typeHints = [
     'code' => '💡 Tipp für Java/Python-Aufgaben: Teile eine Starterdatei aus, z. B. Auto.java mit vorbereiteter Klasse oder ein Python-Grundgerüst. Über „Variante anlegen" im Aufgabenpool kannst du die Aufgabe später mit einem Klick als Java- oder Python-Variante duplizieren.',
@@ -91,10 +91,10 @@ $typeHints = [
             <ul class="todo-list">
                 <?php foreach ($todos as $todo): ?>
                 <li class="todo-item">
-                    <span><?= e($todo['title']) ?></span>
+                    <span><?= e($todo->title) ?></span>
                     <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/todos') ?>" class="form-inline">
                         <?= csrf_field() ?>
-                        <input type="hidden" name="delete_todo_id" value="<?= (int) $todo['id'] ?>">
+                        <input type="hidden" name="delete_todo_id" value="<?= (int) $todo->id ?>">
                         <button class="btn btn-ghost" type="submit" title="ToDo löschen">🗑</button>
                     </form>
                 </li>
