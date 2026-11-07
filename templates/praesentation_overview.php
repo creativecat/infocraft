@@ -29,27 +29,35 @@
     <p>Lege oben eine Präsentation an und füge Text- und Code-Folien hinzu. Im Präsentationsmodus lässt sich der Code direkt vorführen und verändern.</p>
 </div>
 <?php else: ?>
+<?php
+$counts = [];
+foreach ($items as $presentation) {
+    $counts[$presentation->level] = ($counts[$presentation->level] ?? 0) + 1;
+}
+?>
 <?php $currentLevel = 0; ?>
 <?php foreach ($items as $presentation): ?>
 <?php if ($presentation->level !== $currentLevel): ?>
 <?php $currentLevel = $presentation->level; ?>
-<h2 class="level-heading">Jahrgangsstufe <?= (int) $currentLevel ?></h2>
+<h2 class="level-heading">Jahrgangsstufe <?= (int) $currentLevel ?> <span class="pill"><?= (int) $counts[$currentLevel] ?> Präsentation<?= $counts[$currentLevel] === 1 ? '' : 'en' ?></span></h2>
 <?php endif; ?>
-<section class="panel">
-    <div class="panel-head">
-        <h3>🎬 <?= e($presentation->title) ?></h3>
-        <span class="pill">ab Jgst. <?= e($presentation->level) ?></span>
-    </div>
-    <p class="muted"><?= count($presentation->slides()) ?> Folie<?= count($presentation->slides()) === 1 ? '' : 'n' ?><?php if ($presentation->slug !== null): ?> &middot; Themen-Link: <a href="<?= url('praesentationen/thema/' . rawurlencode($presentation->slug)) ?>">/praesentationen/thema/<?= e($presentation->slug) ?></a><?php endif; ?></p>
-    <div class="btn-row">
-        <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">▶ Präsentieren</a>
-        <?php if ($user->role === 'admin' || $presentation->teacherId === $user->id): ?>
-        <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id) ?>">Bearbeiten</a>
-        <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/loeschen') ?>" class="form-inline">
-            <?= csrf_field() ?>
-            <button class="btn btn-ghost" type="submit">Löschen</button>
-        </form>
-        <?php endif; ?>
+<section class="panel praes-panel">
+    <div class="praes-row">
+        <div class="praes-info">
+            <a class="praes-title" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">🎬 <?= e($presentation->title) ?></a>
+            <span class="muted praes-meta"><?= count($presentation->slides()) ?> Folie<?= count($presentation->slides()) === 1 ? '' : 'n' ?><?php if ($presentation->slug !== null): ?> &middot; <a href="<?= url('praesentationen/thema/' . rawurlencode($presentation->slug)) ?>">Themen-Link</a><?php endif; ?></span>
+        </div>
+        <div class="praes-actions">
+            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">▶ Präsentieren</a>
+            <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id . '/moderator') ?>" title="Steuerzentrale: aktuelle und nächste Folie, Timer - synchron zur Präsentationsansicht">🖥 Moderator</a>
+            <?php if ($user->role === 'admin' || $presentation->teacherId === $user->id): ?>
+            <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id) ?>">Bearbeiten</a>
+            <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/loeschen') ?>" class="form-inline">
+                <?= csrf_field() ?>
+                <button class="btn btn-ghost" type="submit">Löschen</button>
+            </form>
+            <?php endif; ?>
+        </div>
     </div>
 </section>
 <?php endforeach; ?>
@@ -62,19 +70,28 @@
     <p>Deine Lehrkraft hat noch keine Präsentationen für deine Klassenstufe freigegeben.</p>
 </div>
 <?php else: ?>
+<?php
+$counts = [];
+foreach ($items as $presentation) {
+    $counts[$presentation->level] = ($counts[$presentation->level] ?? 0) + 1;
+}
+?>
 <?php $currentLevel = 0; ?>
 <?php foreach ($items as $presentation): ?>
 <?php if ($presentation->level !== $currentLevel): ?>
 <?php $currentLevel = $presentation->level; ?>
-<h2 class="level-heading">Jahrgangsstufe <?= (int) $currentLevel ?></h2>
+<h2 class="level-heading">Jahrgangsstufe <?= (int) $currentLevel ?> <span class="pill"><?= (int) $counts[$currentLevel] ?> Präsentation<?= $counts[$currentLevel] === 1 ? '' : 'en' ?></span></h2>
 <?php endif; ?>
-<section class="panel">
-    <div class="panel-head">
-        <h3>🎬 <?= e($presentation->title) ?></h3>
-        <span class="pill">ab Jgst. <?= e($presentation->level) ?></span>
+<section class="panel praes-panel">
+    <div class="praes-row">
+        <div class="praes-info">
+            <a class="praes-title" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">🎬 <?= e($presentation->title) ?></a>
+            <span class="muted praes-meta"><?= count($presentation->slides()) ?> Folie<?= count($presentation->slides()) === 1 ? '' : 'n' ?></span>
+        </div>
+        <div class="praes-actions">
+            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">▶ Ansehen</a>
+        </div>
     </div>
-    <p class="muted"><?= count($presentation->slides()) ?> Folie<?= count($presentation->slides()) === 1 ? '' : 'n' ?></p>
-    <div class="btn-row"><a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">▶ Ansehen</a></div>
 </section>
 <?php endforeach; ?>
 <?php endif; ?>

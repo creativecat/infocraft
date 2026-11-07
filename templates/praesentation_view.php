@@ -1,11 +1,14 @@
 <?php /** Präsentationsmodus: Folie für Folie, Vollbild (Taste F), Pfeiltasten.
  * Code-Folien tragen Syntax-Highlighting (highlight.js) und sind für
  * Lehrkräfte direkt hier editierbar und speicherbar. */ ?>
-<div class="slide-stage" id="slide-stage">
+<div class="slide-stage" id="slide-stage" data-pid="<?= (int) $presentation->id ?>">
     <div class="slide-toolbar">
         <a class="btn btn-ghost" href="<?= url('praesentationen') ?>">← Alle</a>
         <?php if ($mayEdit): ?>
         <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id) ?>">Bearbeiten</a>
+        <?php endif; ?>
+        <?php if ($isTeacher): ?>
+        <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id . '/moderator') ?>" title="Steuerzentrale: aktuelle und nächste Folie, Timer - synchron zu diesem Fenster">🖥 Moderator</a>
         <?php endif; ?>
         <button class="btn btn-ghost" type="button" id="slide-full" title="Vollbild (Taste F)">⛶ Vollbild</button>
         <div class="slide-counter"><button class="btn btn-ghost" type="button" id="slide-prev" title="Zurück (Pfeiltaste links)">◀</button><span id="slide-counter"></span><button class="btn btn-ghost" type="button" id="slide-next" title="Weiter (Pfeiltaste rechts)">▶</button></div>
@@ -58,6 +61,21 @@
   var fullBtn = document.getElementById('slide-full');
   var counter = document.getElementById('slide-counter');
   var current = 0;
+  // Sync mit dem Moderatorenbildschirm (gleiches Browser-Fenster-Paar, gleiche Origin):
+  // Dieser Modus sendet {typ:'pos'}, der Moderator sendet {typ:'goto'}.
+  var remote = false;
+  var channel = null;
+  if (stage.dataset && typeof BroadcastChannel !== 'undefined') {
+    channel = new BroadcastChannel('ic-praes-' + stage.dataset.pid);
+    channel.onmessage = function (ev) {
+      var msg = ev.data || {};
+      if (msg.typ === 'goto' && typeof msg.pos === 'number') {
+        remote = true;
+        show(msg.pos);
+        remote = false;
+      }
+    };
+  }
 
   function fit(i) {
     if (i < 0) { return 0; }
@@ -72,6 +90,7 @@
       else { slides[k].classList.remove('slide-active'); }
     }
     if (counter) { counter.textContent = (current + 1) + ' / ' + slides.length; }
+    if (channel && !remote) { channel.postMessage({ typ: 'pos', pos: current }); }
   }
 
   function toggleFull() {

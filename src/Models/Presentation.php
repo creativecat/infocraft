@@ -68,10 +68,10 @@ final class Presentation
         return $slides;
     }
 
-    /** Erlaubte Sprachen für Code-Folien (highlight.js im Browser kennt alle drei). */
+    /** Erlaubte Sprachen für Code-Folien (highlight.js im Browser kennt alle vier). */
     public static function cleanLang(string $lang): string
     {
-        return in_array($lang, ['java', 'python', 'sql'], true) ? $lang : 'java';
+        return in_array($lang, ['java', 'python', 'sql', 'html'], true) ? $lang : 'java';
     }
 
     /** @param list<array{type: string, title: string, body?: string, lang?: string, code?: string}> $slides */

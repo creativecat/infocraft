@@ -143,6 +143,7 @@ $router->get('/praesentationen/thema/{slug}', [PresentationController::class, 's
 $router->get('/praesentationen/{id}', [PresentationController::class, 'edit']);
 $router->post('/praesentationen/{id}', [PresentationController::class, 'saveMeta']);
 $router->get('/praesentationen/{id}/zeigen', [PresentationController::class, 'show']);
+$router->get('/praesentationen/{id}/moderator', [PresentationController::class, 'moderator']);
 $router->post('/praesentationen/{id}/folie', [PresentationController::class, 'addSlide']);
 $router->post('/praesentationen/{id}/folie/{pos}', [PresentationController::class, 'saveSlide']);
 $router->post('/praesentationen/{id}/folie/{pos}/loeschen', [PresentationController::class, 'deleteSlide']);

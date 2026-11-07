@@ -141,6 +141,45 @@ final class PresentationController
             'presentation' => $presentation,
             'slides' => $rendered,
             'mayEdit' => Auth::isTeacher() && ($user->role === 'admin' || $presentation->teacherId === $user->id),
+            'isTeacher' => Auth::isTeacher(),
+            'user' => $user,
+        ]);
+    }
+
+    /**
+     * Moderatorenbildschirm (nur für Lehrkräfte): Steuerzentrale mit aktueller
+     * und nächster Folie, Folienliste, Timer und Uhr. Läuft im selben Browser
+     * synchron zur Präsentationsansicht auf dem Beamer (BroadcastChannel).
+     */
+    public static function moderator(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        $presentation = Presentation::find((int) ($params['id'] ?? 0));
+        if ($presentation === null) {
+            http_response_code(404);
+            render('error', ['title' => 'Nicht gefunden', 'message' => 'Diese Präsentation gibt es nicht.']);
+            return;
+        }
+        if (!Auth::isTeacher()) {
+            // Schülerinnen und Schüler haben im Präsentationsmodus nichts zu steuern.
+            redirect('/praesentationen/' . $presentation->id . '/zeigen');
+        }
+        $slides = $presentation->slides();
+        $rendered = [];
+        foreach ($slides as $slide) {
+            $slide['html'] = ($slide['type'] ?? 'text') === 'text'
+                ? WikiController::renderMarkdown((string) ($slide['body'] ?? ''))
+                : '';
+            $rendered[] = $slide;
+        }
+        render('praesentation_moderator', [
+            'title' => $presentation->title . ' (Moderator)',
+            'active' => 'module-praesentationen',
+            'presentation' => $presentation,
+            'slides' => $rendered,
             'user' => $user,
         ]);
     }

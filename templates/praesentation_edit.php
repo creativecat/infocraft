@@ -46,7 +46,7 @@
         <div class="form-row form">
             <label class="field"><span>Sprache</span>
                 <select name="lang">
-                    <?php foreach (['java', 'python', 'sql'] as $lang): ?>
+                    <?php foreach (['java', 'python', 'sql', 'html'] as $lang): ?>
                     <option value="<?= $lang ?>"<?= $slide['lang'] === $lang ? ' selected' : '' ?>><?= $lang ?></option>
                     <?php endforeach; ?>
                 </select>
