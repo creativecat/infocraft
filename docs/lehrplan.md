@@ -11,7 +11,7 @@ Zusätzlich kann jede Lehrkraft pro Klasse und Arbeitsbereich zwischen drei Eins
 | Aufgaben (Übung und Abfrage) | 6 | Übergreifend: Anwendung und Festigung aller Themen |
 | Quiz-Arena | 6 | Übergreifend: Wiederholung und Wissenssicherung |
 | Wiki | 6 | Übergreifend: Fachbegriffe, Konzepte, Selbstlernen |
-| Präsentationen | 6 | Übergreifend: Unterrichtsbegleitung und Demonstration aller Themen |
+| Präsentationen | 6 | Übergreifend: Unterrichtsbegleitung und Demonstration aller Themen. Seed-Präsentationen decken die Lehrplanbereiche ab: Jgst. 9 (funktionale Modellierung und Tabellenkalkulation, Datenmodellierung, SQL-Grundlagen, Java-OO mit Vererbung, Datenschutz mit DSGVO, Mehrbenutzerproblematik, Data-Mining) und Jgst. 10 (Java-Wiederholung, relationale Datenbanken mit Primär-/Fremdschlüssel und JOIN, Arrays und Referenzen, Datenkapselung, Polymorphismus, Projekt). Jede Präsentation endet mit einer Übungsaufgabe und Musterlösung; passende Katalog-Aufgaben liegen im Aufgabenpool. |
 | SQL-Werkstatt | 9 | Datenbanken: Datenerfassung und -verwaltung, SQL-Grundlagen (SELECT, JOIN, GROUP BY, INSERT/UPDATE), Datenmodellierung |
 
 ## SQL-Werkstatt im Detail

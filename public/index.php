@@ -139,6 +139,7 @@ $router->post('/wiki/{id}/loeschen', [WikiController::class, 'delete']);
 // Präsentationsmodus direkt editierbar (Syntax-Highlighting).
 $router->get('/praesentationen', [PresentationController::class, 'index']);
 $router->post('/praesentationen/anlegen', [PresentationController::class, 'create']);
+$router->get('/praesentationen/thema/{slug}', [PresentationController::class, 'show']);
 $router->get('/praesentationen/{id}', [PresentationController::class, 'edit']);
 $router->post('/praesentationen/{id}', [PresentationController::class, 'saveMeta']);
 $router->get('/praesentationen/{id}/zeigen', [PresentationController::class, 'show']);

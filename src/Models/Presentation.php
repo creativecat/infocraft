@@ -17,6 +17,7 @@ final class Presentation
         public readonly int $id,
         public readonly int $teacherId,
         public readonly string $title,
+        public readonly ?string $slug,
         public readonly int $level,
         public readonly string $content,
         public readonly int $position,
@@ -29,6 +30,7 @@ final class Presentation
             (int) $row['id'],
             (int) $row['teacher_id'],
             (string) $row['title'],
+            isset($row['slug']) ? ((string) $row['slug'] !== '' ? (string) $row['slug'] : null) : null,
             (int) ($row['level'] ?? 6),
             (string) ($row['content'] ?? '[]'),
             (int) ($row['position'] ?? 0),
@@ -120,6 +122,19 @@ final class Presentation
     {
         $stmt = Database::pdo()->prepare('SELECT * FROM presentations WHERE id = ? LIMIT 1');
         $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        return $row === false ? null : self::fromRow($row);
+    }
+
+    /** Themenseite: Präsentation über ihren Slug finden (z. B. datenschutz). */
+    public static function findBySlug(string $slug): ?self
+    {
+        $slug = substr(trim($slug), 0, 60);
+        if ($slug === '') {
+            return null;
+        }
+        $stmt = Database::pdo()->prepare('SELECT * FROM presentations WHERE slug = ? LIMIT 1');
+        $stmt->execute([$slug]);
         $row = $stmt->fetch();
         return $row === false ? null : self::fromRow($row);
     }

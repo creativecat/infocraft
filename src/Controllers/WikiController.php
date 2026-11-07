@@ -219,6 +219,8 @@ final class WikiController
     private static function mdInline(string $s): string
     {
         $s = htmlspecialchars($s, ENT_QUOTES);
+        // Links: [Text](https://... ) oder [Text](/serverrelativ) - nur http(s) und server-relative Pfade.
+        $s = preg_replace('/\[([^\]]+)\]\((https?:\/\/[^)\s]+|\/[^)\s]*)\)/', '<a href="\2">\1</a>', $s) ?? $s;
         $s = preg_replace('/\*\*(.+?)\*\*/s', '<strong>\1</strong>', $s) ?? $s;
         $s = preg_replace('/\*(.+?)\*/s', '<em>\1</em>', $s) ?? $s;
         $s = preg_replace('/`(.+?)`/s', '<code>\1</code>', $s) ?? $s;

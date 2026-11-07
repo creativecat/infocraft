@@ -113,7 +113,10 @@ final class PresentationController
         if ($user === null) {
             redirect('/login');
         }
-        $presentation = Presentation::find((int) ($params['id'] ?? 0));
+        // Permanenter Themen-Link (/praesentationen/thema/{slug}) oder klassisch per id.
+        $presentation = isset($params['slug'])
+            ? Presentation::findBySlug((string) $params['slug'])
+            : Presentation::find((int) ($params['id'] ?? 0));
         if ($presentation === null) {
             http_response_code(404);
             render('error', ['title' => 'Nicht gefunden', 'message' => 'Diese Präsentation gibt es nicht.']);

@@ -398,3 +398,6 @@ body.sidebar-hidden .sidebar { display: none; }
 
 /* Im eigenen Präsentieren-Schalter der Kopfzeile größere Schrift (app.js). */
 :root.presenting .slide-text { font-size: 1.2rem; }
+
+/* Übersicht: Gruppierung nach Jahrgangsstufe (praesentation_overview.php) */
+.level-heading { margin: 1.4rem 0 0.4rem; font-size: 1.15rem; color: var(--text, #222); border-bottom: 2px solid var(--primary, #4a6); padding-bottom: 0.25rem; }
