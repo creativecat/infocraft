@@ -743,6 +743,46 @@ setTimeout(function () {
               }
               ok(noErr, 'T32c rote Zeilenmarkierungen werden mit behobenem Fehler geloest');
 
+              /* T33: Einzelschritt springt automatisch zur Datei und Zeile. */
+              taE.value = 'class Auto {' + NLt +
+                '  public String marke;' + NLt +
+                '}' + NLt +
+                'Auto a = new Auto();';
+              taE.dispatch('input');
+              gta.value = 'class Garage {' + NLt +
+                '  public int plaetze;' + NLt +
+                '}' + NLt +
+                'Garage g = new Garage();';
+              gta.dispatch('input');
+              stepBtn.dispatch('click');
+              ok(!hidden(pane2) && hidden(pane1), 'T33a Einzelschritt oeffnet automatisch die Datei des naechsten Schritts');
+              ok(f2.row.classList.contains('has-step') && !f1.row.classList.contains('has-step'), 'T33b Datei des Schritts ist in der Dateiliste gelb unterlegt');
+              var stepCells = pane2.querySelector('.ln-gutter').querySelectorAll('.ln-cur');
+              ok(stepCells.length === 1, 'T33c die pausierte Zeile ist in den Zeilennummern gelb markiert');
+              var stepOff = 0;
+              var stepLines = String(gta.value).split(NLt);
+              var sl;
+              for (sl = 0; sl < 3; sl++) { stepOff += stepLines[sl].length + 1; }
+              ok(gta.selectionStart === stepOff && gta.selectionEnd === stepOff, 'T33d Cursor springt an den Anfang der pausierten Zeile');
+              stepBtn.dispatch('click');
+              ok(!f2.row.classList.contains('has-step') && !f1.row.classList.contains('has-step'), 'T33e gelbe Datei-Markierung loest sich, wenn das Programm durchlaeuft');
+              ok(stepInfo.textContent.indexOf('durchgelaufen') !== -1, 'T33f Info meldet das Ende des Programms');
+
+              /* T34: Dateien mit Fehlern sind in der Dateiliste rot unterlegt. */
+              gta.value = 'class Garage {' + NLt +
+                '  public int plaetze' + NLt +
+                '}';
+              gta.dispatch('input');
+              runBtn.dispatch('click');
+              ok(f2.row.classList.contains('has-err'), 'T34a fehlerhafte Datei ist in der Dateiliste rot unterlegt');
+              ok(!f1.row.classList.contains('has-err'), 'T34b fehlerfreie Datei bleibt ohne rote Unterlage');
+              gta.value = 'class Garage {' + NLt +
+                '  public int plaetze;' + NLt +
+                '}';
+              gta.dispatch('input');
+              runBtn.dispatch('click');
+              ok(!f2.row.classList.contains('has-err'), 'T34c rote Unterlage verschwindet, sobald der Fehler behoben ist');
+
               console.log('');
               if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }
               else { console.log(failures.length + ' UI-Tests fehlgeschlagen.'); process.exit(1); }

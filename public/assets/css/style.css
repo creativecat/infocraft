@@ -479,6 +479,9 @@ body.sidebar-hidden .sidebar { display: none; }
 }
 .ide-file-btn:hover { background: var(--surface); color: var(--text); }
 .ide-file-btn.active, .ide-file.active .ide-file-btn { background: #eef0fe; border-color: #c7d2fe; color: var(--primary-2); font-weight: 600; }
+/* Dateien mit Fehlern rot, die Datei des Einzelschritts gelb unterlegt */
+.ide-file.has-err .ide-file-btn { background: #fee2e2; border-color: #dc2626; color: #b91c1c; font-weight: 600; }
+.ide-file.has-step .ide-file-btn { background: #fde68a; border-color: #f59e0b; color: #92400e; font-weight: 600; }
 .ide-file-del { flex-shrink: 0; }
 .ide-file-del .btn { padding: 3px 8px; font-size: 0.8rem; border-color: transparent; }
 .ide-side-new { display: flex; gap: 6px; margin-top: auto; }

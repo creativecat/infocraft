@@ -4233,27 +4233,66 @@
       }
       return pos;
     }
-    function jumpToError(er) {
-      var paneEl = er.file ? paneElByName(er.file) : null;
-      if (!paneEl) { return; }
+    /* Springt zu einer Stelle im Editor: Datei wechseln, Cursor an den Zeilen-
+     * Anfang, Zeile in den sichtbaren Bereich scrollen. Nutzt der Fehler-
+     * sprung und der Einzelschritt. */
+    function jumpToLine(fname, line) {
+      var paneEl = fname ? paneElByName(fname) : null;
+      if (!paneEl || !line) { return; }
       selectFile(paneEl.getAttribute('data-file-pane'));
       var ta = paneEl.querySelector('textarea');
-      if (ta && er.line) {
-        /* Cursor an den Anfang der Fehlerzeile setzen */
-        var off = lineStartOffset(String(ta.value || ''), er.line);
-        if (ta.setSelectionRange) { ta.setSelectionRange(off, off); }
-        /* Zeile im Editor sichtbar machen (Gutter-Zelle als Anhaltspunkt) */
-        try {
-          var rec = gutterByFile(er.file);
-          var cell = rec && rec.cells[er.line - 1];
-          if (cell && typeof cell.offsetTop === 'number' && isFinite(cell.offsetTop) && cell.offsetTop > 0) {
-            var top = Math.max(0, cell.offsetTop - 48);
-            if (ta.scrollTop !== undefined) { ta.scrollTop = top; }
-            if (rec.box && rec.box.scrollTop !== undefined) { rec.box.scrollTop = top; }
-          }
-        } catch (escroll) { /* aeltere Browser: ohne Scroll einfach weiter */ }
-        markErrLines([er]);
+      if (!ta) { return; }
+      /* Cursor an den Anfang der Zeile setzen */
+      var off = lineStartOffset(String(ta.value || ''), line);
+      if (ta.setSelectionRange) { ta.setSelectionRange(off, off); }
+      /* Zeile im Editor sichtbar machen (Gutter-Zelle als Anhaltspunkt) */
+      try {
+        var rec = gutterByFile(fname);
+        var cell = rec && rec.cells[line - 1];
+        if (cell && typeof cell.offsetTop === 'number' && isFinite(cell.offsetTop) && cell.offsetTop > 0) {
+          var top = Math.max(0, cell.offsetTop - 48);
+          if (ta.scrollTop !== undefined) { ta.scrollTop = top; }
+          if (rec.box && rec.box.scrollTop !== undefined) { rec.box.scrollTop = top; }
+        }
+      } catch (escroll) { /* aeltere Browser: ohne Scroll einfach weiter */ }
+    }
+    function jumpToError(er) {
+      if (!er.file) { return; }
+      jumpToLine(er.file, er.line);
+      markErrLines([er]);
+    }
+    /* Dateiliste links: Dateien mit Fehlern rot unterlegen, die Datei des
+     * Einzelschritts gelb - so sieht man auch bei mehreren Dateien sofort,
+     * wo gerade etwas los ist. */
+    function rowByFile(name) {
+      if (!name) { return null; }
+      var paneEl = paneElByName(name);
+      var id = paneEl ? paneEl.getAttribute('data-file-pane') : null;
+      var j;
+      for (j = 0; j < fileRows.length; j++) {
+        if (fileRows[j].getAttribute('data-file-row') === id) { return fileRows[j]; }
       }
+      return null;
+    }
+    function markFileErrFlags(errs) {
+      var j;
+      for (j = 0; j < fileRows.length; j++) {
+        if (fileRows[j].classList && fileRows[j].classList.remove) { fileRows[j].classList.remove('has-err'); }
+      }
+      for (j = 0; j < errs.length; j++) {
+        var er = errs[j];
+        if (!er || !er.file) { continue; }
+        var row = rowByFile(er.file);
+        if (row && row.classList && row.classList.add) { row.classList.add('has-err'); }
+      }
+    }
+    function markStepFile(name) {
+      var j;
+      for (j = 0; j < fileRows.length; j++) {
+        if (fileRows[j].classList && fileRows[j].classList.remove) { fileRows[j].classList.remove('has-step'); }
+      }
+      var row = rowByFile(name);
+      if (row && row.classList && row.classList.add) { row.classList.add('has-step'); }
     }
     function renderErrCard(box, er) {
       var card = document.createElement('div');
@@ -4289,6 +4328,8 @@
       if (!errBox) { return; }
       errMode = mode || 'run';
       errHasCards = list.length > 0;
+      /* Dateiliste links synchron halten: fehlerhafte Dateien rot unterlegen */
+      markFileErrFlags(list);
       errBox.innerHTML = '';
       if (list.length === 0) {
         errBox.innerHTML = '<div class="err-card err-ok">' + (errMode === 'live'
@@ -4390,6 +4431,8 @@
         var i2;
         for (i2 = 0; i2 < rec.cells.length; i2++) { rec.cells[i2].className = 'ln-cell'; }
       }
+      /* Auch die gelbe Datei-Markierung des Einzelschritts in der Liste loesen */
+      markStepFile(null);
       if (stepInfo) { stepInfo.textContent = ''; }
     }
     function markErrLines(errs) {
@@ -4600,7 +4643,13 @@
       renderObjects(res.paused ? res.objects : null);
       updateReplHint();
       markErrLines(res.errors);
-      if (res.paused) { markCurLine(res.pauseFile, res.pauseLine); }
+      /* Einzelschritt: Datei der Pause in der Liste gelb unterlegen und im
+       * Editor direkt zur Zeile springen, die als Naechstes dran ist. */
+      markStepFile(res.paused ? res.pauseFile : null);
+      if (res.paused) {
+        jumpToLine(res.pauseFile, res.pauseLine);
+        markCurLine(res.pauseFile, res.pauseLine);
+      }
     }
     function startGfxLoop() {
       GFX_ONERROR = function (jerr) {
@@ -4611,6 +4660,7 @@
         }
         var b = badge();
         if (b) { b.textContent = '1'; }
+        markFileErrFlags([jerr]);
         if (stepInfo) { stepInfo.textContent = 'Das Programm wurde angehalten: Fehler im laufenden Grafik-Fenster.'; }
       };
       gfxStartLoop();
