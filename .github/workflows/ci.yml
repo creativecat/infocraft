@@ -37,7 +37,7 @@ jobs:
           CODE_TASKS=$(curl -sS -o tasks.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/aufgaben)
           CODE_WS=$(curl -sS -o ws.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/sql/shop)
           CSRF2=$(grep -o 'value="[a-f0-9]*"' ws.html | head -n1 | cut -d'"' -f2)
-          curl -sS -b cookies.txt -c cookies.txt -o query.html --data-urlencode "csrf=$CSRF2" --data-urlencode "sql=SELECT COUNT(*) AS n FROM produkte" http://127.0.0.1:8080/werkstatt/sql/shop
+          curl -sS -L -b cookies.txt -c cookies.txt -o query.html --data-urlencode "csrf=$CSRF2" --data-urlencode "sql=SELECT COUNT(*) AS n FROM produkte" http://127.0.0.1:8080/werkstatt/sql/shop
           grep -q 'data-result="ok"' query.html && QUERY_OK=1 || QUERY_OK=0
           CLASS6=$(sqlite3 "$DB" "SELECT id FROM classes WHERE name = '6R'")
           CODE_OTP=$(curl -sS -L -o otp.html -w "%{http_code}" -b cookies.txt -c cookies.txt -d "csrf=$CSRF2" -d "class_id=$CLASS6" http://127.0.0.1:8080/unterricht/passwort)
