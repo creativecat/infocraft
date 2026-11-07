@@ -217,3 +217,59 @@
     }
   });
 })();
+
+
+// ===== Prüfungsmodus: Warnung vor dem Verlassen und automatisches Speichern =====
+(function () {
+  'use strict';
+  var body = document.body;
+  if (!body || !body.hasAttribute('data-exam-lock')) {
+    return;
+  }
+  // Ein abgeschicktes Formular (Abgabe, Abmelden) ist keine Verlust-Warnung wert.
+  document.addEventListener('submit', function () {
+    body.removeAttribute('data-exam-lock');
+  });
+  window.addEventListener('beforeunload', function (e) {
+    if (document.body.hasAttribute('data-exam-lock')) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+  // Automatisches Speichern der Teilaufgaben-Antworten.
+  var saveUrl = body.getAttribute('data-exam-save');
+  var csrf = body.getAttribute('data-csrf');
+  if (!saveUrl || !csrf) {
+    return;
+  }
+  document.querySelectorAll('textarea.ex-answer').forEach(function (area) {
+    var taskId = area.getAttribute('data-task');
+    var status = document.getElementById('ex-status-' + taskId);
+    var timer = null;
+    area.addEventListener('input', function () {
+      if (timer) { clearTimeout(timer); }
+      timer = setTimeout(function () {
+        var data = new URLSearchParams();
+        data.append('csrf', csrf);
+        data.append('task_id', taskId);
+        data.append('answer', area.value);
+        if (status) { status.textContent = 'Speichern ...'; }
+        fetch(saveUrl, {
+          method: 'POST',
+          body: data,
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        }).then(function (res) { return res.json(); }).then(function (json) {
+          if (status) {
+            var now = new Date();
+            var hh = ('0' + now.getHours()).slice(-2);
+            var mm = ('0' + now.getMinutes()).slice(-2);
+            status.textContent = json.ok ? 'Automatisch gespeichert (' + hh + ':' + mm + ')' : ('Nicht gespeichert: ' + (json.error || 'Fehler'));
+          }
+        }).catch(function () {
+          if (status) { status.textContent = 'Nicht gespeichert (offline?)'; }
+        });
+      }, 1000);
+    });
+  });
+})();

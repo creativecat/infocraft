@@ -35,6 +35,7 @@ final class Migrator
             self::seedDemoProjects($pdo);
             self::seedDemoTasks($pdo);
             self::seedDemoQuizzes($pdo);
+            self::seedDemoExams($pdo);
         }
 
         return ['statements' => count($statements), 'classes' => $classes, 'users' => $users];
@@ -288,6 +289,82 @@ final class Migrator
 
         $insertTarget = $pdo->prepare('INSERT INTO quiz_targets (quiz_id, class_id, user_id) VALUES (?, ?, NULL)');
         $insertTarget->execute([$quizId, $class9R]);
+    }
+
+
+    /**
+     * Demo-Daten fuer den Pruefungsmodus:
+     * 1) laufende HTML-Pruefung von Stefan (Jonas, 6R) zeigt die Sperre,
+     * 2) herausgegebene SQL-Schularbeit von Claudia (Emma, 9R) zeigt
+     *    den Ergebnisvergleich mit Musterloesung.
+     */
+    private static function seedDemoExams(PDO $pdo): void
+    {
+        if ((int) $pdo->query('SELECT COUNT(*) FROM exams')->fetchColumn() > 0) {
+            return;
+        }
+        $idFor = static function (PDO $pdo, string $login): int {
+            $stmt = $pdo->prepare('SELECT id FROM users WHERE login_name = ?');
+            $stmt->execute([$login]);
+            return (int) $stmt->fetchColumn();
+        };
+        $stefanId = $idFor($pdo, 'stefan.schmidt');
+        $claudiaId = $idFor($pdo, 'claudia.fischer');
+        $jonasId = $idFor($pdo, 'jonas.wagner');
+        $emmaId = $idFor($pdo, 'emma.krueger');
+        $now = date('Y-m-d H:i:s');
+
+        // 1) Laufende HTML-Pruefung (6R, Jonas): Pruefungsmodus mit Sperre.
+        $vorlage = "<!DOCTYPE html>\n<html lang=\"de\">\n<head>\n  <title>Meine erste Seite</title>\n</head>\n<body>\n  <!-- Hier entsteht deine Pruefungsseite -->\n</body>\n</html>\n";
+        $insertProject = $pdo->prepare('INSERT INTO projects (owner_id, folder_id, title, type, language, content) VALUES (?, NULL, ?, ?, ?, ?)');
+        $insertProject->execute([$stefanId, 'Vorlage: Meine erste Seite', 'html', 'html', $vorlage]);
+        $templateId = (int) $pdo->lastInsertId();
+
+        $insertExam = $pdo->prepare('INSERT INTO exams (teacher_id, kind, title, description, level, phase, started_at) VALUES (?, ?, ?, ?, ?, \'durchfuehrung\', ?)');
+        $insertExam->execute([$stefanId, 'pruefung', 'HTML-Prüfung: Meine erste Seite', 'Überschrift, Absatz, Liste und ein Link, alles auf einer eigenen Seite.', 6, $now]);
+        $examId = (int) $pdo->lastInsertId();
+
+        $insertGroup = $pdo->prepare('INSERT INTO exam_groups (exam_id, name, template_project_id) VALUES (?, ?, ?)');
+        $insertGroup->execute([$examId, 'Gruppe A', $templateId]);
+        $groupId = (int) $pdo->lastInsertId();
+
+        $insertMember = $pdo->prepare('INSERT INTO exam_members (group_id, user_id) VALUES (?, ?)');
+        $insertMember->execute([$groupId, $jonasId]);
+
+        $insertTask = $pdo->prepare('INSERT INTO exam_tasks (exam_id, position, title, description, be, sample_solution) VALUES (?, ?, ?, ?, ?, ?)');
+        $insertTask->execute([$examId, 1, 'Grundgerüst', 'Erstelle eine Seite mit einer großen Überschrift und einem einleitenden Absatz.', 4, '<h1>Willkommen auf meiner Seite</h1><p>Hallo! Das ist meine erste eigene Webseite.</p>']);
+        $insertTask->execute([$examId, 2, 'Liste und Link', 'Füge eine Liste mit drei Hobbys hinzu und verlinke eines davon.', 4, '<ul><li>Lesen</li><li>Programmieren</li><li>Turnen</li></ul><p><a href="https://www.wikipedia.de">Mein Lieblingslink</a></p>']);
+
+        $insertProject->execute([$jonasId, 'HTML-Prüfung: Meine erste Seite', 'html', 'html', $vorlage]);
+        $workProjectId = (int) $pdo->lastInsertId();
+        $insertWork = $pdo->prepare('INSERT INTO exam_works (exam_id, user_id, group_id, project_id, started_at) VALUES (?, ?, ?, ?, ?)');
+        $insertWork->execute([$examId, $jonasId, $groupId, $workProjectId, $now]);
+
+        // 2) Herausgegebene SQL-Schularbeit (9R, Emma): Ergebnisvergleich.
+        $insertExam->execute([$claudiaId, 'arbeit', 'Schularbeit: SQL-Grundlagen', 'SELECT, WHERE und ORDER BY am Shop-Modell.', 9, $now]);
+        $examBId = (int) $pdo->lastInsertId();
+
+        $insertGroupB = $pdo->prepare('INSERT INTO exam_groups (exam_id, name) VALUES (?, ?)');
+        $insertGroupB->execute([$examBId, '9R']);
+        $groupBId = (int) $pdo->lastInsertId();
+        $insertMember->execute([$groupBId, $emmaId]);
+
+        $insertTaskB = $pdo->prepare('INSERT INTO exam_tasks (exam_id, position, title, description, be, sample_solution) VALUES (?, ?, ?, ?, ?, ?)');
+        $insertTaskB->execute([$examBId, 1, 'Alle Produkte', 'Zeige alle Produkte mit Name und Preis, sortiert nach Preis (günstigste zuerst).', 5, 'SELECT name, preis FROM produkte ORDER BY preis']);
+        $taskB1 = (int) $pdo->lastInsertId();
+        $insertTaskB->execute([$examBId, 2, 'Schnäppchen', 'Finde alle Produkte, die weniger als 15 Euro kosten.', 5, 'SELECT name, preis FROM produkte WHERE preis < 15']);
+        $taskB2 = (int) $pdo->lastInsertId();
+
+        $insertWorkB = $pdo->prepare('INSERT INTO exam_works (exam_id, user_id, group_id, project_id, started_at, submitted_at) VALUES (?, ?, ?, NULL, ?, ?)');
+        $insertWorkB->execute([$examBId, $emmaId, $groupBId, $now, $now]);
+
+        $insertAnswer = $pdo->prepare('INSERT INTO exam_answers (task_id, user_id, answer) VALUES (?, ?, ?)');
+        $insertAnswer->execute([$taskB1, $emmaId, 'SELECT name, preis FROM produkte ORDER BY preis']);
+        $insertAnswer->execute([$taskB2, $emmaId, 'SELECT * FROM produkte WHERE preis < 15']);
+
+        $insertGrading = $pdo->prepare('INSERT INTO exam_gradings (task_id, user_id, be_erreicht, comment, source, checked) VALUES (?, ?, ?, ?, ?, ?)');
+        $insertGrading->execute([$taskB1, $emmaId, 5.0, 'Sauber: Spalten, Tabelle und Sortierung stimmen.', 'lk', 1]);
+        $insertGrading->execute([$taskB2, $emmaId, 4.0, 'WHERE stimmt, aber bitte gezielt name und preis auswählen statt SELECT *.', 'api', 1]);
     }
 }
 

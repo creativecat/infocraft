@@ -150,3 +150,72 @@ CREATE TABLE IF NOT EXISTS quiz_attempts (
     answers TEXT NOT NULL DEFAULT '',
     finished_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+
+-- Prüfungen & Schularbeiten (Phase 5): Vorbereitung, Durchführung mit Sperre, Korrektur, Herausgabe
+CREATE TABLE IF NOT EXISTS exams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    teacher_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    kind TEXT NOT NULL DEFAULT 'pruefung',
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    level INTEGER NOT NULL DEFAULT 6,
+    phase TEXT NOT NULL DEFAULT 'vorbereitung',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    started_at TEXT NULL,
+    released_at TEXT NULL
+);
+
+CREATE TABLE IF NOT EXISTS exam_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exam_id INTEGER NOT NULL REFERENCES exams (id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    template_project_id INTEGER NULL REFERENCES projects (id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS exam_members (
+    group_id INTEGER NOT NULL REFERENCES exam_groups (id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    PRIMARY KEY (group_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS exam_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exam_id INTEGER NOT NULL REFERENCES exams (id) ON DELETE CASCADE,
+    position INTEGER NOT NULL DEFAULT 1,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    be INTEGER NOT NULL DEFAULT 1,
+    sample_solution TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS exam_works (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exam_id INTEGER NOT NULL REFERENCES exams (id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    group_id INTEGER NULL REFERENCES exam_groups (id) ON DELETE SET NULL,
+    project_id INTEGER NULL REFERENCES projects (id) ON DELETE SET NULL,
+    started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    submitted_at TEXT NULL,
+    UNIQUE (exam_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS exam_answers (
+    task_id INTEGER NOT NULL REFERENCES exam_tasks (id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    answer TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (task_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS exam_gradings (
+    task_id INTEGER NOT NULL REFERENCES exam_tasks (id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    be_erreicht REAL NOT NULL DEFAULT 0,
+    comment TEXT NOT NULL DEFAULT '',
+    source TEXT NOT NULL DEFAULT 'lk',
+    checked INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (task_id, user_id)
+);

@@ -38,4 +38,18 @@ return [
         'redirect_uri' => '',          // z. B. https://informatik.schule.de/auth/sso/callback
         'auto_create' => true,         // Unbekannte Schulkonten automatisch anlegen
     ],
+
+    // Anonyme API-Korrektur für Prüfungen und Schularbeiten (siehe README).
+    // mode: 'json' = eigener Endpunkt mit festem JSON-Vertrag,
+    //       'chat' = OpenAI-/Mistral-kompatible Chat-API (Antwort muss JSON enthalten).
+    'exam' => [
+        'api' => [
+            'mode' => 'json',
+            'url' => '',
+            'key' => '',
+            'model' => '',
+        ],
+    ],
 ];
+
+

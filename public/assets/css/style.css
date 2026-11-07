@@ -279,3 +279,14 @@ body.sidebar-hidden .sidebar { display: none; }
 .review-correct { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 14px; }
 .review-wrong { background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 14px; }
 .score-big { font-size: 2rem; font-weight: 800; color: var(--primary); }
+
+
+/* ===== Prüfungsmodus (Prüfungen & Schularbeiten) ===== */
+.exam-lock-banner { position: sticky; top: 0; z-index: 40; background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; font-weight: 600; }
+.ex-answer { width: 100%; min-height: 140px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.85rem; }
+.ex-answer-status { font-size: 0.8rem; color: var(--muted); }
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; }
+.own, .muster { border-radius: 10px; padding: 12px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.8rem; white-space: pre-wrap; background: #f8fafc; border: 1px solid var(--border); overflow-wrap: anywhere; }
+.muster { background: #f0fdf4; border-color: #86efac; }
+.work-code { background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 14px; overflow: auto; max-height: 420px; font-size: 0.8rem; }
+.score-big { font-size: 1.6rem; font-weight: 800; margin: 6px 0 2px; }
