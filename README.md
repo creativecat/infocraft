@@ -9,7 +9,7 @@ Digitale Informatik-Werkstatt für den bayerischen LehrplanPLUS (Gymnasium): SQL
 | SQL-Werkstatt (Shop, Instagram, Dateninsel-Adventure) | 9 | fertig (Basis) |
 | Code-Werkstatt (Projekte, Ordner, Austeilen; IDE folgt) | 6 | in Arbeit |
 | Aufgaben / Meine Aufgaben | 6 | in Arbeit (Basis fertig) |
-| HTML-WYSIWYG-Werkstatt | 6 | geplant |
+| HTML-Werkstatt (WYSIWYG-Editor mit Sofortvorschau, Vorlagen) | 6 | fertig (Basis) |
 | Quiz-Arena | 6 | geplant |
 | Wiki & Präsentationen | 6 | geplant |
 

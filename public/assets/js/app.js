@@ -142,3 +142,31 @@
     });
   }
 })();
+/* InfoCraft Phase 3: HTML-Werkstatt Sofortvorschau, Strg+S speichern */
+(function () {
+  'use strict';
+
+  var htmlEditor = document.getElementById('html-editor');
+  var htmlPreview = document.getElementById('html-preview');
+  if (htmlEditor && htmlPreview) {
+    var updatePreview = function () {
+      htmlPreview.srcdoc = htmlEditor.value;
+    };
+    var previewTimer = null;
+    htmlEditor.addEventListener('input', function () {
+      if (previewTimer) { clearTimeout(previewTimer); }
+      previewTimer = setTimeout(updatePreview, 400);
+    });
+    updatePreview();
+  }
+
+  var saveForm = document.getElementById('html-form');
+  if (saveForm) {
+    saveForm.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        saveForm.submit();
+      }
+    });
+  }
+})();

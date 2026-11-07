@@ -15,6 +15,7 @@ use Infocraft\Controllers\AdminController;
 use Infocraft\Controllers\AuthController;
 use Infocraft\Controllers\CodeController;
 use Infocraft\Controllers\HomeController;
+use Infocraft\Controllers\HtmlController;
 use Infocraft\Controllers\ModuleController;
 use Infocraft\Controllers\SqlWorkshopController;
 use Infocraft\Controllers\TaskController;
@@ -59,6 +60,12 @@ $router->post('/werkstatt/code/verteilen', [CodeController::class, 'distribute']
 $router->post('/werkstatt/code/loeschen', [CodeController::class, 'delete']);
 $router->get('/werkstatt/code/{id}', [CodeController::class, 'open']);
 $router->post('/werkstatt/code/{id}', [CodeController::class, 'save']);
+
+// HTML-Werkstatt (WYSIWYG-Editor, nutzt die Projektverwaltung der Code-Werkstatt)
+$router->get('/werkstatt/html', [HtmlController::class, 'index']);
+$router->post('/werkstatt/html/projekt', [HtmlController::class, 'create']);
+$router->get('/werkstatt/html/{id}', [HtmlController::class, 'open']);
+$router->post('/werkstatt/html/{id}', [HtmlController::class, 'save']);
 
 // Aufgabenpool (Lehrkräfte) bzw. Meine Aufgaben (Schülerinnen und Schüler)
 $router->get('/aufgaben', [TaskController::class, 'index']);
