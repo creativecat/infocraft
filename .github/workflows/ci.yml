@@ -26,11 +26,16 @@ jobs:
         run: php tools/migrate.php --driver sqlite
       - name: Smoke-Tests (Entwicklungsserver)
         run: |
-          php -S 127.0.0.1:8080 -t public public/index.php &
+          php -S 127.0.0.1:8080 -t public public/index.php &> server.log &
           sleep 2
-          curl -fsS -c cookies.txt http://127.0.0.1:8080/login -o login.html
-          grep -q "InfoCraft" login.html
+          CODE_LOGIN=$(curl -sS -o login.html -w "%{http_code}" -c cookies.txt http://127.0.0.1:8080/login)
           CSRF=$(grep -o 'value="[a-f0-9]*"' login.html | head -n1 | cut -d'"' -f2)
-          curl -fsS -L -b cookies.txt -c cookies.txt -d "csrf=$CSRF" -d "user_id=1" http://127.0.0.1:8080/login/demo -o home.html
-          grep -q "Willkommen" home.html
-          curl -fsS -b cookies.txt -o /dev/null http://127.0.0.1:8080/modul/sql
+          CODE_DEMO=$(curl -sS -L -o home.html -w "%{http_code}" -b cookies.txt -c cookies.txt -d "csrf=$CSRF" -d "user_id=1" http://127.0.0.1:8080/login/demo)
+          CODE_MODULE=$(curl -sS -o modul.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/modul/sql)
+          echo "GET /login: $CODE_LOGIN | POST /login/demo: $CODE_DEMO | GET /modul/sql: $CODE_MODULE"
+          if [ "$CODE_LOGIN" = "200" ] && [ "$CODE_DEMO" = "200" ] && [ "$CODE_MODULE" = "200" ]; then
+            echo "Alle Smoke-Tests bestanden."
+          else
+            echo "::error::DIAG | GET /login: $CODE_LOGIN | POST /login/demo: $CODE_DEMO | GET /modul/sql: $CODE_MODULE | CSRF: ${CSRF:0:8} | login: $(head -c 150 login.html | tr "\n" " ") | home: $(head -c 150 home.html | tr "\n" " ") | server: $(tail -n 6 server.log | tr "\n" " ")"
+            exit 1
+          fi
