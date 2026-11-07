@@ -51,7 +51,8 @@ a { color: var(--primary); text-decoration: none; }
 .nav { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; flex: 1; overflow-y: auto; }
 .nav-sep { margin: 14px 12px 6px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.6; }
 .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; color: #cbd5e1; font-size: 0.95rem; }
-.nav-item span { width: 1.4em; text-align: center; }
+.nav-icon { width: 1.4em; text-align: center; flex-shrink: 0; }
+.nav-label { min-width: 0; }
 .nav-item:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
 .nav-item.active { background: var(--primary); color: #fff; font-weight: 600; }
 
@@ -135,6 +136,9 @@ a { color: var(--primary); text-decoration: none; }
     border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 0.95rem; font-family: inherit; background: #fbfcfe; color: var(--text); width: 100%;
 }
 .field input:focus, .input:focus, textarea:focus { outline: 2px solid #c7d2fe; border-color: var(--primary); }
+.field select {
+    border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 0.95rem; font-family: inherit; background: #fbfcfe; color: var(--text); width: 100%;
+}
 
 /* Tabellen */
 .table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
@@ -195,8 +199,62 @@ a { color: var(--primary); text-decoration: none; }
     .topbar { flex-direction: column; align-items: flex-start; }
     .content { padding: 18px; }
     .demo-grid { grid-template-columns: 1fr; }
+    body.sidebar-mini .sidebar, body.sidebar-hidden .sidebar { width: 100%; display: flex; }
+    body.sidebar-mini .brand-name, body.sidebar-mini .nav-label, body.sidebar-mini .nav-sep { display: inline; }
 }
 
 /* Präsentationsmodus */
 :root.presenting .content { max-width: 1600px; }
 :root.presenting .card { padding: 28px; }
+
+/* ============================================================
+   Phase 2: Sidebar-Zustände, Werkstatt, Drag & Drop, OTP
+   ============================================================ */
+
+/* Sidebar-Umschalter (oben links): voll -> mini -> ausgeblendet */
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.icon-btn { background: transparent; border: 1px solid var(--border); border-radius: 10px; width: 38px; height: 38px; font-size: 1.05rem; cursor: pointer; flex-shrink: 0; }
+.icon-btn:hover { background: #f1f4f9; }
+
+body.sidebar-mini .sidebar { width: 64px; }
+body.sidebar-mini .brand { justify-content: center; padding: 18px 8px; }
+body.sidebar-mini .brand-name, body.sidebar-mini .nav-label, body.sidebar-mini .nav-sep, body.sidebar-mini .sidebar-foot { display: none; }
+body.sidebar-mini .nav-item { justify-content: center; padding: 10px 8px; }
+body.sidebar-hidden .sidebar { display: none; }
+
+/* Code-Werkstatt: Ordner und Drag & Drop */
+.folder-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.folder-item { border: 2px dashed var(--border); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: border-color 0.1s ease, background 0.1s ease; }
+.folder-item:hover, .folder-item.drop-hover { border-color: var(--primary); background: #eef2ff; }
+.project-card { cursor: grab; }
+.project-card:active { cursor: grabbing; }
+
+/* SQL-Werkstatt */
+.sql-input { font-size: 0.95rem; }
+.query-result { margin-top: 14px; border-radius: 10px; padding: 4px 14px; }
+.query-result.ok { background: #f0fdf4; border: 1px solid #bbf7d0; }
+.query-result.error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 10px 14px; }
+.table-browser { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
+.table-browser summary { cursor: pointer; }
+.mermaid { background: #fbfcfe; border: 1px solid var(--border); border-radius: 10px; padding: 14px; overflow-x: auto; text-align: center; }
+
+/* Missionen und Aufgaben */
+.mission { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 12px; }
+.mission-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mission.solved { background: #f0fdf4; border-color: #bbf7d0; }
+.badge-solved { background: #dcfce7; color: #166534; border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 700; }
+
+/* OTP-Liste (druckbar) */
+.otp-table td:nth-child(4) { font-size: 1.05rem; }
+
+/* Kompakte Formulare */
+.form-inline { display: inline-flex; align-items: center; gap: 8px; }
+.form-row { flex-direction: row; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.code-editor { min-height: 320px; }
+
+/* Ausdruck (z. B. OTP-Liste) */
+@media print {
+    .sidebar, .topbar, .foot, .btn, .btn-row, .notice { display: none !important; }
+    body { background: #fff; }
+    .content { padding: 0; max-width: none; }
+}

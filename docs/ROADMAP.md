@@ -1,58 +1,21 @@
-# 🚀 Roadmap
+# InfoCraft-Roadmap
 
-InfoCraft wird modulweise entwickelt. Jede Phase liefert eine nutzbare Einheit, alles orientiert sich am bayerischen LehrplanPLUS (docs/lehrplan.md).
+Übersicht der Ausbaustufen. Details zu den Bereichen stehen in docs/lehrplan.md und im Code.
 
-## Phase 1: Fundament (fertig)
+| Phase | Inhalt | Status |
+| --- | --- | --- |
+| 1 | Grundgerüst: Front-Controller, Router, Templates, Rollen, Anmeldung (Passwort, Demo, SSO M365, CSV-Import), SQLite-Auto-Migration | fertig |
+| 2 | SQL-Werkstatt: Vorlagen (Shop, Instagram, Dateninsel-Adventure), eigene Kopie pro Person, Rechte (lesen, lesen und schreiben, Tabellen anlegen), ER-Diagramme (Mermaid), Missionen mit automatischer Prüfung, Austeilen an Klassen und Einzelne | fertig (Basis) |
+| 3 | HTML-WYSIWYG-Werkstatt: Editor mit Sofortvorschau, Vorlagen, gestufte Aufgaben, Präsentations- und Prüfungsmodus | geplant |
+| 4 | Code-Werkstatt: Projekte, Ordner, Drag & Drop und Austeilen sind fertig; online-IDE für Java und Python mit Auto-Vervollständigung und Skriptsteuerung folgt | in Arbeit |
+| 5 | Quiz-Arena: Quizrunden im Kahoot-Stil, Prüfungsmodus für alle Bereiche | geplant |
+| 6 | Wiki, Präsentationen, Lernvideos | geplant |
+| 7 | Aufgabenpool: Anlegen und Austeilen an Klassen/Einzelne ist fertig; umfangreicher Pool mit Automatisierung folgt | in Arbeit (Basis fertig) |
 
-- Grundgerüst: Routing, Templates, Design, Präsentationsmodus (Basis: Skalierung, pro Endgerät gespeichert)
-- Nutzer: Rollen Schülerin/Schüler, Lehrkraft, Administration
-- Anmeldung: Microsoft-365-SSO (OpenID Connect), CSV-Import, Demo-Modus
-- Datenhaltung: MySQL/MariaDB oder SQLite, minimale Nutzerdaten (Vor-/Nachname, Klasse, Rolle)
-- CI auf GitHub (Syntaxprüfung, Migration, Smoke-Tests)
+## Nächste Schritte
 
-## Phase 2: SQL-Werkstatt
+1. HTML-WYSIWYG-Werkstatt (Phase 3),
+2. Java/Python-IDE in der Code-Werkstatt (Phase 4),
+3. Quiz-Arena mit Prüfungsmodus (Phase 5).
 
-- Einstiegsprojekt: Abbildung eines Shops und eines Instagram-Klons als Datenbank
-- Backend mit Tabellenansicht (Daten ansehen, bearbeiten, filtern)
-- Automatisch generierte ER- und Klassendiagramme, als Mermaid-Quelltext exportierbar und editierbar
-- SQL-Text-Adventure im Stil von SQL Island (Aufgaben per SQL-Query lösen, Geschichte vorantreiben)
-- Präsentations- und Prüfungsmodus für diesen Bereich
-
-## Phase 3: HTML-Werkstatt
-
-- Einfacher WYSIWYG-Editor mit Sofortvorschau
-- Vorlagen und Aufgaben aus dem Lehrplan (Webseiten gestalten)
-
-## Phase 4: Code-Werkstatt
-
-- Online-IDE für Java und Python (Aufbau wie bekannte Online-IDEs)
-- Automatische Dateiendungen (.java, .py)
-- Schritt-für-Schritt-Steuerung durch geführte Skripte
-- Präsentationsmodus
-- Hinweis zur Ausführung: Python perspektivisch im Browser (Pyodide) oder Sandbox, Java über vorbereitete Lernskripte, bis eine sichere serverseitige Ausführung steht
-
-## Phase 5: Quiz-Arena und Prüfungsmodus
-
-- Quizrunden im Kahoot-Stil (live, Punkte, Rangliste)
-- Quiz zu allen Themen aus Präsentationen und Wiki
-- Prüfungsmodus für alle Bereiche (gesteuerte Aufgabenstellung, Auswertung für Lehrkräfte)
-
-## Phase 6: Wiki, Präsentationen, Lernvideos
-
-- Umfangreiches Wiki zu allen Inhalten
-- Präsentationen zu Themen
-- Später: Lernvideos zum Einbetten, mit Skripten und Beispielaufgaben
-
-## Phase 7: Aufgabenpool
-
-- Umfangreicher Aufgabenpool, abgestimmt auf die Präsentationen
-- Eigene Aufgaben für Schülerinnen und Schüler und für Lehrkräfte
-- Lehrkräfte teilen Aufgaben an Klassen aus
-
-## Offen gehalten (u. a. Oberstufe)
-
-- Fortgeschrittene SQL-Themen (JOINs, Transaktionen, Normalisierung) als Adventure-Level
-- Algorithmen und Datenstrukturen für die Oberstufe
-- Projektarbeiten und Abiturvorbereitung
-
-Erweiterungen werden so angebaut, dass neue Module ohne Refactoring der Bestandsmodule möglich sind (Modul-Registry, einheitliche Migrations).
+Oberstufen-Funktionen (ab Jahrgangsstufe 11) sind über die Level-Angaben der Module bereits vorbereitet.

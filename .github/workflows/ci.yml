@@ -24,18 +24,56 @@ jobs:
         run: php tools/migrate.php --driver sqlite
       - name: Migration erneut ausfuehren (Idempotenz)
         run: php tools/migrate.php --driver sqlite
-      - name: Smoke-Tests (Entwicklungsserver)
+      - name: Smoke-Tests (Werkstatt, Rechte, Stufen)
         run: |
           php -S 127.0.0.1:8080 -t public public/index.php &> server.log &
           sleep 2
+          DB="database/infocraft.sqlite"
           CODE_LOGIN=$(curl -sS -o login.html -w "%{http_code}" -c cookies.txt http://127.0.0.1:8080/login)
           CSRF=$(grep -o 'value="[a-f0-9]*"' login.html | head -n1 | cut -d'"' -f2)
           CODE_DEMO=$(curl -sS -L -o home.html -w "%{http_code}" -b cookies.txt -c cookies.txt -d "csrf=$CSRF" -d "user_id=1" http://127.0.0.1:8080/login/demo)
-          CODE_MODULE=$(curl -sS -o modul.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/modul/sql)
-          echo "GET /login: $CODE_LOGIN | POST /login/demo: $CODE_DEMO | GET /modul/sql: $CODE_MODULE"
-          if [ "$CODE_LOGIN" = "200" ] && [ "$CODE_DEMO" = "200" ] && [ "$CODE_MODULE" = "200" ]; then
+          CODE_SQL=$(curl -sS -o sql.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/sql)
+          CODE_CODE=$(curl -sS -o code.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/code)
+          CODE_TASKS=$(curl -sS -o tasks.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/aufgaben)
+          CODE_WS=$(curl -sS -o ws.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/sql/shop)
+          CSRF2=$(grep -o 'value="[a-f0-9]*"' ws.html | head -n1 | cut -d'"' -f2)
+          curl -sS -b cookies.txt -c cookies.txt -o query.html --data-urlencode "csrf=$CSRF2" --data-urlencode "sql=SELECT COUNT(*) AS n FROM produkte" http://127.0.0.1:8080/werkstatt/sql/shop
+          grep -q 'data-result="ok"' query.html && QUERY_OK=1 || QUERY_OK=0
+          CLASS6=$(sqlite3 "$DB" "SELECT id FROM classes WHERE name = '6R'")
+          CODE_OTP=$(curl -sS -L -o otp.html -w "%{http_code}" -b cookies.txt -c cookies.txt -d "csrf=$CSRF2" -d "class_id=$CLASS6" http://127.0.0.1:8080/unterricht/passwort)
+          grep -q "Satzbaulogik" otp.html && OTP_OK=1 || OTP_OK=0
+          EMMA=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'emma.krueger'")
+          LENA=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'lena.müller'")
+          curl -sS -o login2.html -c cookies2.txt http://127.0.0.1:8080/login
+          CSRF3=$(grep -o 'value="[a-f0-9]*"' login2.html | head -n1 | cut -d'"' -f2)
+          CODE_EMMA=$(curl -sS -L -o home_emma.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt -d "csrf=$CSRF3" -d "user_id=$EMMA" http://127.0.0.1:8080/login/demo)
+          grep -q "werkstatt/sql" home_emma.html && EMMA_SQL=1 || EMMA_SQL=0
+          grep -q "werkstatt/code" home_emma.html && EMMA_CODE=1 || EMMA_CODE=0
+          curl -sS -o login3.html -c cookies3.txt http://127.0.0.1:8080/login
+          CSRF4=$(grep -o 'value="[a-f0-9]*"' login3.html | head -n1 | cut -d'"' -f2)
+          CODE_LENA=$(curl -sS -L -o home_lena.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" -d "user_id=$LENA" http://127.0.0.1:8080/login/demo)
+          grep -q "werkstatt/sql" home_lena.html && LENA_SQL=1 || LENA_SQL=0
+          grep -q "werkstatt/code" home_lena.html && LENA_CODE=1 || LENA_CODE=0
+          echo "login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE lena:$CODE_LENA/$LENA_SQL/$LENA_CODE"
+          FAILED=0
+          [ "$CODE_LOGIN" = "200" ] || FAILED=1
+          [ "$CODE_DEMO" = "200" ] || FAILED=1
+          [ "$CODE_SQL" = "200" ] || FAILED=1
+          [ "$CODE_CODE" = "200" ] || FAILED=1
+          [ "$CODE_TASKS" = "200" ] || FAILED=1
+          [ "$CODE_WS" = "200" ] || FAILED=1
+          [ "$QUERY_OK" = "1" ] || FAILED=1
+          [ "$CODE_OTP" = "200" ] || FAILED=1
+          [ "$OTP_OK" = "1" ] || FAILED=1
+          [ "$CODE_EMMA" = "200" ] || FAILED=1
+          [ "$EMMA_SQL" = "1" ] || FAILED=1
+          [ "$EMMA_CODE" = "1" ] || FAILED=1
+          [ "$CODE_LENA" = "200" ] || FAILED=1
+          [ "$LENA_SQL" = "0" ] || FAILED=1
+          [ "$LENA_CODE" = "1" ] || FAILED=1
+          if [ "$FAILED" = "0" ]; then
             echo "Alle Smoke-Tests bestanden."
           else
-            echo "::error::DIAG | GET /login: $CODE_LOGIN | POST /login/demo: $CODE_DEMO | GET /modul/sql: $CODE_MODULE | CSRF: ${CSRF:0:8} | login: $(head -c 120 login.html | tr "\n" " ") | errors: $(grep "InfoCraft:" server.log | head -n 3 | tr "\n" " ")"
+            echo "::error::DIAG | login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE lena:$CODE_LENA/$LENA_SQL/$LENA_CODE | errors: $(grep 'InfoCraft:' server.log | head -n 5 | tr '\n' ' ')"
             exit 1
           fi

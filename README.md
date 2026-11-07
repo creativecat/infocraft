@@ -1,73 +1,69 @@
-# 🔨 InfoCraft
+# InfoCraft
 
-**Digitale Informatik-Werkstatt für den bayerischen Unterricht.**
-InfoCraft bündelt SQL, HTML, Java/Python, Quiz, Wiki und Aufgabenpool hinter einer Oberfläche, konsequent auf den bayerischen LehrplanPLUS abgestimmt.
+Digitale Informatik-Werkstatt für den bayerischen LehrplanPLUS (Gymnasium): SQL, HTML, Java/Python, Quiz, Wiki und Aufgaben, mit Rollen für Lehrkräfte, Schülerinnen und Schüler und Administration.
 
-| Modul | Inhalt | Status |
+## Arbeitsbereiche
+
+| Bereich | Ab Jahrgangsstufe | Status |
 | --- | --- | --- |
-| 🗄️ SQL-Werkstatt | Shop-/Instagram-Datenmodell, Tabellenansicht, Mermaid-Diagramme, SQL-Adventure | geplant (Phase 2) |
-| 🎨 HTML-Werkstatt | WYSIWYG-Editor mit Sofortvorschau | geplant (Phase 3) |
-| 💻 Code-Werkstatt | Java/Python-IDE mit Schritt-für-Schritt-Steuerung | geplant (Phase 4) |
-| 🏆 Quiz-Arena | Quizrunden im Kahoot-Stil | geplant (Phase 5) |
-| 📚 Wiki | Umfangreiches Themen-Wiki, Präsentationen, später Lernvideos | geplant (Phase 6) |
-| 📝 Aufgaben | Aufgabenpool, eigene Aufgaben, Austeilen durch Lehrkräfte | geplant (Phase 7) |
+| SQL-Werkstatt (Shop, Instagram, Dateninsel-Adventure) | 9 | fertig (Basis) |
+| Code-Werkstatt (Projekte, Ordner, Austeilen; IDE folgt) | 6 | in Arbeit |
+| Aufgaben / Meine Aufgaben | 6 | in Arbeit (Basis fertig) |
+| HTML-WYSIWYG-Werkstatt | 6 | geplant |
+| Quiz-Arena | 6 | geplant |
+| Wiki & Präsentationen | 6 | geplant |
 
-Phase 1 (fertig): Grundgerüst, Anmeldung (Microsoft-SSO, CSV-Import, Demo-Modus), Rollen (Schülerin/Schüler, Lehrkraft, Admin), Präsentationsmodus (Basis). Details: [docs/ROADMAP.md](docs/ROADMAP.md)
+Schülerinnen und Schüler sehen nur die Bereiche, die laut LehrplanPLUS für ihre Klassenstufe relevant sind. Ausgeteilte Inhalte (z. B. Datenbanken) bleiben auch darunter sichtbar.
 
-## ⚡ Schnellstart (lokal oder GitHub Codespaces)
+## Kernfunktionen
 
-Voraussetzung: PHP 8.3+ (getestet bis 8.5). Keine Composer-Abhängigkeiten, keine externe Datenbank nötig.
+- **Rollen und Anmeldung:** SSO über Microsoft 365 (docs/sso-m365.md) oder CSV-Import mit minimalen Daten (Vorname, Nachname, Klasse, Rolle).
+- **OTP-Passwörter:** Neue Konten und Passwort-Resets erzeugen immer Einmalpasswörter nach der Satzbaulogik (Merksatz: "Apfel, Berg, Katze und Wolke" ergibt z. B. Abkw42!). Lehrkräfte können OTPs für einzelne Personen oder ganze Klassen erzeugen.
+- **SQL-Werkstatt:** Lehrkräfte teilen Datenbankvorlagen an Klassen aus, mit Rechten pro Person: nur lesen, lesen und schreiben oder Tabellen anlegen. Jede Person arbeitet an ihrer eigenen Kopie, ER-Diagramme (Mermaid) und Missionen inklusive.
+- **Code-Werkstatt:** Projekte anlegen, in Ordnern per Drag & Drop sortieren, von Lehrkräften an Klassen oder Einzelne austellen.
+- **Aufgabenpool:** Aufgaben anlegen und austeilen, Schülerinnen und Schüler sehen nur Aufgaben bis zu ihrer Jahrgangsstufe.
+- **Präsentationsmodus:** Ansicht per Klick vergrößern.
+
+## Schnellstart (lokal)
 
 ```bash
 git clone https://github.com/creativecat/infocraft.git
 cd infocraft
+php tools/migrate.php --driver sqlite
 php -S localhost:8080 -t public public/index.php
 ```
 
-Dann http://localhost:8080 öffnen. Beim ersten Aufruf legt InfoCraft automatisch eine SQLite-Datenbank mit Beispieldaten an (1 Admin, 2 Lehrkräfte, 11 Schülerinnen/Schüler, 3 Klassen).
+SQLite läuft ohne weiteren Datenbankserver, die Migration erzeugt Schema und Beispieldaten.
 
-## 🧪 Auf GitHub testen
+## Demo-Konten (Demo-Modus)
 
-- **Actions**: Bei jedem Push läuft die CI: PHP-Syntaxprüfung (8.3 und 8.5), Migration mit Beispieldaten, Smoke-Tests mit Demo-Anmeldung gegen den Entwicklungsserver. Siehe Reiter *Actions*.
-- **Codespaces**: Repository in einem Codespace öffnen, den Schnellstart oben ausführen, Port 8080 wird automatisch weitergeleitet.
+Passwort jeweils **demo1234**. Ein-Klick-Anmeldung auf der Login-Seite, wenn demo_mode aktiv ist.
 
-## 🌍 Auf eigenem Webspace betreiben (Apache, PHP 8.3+)
+| Anmeldename | Rolle | Hinweis |
+| --- | --- | --- |
+| matthias.glienke | Administration | sieht alles |
+| stefan.schmidt | Lehrkraft | unterrichtet 6R |
+| claudia.fischer | Lehrkraft | unterrichtet 9R, hat alle SQL-Vorlagen |
+| lena.müller | Schülerin, 6R | sieht kein SQL (erst ab Jgst. 9) |
+| emma.krueger | Schülerin, 9R | sieht SQL: Shop (schreiben), Instagram (lesen), Adventure (schreiben) |
 
-1. Repo hochladen (FTP oder git clone) und den DocumentRoot auf `public/` zeigen lassen.
-2. `config/config.example.php` nach `config/config.php` kopieren und anpassen:
-   - `db.driver` auf `mysql` und die Zugangsdaten eintragen (oder SQLite belassen),
-   - `app.demo_mode` auf `false`,
-   - optional SSO konfigurieren ([docs/sso-m365.md](docs/sso-m365.md)).
-3. Einmalig das Schema einspielen: `php tools/migrate.php` (per SSH/Konsole). Alternativ `sql/schema.mysql.sql` in phpMyAdmin importieren.
+## Installation auf Webspace (PHP 8.3+, auch 8.5)
 
-## 👤 Demo-Zugänge (Demo-Modus)
+1. Dateien hochladen, DocumentRoot der Domain auf public/ zeigen lassen.
+2. config/config.example.php nach config/config.php kopieren und anpassen (Treiber sqlite oder mysql, demo_mode, ggf. SSO).
+3. Einmalig php tools/migrate.php ausführen (Schema + Beispieldaten).
+4. Für MySQL: sql/schema.mysql.sql liegt bei, alternativ einfach die Migration laufen lassen.
 
-| Anmeldename | Passwort | Rolle | Klasse |
-| --- | --- | --- | --- |
-| matthias.glienke | demo1234 | Administration | |
-| stefan.schmidt | demo1234 | Lehrkraft | |
-| claudia.fischer | demo1234 | Lehrkraft | |
-| lena.müller bis nele.adler | demo1234 | Schülerin/Schüler | 6R / 9R |
+Ohne Composer, ohne Node-Build: nur PHP mit PDO.
 
-Auf der Anmeldeseite gibt es zusätzlich Ein-Klick-Demo-Buttons, solange `app.demo_mode` aktiv ist.
+## Qualitätssicherung
 
-## 🔐 Anmeldung & Datenschutz
+GitHub Actions prüft jeden Push mit PHP 8.3 und 8.5: Syntax, Migration (inkl. Idempotenz) und Smoke-Tests über HTTP (Login, Werkstatt-Seiten, SQL-Ausführung, Rechtevergabe, Stufen-Filterung).
 
-- **Microsoft-365-SSO** (OpenID Connect) als Standardweg für den Produktivbetrieb, siehe [docs/sso-m365.md](docs/sso-m365.md).
-- **CSV-Import** für Klassenlisten: nur Vorname, Nachname, Klasse, Rolle, nichts darüber.
-- **Demo-Modus** nur für Entwicklung und Präsentation.
+## Dokumentation
 
-## 🗂 Projektstruktur
+- docs/ROADMAP.md: Ausbaustufen und Status
+- docs/lehrplan.md: Zuordnung der Bereiche zu Jahrgangsstufen (LehrplanPLUS)
+- docs/sso-m365.md: Einrichtung von Microsoft-365-SSO
 
-```text
-public/      Einstieg (index.php), Assets, .htaccess
-src/         PHP-Klassen (Router, Auth, SSO, CSV-Import, Models, Controller)
-templates/   Views (Layout, Login, Module, Admin)
-sql/         Schemata für MySQL/MariaDB und SQLite
-tools/       migrate.php (Schema + Beispieldaten)
-docs/        Roadmap, Lehrplan-Referenz, SSO-Einrichtung
-```
-
-## 📜 Lizenz
-
-Noch offen (folgt).
+Lizenz: privat (creativecat).
