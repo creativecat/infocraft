@@ -19,3 +19,93 @@ CREATE TABLE IF NOT EXISTS users (
     active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Zuordnung Lehrkraft zu Klasse (wer darf Passwörter zurücksetzen und Inhalte austeilen)
+CREATE TABLE IF NOT EXISTS class_teachers (
+    teacher_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    class_id INTEGER NOT NULL REFERENCES classes (id) ON DELETE CASCADE,
+    PRIMARY KEY (teacher_id, class_id)
+);
+
+-- Ordner und Projekte (Code-Werkstatt, später auch HTML-Werkstatt)
+CREATE TABLE IF NOT EXISTS folders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    position INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    folder_id INTEGER NULL REFERENCES folders (id) ON DELETE SET NULL,
+    title TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'code',
+    language TEXT NULL,
+    content TEXT NOT NULL DEFAULT '',
+    created_by INTEGER NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Aufgabenpool (Lehrkräfte) und Austeilen an Klassen oder Einzelne
+CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    teacher_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    type TEXT NOT NULL DEFAULT 'allgemein',
+    level INTEGER NOT NULL DEFAULT 6,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS task_targets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id INTEGER NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+    class_id INTEGER NULL REFERENCES classes (id) ON DELETE CASCADE,
+    user_id INTEGER NULL REFERENCES users (id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- SQL-Werkstatt: Vorlagen, Missionen (Adventure/Aufgaben), Zuweisungen mit Rechten
+CREATE TABLE IF NOT EXISTS sql_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    level INTEGER NOT NULL DEFAULT 9,
+    is_adventure INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sql_missions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL REFERENCES sql_templates (id) ON DELETE CASCADE,
+    position INTEGER NOT NULL DEFAULT 0,
+    kind TEXT NOT NULL DEFAULT 'query',
+    title TEXT NOT NULL,
+    story TEXT NOT NULL DEFAULT '',
+    hint TEXT NOT NULL DEFAULT '',
+    solution_sql TEXT NOT NULL,
+    check_sql TEXT NOT NULL DEFAULT '',
+    check_expected TEXT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sql_grants (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL REFERENCES sql_templates (id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    permission TEXT NOT NULL DEFAULT 'read',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (template_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS sql_solves (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    grant_id INTEGER NOT NULL REFERENCES sql_grants (id) ON DELETE CASCADE,
+    mission_id INTEGER NOT NULL REFERENCES sql_missions (id) ON DELETE CASCADE,
+    solved_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (grant_id, mission_id)
+);

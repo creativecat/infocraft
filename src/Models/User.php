@@ -102,6 +102,29 @@ final class User
         return $list;
     }
 
+    /** @return list<self> */
+    public static function byClass(int $classId): array
+    {
+        $stmt = Database::pdo()->prepare("SELECT * FROM users WHERE class_id = ? AND role = 'student' ORDER BY last_name, first_name");
+        $stmt->execute([$classId]);
+        $list = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $list[] = self::fromRow($row);
+        }
+        return $list;
+    }
+
+    /** @return list<self> */
+    public static function teachers(): array
+    {
+        $rows = Database::pdo()->query("SELECT * FROM users WHERE role IN ('teacher', 'admin') ORDER BY role, last_name, first_name")->fetchAll();
+        $list = [];
+        foreach ($rows as $row) {
+            $list[] = self::fromRow($row);
+        }
+        return $list;
+    }
+
     public static function create(
         string $firstName,
         string $lastName,

@@ -18,6 +18,12 @@ final class SchoolClass
         return new self((int) $row['id'], (string) $row['name']);
     }
 
+    /** Jahrgangsstufe aus dem Klassennamen lesen (6R -> 6, 10G -> 10). */
+    public function level(): int
+    {
+        return preg_match('/(\d+)/', $this->name, $m) === 1 ? (int) $m[1] : 0;
+    }
+
     public static function find(int $id): ?self
     {
         $stmt = Database::pdo()->prepare('SELECT * FROM classes WHERE id = ? LIMIT 1');
@@ -50,5 +56,37 @@ final class SchoolClass
             $list[] = self::fromRow($row);
         }
         return $list;
+    }
+
+    /** Klassen einer Lehrkraft (für Admins: alle). @return list<self> */
+    public static function forTeacher(int $teacherId, bool $all = false): array
+    {
+        if ($all) {
+            return self::all();
+        }
+        $rows = Database::pdo()
+            ->query('SELECT c.* FROM classes c JOIN class_teachers ct ON ct.class_id = c.id WHERE ct.teacher_id = ' . (int) $teacherId . ' ORDER BY c.name')
+            ->fetchAll();
+        $list = [];
+        foreach ($rows as $row) {
+            $list[] = self::fromRow($row);
+        }
+        return $list;
+    }
+
+    public static function assignTeacher(int $teacherId, int $classId): void
+    {
+        $sql = Database::driver() === 'mysql'
+            ? 'INSERT IGNORE INTO class_teachers (teacher_id, class_id) VALUES (?, ?)'
+            : 'INSERT OR IGNORE INTO class_teachers (teacher_id, class_id) VALUES (?, ?)';
+        $stmt = Database::pdo()->prepare($sql);
+        $stmt->execute([$teacherId, $classId]);
+    }
+
+    public static function hasTeacher(int $classId, int $teacherId): bool
+    {
+        $stmt = Database::pdo()->prepare('SELECT COUNT(*) FROM class_teachers WHERE class_id = ? AND teacher_id = ?');
+        $stmt->execute([$classId, $teacherId]);
+        return (int) $stmt->fetchColumn() > 0;
     }
 }
