@@ -358,3 +358,15 @@ body.sidebar-hidden .sidebar { display: none; }
 .err-ok .err-head { color: #166534; }
 .err-msg { font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .err-hint { font-size: 0.85rem; color: #5b21b6; margin: 4px 0 0; }
+
+
+/* ===== Wiki: gerenderte Nachschlage-Seiten ===== */
+.wiki-content h2 { margin: 18px 0 8px; font-size: 1.25rem; }
+.wiki-content h3 { margin: 16px 0 6px; font-size: 1.1rem; }
+.wiki-content h4 { margin: 14px 0 6px; font-size: 1rem; }
+.wiki-content h2:first-child, .wiki-content h3:first-child { margin-top: 4px; }
+.wiki-content ul { margin: 8px 0; padding-left: 22px; }
+.wiki-content li { margin: 3px 0; }
+.wiki-content code { background: #f1f4f9; border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; font-size: 0.88em; font-family: ui-monospace, Consolas, monospace; }
+.wiki-content pre { margin: 10px 0; padding: 12px 14px; border-radius: 10px; overflow-x: auto; }
+.wiki-content pre code { background: none; border: none; padding: 0; }

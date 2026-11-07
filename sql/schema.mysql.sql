@@ -321,3 +321,19 @@ CREATE TABLE IF NOT EXISTS class_diagrams (
     PRIMARY KEY (id),
     CONSTRAINT fk_diagrams_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Wiki: Nachschlage-Seiten der Lehrkraefte, sichtbar ab der angegebenen Jahrgangsstufe
+CREATE TABLE IF NOT EXISTS wiki_pages (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    teacher_id INT UNSIGNED NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    content MEDIUMTEXT NOT NULL,
+    level INT NOT NULL DEFAULT 6,
+    position INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_wiki_teacher (teacher_id),
+    KEY idx_wiki_level (level),
+    CONSTRAINT fk_wiki_teacher FOREIGN KEY (teacher_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

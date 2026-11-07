@@ -23,6 +23,7 @@ use Infocraft\Controllers\QuizController;
 use Infocraft\Controllers\SqlWorkshopController;
 use Infocraft\Controllers\TaskController;
 use Infocraft\Controllers\TeacherController;
+use Infocraft\Controllers\WikiController;
 use Infocraft\Router;
 
 // Basispfad, falls InfoCraft in einem Unterverzeichnis installiert ist.
@@ -118,6 +119,14 @@ $router->get('/pruefungen/{id}/ergebnis', [ExamController::class, 'result']);
 $router->get('/aufgaben', [TaskController::class, 'index']);
 $router->post('/aufgaben/anlegen', [TaskController::class, 'create']);
 $router->post('/aufgaben/austeilen', [TaskController::class, 'assign']);
+
+// Wiki: Nachschlage-Seiten mit Stufen-Filter (Lehrkräfte verwalten)
+$router->get('/wiki', [WikiController::class, 'index']);
+$router->post('/wiki/anlegen', [WikiController::class, 'create']);
+$router->get('/wiki/{id}', [WikiController::class, 'show']);
+$router->get('/wiki/{id}/bearbeiten', [WikiController::class, 'edit']);
+$router->post('/wiki/{id}', [WikiController::class, 'save']);
+$router->post('/wiki/{id}/loeschen', [WikiController::class, 'delete']);
 
 // Verwaltung
 $router->get('/admin/users', [AdminController::class, 'users']);
