@@ -2,6 +2,8 @@
 
 Jeder Arbeitsbereich trägt eine Jahrgangsstufe. Schülerinnen und Schüler sehen einen Bereich erst, wenn ihre Klasse diese Stufe erreicht hat (Code-Werkstatt und Aufgaben ab Jgst. 6, SQL-Werkstatt ab Jgst. 9). Lehrkräfte sehen alle Bereiche und können Inhalte gezielt früher austeilen: Ausgeteilte Datenbanken sind auch unterhalb der Stufe sichtbar.
 
+Zusätzlich kann jede Lehrkraft pro Klasse und Arbeitsbereich zwischen drei Einstellungen wählen (Meine Klassen): **Standard** (die Lehrplan-Stufe entscheidet), **Freigeben** (der Bereich wird früher nutzbar, z. B. die SQL-Werkstatt für eine AG in der 7. Jahrgangsstufe) und **Sperren** (der Bereich wird für die Klasse ausgeblendet, auch über die direkte URL). Die Sperre gilt nur für die eingestellte Klasse, nie für andere Klassen, und eine laufende Prüfung hat immer Vorrang.
+
 | Bereich | Ab Jgst. | Lehrplanbezug |
 | --- | --- | --- |
 | Code-Werkstatt | 6 | Algorithmen und Programmieren: Grundlagen, Kontrollstrukturen, Methoden (Java/Python) |

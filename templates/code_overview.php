@@ -76,6 +76,18 @@
             <div class="btn-row"><button class="btn btn-primary" type="submit">Kopie austeilen</button></div>
         </form>
         <?php endif; ?>
+        <?php if ($isTeacher && $studentsByClass !== []): ?>
+        <h3>🎒 Projekte meiner Schülerinnen und Schüler</h3>
+        <?php foreach ($studentsByClass as $sClassId => $sStudents): ?>
+            <p class="muted">Klasse <?= e($classNames[$sClassId] ?? '') ?>:</p>
+            <p>
+                <?php foreach ($sStudents as $sStudent): ?>
+                <a class="pill" href="<?= url('werkstatt/code/schueler/' . (int) $sStudent->id) ?>">📂 <?= e($sStudent->fullName()) ?></a>
+                <?php endforeach; ?>
+            </p>
+        <?php endforeach; ?>
+        <p class="muted">Jede Person zeigt ihre eigenen Projekte. Du kannst sie öffnen, den Zwischenstand ansehen und beim Arbeiten helfen.</p>
+        <?php endif; ?>
     </section>
     <section class="panel">
         <h3>🗂️ Ordner</h3>

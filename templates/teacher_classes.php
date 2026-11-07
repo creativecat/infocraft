@@ -31,6 +31,34 @@
         </form>
     </div>
     <p class="muted">Schülerinnen und Schüler zeichnen Klassendiagramme immer selbst. Hier stellst du nur ein, ob Diagramme automatisch aus Java-, Python- und SQL-Skripten erzeugt werden dürfen.</p>
+    <h4>🧩 Arbeitsbereiche für diese Klasse</h4>
+    <p class="muted">Standard: die Jahrgangsstufe im LehrplanPLUS entscheidet. <strong>Freigeben</strong> macht einen Bereich früher nutzbar, <strong>sperren</strong> blendet ihn für die Klasse aus. Austeilungen bleiben auch bei gesperrtem Bereich gespeichert.</p>
+    <table class="table">
+        <thead><tr><th>Arbeitsbereich</th><th>Ab Stufe</th><th>Einstellung</th><th></th></tr></thead>
+        <tbody>
+        <?php foreach ($modules as $mKey => $m): ?>
+        <?php $mMode = $entry['moduleModes'][$mKey] ?? 'standard'; ?>
+        <tr>
+            <td><?= $m['icon'] ?> <?= e($m['title']) ?></td>
+            <td><?= (int) $m['level'] ?></td>
+            <td>
+                <form method="post" action="<?= url('unterricht/klassen/modul') ?>" class="form-inline">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="class_id" value="<?= (int) $entry['class']->id ?>">
+                    <input type="hidden" name="module" value="<?= e($mKey) ?>">
+                    <select name="mode">
+                        <option value="standard"<?= $mMode === 'standard' ? ' selected' : '' ?>>Standard (Lehrplan-Stufe)</option>
+                        <option value="freigeben"<?= $mMode === 'freigeben' ? ' selected' : '' ?>>Freigeben (früher nutzbar)</option>
+                        <option value="sperren"<?= $mMode === 'sperren' ? ' selected' : '' ?>>Sperren (ausgeblendet)</option>
+                    </select>
+                    <button class="btn btn-ghost" type="submit">Speichern</button>
+                </form>
+            </td>
+            <td class="muted"><?= $mMode === 'freigeben' ? 'freigegeben' : ($mMode === 'sperren' ? 'gesperrt' : 'Standard') ?></td>
+        </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
     <?php if ($entry['students'] === []): ?>
         <p class="muted">In dieser Klasse gibt es noch keine Schülerinnen und Schüler.</p>
     <?php else: ?>

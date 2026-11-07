@@ -245,7 +245,36 @@ jobs:
           grep -q "erlaubt" dtoggle_on.html && DIAG_TOGGLE_ON_OK=1 || DIAG_TOGGLE_ON_OK=0
           CODE_DDELETE=$(curl -sS -L -o ddelete.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" http://127.0.0.1:8080/diagramme/$DID/loeschen)
           grep -q "Mein Diagramm" ddelete.html && DIAG_DEL_OK=0 || DIAG_DEL_OK=1
-          echo "login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK py:$CODE_PYED/$PY_RUN_OK query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE/$EMMA_HTML lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK qmanage:$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES exam:$CODE_STEFAN/$CODE_EXAM/$EX_OVER_OK/$EX_CREATE_OK/$EX_MEMBER_OK/$EX_TPL_OK/$EX_TASKS_OK/$CODE_EXSTART/$EX_START_OK/$LOCK_OK/$LOCK_REDIRECT_OK/$CODE_EXWORK/$EX_WORK_OK/$CODE_EXSAVE/$EXSAVE_OK/$EX_SUBMIT_OK/$EX_END_OK/$CODE_EXCORRECT/$EX_CORRECT_OK/$EX_GRADE_OK/$EX_API_OK/$EX_RELEASE_OK/$EX_RESULT_OK/$EX_FEEDBACK_OK/$EX_UNLOCK_OK/$CODE_JONAS/$JONAS_LOCK_OK/$CODE_ARBEITRES/$ARBEIT_RES_OK diagram:$CODE_DLIST/$DIAG_OVER_OK/$CODE_DCREATE/$DIAG_CREATE_OK/$DIAG_EDIT_OK/$CODE_DSAVE/$DIAG_SAVE_OK/$CODE_PYPROJ/$CODE_PYSAVE/$PY_SAVE_OK/$CODE_PYDIAG/$PY_DIAG_OK/$PY_DIAG_CLASS_OK/$PY_DIAG_REL_OK/$PY_DIAG_METH_OK/$CODE_JPROJ/$CODE_JSAVE/$J_SAVE_OK/$CODE_JDIAG/$JAVA_DIAG_OK/$JAVA_DIAG_FIELD_OK/$JAVA_DIAG_METH_OK/$J_UI_OK/$J_RUN_OK/$J_DBHINT_OK/$J_DBHELP_OK/$J_FILE_OK/$J_GID_OK/$J_FILE_SAVE_OK/$J_SYNC_OK/$J_FDEL_OK wiki:$CODE_WIKI/$WIKI_OK/$CODE_WCREATE/$WCREATE_OK/$W_GID_OK/$CODE_WPAGE/$WPAGE_OK/$CODE_WEDIT/$WSAVE_OK/$CODE_WCREATE9/$WLOCK_OK/$CODE_WDEL/$WDEL_OK katalog:$CODE_TCAT/$TCAT_OK/$TCAT_LEVEL_OK/$TCAT_NOLEAK_OK/$CODE_TIMPORT/$TIMPORT_OK/$TIMPORT_DB_OK/$CODE_TDUP/$TDUP_OK/$CODE_TLEVEL/$TLEVEL_OK/$TLEVEL_DB_OK/$CODE_TDEL/$TDEL_OK/$TDEL_DB_OK $CODE_SQLDIAG/$SQL_DIAG_OK/$SQL_DIAG_MER_OK/$CODE_DCLASSES/$DIAG_CLASSES_OK/$CODE_DTOGGLE/$DIAG_TOGGLE_OFF_OK/$CODE_DLOCK/$DIAG_LOCK_OK/$CODE_DTUNTOGGLE/$DIAG_TOGGLE_ON_OK/$CODE_DDELETE/$DIAG_DEL_OK hl:$HL_HTML_OK/$HL_CODE_OK/$HL_SQL_OK/$HL_DIAG_OK"
+          # Lehrkraft-Zugriff auf Schuelerprojekte + Modul-Freigabe je Klasse
+          CLASS9=$(sqlite3 "$DB" "SELECT id FROM classes WHERE name = '9R'")
+          CODE_EMMA_PROJ=$(curl -sS -L -o emma_proj.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt -d "csrf=$CSRF3" -d "title=Emmas Eigenversuch" -d "type=code" -d "language=python" http://127.0.0.1:8080/werkstatt/code/projekt)
+          EMPROJ=$(sqlite3 "$DB" "SELECT id FROM projects WHERE title = 'Emmas Eigenversuch' AND owner_id = $EMMA")
+          [ -n "$EMPROJ" ] && EPROJ_OK=1 || EPROJ_OK=0
+          CODE_SPUPIL=$(curl -sS -o spupil.html -w "%{http_code}" -b cookies4.txt http://127.0.0.1:8080/werkstatt/code/schueler/$EMMA)
+          grep -q "Emmas Eigenversuch" spupil.html && SPUPIL_OK=1 || SPUPIL_OK=0
+          CODE_SPUPIL_OPEN=$(curl -sS -o spupil_open.html -w "%{http_code}" -b cookies4.txt http://127.0.0.1:8080/werkstatt/code/$EMPROJ)
+          grep -q "Schülerprojekt von Emma Krüger" spupil_open.html && SPUPIL_OPEN_OK=1 || SPUPIL_OPEN_OK=0
+          CODE_SPUPIL_DENY=$(curl -sS -o spupil_deny.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/werkstatt/code/$EMPROJ)
+          [ "$CODE_SPUPIL_DENY" = "404" ] && SPUPIL_DENY_OK=1 || SPUPIL_DENY_OK=0
+          CSRF11=$(grep -o 'value="[a-f0-9]*"' qmanage.html | head -n1 | cut -d'"' -f2)
+          CODE_MODSP=$(curl -sS -L -o modsp.html -w "%{http_code}" -b cookies4.txt -c cookies4.txt -d "csrf=$CSRF11" -d "class_id=$CLASS9" -d "module=wiki" -d "mode=sperren" http://127.0.0.1:8080/unterricht/klassen/modul)
+          grep -q "jetzt für die Klasse gesperrt" modsp.html && MODSP_OK=1 || MODSP_OK=0
+          curl -sS -L -b cookies2.txt -c cookies2.txt -o modsp_home.html http://127.0.0.1:8080/
+          grep -q "Präsentationen" modsp_home.html && MODSP_NAV_OK=0 || MODSP_NAV_OK=1
+          CODE_MODSP_BLOCK=$(curl -sS -L -o modsp_block.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt http://127.0.0.1:8080/wiki)
+          grep -q "nicht freigegeben" modsp_block.html && MODSP_BLOCK_OK=1 || MODSP_BLOCK_OK=0
+          CODE_MODSP_RESET=$(curl -sS -L -o modsp_reset.html -w "%{http_code}" -b cookies4.txt -c cookies4.txt -d "csrf=$CSRF11" -d "class_id=$CLASS9" -d "module=wiki" -d "mode=standard" http://127.0.0.1:8080/unterricht/klassen/modul)
+          grep -q "folgt wieder der Jahrgangsstufe" modsp_reset.html && MODSP_RESET_OK=1 || MODSP_RESET_OK=0
+          curl -sS -L -b cookies2.txt -c cookies2.txt -o modsp_home2.html http://127.0.0.1:8080/
+          grep -q "Präsentationen" modsp_home2.html && MODSP_NAV_BACK_OK=1 || MODSP_NAV_BACK_OK=0
+          CODE_MODFREE=$(curl -sS -L -o modfree.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "class_id=$CLASS6" -d "module=sql" -d "mode=freigeben" http://127.0.0.1:8080/unterricht/klassen/modul)
+          grep -q "jetzt für die Klasse freigegeben" modfree.html && MODFREE_OK=1 || MODFREE_OK=0
+          curl -sS -L -b cookies3.txt -c cookies3.txt -o modfree_home.html http://127.0.0.1:8080/
+          grep -q "werkstatt/sql" modfree_home.html && MODFREE_NAV_OK=1 || MODFREE_NAV_OK=0
+          curl -sS -L -b cookies5.txt -c cookies5.txt -o modfree_reset.html -d "csrf=$CSRF8" -d "class_id=$CLASS6" -d "module=sql" -d "mode=standard" http://127.0.0.1:8080/unterricht/klassen/modul
+          curl -sS -L -b cookies3.txt -c cookies3.txt -o modfree_home2.html http://127.0.0.1:8080/
+          grep -q "werkstatt/sql" modfree_home2.html && MODFREE_BACK_OK=0 || MODFREE_BACK_OK=1
+          echo "login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK py:$CODE_PYED/$PY_RUN_OK query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE/$EMMA_HTML lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK qmanage:$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES exam:$CODE_STEFAN/$CODE_EXAM/$EX_OVER_OK/$EX_CREATE_OK/$EX_MEMBER_OK/$EX_TPL_OK/$EX_TASKS_OK/$CODE_EXSTART/$EX_START_OK/$LOCK_OK/$LOCK_REDIRECT_OK/$CODE_EXWORK/$EX_WORK_OK/$CODE_EXSAVE/$EXSAVE_OK/$EX_SUBMIT_OK/$EX_END_OK/$CODE_EXCORRECT/$EX_CORRECT_OK/$EX_GRADE_OK/$EX_API_OK/$EX_RELEASE_OK/$EX_RESULT_OK/$EX_FEEDBACK_OK/$EX_UNLOCK_OK/$CODE_JONAS/$JONAS_LOCK_OK/$CODE_ARBEITRES/$ARBEIT_RES_OK diagram:$CODE_DLIST/$DIAG_OVER_OK/$CODE_DCREATE/$DIAG_CREATE_OK/$DIAG_EDIT_OK/$CODE_DSAVE/$DIAG_SAVE_OK/$CODE_PYPROJ/$CODE_PYSAVE/$PY_SAVE_OK/$CODE_PYDIAG/$PY_DIAG_OK/$PY_DIAG_CLASS_OK/$PY_DIAG_REL_OK/$PY_DIAG_METH_OK/$CODE_JPROJ/$CODE_JSAVE/$J_SAVE_OK/$CODE_JDIAG/$JAVA_DIAG_OK/$JAVA_DIAG_FIELD_OK/$JAVA_DIAG_METH_OK/$J_UI_OK/$J_RUN_OK/$J_DBHINT_OK/$J_DBHELP_OK/$J_FILE_OK/$J_GID_OK/$J_FILE_SAVE_OK/$J_SYNC_OK/$J_FDEL_OK wiki:$CODE_WIKI/$WIKI_OK/$CODE_WCREATE/$WCREATE_OK/$W_GID_OK/$CODE_WPAGE/$WPAGE_OK/$CODE_WEDIT/$WSAVE_OK/$CODE_WCREATE9/$WLOCK_OK/$CODE_WDEL/$WDEL_OK katalog:$CODE_TCAT/$TCAT_OK/$TCAT_LEVEL_OK/$TCAT_NOLEAK_OK/$CODE_TIMPORT/$TIMPORT_OK/$TIMPORT_DB_OK/$CODE_TDUP/$TDUP_OK/$CODE_TLEVEL/$TLEVEL_OK/$TLEVEL_DB_OK/$CODE_TDEL/$TDEL_OK/$TDEL_DB_OK $CODE_SQLDIAG/$SQL_DIAG_OK/$SQL_DIAG_MER_OK/$CODE_DCLASSES/$DIAG_CLASSES_OK/$CODE_DTOGGLE/$DIAG_TOGGLE_OFF_OK/$CODE_DLOCK/$DIAG_LOCK_OK/$CODE_DTUNTOGGLE/$DIAG_TOGGLE_ON_OK/$CODE_DDELETE/$DIAG_DEL_OK mods:$MODSP_OK/$MODSP_NAV_OK/$MODSP_BLOCK_OK/$MODSP_RESET_OK/$MODSP_NAV_BACK_OK/$MODFREE_OK/$MODFREE_NAV_OK/$MODFREE_BACK_OK schueler:$SPUPIL_OK/$SPUPIL_OPEN_OK/$SPUPIL_DENY_OK hl:$HL_HTML_OK/$HL_CODE_OK/$HL_SQL_OK/$HL_DIAG_OK"
           FAILED=0
           [ "$CODE_LOGIN" = "200" ] || FAILED=1
           [ "$CODE_DEMO" = "200" ] || FAILED=1
@@ -389,9 +418,27 @@ jobs:
           [ "$DIAG_TOGGLE_ON_OK" = "1" ] || FAILED=1
           [ "$CODE_DDELETE" = "200" ] || FAILED=1
           [ "$DIAG_DEL_OK" = "1" ] || FAILED=1
+          [ "$EPROJ_OK" = "1" ] || FAILED=1
+          [ "$CODE_SPUPIL" = "200" ] || FAILED=1
+          [ "$SPUPIL_OK" = "1" ] || FAILED=1
+          [ "$CODE_SPUPIL_OPEN" = "200" ] || FAILED=1
+          [ "$SPUPIL_OPEN_OK" = "1" ] || FAILED=1
+          [ "$SPUPIL_DENY_OK" = "1" ] || FAILED=1
+          [ "$CODE_MODSP" = "200" ] || FAILED=1
+          [ "$MODSP_OK" = "1" ] || FAILED=1
+          [ "$MODSP_NAV_OK" = "1" ] || FAILED=1
+          [ "$CODE_MODSP_BLOCK" = "200" ] || FAILED=1
+          [ "$MODSP_BLOCK_OK" = "1" ] || FAILED=1
+          [ "$CODE_MODSP_RESET" = "200" ] || FAILED=1
+          [ "$MODSP_RESET_OK" = "1" ] || FAILED=1
+          [ "$MODSP_NAV_BACK_OK" = "1" ] || FAILED=1
+          [ "$CODE_MODFREE" = "200" ] || FAILED=1
+          [ "$MODFREE_OK" = "1" ] || FAILED=1
+          [ "$MODFREE_NAV_OK" = "1" ] || FAILED=1
+          [ "$MODFREE_BACK_OK" = "1" ] || FAILED=1
           if [ "$FAILED" = "0" ]; then
             echo "Alle Smoke-Tests bestanden."
           else
-            echo "::error::DIAG | login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK py:$CODE_PYED/$PY_RUN_OK quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK/$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES exam:$CODE_STEFAN/$CODE_EXAM/$EX_OVER_OK/$EX_CREATE_OK/$EX_MEMBER_OK/$EX_TPL_OK/$EX_TASKS_OK/$CODE_EXSTART/$EX_START_OK/$LOCK_OK/$LOCK_REDIRECT_OK/$CODE_EXWORK/$EX_WORK_OK/$CODE_EXSAVE/$EXSAVE_OK/$EX_SUBMIT_OK/$EX_END_OK/$CODE_EXCORRECT/$EX_CORRECT_OK/$EX_GRADE_OK/$EX_API_OK/$EX_RELEASE_OK/$EX_RESULT_OK/$EX_FEEDBACK_OK/$EX_UNLOCK_OK/$CODE_JONAS/$JONAS_LOCK_OK/$CODE_ARBEITRES/$ARBEIT_RES_OK diagram:$CODE_DLIST/$DIAG_OVER_OK/$CODE_PYDIAG/$PY_DIAG_OK/$PY_DIAG_REL_OK/$PY_DIAG_METH_OK/$CODE_JDIAG/$JAVA_DIAG_OK/$JAVA_DIAG_FIELD_OK/$JAVA_DIAG_METH_OK/$J_UI_OK/$J_RUN_OK/$J_DBHINT_OK/$J_FILE_OK/$J_FILE_SAVE_OK/$J_FDEL_OK wiki:$CODE_WIKI/$WIKI_OK/$WCREATE_OK/$W_GID_OK/$WPAGE_OK/$WSAVE_OK/$WLOCK_OK/$WDEL_OK katalog:$TCAT_OK/$TCAT_LEVEL_OK/$TIMPORT_OK/$TIMPORT_DB_OK/$TDUP_OK/$TLEVEL_OK/$TLEVEL_DB_OK/$TDEL_OK/$TDEL_DB_OK $CODE_SQLDIAG/$SQL_DIAG_OK/$CODE_DTOGGLE/$DIAG_TOGGLE_OFF_OK/$CODE_DLOCK/$DIAG_LOCK_OK/$CODE_DTUNTOGGLE/$DIAG_TOGGLE_ON_OK/$CODE_DDELETE/$DIAG_DEL_OK hl:$HL_HTML_OK/$HL_CODE_OK/$HL_SQL_OK/$HL_DIAG_OK | errors: $(grep 'InfoCraft:' server.log | head -n 5 | tr '\n' ' ')"
+            echo "::error::DIAG | login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK py:$CODE_PYED/$PY_RUN_OK quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK/$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES exam:$CODE_STEFAN/$CODE_EXAM/$EX_OVER_OK/$EX_CREATE_OK/$EX_MEMBER_OK/$EX_TPL_OK/$EX_TASKS_OK/$CODE_EXSTART/$EX_START_OK/$LOCK_OK/$LOCK_REDIRECT_OK/$CODE_EXWORK/$EX_WORK_OK/$CODE_EXSAVE/$EXSAVE_OK/$EX_SUBMIT_OK/$EX_END_OK/$CODE_EXCORRECT/$EX_CORRECT_OK/$EX_GRADE_OK/$EX_API_OK/$EX_RELEASE_OK/$EX_RESULT_OK/$EX_FEEDBACK_OK/$EX_UNLOCK_OK/$CODE_JONAS/$JONAS_LOCK_OK/$CODE_ARBEITRES/$ARBEIT_RES_OK diagram:$CODE_DLIST/$DIAG_OVER_OK/$CODE_PYDIAG/$PY_DIAG_OK/$PY_DIAG_REL_OK/$PY_DIAG_METH_OK/$CODE_JDIAG/$JAVA_DIAG_OK/$JAVA_DIAG_FIELD_OK/$JAVA_DIAG_METH_OK/$J_UI_OK/$J_RUN_OK/$J_DBHINT_OK/$J_FILE_OK/$J_FILE_SAVE_OK/$J_FDEL_OK wiki:$CODE_WIKI/$WIKI_OK/$WCREATE_OK/$W_GID_OK/$WPAGE_OK/$WSAVE_OK/$WLOCK_OK/$WDEL_OK katalog:$TCAT_OK/$TCAT_LEVEL_OK/$TIMPORT_OK/$TIMPORT_DB_OK/$TDUP_OK/$TLEVEL_OK/$TLEVEL_DB_OK/$TDEL_OK/$TDEL_DB_OK $CODE_SQLDIAG/$SQL_DIAG_OK/$CODE_DTOGGLE/$DIAG_TOGGLE_OFF_OK/$CODE_DLOCK/$DIAG_LOCK_OK/$CODE_DTUNTOGGLE/$DIAG_TOGGLE_ON_OK/$CODE_DDELETE/$DIAG_DEL_OK mods:$MODSP_OK/$MODSP_NAV_OK/$MODSP_BLOCK_OK/$MODSP_RESET_OK/$MODSP_NAV_BACK_OK/$MODFREE_OK/$MODFREE_NAV_OK/$MODFREE_BACK_OK schueler:$SPUPIL_OK/$SPUPIL_OPEN_OK/$SPUPIL_DENY_OK hl:$HL_HTML_OK/$HL_CODE_OK/$HL_SQL_OK/$HL_DIAG_OK | errors: $(grep 'InfoCraft:' server.log | head -n 5 | tr '\n' ' ')"
             exit 1
           fi

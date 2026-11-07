@@ -256,3 +256,12 @@ CREATE TABLE IF NOT EXISTS wiki_pages (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Modul-Freigabe je Klasse: 'freigeben' = vorzeitig sichtbar, 'sperren' = ausgeblendet,
+-- kein Eintrag = Jahrgangsstufe laut LehrplanPLUS entscheidet
+CREATE TABLE IF NOT EXISTS module_settings (
+    class_id INTEGER NOT NULL REFERENCES classes (id) ON DELETE CASCADE,
+    module_key TEXT NOT NULL,
+    mode TEXT NOT NULL,
+    PRIMARY KEY (class_id, module_key)
+);

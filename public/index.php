@@ -45,6 +45,7 @@ $router->get('/unterricht/klassen', [TeacherController::class, 'classes']);
 $router->get('/unterricht/passwort/ergebnis', [TeacherController::class, 'otpResults']);
 $router->post('/unterricht/passwort', [TeacherController::class, 'resetPassword']);
 $router->post('/unterricht/klasse/zuordnen', [TeacherController::class, 'assignTeacher']);
+$router->post('/unterricht/klassen/modul', [TeacherController::class, 'setModule']);
 
 // SQL-Werkstatt (feste Routen vor den Platzhaltern registrieren)
 $router->get('/werkstatt/sql', [SqlWorkshopController::class, 'index']);
@@ -62,6 +63,8 @@ $router->post('/werkstatt/code/ordner', [CodeController::class, 'createFolder'])
 $router->post('/werkstatt/code/move', [CodeController::class, 'move']);
 $router->post('/werkstatt/code/verteilen', [CodeController::class, 'distribute']);
 $router->post('/werkstatt/code/loeschen', [CodeController::class, 'delete']);
+// Schuelerprojekte (Lehrkraefte): vor dem Platzhalter {id} registrieren
+$router->get('/werkstatt/code/schueler/{id}', [CodeController::class, 'studentProjects']);
 $router->get('/werkstatt/code/{id}', [CodeController::class, 'open']);
 $router->post('/werkstatt/code/{id}', [CodeController::class, 'save']);
 $router->post('/werkstatt/code/{id}/datei', [CodeController::class, 'addFile']);
@@ -150,6 +153,10 @@ if ($path === '') {
 // Prüfungsmodus: Schülerinnen und Schüler mit laufender Prüfung werden auf
 // die Prüfung umgeleitet, alle anderen Bereiche sind gesperrt.
 Infocraft\Controllers\ExamController::guard($path);
+
+// Modul-Freigabe: gesperrte oder noch nicht dran gewesene Module sind für
+// Schülerinnen und Schüler auch über ihre URL nicht erreichbar (personengebunden).
+Infocraft\Controllers\ModuleController::guard($path);
 
 try {
     $router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', $path);

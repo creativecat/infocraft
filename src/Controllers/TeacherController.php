@@ -28,12 +28,17 @@ final class TeacherController
         $classes = SchoolClass::forTeacher($user->id, $isAdmin);
         $byClass = [];
         foreach ($classes as $class) {
-            $byClass[] = ['class' => $class, 'students' => User::byClass($class->id)];
+            $byClass[] = [
+                'class' => $class,
+                'students' => User::byClass($class->id),
+                'moduleModes' => \Infocraft\Controllers\ModuleController::modesFor($class->id),
+            ];
         }
         render('teacher_classes', [
             'title' => 'Meine Klassen',
             'active' => 'unterricht',
             'byClass' => $byClass,
+            'modules' => \Infocraft\Controllers\ModuleController::modules(),
             'teachers' => $isAdmin ? User::teachers() : [],
             'allClasses' => $isAdmin ? SchoolClass::all() : [],
         ]);
@@ -171,6 +176,47 @@ final class TeacherController
         $enabled = (string) ($_POST['enabled'] ?? '') === '1';
         SchoolClass::setDiagramAuto($classId, $enabled);
         flash('success', 'Klasse ' . $class->name . ': Automatisches Erzeugen von Klassendiagrammen ist jetzt ' . ($enabled ? 'erlaubt.' : 'deaktiviert.'));
+        redirect('/unterricht/klassen');
+    }
+
+    /**
+     * Modul-Freigabe je Klasse: 'freigeben' = vorzeitig sichtbar,
+     * 'sperren' = ausgeblendet, 'standard' = LehrplanPLUS-Stufe entscheidet.
+     */
+    public static function setModule(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Dieser Bereich ist nur für Lehrkräfte zugänglich.');
+            redirect('/');
+        }
+        csrf_validate();
+        $isAdmin = $user->role === 'admin';
+        $classId = (int) ($_POST['class_id'] ?? 0);
+        $class = SchoolClass::find($classId);
+        if ($class === null || (!$isAdmin && !SchoolClass::hasTeacher($classId, $user->id))) {
+            flash('error', 'Diese Klasse unterrichtest du nicht.');
+            redirect('/unterricht/klassen');
+        }
+        $slug = (string) ($_POST['module'] ?? '');
+        $modules = \Infocraft\Controllers\ModuleController::modules();
+        if (!isset($modules[$slug])) {
+            flash('error', 'Dieses Modul gibt es nicht.');
+            redirect('/unterricht/klassen');
+        }
+        $mode = (string) ($_POST['mode'] ?? 'standard');
+        \Infocraft\Controllers\ModuleController::setMode($classId, $slug, $mode);
+        $title = $modules[$slug]['title'];
+        if ($mode === 'sperren') {
+            flash('success', 'Klasse ' . $class->name . ': Das Modul ' . $title . ' ist jetzt für die Klasse gesperrt.');
+        } elseif ($mode === 'freigeben') {
+            flash('success', 'Klasse ' . $class->name . ': Das Modul ' . $title . ' ist jetzt für die Klasse freigegeben (auch unterhalb der Stufe).');
+        } else {
+            flash('success', 'Klasse ' . $class->name . ': Das Modul ' . $title . ' folgt wieder der Jahrgangsstufe im LehrplanPLUS.');
+        }
         redirect('/unterricht/klassen');
     }
 }

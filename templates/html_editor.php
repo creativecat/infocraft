@@ -3,6 +3,12 @@
         <h3>🌐 <?= e($project->title) ?></h3>
         <a class="btn btn-ghost" href="<?= url('werkstatt/html') ?>">← Zurück</a>
     </div>
+    <?php if ($isForeign): ?>
+    <div class="notice">
+        <strong>🎓 Schülerprojekt von <?= e($ownerName) ?></strong>
+        <p>Du bist als Lehrkraft hier. Änderungen speicherst du wie gewohnt, die Schülerin oder der Schüler sieht dieselbe Seite.</p>
+    </div>
+    <?php endif; ?>
     <form method="post" action="<?= url('werkstatt/html/' . (int) $project->id) ?>" class="form" id="html-form">
         <?= csrf_field() ?>
         <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>

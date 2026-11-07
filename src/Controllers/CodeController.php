@@ -184,7 +184,7 @@ final class CodeController
             redirect('/login');
         }
         $project = Project::find((int) ($params['id'] ?? 0));
-        if ($project === null || $project->ownerId !== $user->id) {
+        if ($project === null || !self::canOpen($user, $project)) {
             http_response_code(404);
             render('error', ['title' => 'Projekt nicht gefunden', 'message' => 'Dieses Projekt gibt es nicht oder gehört dir nicht.']);
             return;
@@ -195,12 +195,15 @@ final class CodeController
             $name = self::javaFileName($project->content, $project->title);
             $files = [new ProjectFile(0, $project->id, $name, $project->content, 0, null)];
         }
+        $owner = User::find($project->ownerId);
         render('code_project', [
             'title' => $project->title,
             'active' => 'module-code',
             'project' => $project,
             'files' => $files,
             'user' => $user,
+            'ownerName' => $owner !== null ? $owner->fullName() : '',
+            'isForeign' => $project->ownerId !== $user->id,
             'diagramAuto' => SchoolClass::diagramAutoForUser($user),
         ]);
     }
@@ -213,7 +216,7 @@ final class CodeController
         }
         csrf_validate();
         $project = Project::find((int) ($params['id'] ?? 0));
-        if ($project === null || $project->ownerId !== $user->id) {
+        if ($project === null || !self::canOpen($user, $project)) {
             flash('error', 'Projekt nicht gefunden.');
             redirect('/werkstatt/code');
         }
@@ -267,7 +270,7 @@ final class CodeController
         }
         csrf_validate();
         $project = Project::find((int) ($params['id'] ?? 0));
-        if ($project === null || $project->ownerId !== $user->id || $project->type !== 'code' || $project->language !== 'java') {
+        if ($project === null || !self::canOpen($user, $project) || $project->type !== 'code' || $project->language !== 'java') {
             flash('error', 'Projekt nicht gefunden.');
             redirect('/werkstatt/code');
         }
@@ -308,7 +311,7 @@ final class CodeController
         csrf_validate();
         $project = Project::find((int) ($params['id'] ?? 0));
         $file = ProjectFile::find((int) ($params['fileId'] ?? 0));
-        if ($project === null || $project->ownerId !== $user->id || $file === null || $file->projectId !== $project->id) {
+        if ($project === null || !self::canOpen($user, $project) || $file === null || $file->projectId !== $project->id) {
             flash('error', 'Datei nicht gefunden.');
             redirect('/werkstatt/code');
         }
@@ -361,5 +364,62 @@ final class CodeController
             $map[$class->id] = User::byClass($class->id);
         }
         return $map;
+    }
+
+    /**
+     * Zugriffsrecht auf ein Projekt: die Eigentümerin oder der Eigentümer immer.
+     * Lehrkräfte und die Administration duerfen Projekte der Schuelerinnen
+     * und Schueler ihrer Klassen oeffnen und bearbeiten (unterstuetzen, helfen,
+     * Zwischenstand ansehen). Auch von der HTML-Werkstatt genutzt.
+     */
+    public static function canOpen(User $user, Project $project): bool
+    {
+        if ($project->ownerId === $user->id) {
+            return true;
+        }
+        if ($user->role === 'admin') {
+            return true;
+        }
+        if (!Auth::isTeacher()) {
+            return false;
+        }
+        $owner = User::find($project->ownerId);
+        return $owner !== null
+            && $owner->role === 'student'
+            && $owner->classId !== null
+            && SchoolClass::hasTeacher($owner->classId, $user->id);
+    }
+
+    /**
+     * Projekte einer Schuelerin oder eines Schuelers (nur fuer Lehrkraefte,
+     * nur fuer eigene Klassen): zum Ansehen und Unterstuetzen oeffnen.
+     */
+    public static function studentProjects(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Dieser Bereich ist nur für Lehrkräfte zugänglich.');
+            redirect('/werkstatt/code');
+        }
+        $student = User::find((int) ($params['id'] ?? 0));
+        $isAdmin = $user->role === 'admin';
+        if ($student === null || $student->role !== 'student'
+            || (!$isAdmin && ($student->classId === null || !SchoolClass::hasTeacher($student->classId, $user->id)))) {
+            http_response_code(404);
+            render('error', ['title' => 'Nicht gefunden', 'message' => 'Diese Schülerin oder dieser Schüler ist nicht in einer deiner Klassen.']);
+            return;
+        }
+        $class = $student->classId !== null ? SchoolClass::find($student->classId) : null;
+        render('code_student', [
+            'title' => 'Projekte von ' . $student->fullName(),
+            'active' => 'module-code',
+            'student' => $student,
+            'className' => $class !== null ? $class->name : '',
+            'projects' => Project::all($student->id),
+            'user' => $user,
+        ]);
     }
 }

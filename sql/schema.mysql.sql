@@ -337,3 +337,13 @@ CREATE TABLE IF NOT EXISTS wiki_pages (
     KEY idx_wiki_level (level),
     CONSTRAINT fk_wiki_teacher FOREIGN KEY (teacher_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Modul-Freigabe je Klasse: 'freigeben' = vorzeitig sichtbar, 'sperren' = ausgeblendet,
+-- kein Eintrag = Jahrgangsstufe laut LehrplanPLUS entscheidet
+CREATE TABLE IF NOT EXISTS module_settings (
+    class_id INT UNSIGNED NOT NULL,
+    module_key VARCHAR(40) NOT NULL,
+    mode VARCHAR(16) NOT NULL,
+    PRIMARY KEY (class_id, module_key),
+    CONSTRAINT fk_ms_class FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

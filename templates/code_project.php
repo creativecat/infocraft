@@ -3,6 +3,12 @@
         <h3><?= $project->type === 'html' ? '🌐' : '💻' ?> <?= e($project->title) ?></h3>
         <a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>">← Zurück</a>
     </div>
+    <?php if ($isForeign): ?>
+    <div class="notice">
+        <strong>🎓 Schülerprojekt von <?= e($ownerName) ?></strong>
+        <p>Du bist als Lehrkraft hier. Änderungen speicherst du wie gewohnt, die Schülerin oder der Schüler sieht dieselben Dateien. Perfekt, um den Zwischenstand anzusehen oder gemeinsam am Code zu arbeiten.</p>
+    </div>
+    <?php endif; ?>
     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="form">
         <?= csrf_field() ?>
         <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>

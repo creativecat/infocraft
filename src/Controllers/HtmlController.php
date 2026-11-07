@@ -53,16 +53,19 @@ final class HtmlController
     {
         $user = self::requireAccess();
         $project = Project::find((int) ($params['id'] ?? 0));
-        if ($project === null || $project->ownerId !== $user->id || $project->type !== 'html') {
+        if ($project === null || !CodeController::canOpen($user, $project) || $project->type !== 'html') {
             http_response_code(404);
             render('error', ['title' => 'Seite nicht gefunden', 'message' => 'Diese Seite gibt es nicht oder gehört dir nicht.']);
             return;
         }
+        $owner = User::find($project->ownerId);
         render('html_editor', [
             'title' => $project->title,
             'active' => 'module-html',
             'project' => $project,
             'user' => $user,
+            'ownerName' => $owner !== null ? $owner->fullName() : '',
+            'isForeign' => $project->ownerId !== $user->id,
         ]);
     }
 
@@ -71,7 +74,7 @@ final class HtmlController
         $user = self::requireAccess();
         csrf_validate();
         $project = Project::find((int) ($params['id'] ?? 0));
-        if ($project === null || $project->ownerId !== $user->id || $project->type !== 'html') {
+        if ($project === null || !CodeController::canOpen($user, $project) || $project->type !== 'html') {
             flash('error', 'Seite nicht gefunden.');
             redirect('/werkstatt/html');
         }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Infocraft\Controllers;
 
 use Infocraft\Auth;
+use Infocraft\Database;
 use Infocraft\Models\SqlTemplate;
 use Infocraft\Models\User;
 
@@ -164,6 +165,7 @@ final class ModuleController
     /**
      * Module, die diese Person sehen darf: Schülerinnen und Schüler nur bis
      * zu ihrer Jahrgangsstufe (plus ausgeteilte Inhalte), Lehrkräfte alle.
+     * Lehrkräfte können pro Klasse freigeben (früher sichtbar) oder sperren.
      * @return array<string, array{slug: string, title: string, icon: string, phase: string, status: string, level: int, route: ?string, description: string, features: array<int, string>, lehrplan: string}>
      */
     public static function visible(?User $user): array
@@ -176,17 +178,86 @@ final class ModuleController
             return $modules;
         }
         $level = Auth::levelOf($user) ?? 0;
+        $modes = $user->classId === null ? [] : self::modesFor($user->classId);
         $visible = [];
         foreach ($modules as $key => $module) {
-            if (($module['level'] ?? 6) <= $level) {
+            $mode = $modes[$key] ?? '';
+            if ($mode === 'sperren') {
+                continue;
+            }
+            if ($mode === 'freigeben' || ($module['level'] ?? 6) <= $level) {
                 $visible[$key] = $module;
             }
         }
         // Ausgeteilte Datenbanken sind sichtbar, auch unterhalb der Stufe
-        if (!isset($visible['sql']) && SqlTemplate::hasGrants($user)) {
+        if (!isset($visible['sql']) && ($modes['sql'] ?? '') !== 'sperren' && SqlTemplate::hasGrants($user)) {
             $visible['sql'] = $modules['sql'];
         }
         return $visible;
+    }
+
+    /**
+     * Einstellungen einer Klasse: Modul-Schluessel => 'freigeben' oder 'sperren'.
+     * @return array<string, string>
+     */
+    public static function modesFor(int $classId): array
+    {
+        $stmt = Database::pdo()->prepare('SELECT module_key, mode FROM module_settings WHERE class_id = ?');
+        $stmt->execute([$classId]);
+        $modes = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $modes[(string) $row['module_key']] = (string) $row['mode'];
+        }
+        return $modes;
+    }
+
+    /**
+     * Freigabe einer Klasse setzen: 'freigeben' = vorzeitig sichtbar,
+     * 'sperren' = ausgeblendet, alles andere (Standard) = Lehrplan-Stufe entscheidet.
+     */
+    public static function setMode(int $classId, string $slug, string $mode): void
+    {
+        if (!isset(self::modules()[$slug])) {
+            return;
+        }
+        $pdo = Database::pdo();
+        if ($mode !== 'freigeben' && $mode !== 'sperren') {
+            $stmt = $pdo->prepare('DELETE FROM module_settings WHERE class_id = ? AND module_key = ?');
+            $stmt->execute([$classId, $slug]);
+            return;
+        }
+        $sql = Database::driver() === 'mysql'
+            ? 'INSERT INTO module_settings (class_id, module_key, mode) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE mode = VALUES(mode)'
+            : 'INSERT INTO module_settings (class_id, module_key, mode) VALUES (?, ?, ?) ON CONFLICT(class_id, module_key) DO UPDATE SET mode = excluded.mode';
+        $pdo->prepare($sql)->execute([$classId, $slug, $mode]);
+    }
+
+    /**
+     * Direktschutz: Gesperrte oder noch nicht dran gewesene Module sind auch
+     * über ihre URL nicht erreichbar. Prüfung ist personengebunden (wie der
+     * Prüfungsmodus): andere Klassen sind nie betroffen. Wird in
+     * public/index.php vor dem Dispatch aufgerufen.
+     */
+    public static function guard(string $path): void
+    {
+        $user = Auth::user();
+        if ($user === null || $user->role !== 'student') {
+            return;
+        }
+        if (\Infocraft\Models\Exam::lockForUser($user->id) !== null) {
+            return;
+        }
+        $visible = self::visible($user);
+        foreach (self::modules() as $key => $module) {
+            if (isset($visible[$key]) || empty($module['route'])) {
+                continue;
+            }
+            $route = '/' . $module['route'];
+            if ($path === $route || str_starts_with($path, $route . '/')) {
+                flash('error', 'Dieser Arbeitsbereich ist für deine Klasse (noch) nicht freigegeben.');
+                redirect('/');
+            }
+        }
     }
 
     public static function show(array $params): void
