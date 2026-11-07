@@ -681,9 +681,73 @@ setTimeout(function () {
           ok(errTxt.indexOf('gehört') !== -1, 'T29a Fehlermeldung schreibt gehört mit echtem ö');
           ok(errTxt.indexOf('gehoert') === -1, 'T29b keine Ersatz-Schreibung mehr in der Meldung');
 
-          console.log('');
-          if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }
-          else { console.log(failures.length + ' UI-Tests fehlgeschlagen.'); process.exit(1); }
+          /* T30: Ein erfolgreicher Lauf ersetzt alte Fehler durch den Erfolg. */
+          taE.value = 'class Auto {' + NLt +
+            '  public String marke;' + NLt +
+            '}' + NLt +
+            'Auto a = new Auto();';
+          taE.dispatch('input');
+          runBtn.dispatch('click');
+          var okHtml = errBox.innerHTML;
+          ok(okHtml.indexOf('fehlerfrei') !== -1 && okHtml.indexOf('gehört') === -1, 'T30a erfolgreicher Lauf ersetzt die alten Fehler');
+          ok(okHtml.indexOf('Alles fehlerfrei durchgelaufen') !== -1, 'T30b Erfolg der Ausfuehrung bleibt deutlich sichtbar');
+
+          /* T31: Klick auf die Fehlerkarte springt zur Datei und Zeile. */
+          var gta = pane2.querySelector('textarea');
+          gta.value = 'class Garage {' + NLt +
+            '  public int plaetze' + NLt +
+            '}' + NLt +
+            'Garage g = new Garage();';
+          gta.dispatch('input');
+          runBtn.dispatch('click');
+          var gCard = errBox.children[0];
+          ok(gCard && gCard.classList.contains('err-jump'), 'T31a Fehlerkarte aus einer anderen Datei ist klickbar');
+          ok(hidden(pane2), 'T31b vorher ist Garage.java noch nicht offen');
+          gCard.dispatch('click');
+          ok(!hidden(pane2) && hidden(pane1), 'T31c Klick oeffnet Garage.java im Editor');
+          var errLine = 0;
+          var gCells = pane2.querySelector('.ln-gutter').querySelectorAll('.ln-cell');
+          var gi;
+          for (gi = 0; gi < gCells.length; gi++) {
+            if (gCells[gi].className.indexOf('ln-err') !== -1) { errLine = gi + 1; break; }
+          }
+          ok(errLine > 0, 'T31d Fehlerzeile in Garage.java ist rot markiert');
+          var wantOff = 0;
+          var gLines = String(gta.value).split(NLt);
+          var gl;
+          for (gl = 0; gl < errLine - 1; gl++) { wantOff += gLines[gl].length + 1; }
+          ok(gta.selectionStart === wantOff && gta.selectionEnd === wantOff, 'T31e Cursor steht am Anfang der Fehlerzeile');
+
+          /* T32: Live-Fehlerkonsole - Fehler erscheinen beim Tippen, ohne Ausfuehren. */
+          gta.value = 'class Garage {' + NLt +
+            '  public int plaetze;' + NLt +
+            '}';
+          gta.dispatch('input');
+          taE.value = 'class Auto {' + NLt +
+            '  public String marke' + NLt +
+            '}';
+          taE.dispatch('input');
+          setTimeout(function () {
+            ok(errBox.textOf().indexOf('Syntaxfehler') !== -1, 'T32a Fehler erscheint beim Tippen ohne Ausfuehren');
+            taE.value = 'class Auto {' + NLt +
+              '  public String marke;' + NLt +
+              '}';
+            taE.dispatch('input');
+            setTimeout(function () {
+              ok(errBox.innerHTML.indexOf('Keine Fehler im Code gefunden') !== -1, 'T32b behobener Fehler verschwindet ohne neuen Lauf');
+              var gCells2 = pane2.querySelector('.ln-gutter').querySelectorAll('.ln-cell');
+              var noErr = true;
+              var gi2;
+              for (gi2 = 0; gi2 < gCells2.length; gi2++) {
+                if (gCells2[gi2].className.indexOf('ln-err') !== -1) { noErr = false; }
+              }
+              ok(noErr, 'T32c rote Zeilenmarkierungen werden mit behobenem Fehler geloest');
+
+              console.log('');
+              if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }
+              else { console.log(failures.length + ' UI-Tests fehlgeschlagen.'); process.exit(1); }
+            }, 700);
+          }, 700);
         }, 700);
       }, 200);
     }, 900);

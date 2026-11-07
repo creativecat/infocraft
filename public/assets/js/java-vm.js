@@ -4213,6 +4213,48 @@
       })(ctabs[ti]);
     }
 
+    /* Fehlerkarte mit Sprung: Klick zeigt die Stelle direkt im Editor der
+     * richtigen Datei (Datei wechseln, Cursor an die Zeile, Zeile markieren). */
+    function paneElByName(name) {
+      var j;
+      for (j = 0; j < panes.length; j++) {
+        if (panes[j].getAttribute('data-file-name') === name) { return panes[j]; }
+      }
+      return null;
+    }
+    function lineStartOffset(text, line) {
+      var pos = 0;
+      var li = 1;
+      while (li < line && pos < text.length) {
+        var nx = text.indexOf(NL, pos);
+        if (nx === -1) { return text.length; }
+        pos = nx + 1;
+        li++;
+      }
+      return pos;
+    }
+    function jumpToError(er) {
+      var paneEl = er.file ? paneElByName(er.file) : null;
+      if (!paneEl) { return; }
+      selectFile(paneEl.getAttribute('data-file-pane'));
+      var ta = paneEl.querySelector('textarea');
+      if (ta && er.line) {
+        /* Cursor an den Anfang der Fehlerzeile setzen */
+        var off = lineStartOffset(String(ta.value || ''), er.line);
+        if (ta.setSelectionRange) { ta.setSelectionRange(off, off); }
+        /* Zeile im Editor sichtbar machen (Gutter-Zelle als Anhaltspunkt) */
+        try {
+          var rec = gutterByFile(er.file);
+          var cell = rec && rec.cells[er.line - 1];
+          if (cell && typeof cell.offsetTop === 'number' && isFinite(cell.offsetTop) && cell.offsetTop > 0) {
+            var top = Math.max(0, cell.offsetTop - 48);
+            if (ta.scrollTop !== undefined) { ta.scrollTop = top; }
+            if (rec.box && rec.box.scrollTop !== undefined) { rec.box.scrollTop = top; }
+          }
+        } catch (escroll) { /* aeltere Browser: ohne Scroll einfach weiter */ }
+        markErrLines([er]);
+      }
+    }
     function renderErrCard(box, er) {
       var card = document.createElement('div');
       card.className = 'err-card' + (er.kind === 'stderr' ? ' err-stderr' : '');
@@ -4232,17 +4274,59 @@
         hint.textContent = 'Tipp: ' + er.hint;
         card.appendChild(hint);
       }
+      /* Klick auf die Karte springt zur Stelle, wenn die Datei im Projekt liegt */
+      if (er.file && paneElByName(er.file)) {
+        card.className = card.className + ' err-jump';
+        card.setAttribute('title', 'Klick: zeigt die Stelle im Editor');
+        card.addEventListener('click', function () { jumpToError(er); });
+      }
       box.appendChild(card);
     }
 
-    function showErrors(list) {
+    var errMode = 'run'; /* 'run' = Ergebnis eines Laufs, 'live' = Stand beim Tippen */
+    var errHasCards = false;
+    function showErrors(list, mode) {
       if (!errBox) { return; }
+      errMode = mode || 'run';
+      errHasCards = list.length > 0;
       errBox.innerHTML = '';
       if (list.length === 0) {
-        errBox.innerHTML = '<div class="err-card err-ok">Alles fehlerfrei durchgelaufen.</div>';
+        errBox.innerHTML = '<div class="err-card err-ok">' + (errMode === 'live'
+          ? 'Keine Fehler im Code gefunden – klicke ▶ Ausführen, wenn du starten willst.'
+          : 'Alles fehlerfrei durchgelaufen.') + '</div>';
         return;
       }
       for (var h = 0; h < list.length; h++) { renderErrCard(errBox, list[h]); }
+    }
+
+    /* Live-Prüfung beim Tippen: Die Fehlerkonsole passt sich sofort an den
+     * Code an (wie das Klassendiagramm), ohne einen Lauf zu starten.
+     * Alte Fehlermeldungen mit verschobenen Zeilennummern verschwinden so
+     * von selbst; der grüne Erfolg eines Laufs bleibt stehen. */
+    var liveErrTimer = null;
+    function updateLiveErrors() {
+      if (!errBox) { return; }
+      var comp;
+      try { comp = compileAll(collectFiles()); } catch (e) { comp = null; }
+      if (!comp) { return; }
+      var list = comp.errors || [];
+      var b = badge();
+      if (list.length > 0) {
+        showErrors(list, 'live');
+        if (b) { b.textContent = String(list.length); }
+        clearLineMarks();
+        markErrLines(list);
+      } else if (errMode === 'live' || errHasCards) {
+        /* Vorher standen Fehler: Erfolg melden und Markierungen lösen */
+        showErrors([], 'live');
+        if (b) { b.textContent = '0'; }
+        clearLineMarks();
+      }
+    }
+    function scheduleLiveErrors() {
+      if (!errBox) { return; }
+      if (liveErrTimer) { clearTimeout(liveErrTimer); }
+      liveErrTimer = setTimeout(updateLiveErrors, 500);
     }
 
     /* ---------- Zeilennummern neben dem Editor (Gutter) ----------
@@ -4773,6 +4857,9 @@
       paneAreas[i].addEventListener('input', function () {
         if (classTimer) { clearTimeout(classTimer); }
         classTimer = setTimeout(renderClasses, 500);
+        /* Fehlerkonsole live anpassen: Fehler beim Tippen erscheinen sofort,
+         * behobene Fehler verschwinden ohne neuen Lauf. */
+        scheduleLiveErrors();
       });
     }
     renderClasses();
