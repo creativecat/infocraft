@@ -10,7 +10,7 @@
 
 <section class="panel">
     <div class="panel-head">
-        <h3><span class="pill"><?= e($task->type) ?> · Jgst. <?= (int) $task->level ?></span> <?= e($task->title) ?></h3>
+        <h3><span class="pill"><?= e($task->type) ?> · Jgst. <?= (int) $task->level ?><?= $task->maxPoints > 0 ? ' · max. ' . (int) $task->maxPoints . ' Punkte' : '' ?><?= $task->lateLock === 1 ? ' · 🔒 Frist-Sperre' : '' ?></span> <?= e($task->title) ?></h3>
         <a class="btn btn-ghost" href="<?= url('aufgaben') ?>">← Zurück zum Aufgabenpool</a>
     </div>
     <?php if ($task->description !== ''): ?><p class="muted"><?= e($task->description) ?></p><?php endif; ?>
@@ -33,6 +33,13 @@
 <section class="panel">
     <h3>Musterlösung (zum Vergleich)</h3>
     <div class="muster"><?= e($sampleSolution) ?></div>
+</section>
+<?php endif; ?>
+
+<?php if ($task->rubric !== ''): ?>
+<section class="panel">
+    <h3>Erwartungshorizont (Bewertungskriterien, wird der KI mitgegeben)</h3>
+    <div class="muster"><?= e($task->rubric) ?></div>
 </section>
 <?php endif; ?>
 
@@ -62,7 +69,7 @@
         <p class="muted">Noch keine Abgabe.<?= $row['dueAt'] !== null ? ' Abgabetermin: ' . e($row['dueAt']) . ' Uhr' : '' ?></p>
         <?php endif; ?>
         <div class="two-col" style="margin-top:12px;">
-            <label class="field"><span>Note (frei, z. B. 1, 2-, 3+)</span>
+            <label class="field"><span>Note (frei, z. B. 1, 2-, 3+<?= $task->maxPoints > 0 ? '; Punkte als Teil der Note, z. B. "2- (8/' . (int) $task->maxPoints . ' Punkte)"' : '' ?>)</span>
                 <input type="text" name="grade_<?= (int) $student->id ?>" maxlength="10" value="<?= $row['grading'] !== null ? e($row['grading']['grade']) : '' ?>" placeholder="Note">
             </label>
             <label class="field"><span>Feedback (erscheint für die Schülerin bzw. den Schüler)</span>

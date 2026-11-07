@@ -2,7 +2,7 @@
 <section class="hero">
     <div class="hero-emoji">📝</div>
     <h1>Aufgabenpool</h1>
-    <p>Aufgaben anlegen, bearbeiten und an ganze Klassen oder einzelne Personen austellen, mit Abgabetermin. Eigene Aufgaben in den gemeinsamen Pool aller Lehrkräfte teilen, geteilte Aufgaben als Kopie übernehmen und frei anpassen. Fertige Aufgaben gibt es dazu aus dem Katalog.</p>
+    <p>Aufgaben anlegen, bearbeiten und an ganze Klassen oder einzelne Personen austellen, mit Starttermin (ab wann die Aufgabe erscheint), Abgabetermin und optionaler Frist-Sperre. Eigene Aufgaben in den gemeinsamen Pool aller Lehrkräfte teilen, geteilte Aufgaben als Kopie übernehmen und frei anpassen. Fertige Aufgaben gibt es dazu aus dem Katalog.</p>
 </section>
 
 <div class="two-col">
@@ -13,6 +13,15 @@
             <label class="field"><span>Titel</span><input type="text" name="title" required placeholder="z. B. JOINs üben"></label>
             <label class="field"><span>Beschreibung</span><textarea name="description" rows="4" placeholder="Was ist zu tun?"></textarea></label>
             <label class="field"><span>Musterlösung (optional, dient der Korrektur und der KI als Vergleich)</span><textarea name="sample_solution" rows="2" placeholder="Wie sieht eine gute Lösung aus?"></textarea></label>
+            <label class="field"><span>Erwartungshorizont (optional, wird dir in der Korrektur und der KI als Bewertungshilfe mitgegeben)</span><textarea name="rubric" rows="2" placeholder="Worauf kommt es an, wie verteilen sich die Punkte?"></textarea></label>
+            <div class="two-col">
+                <label class="field"><span>Maximale Punktzahl (0 = keine Punktevergabe)</span>
+                    <input type="number" name="max_points" min="0" max="1000" value="0">
+                </label>
+                <div class="field"><span>Frist-Sperre</span>
+                    <label style="display:flex;gap:6px;align-items:center;font-weight:normal;"><input type="checkbox" name="late_lock" value="1"> Nach dem Abgabetermin keine neuen Abgaben mehr annehmen</label>
+                </div>
+            </div>
             <div class="two-col">
                 <label class="field"><span>Typ</span>
                     <select name="type">
@@ -46,7 +55,7 @@
         <div class="mission">
             <div class="mission-head">
                 <strong><?= e($task->title) ?></strong>
-                <span class="pill"><?= e($task->type) ?> · Jgst. <?= (int) $task->level ?><?= $task->shared === 1 ? ' · 🤝 im gemeinsamen Pool' : '' ?></span>
+                <span class="pill"><?= e($task->type) ?> · Jgst. <?= (int) $task->level ?><?= $task->shared === 1 ? ' · 🤝 im gemeinsamen Pool' : '' ?><?= $task->maxPoints > 0 ? ' · max. ' . (int) $task->maxPoints . ' Punkte' : '' ?><?= $task->lateLock === 1 ? ' · 🔒 Frist-Sperre' : '' ?></span>
             </div>
             <?php if ($task->description !== ''): ?><p class="muted"><?= e($task->description) ?></p><?php endif; ?>
             <?php if ($targets[$task->id] === []): ?>
@@ -54,9 +63,21 @@
             <?php else: ?>
             <p class="muted">Ausgeteilt an:</p>
             <?php foreach ($targets[$task->id] as $target): ?>
+            <?php $hidden = $target['visibleFrom'] !== null && $target['visibleFrom'] > date('Y-m-d H:i'); ?>
             <div class="form-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0;">
-                <span class="pill"><?= e($target['kind']) ?> <?= e($target['name']) ?></span>
-                <span class="muted">Abgabe: <?= $target['dueAt'] !== null ? e($target['dueAt']) . ' Uhr' : 'ohne Termin' ?> · ausgeteilt am <?= e($target['assignedAt']) ?></span>
+                <span class="pill"><?= e($target['kind']) ?> <?= e($target['name']) ?><?= $hidden ? ' · ⏳ erscheint am ' . e($target['visibleFrom']) : '' ?></span>
+                <span class="muted">Sichtbar: <?= $target['visibleFrom'] !== null ? 'ab ' . e($target['visibleFrom']) . ' Uhr' : 'sofort' ?> · Abgabe: <?= $target['dueAt'] !== null ? e($target['dueAt']) . ' Uhr' : 'ohne Termin' ?> · ausgeteilt am <?= e($target['assignedAt']) ?></span>
+                <form method="post" action="<?= url('aufgaben/start') ?>" class="form-inline" style="display:flex;gap:6px;align-items:center;">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="target_id" value="<?= (int) $target['id'] ?>">
+                    <input type="datetime-local" name="visible_from" value="<?= $target['visibleFrom'] !== null ? e(str_replace(' ', 'T', $target['visibleFrom'])) : '' ?>" title="Starttermin: ab wann sehen die Schülerinnen und Schüler diese Aufgabe? Leer lassen oder leeren Termin speichern für sofortige Sichtbarkeit.">
+                    <button class="btn btn-ghost" type="submit" title="Starttermin dieser Zuweisung setzen oder mit leerem Feld streichen (sofort sichtbar)">🚀 Start</button>
+                </form>
+                <form method="post" action="<?= url('aufgaben/einziehen') ?>" class="form-inline">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="target_id" value="<?= (int) $target['id'] ?>">
+                    <button class="btn btn-ghost" type="submit" title="Zuweisung zurücknehmen: die Aufgabe verschwindet für die Klasse bzw. Person, Abgaben bleiben erhalten">↩️ Einziehen</button>
+                </form>
                 <form method="post" action="<?= url('aufgaben/termin') ?>" class="form-inline" style="display:flex;gap:6px;align-items:center;">
                     <?= csrf_field() ?>
                     <input type="hidden" name="target_id" value="<?= (int) $target['id'] ?>">
@@ -91,6 +112,9 @@
                         </select>
                     </label>
                 </div>
+                <label class="field"><span>Starttermin (optional): ab diesem Datum und Uhrzeit erscheint die Aufgabe für die Klasse bzw. Person, vorher ist sie unsichtbar</span>
+                    <input type="datetime-local" name="visible_from">
+                </label>
                 <label class="field"><span>Abgabetermin (optional, Datum und Uhrzeit)</span>
                     <input type="datetime-local" name="due_at">
                 </label>

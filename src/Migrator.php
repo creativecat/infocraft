@@ -37,6 +37,7 @@ final class Migrator
         // Abgabetermine idempotent nachziehen.
         self::ensureTaskSharedAndSolutionColumns($pdo, $driver);
         self::ensureTaskTargetDueAtColumn($pdo, $driver);
+        self::ensureTaskTimingAndGradingColumns($pdo, $driver);
 
         $classes = 0;
         $users = 0;
@@ -267,17 +268,17 @@ final class Migrator
         $class6R = $classIdFor($pdo, '6R');
         $class9R = $classIdFor($pdo, '9R');
 
-        $insertTask = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level, shared, sample_solution) VALUES (?, ?, ?, ?, ?, 0, ?)');
+        $insertTask = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level, shared, sample_solution, rubric) VALUES (?, ?, ?, ?, ?, 0, ?, ?)');
         $insertTarget = $pdo->prepare('INSERT INTO task_targets (task_id, class_id, user_id, due_at) VALUES (?, ?, NULL, ?)');
 
-        $insertTask->execute([$stefanId, 'HTML-Grundgerüst entwerfen', 'Erstelle eine eigene Seite mit Überschrift, Absatz und Liste. Nutze die Code-Werkstatt.', 'html', 6, '']);
+        $insertTask->execute([$stefanId, 'HTML-Grundgerüst entwerfen', 'Erstelle eine eigene Seite mit Überschrift, Absatz und Liste. Nutze die Code-Werkstatt.', 'html', 6, '', '']);
         $insertTarget->execute([(int) $pdo->lastInsertId(), $class6R, '2030-12-31 14:00']);
-        $insertTask->execute([$stefanId, 'Python-Schleifen üben', 'Schreibe ein Programm, das die Zahlen von 1 bis 10 untereinander ausgibt.', 'code', 6, "for i in range(1, 11):\n    print(i)"]);
+        $insertTask->execute([$stefanId, 'Python-Schleifen üben', 'Schreibe ein Programm, das die Zahlen von 1 bis 10 untereinander ausgibt.', 'code', 6, "for i in range(1, 11):\n    print(i)", '']);
         $insertTarget->execute([(int) $pdo->lastInsertId(), $class6R, null]);
         // Von Claudia für alle Lehrkräfte geteilte Aufgabe (gemeinsamer Pool)
-        $insertSharedTask = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level, shared, sample_solution) VALUES (?, ?, ?, ?, ?, 1, ?)');
-        $insertSharedTask->execute([$claudiaId, 'ER-Modell Schulbibliothek (geteilt)', 'Modelliere eine kleine Bibliothek: Buch, Ausleihe und Mitglied mit Beziehungen und Kardinalitäten. Zeichne das ER-Modell in dein Heft.', 'sql', 10, 'Buch (1) – (n) Ausleihe (n) – (1) Mitglied']);
-        $insertTask->execute([$claudiaId, 'SQL-Einstieg: SELECT üben', 'Öffne die verteilte Shop-Datenbank und löse die ersten zwei Missionen.', 'sql', 9, '']);
+        $insertSharedTask = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level, shared, sample_solution, rubric) VALUES (?, ?, ?, ?, ?, 1, ?, ?)');
+        $insertSharedTask->execute([$claudiaId, 'ER-Modell Schulbibliothek (geteilt)', 'Modelliere eine kleine Bibliothek: Buch, Ausleihe und Mitglied mit Beziehungen und Kardinalitäten. Zeichne das ER-Modell in dein Heft.', 'sql', 10, 'Buch (1) – (n) Ausleihe (n) – (1) Mitglied', '']);
+        $insertTask->execute([$claudiaId, 'SQL-Einstieg: SELECT üben', 'Öffne die verteilte Shop-Datenbank und löse die ersten zwei Missionen.', 'sql', 9, '', '']);
         $insertTarget->execute([(int) $pdo->lastInsertId(), $class9R, null]);
     }
 
@@ -550,6 +551,50 @@ final class Migrator
             }
         }
         $pdo->exec('ALTER TABLE task_targets ADD COLUMN due_at TEXT NULL');
+    }
+
+    /**
+     * Aufgabenverwaltung 2: Starttermin an Zuweisungen (visible_from) sowie
+     * Punktzahl, Erwartungshorizont und Frist-Sperre an Aufgaben nachziehen.
+     */
+    private static function ensureTaskTimingAndGradingColumns(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            foreach ([
+                ['tasks', 'max_points', 'ALTER TABLE tasks ADD COLUMN max_points INT UNSIGNED NOT NULL DEFAULT 0'],
+                ['tasks', 'rubric', "ALTER TABLE tasks ADD COLUMN rubric TEXT NOT NULL"],
+                ['tasks', 'late_lock', 'ALTER TABLE tasks ADD COLUMN late_lock TINYINT(1) NOT NULL DEFAULT 0'],
+                ['task_targets', 'visible_from', 'ALTER TABLE task_targets ADD COLUMN visible_from VARCHAR(16) NULL'],
+            ] as [$table, $column, $statement]) {
+                $exists = $pdo->query('SHOW COLUMNS FROM ' . $table . ' LIKE ' . $pdo->quote($column))->fetchColumn();
+                if ($exists === false || $exists === null) {
+                    $pdo->exec($statement);
+                    if ($column === 'rubric') {
+                        $pdo->exec("UPDATE tasks SET rubric = ''");
+                    }
+                }
+            }
+            return;
+        }
+        $taskColumns = [];
+        foreach ($pdo->query('PRAGMA table_info(tasks)')->fetchAll() as $column) {
+            $taskColumns[] = (string) ($column['name'] ?? '');
+        }
+        if (!in_array('max_points', $taskColumns, true)) {
+            $pdo->exec('ALTER TABLE tasks ADD COLUMN max_points INTEGER NOT NULL DEFAULT 0');
+        }
+        if (!in_array('rubric', $taskColumns, true)) {
+            $pdo->exec("ALTER TABLE tasks ADD COLUMN rubric TEXT NOT NULL DEFAULT ''");
+        }
+        if (!in_array('late_lock', $taskColumns, true)) {
+            $pdo->exec('ALTER TABLE tasks ADD COLUMN late_lock INTEGER NOT NULL DEFAULT 0');
+        }
+        foreach ($pdo->query('PRAGMA table_info(task_targets)')->fetchAll() as $column) {
+            if ((string) ($column['name'] ?? '') === 'visible_from') {
+                return;
+            }
+        }
+        $pdo->exec('ALTER TABLE task_targets ADD COLUMN visible_from TEXT NULL');
     }
 
     /**

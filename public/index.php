@@ -124,6 +124,8 @@ $router->get('/aufgaben', [TaskController::class, 'index']);
 $router->post('/aufgaben/anlegen', [TaskController::class, 'create']);
 $router->post('/aufgaben/austeilen', [TaskController::class, 'assign']);
 $router->post('/aufgaben/termin', [TaskController::class, 'dueDate']);
+$router->post('/aufgaben/start', [TaskController::class, 'startDate']);
+$router->post('/aufgaben/einziehen', [TaskController::class, 'withdraw']);
 $router->get('/aufgaben/ki', [TaskController::class, 'aiSettings']);
 $router->post('/aufgaben/ki', [TaskController::class, 'aiSave']);
 $router->post('/aufgaben/ki/schule', [TaskController::class, 'aiSchool']);

@@ -93,7 +93,9 @@ final class TaskController
             $type = 'allgemein';
         }
         $level = (int) ($_POST['level'] ?? 6);
-        Task::create($user->id, $title, (string) ($_POST['description'] ?? ''), $type, $level);
+        $lateLock = ($_POST['late_lock'] ?? '') === '1' ? 1 : 0;
+        $maxPoints = max(0, min(1000, (int) ($_POST['max_points'] ?? 0)));
+        Task::createFull($user->id, $title, (string) ($_POST['description'] ?? ''), $type, $level, 0, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''));
         flash('success', 'Aufgabe angelegt.');
         redirect('/aufgaben');
     }
@@ -149,7 +151,9 @@ final class TaskController
             $type = 'allgemein';
         }
         $level = (int) ($_POST['level'] ?? 6);
-        Task::update($task->id, $title, (string) ($_POST['description'] ?? ''), $type, $level, (string) ($_POST['sample_solution'] ?? ''));
+        $lateLock = ($_POST['late_lock'] ?? '') === '1' ? 1 : 0;
+        $maxPoints = max(0, min(1000, (int) ($_POST['max_points'] ?? 0)));
+        Task::update($task->id, $title, (string) ($_POST['description'] ?? ''), $type, $level, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''));
         flash('success', 'Aufgabe gespeichert.');
         redirect('/aufgaben');
     }
@@ -290,7 +294,7 @@ final class TaskController
         redirect('/aufgaben');
     }
 
-    /** Aufgabe austeilen, mit optionalem Abgabedatum und Uhrzeit. */
+    /** Aufgabe austeilen, mit optionalem Starttermin (Sichtbarkeit) und Abgabedatum mit Uhrzeit. */
     public static function assign(): void
     {
         $user = Auth::user();
@@ -308,9 +312,14 @@ final class TaskController
             flash('error', 'Aufgabe nicht gefunden.');
             redirect('/aufgaben');
         }
-        $dueAt = self::parseDueAt((string) ($_POST['due_at'] ?? ''));
+        $dueAt = self::parseAt((string) ($_POST['due_at'] ?? ''));
         if ($dueAt === false) {
             flash('error', 'Bitte den Abgabetermin als Datum mit Uhrzeit angeben (z. B. 2026-11-20 14:30).');
+            redirect('/aufgaben');
+        }
+        $visibleFrom = self::parseAt((string) ($_POST['visible_from'] ?? ''));
+        if ($visibleFrom === false) {
+            flash('error', 'Bitte den Starttermin als Datum mit Uhrzeit angeben (z. B. 2026-11-20 14:30) oder leer lassen.');
             redirect('/aufgaben');
         }
         $classId = (int) ($_POST['class_id'] ?? 0);
@@ -320,8 +329,10 @@ final class TaskController
                 flash('error', 'Du unterrichtest diese Klasse nicht.');
                 redirect('/aufgaben');
             }
-            Task::assign($task->id, $classId, null, $dueAt);
-            flash('success', 'Aufgabe an die Klasse ausgeteilt.');
+            Task::assign($task->id, $classId, null, $dueAt, $visibleFrom);
+            flash('success', $visibleFrom === null
+                ? 'Aufgabe an die Klasse ausgeteilt.'
+                : 'Aufgabe an die Klasse ausgeteilt. Sie erscheint am ' . $visibleFrom . ' Uhr.');
             redirect('/aufgaben');
         }
         if ($singleId > 0) {
@@ -330,11 +341,74 @@ final class TaskController
                 flash('error', 'Diese Person ist nicht in einer deiner Klassen.');
                 redirect('/aufgaben');
             }
-            Task::assign($task->id, null, $student->id, $dueAt);
-            flash('success', 'Aufgabe ausgeteilt.');
+            Task::assign($task->id, null, $student->id, $dueAt, $visibleFrom);
+            flash('success', $visibleFrom === null
+                ? 'Aufgabe ausgeteilt.'
+                : 'Aufgabe ausgeteilt. Sie erscheint am ' . $visibleFrom . ' Uhr.');
             redirect('/aufgaben');
         }
         flash('error', 'Kein Ziel angegeben.');
+        redirect('/aufgaben');
+    }
+
+    /** Starttermin (Sichtbarkeit) einer bestehenden Zuweisung ändern oder streichen (= sofort sichtbar). */
+    public static function startDate(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Nur Lehrkräfte können Starttermine setzen.');
+            redirect('/');
+        }
+        csrf_validate();
+        $target = Task::findTarget((int) ($_POST['target_id'] ?? 0));
+        if ($target === null) {
+            flash('error', 'Zuweisung nicht gefunden.');
+            redirect('/aufgaben');
+        }
+        $task = Task::find((int) $target['task_id']);
+        if ($task === null || !Task::ownedBy($task, $user)) {
+            flash('error', 'Zuweisung nicht gefunden.');
+            redirect('/aufgaben');
+        }
+        $visibleFrom = self::parseAt((string) ($_POST['visible_from'] ?? ''));
+        if ($visibleFrom === false) {
+            flash('error', 'Bitte den Starttermin als Datum mit Uhrzeit angeben (z. B. 2026-11-20 14:30) oder leer lassen.');
+            redirect('/aufgaben');
+        }
+        Task::setTargetVisibleFrom((int) $target['id'], $visibleFrom);
+        flash('success', $visibleFrom === null
+            ? 'Starttermin gestrichen, die Aufgabe ist sofort sichtbar.'
+            : 'Starttermin gespeichert. Die Aufgabe erscheint für die Klasse bzw. Person zum angegebenen Zeitpunkt.');
+        redirect('/aufgaben');
+    }
+
+    /** Zuweisung zurücknehmen: die Aufgabe ist für die Klasse bzw. Person nicht mehr sichtbar. */
+    public static function withdraw(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Nur Lehrkräfte können Zuweisungen zurücknehmen.');
+            redirect('/');
+        }
+        csrf_validate();
+        $target = Task::findTarget((int) ($_POST['target_id'] ?? 0));
+        if ($target === null) {
+            flash('error', 'Zuweisung nicht gefunden.');
+            redirect('/aufgaben');
+        }
+        $task = Task::find((int) $target['task_id']);
+        if ($task === null || !Task::ownedBy($task, $user)) {
+            flash('error', 'Zuweisung nicht gefunden.');
+            redirect('/aufgaben');
+        }
+        Task::deleteTarget((int) $target['id']);
+        flash('success', 'Zuweisung eingezogen. Die Aufgabe ist für die Klasse bzw. Person nicht mehr sichtbar (bereits abgegebene Lösungen bleiben erhalten).');
         redirect('/aufgaben');
     }
 
@@ -360,7 +434,7 @@ final class TaskController
             flash('error', 'Zuweisung nicht gefunden.');
             redirect('/aufgaben');
         }
-        $dueAt = self::parseDueAt((string) ($_POST['due_at'] ?? ''));
+        $dueAt = self::parseAt((string) ($_POST['due_at'] ?? ''));
         if ($dueAt === false) {
             flash('error', 'Bitte den Abgabetermin als Datum mit Uhrzeit angeben (z. B. 2026-11-20 14:30).');
             redirect('/aufgaben');
@@ -397,7 +471,6 @@ final class TaskController
             flash('error', 'Bitte schreibe deine Lösung in das Feld.');
             redirect('/aufgaben');
         }
-        TaskSubmission::upsert($task->id, $user->id, $content);
         $entries = Task::forStudent($user->id, $user->classId, Auth::levelOf($user) ?? 0);
         $dueAt = null;
         foreach ($entries as $entry) {
@@ -406,6 +479,11 @@ final class TaskController
                 break;
             }
         }
+        if ($task->lateLock === 1 && $dueAt !== null && date('Y-m-d H:i') > $dueAt) {
+            flash('error', 'Der Abgabetermin dieser Aufgabe ist abgelaufen, neue Abgaben sind nicht mehr möglich.');
+            redirect('/aufgaben');
+        }
+        TaskSubmission::upsert($task->id, $user->id, $content);
         if ($dueAt !== null && date('Y-m-d H:i') > $dueAt) {
             flash('success', 'Abgabe gespeichert, aber verspätet (Abgabetermin war ' . $dueAt . ' Uhr).');
         } else {
@@ -555,6 +633,8 @@ final class TaskController
             'type' => $task->type,
             'level' => $task->level,
             'sample_solution' => $task->sampleSolution,
+            'max_points' => $task->maxPoints,
+            'rubric' => $task->rubric,
         ];
         $payloadWorks = [];
         foreach ($open as $studentId => $submission) {
@@ -571,8 +651,11 @@ final class TaskController
                     . 'Aufgabe: ' . $task->title . PHP_EOL
                     . 'Aufgabentext: ' . $task->description . PHP_EOL
                     . 'Musterlösung: ' . ($task->sampleSolution !== '' ? $task->sampleSolution : '(keine Musterlösung hinterlegt)') . PHP_EOL
-                    . 'Bewerte jede eingereichte Arbeit mit einer Note (Schulnote 1 bis 6, auch Zwischenwerte wie 2- oder 3+) '
-                    . 'und kurzes, freundliches Feedback in deutscher Sprache. '
+                    . ($task->maxPoints > 0 ? 'Maximale Punktzahl: ' . $task->maxPoints . PHP_EOL : '')
+                    . ($task->rubric !== '' ? 'Erwartungshorizont/Bewertungskriterien: ' . $task->rubric . PHP_EOL : '')
+                    . 'Bewerte jede eingereichte Arbeit mit einer Note (Schulnote 1 bis 6, auch Zwischenwerte wie 2- oder 3+'
+                    . ($task->maxPoints > 0 ? '; nenne zusätzlich die erreichte Punktzahl von maximal ' . $task->maxPoints . ' als Teil der Note, z. B. "2- (8/10 Punkte)"' : '')
+                    . ') und kurzes, freundliches Feedback in deutscher Sprache. '
                     . 'Antworte ausschließlich mit JSON im Format {"results":[{"pseudonym":"Arbeit A","grade":"1","feedback":"..."}]}. '
                     . 'Daten: ' . json_encode(['works' => $payloadWorks], JSON_UNESCAPED_UNICODE);
                 $body = json_encode(['model' => $settings['model'], 'messages' => [['role' => 'user', 'content' => $prompt]]], JSON_UNESCAPED_UNICODE);
@@ -688,11 +771,11 @@ final class TaskController
     }
 
     /**
-     * Abgabetermin aus einem datetime-local-Feld ('2026-11-20T14:30') oder
+     * Datum mit Uhrzeit aus einem datetime-local-Feld ('2026-11-20T14:30') oder
      * Freitext ('2026-11-20 14:30') lesen. null = leer/streichen,
      * false = unbrauchbares Format.
      */
-    private static function parseDueAt(string $value): string|false|null
+    private static function parseAt(string $value): string|false|null
     {
         $value = trim($value);
         if ($value === '') {
@@ -710,7 +793,7 @@ final class TaskController
         return $value;
     }
 
-    /** Prüft, ob eine Aufgabe für diese Schülerin bzw. diesen Schüler sichtbar ist. */
+    /** Prüft, ob eine Aufgabe für diese Schülerin bzw. diesen Schüler bereits sichtbar ist. */
     private static function taskReachesStudent(Task $task, User $student): bool
     {
         $level = Auth::levelOf($student) ?? 0;
@@ -719,8 +802,9 @@ final class TaskController
         }
         $stmt = \Infocraft\Database::pdo()->prepare(
             'SELECT COUNT(*) FROM task_targets WHERE task_id = ? AND (user_id = ? OR (class_id IS NOT NULL AND class_id = ?))'
+            . " AND (visible_from IS NULL OR visible_from = '' OR visible_from <= ?)"
         );
-        $stmt->execute([$task->id, $student->id, $student->classId ?? 0]);
+        $stmt->execute([$task->id, $student->id, $student->classId ?? 0, date('Y-m-d H:i')]);
         return (int) $stmt->fetchColumn() > 0;
     }
 

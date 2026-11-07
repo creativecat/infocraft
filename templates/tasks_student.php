@@ -18,6 +18,7 @@
 $task = $entry['task'];
 $gradingVisible = $entry['grading'] !== null && ($entry['grading']['source'] === 'lk' || $entry['grading']['checked']);
 $late = $entry['dueAt'] !== null && date('Y-m-d H:i') > $entry['dueAt'];
+$submissionClosed = $late && $task->lateLock === 1;
 ?>
 <section class="panel">
     <div class="panel-head">
@@ -42,6 +43,14 @@ $late = $entry['dueAt'] !== null && date('Y-m-d H:i') > $entry['dueAt'];
     <p class="muted">Deine abgegebene Lösung (nach der Korrektur nicht mehr änderbar):</p>
     <div class="own"><?= e($entry['submission'] !== null ? $entry['submission']['content'] : '(keine Abgabe)') ?></div>
     <?php else: ?>
+    <?php if ($submissionClosed): ?>
+    <div class="notice">
+        <strong>Abgabe geschlossen</strong>
+        <p>Der Abgabetermin (<?= e($entry['dueAt']) ?> Uhr) ist abgelaufen, diese Aufgabe nimmt keine Abgaben mehr an.</p>
+    </div>
+    <p class="muted">Deine zuletzt abgegebene Lösung bleibt gespeichert:</p>
+    <div class="own"><?= e($entry['submission'] !== null ? $entry['submission']['content'] : '(keine Abgabe)') ?></div>
+    <?php else: ?>
     <?php if ($entry['submission'] !== null): ?>
     <p class="muted">Abgegeben am <?= e($entry['submission']['submittedAt']) ?>. Du kannst deine Lösung verbessern und erneut abgeben<?= $entry['dueAt'] !== null ? ' (Abgabetermin: ' . e($entry['dueAt']) . ' Uhr, danach zählt sie als verspätet)' : '' ?>.</p>
     <?php endif; ?>
@@ -52,6 +61,7 @@ $late = $entry['dueAt'] !== null && date('Y-m-d H:i') > $entry['dueAt'];
         </label>
         <div class="btn-row"><button class="btn btn-primary" type="submit"><?= $entry['submission'] !== null ? 'Neue Version abgeben' : 'Abgeben' ?></button></div>
     </form>
+    <?php endif; ?>
     <?php endif; ?>
 </section>
 <?php endforeach; ?>

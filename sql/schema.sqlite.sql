@@ -73,6 +73,9 @@ CREATE TABLE IF NOT EXISTS tasks (
     level INTEGER NOT NULL DEFAULT 6,
     shared INTEGER NOT NULL DEFAULT 0,
     sample_solution TEXT NOT NULL DEFAULT '',
+    max_points INTEGER NOT NULL DEFAULT 0,
+    rubric TEXT NOT NULL DEFAULT '',
+    late_lock INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -82,6 +85,7 @@ CREATE TABLE IF NOT EXISTS task_targets (
     class_id INTEGER NULL REFERENCES classes (id) ON DELETE CASCADE,
     user_id INTEGER NULL REFERENCES users (id) ON DELETE CASCADE,
     due_at TEXT NULL,
+    visible_from TEXT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

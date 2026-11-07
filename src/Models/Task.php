@@ -11,6 +11,11 @@ use Infocraft\Database;
  * shared = 1: bewusst in den gemeinsamen Pool aller Lehrkräfte geteilt.
  * sample_solution: Musterlösung, u. a. als Vergleich für die Korrektur
  * und als Kontext für die KI-Erstbewertung.
+ * max_points > 0: Abgabe wird mit Punkten bewertet (0 = nur freie Note).
+ * rubric: Erwartungshorizont/Bewertungskriterien für die Lehrkraft und die KI.
+ * late_lock = 1: nach dem Abgabetermin sind keine Abgaben mehr möglich.
+ * visible_from (an der Zuweisung): Starttermin, ab dem die Aufgabe für
+ * Schülerinnen und Schüler sichtbar wird (leer = sofort).
  */
 final class Task
 {
@@ -23,6 +28,9 @@ final class Task
         public readonly int $level,
         public readonly int $shared = 0,
         public readonly string $sampleSolution = '',
+        public readonly int $lateLock = 0,
+        public readonly int $maxPoints = 0,
+        public readonly string $rubric = '',
     ) {
     }
 
@@ -38,6 +46,9 @@ final class Task
             (int) ($row['level'] ?? 6),
             (int) ($row['shared'] ?? 0),
             (string) ($row['sample_solution'] ?? ''),
+            (int) ($row['late_lock'] ?? 0),
+            (int) ($row['max_points'] ?? 0),
+            (string) ($row['rubric'] ?? ''),
         );
     }
 
@@ -69,13 +80,17 @@ final class Task
      */
     public static function forStudent(int $userId, ?int $classId, int $level): array
     {
+        $now = date('Y-m-d H:i');
+        $visible = '(visible_from IS NULL OR visible_from = \'\' OR visible_from <= ?)';
         $sql = 'SELECT t.*, u.first_name, u.last_name,
                     (SELECT MIN(tt.due_at) FROM task_targets tt
                         WHERE tt.task_id = t.id
-                          AND (tt.user_id = ? OR (tt.class_id IS NOT NULL AND tt.class_id = ?))) AS due_at,
+                          AND (tt.user_id = ? OR (tt.class_id IS NOT NULL AND tt.class_id = ?))
+                          AND ' . $visible . ') AS due_at,
                     (SELECT c2.name FROM task_targets tt3
                         JOIN classes c2 ON c2.id = tt3.class_id
-                        WHERE tt3.task_id = t.id AND tt3.class_id = ? LIMIT 1) AS class_name,
+                        WHERE tt3.task_id = t.id AND tt3.class_id = ?
+                          AND ' . $visible . ' LIMIT 1) AS class_name,
                     (SELECT s.content FROM task_submissions s
                         WHERE s.task_id = t.id AND s.student_id = ?) AS sub_content,
                     (SELECT s.submitted_at FROM task_submissions s
@@ -94,13 +109,15 @@ final class Task
                   AND EXISTS (
                         SELECT 1 FROM task_targets tt2
                         WHERE tt2.task_id = t.id
-                          AND (tt2.user_id = ? OR (tt2.class_id IS NOT NULL AND tt2.class_id = ?)))
+                          AND (tt2.user_id = ? OR (tt2.class_id IS NOT NULL AND tt2.class_id = ?))
+                          AND ' . $visible . ')
                 ORDER BY t.id DESC';
         $stmt = Database::pdo()->prepare($sql);
         $stmt->execute([
-            $userId, $classId ?? 0, $classId ?? 0,
+            $userId, $classId ?? 0, $now,
+            $classId ?? 0, $now,
             $userId, $userId, $userId, $userId, $userId, $userId,
-            $level, $userId, $classId ?? 0,
+            $level, $userId, $classId ?? 0, $now,
         ]);
         $list = [];
         foreach ($stmt->fetchAll() as $row) {
@@ -138,10 +155,10 @@ final class Task
         return self::createFull($teacherId, $title, $description, $type, $level, 0, '');
     }
 
-    public static function createFull(int $teacherId, string $title, string $description, string $type, int $level, int $shared, string $sampleSolution): self
+    public static function createFull(int $teacherId, string $title, string $description, string $type, int $level, int $shared, string $sampleSolution, int $lateLock = 0, int $maxPoints = 0, string $rubric = ''): self
     {
         $pdo = Database::pdo();
-        $stmt = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level, shared, sample_solution) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $stmt = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level, shared, sample_solution, late_lock, max_points, rubric) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $stmt->execute([
             $teacherId,
             substr(trim($title), 0, 200),
@@ -150,6 +167,9 @@ final class Task
             max(1, min(13, $level)),
             $shared === 1 ? 1 : 0,
             $sampleSolution,
+            $lateLock === 1 ? 1 : 0,
+            max(0, min(1000, $maxPoints)),
+            $rubric,
         ]);
         $stmt2 = $pdo->prepare('SELECT * FROM tasks WHERE id = ?');
         $stmt2->execute([(int) $pdo->lastInsertId()]);
@@ -158,15 +178,18 @@ final class Task
     }
 
     /** Eigene Aufgabe nachträglich bearbeiten. */
-    public static function update(int $id, string $title, string $description, string $type, int $level, string $sampleSolution): void
+    public static function update(int $id, string $title, string $description, string $type, int $level, string $sampleSolution, int $lateLock = 0, int $maxPoints = 0, string $rubric = ''): void
     {
-        $stmt = Database::pdo()->prepare('UPDATE tasks SET title = ?, description = ?, type = ?, level = ?, sample_solution = ? WHERE id = ?');
+        $stmt = Database::pdo()->prepare('UPDATE tasks SET title = ?, description = ?, type = ?, level = ?, sample_solution = ?, late_lock = ?, max_points = ?, rubric = ? WHERE id = ?');
         $stmt->execute([
             substr(trim($title), 0, 200),
             $description,
             $type,
             max(1, min(13, $level)),
             $sampleSolution,
+            $lateLock === 1 ? 1 : 0,
+            max(0, min(1000, $maxPoints)),
+            $rubric,
             $id,
         ]);
     }
@@ -212,6 +235,9 @@ final class Task
             $source->level,
             0,
             $source->sampleSolution,
+            $source->lateLock,
+            $source->maxPoints,
+            $source->rubric,
         );
     }
 
@@ -222,7 +248,7 @@ final class Task
     }
 
     /** Aufgabe aus teilen; false, wenn es die Zuweisung schon gab. */
-    public static function assign(int $taskId, ?int $classId, ?int $userId, ?string $dueAt = null): bool
+    public static function assign(int $taskId, ?int $classId, ?int $userId, ?string $dueAt = null, ?string $visibleFrom = null): bool
     {
         if ($classId === null && $userId === null) {
             return false;
@@ -238,8 +264,8 @@ final class Task
         if ((int) $stmt->fetchColumn() > 0) {
             return false;
         }
-        $insert = $pdo->prepare('INSERT INTO task_targets (task_id, class_id, user_id, due_at) VALUES (?, ?, ?, ?)');
-        $insert->execute([$taskId, $classId, $userId, $dueAt]);
+        $insert = $pdo->prepare('INSERT INTO task_targets (task_id, class_id, user_id, due_at, visible_from) VALUES (?, ?, ?, ?, ?)');
+        $insert->execute([$taskId, $classId, $userId, $dueAt, $visibleFrom]);
         return true;
     }
 
@@ -249,6 +275,24 @@ final class Task
         $stmt = Database::pdo()->prepare('UPDATE task_targets SET due_at = ? WHERE id = ?');
         $stmt->execute([$dueAt, $targetId]);
         return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Starttermin einer bestehenden Zuweisung setzen oder streichen.
+     * null = sofort sichtbar.
+     */
+    public static function setTargetVisibleFrom(int $targetId, ?string $visibleFrom): bool
+    {
+        $stmt = Database::pdo()->prepare('UPDATE task_targets SET visible_from = ? WHERE id = ?');
+        $stmt->execute([$visibleFrom, $targetId]);
+        return $stmt->rowCount() > 0;
+    }
+
+    /** Eine Zuweisung zurücknehmen: die Aufgabe verschwindet für das Ziel. */
+    public static function deleteTarget(int $targetId): void
+    {
+        $stmt = Database::pdo()->prepare('DELETE FROM task_targets WHERE id = ?');
+        $stmt->execute([$targetId]);
     }
 
     /** Eine bestimmte Zuweisung finden (für Terminänderungen der Lehrkraft). */
@@ -262,12 +306,12 @@ final class Task
 
     /**
      * Empfänger einer Aufgabe: Klassen und einzelne Personen mit Abgabetermin.
-     * @return list<array{id: int, kind: string, name: string, dueAt: ?string, classId: ?int, userId: ?int}>
+     * @return list<array{id: int, kind: string, name: string, dueAt: ?string, visibleFrom: ?string, assignedAt: string, classId: ?int, userId: ?int}>
      */
     public static function targets(int $taskId): array
     {
         $stmt = Database::pdo()->prepare(
-            'SELECT tt.id, tt.class_id, tt.user_id, tt.due_at, c.name AS class_name, u.first_name, u.last_name
+            'SELECT tt.id, tt.class_id, tt.user_id, tt.due_at, tt.visible_from, c.name AS class_name, u.first_name, u.last_name
              FROM task_targets tt
              LEFT JOIN classes c ON c.id = tt.class_id
              LEFT JOIN users u ON u.id = tt.user_id
@@ -276,12 +320,15 @@ final class Task
         $stmt->execute([$taskId]);
         $list = [];
         foreach ($stmt->fetchAll() as $row) {
+            $dueAt = ($row['due_at'] ?? null) !== null && $row['due_at'] !== '' ? (string) $row['due_at'] : null;
+            $visibleFrom = ($row['visible_from'] ?? null) !== null && $row['visible_from'] !== '' ? (string) $row['visible_from'] : null;
             if ($row['class_name'] !== null) {
                 $list[] = [
                     'id' => (int) $row['id'],
                     'kind' => 'Klasse',
                     'name' => (string) $row['class_name'],
-                    'dueAt' => ($row['due_at'] ?? null) !== null && $row['due_at'] !== '' ? (string) $row['due_at'] : null,
+                    'dueAt' => $dueAt,
+                    'visibleFrom' => $visibleFrom,
                     'assignedAt' => (string) $row['created_at'],
                     'classId' => (int) $row['class_id'],
                     'userId' => null,
@@ -291,7 +338,8 @@ final class Task
                     'id' => (int) $row['id'],
                     'kind' => 'Person',
                     'name' => (string) $row['first_name'] . ' ' . (string) $row['last_name'],
-                    'dueAt' => ($row['due_at'] ?? null) !== null && $row['due_at'] !== '' ? (string) $row['due_at'] : null,
+                    'dueAt' => $dueAt,
+                    'visibleFrom' => $visibleFrom,
                     'assignedAt' => (string) $row['created_at'],
                     'classId' => null,
                     'userId' => (int) $row['user_id'],

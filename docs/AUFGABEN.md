@@ -45,7 +45,28 @@ Zustand: ✅ umgesetzt, 🔜 geplant.
    Korrekturansicht deutlich als Vorschlag markiert. Erst wenn die
    Lehrkraft den Vorschlag übernimmt und speichert, zählt die Bewertung.
 
-## Phase 2: Ideen (🔜 geplant)
+## Phase 2: Termine steuern, einziehen, bewerten (erste Umsetzung umgesetzt)
+
+1. ✅ **Starttermin (Zuweisungsdatum/Zeit):** Aufgaben lassen sich vorbereiten
+   und erst zu einem späteren Datum mit Uhrzeit für die Klasse bzw. Person
+   sichtbar schalten (direkt beim Austeilen oder nachträglich pro Zuweisung,
+   streichbar für sofortige Sichtbarkeit). Vor dem Starttermin ist die
+   Aufgabe für Schülerinnen und Schüler unsichtbar, auch beim Abgeben.
+2. ✅ **Zuweisung einziehen:** Eine ausgeteilte Aufgabe lässt sich pro
+   Klasse oder Person zurücknehmen, ohne sie zu löschen. Bereits abgegebene
+   Lösungen und Korrekturen bleiben erhalten.
+3. ✅ **Frist-Sperre:** Pro Aufgabe einstellbar (Anlegen oder Bearbeiten),
+   ob nach dem Abgabetermin noch verspätete Abgaben möglich sind (Standard)
+   oder ob die Abgabe komplett gesperrt wird.
+4. ✅ **Punktzahl:** Aufgaben können eine maximale Punktzahl erhalten
+   (z. B. 10 Punkte). Die Punktzahl erscheint in der Korrekturübersicht,
+   im Aufgabenpool und wird der KI als Rahmen mitgegeben.
+5. ✅ **Erwartungshorizont/Bewertungskriterien (Rubrics):** Pro Aufgabe
+   lässt sich ein Erwartungshorizont hinterlegen. Er erscheint der Lehrkraft
+   in der Korrekturübersicht und wird der KI-Bewertung als
+   Bewertungshilfe mitgegeben ([#19](https://github.com/creativecat/infocraft/issues/19)).
+
+## Phase 3: Ideen (🔜 geplant)
 
 - 🔜 **Abgabe als Projektverweis:** Statt oder zusätzlich zum Text eine
   Lösung aus der Code-Werkstatt (Java/Python) oder HTML-Werkstatt als
@@ -65,5 +86,10 @@ Zustand: ✅ umgesetzt, 🔜 geplant.
   („Wie sicher fühlst du dich?"), sichtbar nur für die Lehrkraft. ([#17](https://github.com/creativecat/infocraft/issues/17))
 - 🔜 **Wiederkehrende Aufgaben:** Aufgaben mit Wiederholrhythmus
   (z. B. wöchentlich) und automatischem Austeilen. ([#18](https://github.com/creativecat/infocraft/issues/18))
-- 🔜 **Bewertungsraster:** Kriterien je Aufgabe definieren, die der
-  KI-Bewertung mitgegeben werden (Rubrics). ([#19](https://github.com/creativecat/infocraft/issues/19))
+- 🔜 **Notenschlüssel:** aus Punkten automatisch Tendenznoten vorschlagen
+  (schulweiter oder persönlicher Schlüssel).
+- 🔜 **Musterlösung freigeben:** Musterlösung erst nach dem Abgabetermin
+  oder nach der Korrektur für die Schülerinnen und Schüler sichtbar
+  schalten.
+- 🔜 **Aufgabenpakete:** mehrere Aufgaben als Wochenplan-Paket auf einmal
+  austeilen (mit gemeinsamem Start- und Abgabetermin).
