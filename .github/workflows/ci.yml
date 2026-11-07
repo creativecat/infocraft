@@ -26,7 +26,7 @@ jobs:
         run: php tools/migrate.php --driver sqlite
       - name: Java-Interpreter-Tests (Node)
         run: node tools/java-vm-tests.js
-      - name: UI-Tests Java-IDE (Node, Fake-DOM: alle Buttons klickbar)
+      - name: "UI-Tests Java-IDE (Node, Fake-DOM: alle Buttons klickbar)"
         run: node tools/ui-tests.js
       - name: Smoke-Tests (Werkstatt, Rechte, Stufen)
         run: |
