@@ -49,21 +49,21 @@ Zustand: ✅ umgesetzt, 🔜 geplant.
 
 - 🔜 **Abgabe als Projektverweis:** Statt oder zusätzlich zum Text eine
   Lösung aus der Code-Werkstatt (Java/Python) oder HTML-Werkstatt als
-  Abgabe verknüpfen, Korrektur mit Quelltext-Ansicht.
+  Abgabe verknüpfen, Korrektur mit Quelltext-Ansicht. ([#11](https://github.com/creativecat/infocraft/issues/11))
 - 🔜 **Fälligkeits-Übersicht:** Dashboard-Kachel für Lehrkräfte mit
   fälligen und überfälligen Aufgaben, für Schülerinnen und Schüler die
-  nächste anstehende Abgabe.
+  nächste anstehende Abgabe. ([#12](https://github.com/creativecat/infocraft/issues/12))
 - 🔜 **Statistiken:** Abgabequote, Verspätungsquote und Notenverteilung
-  pro Aufgabe und Klasse.
+  pro Aufgabe und Klasse. ([#13](https://github.com/creativecat/infocraft/issues/13))
 - 🔜 **Erinnerungen:** dezente Hinweise auf noch nicht korrigierte
-  Abgaben.
+  Abgaben. ([#14](https://github.com/creativecat/infocraft/issues/14))
 - 🔜 **Export/Import:** Aufgaben als Datei exportieren und importieren,
-  um Aufgaben zwischen Schulen oder Instanzen auszutauschen.
+  um Aufgaben zwischen Schulen oder Instanzen auszutauschen. ([#15](https://github.com/creativecat/infocraft/issues/15))
 - 🔜 **Unteraufgaben:** Aufgabe in Teilschritte mit eigener
-  Erledigungs-Checkliste für Schülerinnen und Schüler.
+  Erledigungs-Checkliste für Schülerinnen und Schüler. ([#16](https://github.com/creativecat/infocraft/issues/16))
 - 🔜 **Selbsteinschätzung:** Kurze Selbsteinschätzung vor der Abgabe
-  („Wie sicher fühlst du dich?"), sichtbar nur für die Lehrkraft.
+  („Wie sicher fühlst du dich?"), sichtbar nur für die Lehrkraft. ([#17](https://github.com/creativecat/infocraft/issues/17))
 - 🔜 **Wiederkehrende Aufgaben:** Aufgaben mit Wiederholrhythmus
-  (z. B. wöchentlich) und automatischem Austeilen.
+  (z. B. wöchentlich) und automatischem Austeilen. ([#18](https://github.com/creativecat/infocraft/issues/18))
 - 🔜 **Bewertungsraster:** Kriterien je Aufgabe definieren, die der
-  KI-Bewertung mitgegeben werden (Rubrics).
+  KI-Bewertung mitgegeben werden (Rubrics). ([#19](https://github.com/creativecat/infocraft/issues/19))
