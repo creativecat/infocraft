@@ -260,13 +260,13 @@ jobs:
           CODE_MODSP=$(curl -sS -L -o modsp.html -w "%{http_code}" -b cookies4.txt -c cookies4.txt -d "csrf=$CSRF11" -d "class_id=$CLASS9" -d "module=wiki" -d "mode=sperren" http://127.0.0.1:8080/unterricht/klassen/modul)
           grep -q "jetzt für die Klasse gesperrt" modsp.html && MODSP_OK=1 || MODSP_OK=0
           curl -sS -L -b cookies2.txt -c cookies2.txt -o modsp_home.html http://127.0.0.1:8080/
-          grep -q "Präsentationen" modsp_home.html && MODSP_NAV_OK=0 || MODSP_NAV_OK=1
+          grep -q 'href="/wiki"' modsp_home.html && MODSP_NAV_OK=0 || MODSP_NAV_OK=1
           CODE_MODSP_BLOCK=$(curl -sS -L -o modsp_block.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt http://127.0.0.1:8080/wiki)
           grep -q "nicht freigegeben" modsp_block.html && MODSP_BLOCK_OK=1 || MODSP_BLOCK_OK=0
           CODE_MODSP_RESET=$(curl -sS -L -o modsp_reset.html -w "%{http_code}" -b cookies4.txt -c cookies4.txt -d "csrf=$CSRF11" -d "class_id=$CLASS9" -d "module=wiki" -d "mode=standard" http://127.0.0.1:8080/unterricht/klassen/modul)
           grep -q "folgt wieder der Jahrgangsstufe" modsp_reset.html && MODSP_RESET_OK=1 || MODSP_RESET_OK=0
           curl -sS -L -b cookies2.txt -c cookies2.txt -o modsp_home2.html http://127.0.0.1:8080/
-          grep -q "Präsentationen" modsp_home2.html && MODSP_NAV_BACK_OK=1 || MODSP_NAV_BACK_OK=0
+          grep -q 'href="/wiki"' modsp_home2.html && MODSP_NAV_BACK_OK=1 || MODSP_NAV_BACK_OK=0
           CODE_MODFREE=$(curl -sS -L -o modfree.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "class_id=$CLASS6" -d "module=sql" -d "mode=freigeben" http://127.0.0.1:8080/unterricht/klassen/modul)
           grep -q "jetzt für die Klasse freigegeben" modfree.html && MODFREE_OK=1 || MODFREE_OK=0
           curl -sS -L -b cookies3.txt -c cookies3.txt -o modfree_home.html http://127.0.0.1:8080/
