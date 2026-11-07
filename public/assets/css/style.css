@@ -426,7 +426,18 @@ body.sidebar-hidden .sidebar { display: none; }
 .ide-savebar .ide-title { flex: 1; min-width: 220px; margin: 0; }
 .ide-savebar .btn { margin-bottom: 6px; }
 
-.ide { display: grid; grid-template-columns: 210px minmax(0, 1fr) 400px; gap: 14px; align-items: stretch; }
+/* Java-Projektseiten nutzen die volle Breite (Dateien, Editor, Konsole nebeneinander) */
+.content:has(.ide) { max-width: none; }
+.ide { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 14px; align-items: stretch; }
+.ide-work {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    min-width: 0;
+}
 .ide-side {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -464,7 +475,7 @@ body.sidebar-hidden .sidebar { display: none; }
 .ide-side-new input { width: 100%; min-width: 0; }
 .ide-side-new .btn { white-space: nowrap; font-size: 0.85rem; }
 
-.ide-main { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.ide-main { min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px; }
 .ide-hlwrap {
     border: 2px solid #c7d2fe;
     border-radius: 12px;
@@ -479,13 +490,12 @@ body.sidebar-hidden .sidebar { display: none; }
 .ide-help pre { margin: 8px 0; }
 
 .ide-console {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: var(--bg);
+    border-left: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     min-width: 0;
-    min-height: 420px;
+    align-self: stretch;
 }
 .console-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 8px 0; border-bottom: 1px solid var(--border); }
 .console-tab {
@@ -556,8 +566,9 @@ body.sidebar-hidden .sidebar { display: none; }
 .obj-field { padding: 4px 10px; border-top: 1px solid var(--border); white-space: pre-wrap; }
 
 @media (max-width: 1280px) {
-    .ide { grid-template-columns: 190px minmax(0, 1fr); }
-    .ide-console { grid-column: 1 / -1; }
+    .ide { grid-template-columns: 200px minmax(0, 1fr); }
+    .ide-work { grid-template-columns: 1fr; }
+    .ide-console { border-left: none; border-top: 1px solid var(--border); }
 }
 @media (max-width: 800px) {
     .ide { grid-template-columns: 1fr; }

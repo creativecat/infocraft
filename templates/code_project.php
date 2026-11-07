@@ -10,7 +10,7 @@
     </div>
     <?php endif; ?>
     <?php if ($project->type === 'code' && $project->language === 'java'): ?>
-    <!-- Java-IDE: Dateien links, Editor in der Mitte, Konsole rechts -->
+    <!-- Java-IDE über die volle Breite: Dateien im eigenen Fenster, Editor und Konsole in einem gemeinsamen Fenster -->
     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="ide-savebar" id="code-save-form">
         <?= csrf_field() ?>
         <label class="field ide-title"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
@@ -38,6 +38,7 @@
                 <button class="btn btn-primary" type="submit">＋ Neue Datei</button>
             </form>
         </aside>
+        <div class="ide-work">
         <div class="ide-main">
             <?php foreach ($files as $i => $file): ?>
             <div class="file-pane" data-file-pane="<?= (int) $file->id ?>" data-file-name="<?= e($file->name) ?>"<?= $i === 0 ? '' : ' hidden' ?>>
@@ -90,6 +91,7 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
                 <div class="java-errors" id="java-errors"></div>
                 <button class="btn btn-ghost" id="java-clear" type="button">Leeren</button>
             </div>
+        </div>
         </div>
     </div>
     <?php else: ?>
