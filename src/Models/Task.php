@@ -45,6 +45,14 @@ final class Task
         return $list;
     }
 
+    public static function find(int $id): ?self
+    {
+        $stmt = Database::pdo()->prepare('SELECT * FROM tasks WHERE id = ? LIMIT 1');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        return $row === false ? null : self::fromRow($row);
+    }
+
     /**
      * Für Schülerinnen und Schüler: ausgeteilte Aufgaben bis zur eigenen Jahrgangsstufe.
      * @return list<array{task: self, className: ?string, teacherName: string}>
@@ -91,12 +99,18 @@ final class Task
         if ($classId === null && $userId === null) {
             return false;
         }
-        $stmt = Database::pdo()->prepare('SELECT COUNT(*) FROM task_targets WHERE task_id = ? AND ((class_id IS NULL AND ? IS NULL AND user_id = ?) OR (user_id IS NULL AND ? IS NULL AND class_id = ?))');
-        $stmt->execute([$taskId, $userId, $userId, $classId, $classId]);
+        $pdo = Database::pdo();
+        if ($classId !== null) {
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM task_targets WHERE task_id = ? AND class_id = ?');
+            $stmt->execute([$taskId, $classId]);
+        } else {
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM task_targets WHERE task_id = ? AND user_id = ?');
+            $stmt->execute([$taskId, $userId]);
+        }
         if ((int) $stmt->fetchColumn() > 0) {
             return false;
         }
-        $insert = Database::pdo()->prepare('INSERT INTO task_targets (task_id, class_id, user_id) VALUES (?, ?, ?)');
+        $insert = $pdo->prepare('INSERT INTO task_targets (task_id, class_id, user_id) VALUES (?, ?, ?)');
         $insert->execute([$taskId, $classId, $userId]);
         return true;
     }

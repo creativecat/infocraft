@@ -3,15 +3,22 @@ declare(strict_types=1);
 
 namespace Infocraft;
 
-use InfocraftModelsSchoolClass;
-use InfocraftModelsUser;
+use Infocraft\Models\SchoolClass;
+use Infocraft\Models\User;
 
+/**
+ * CSV-Import von Klassenlisten (Vorname;Nachname;Klasse;Rolle).
+ * Neue Konten erhalten automatisch einen Anmeldenamen und ein
+ * Einmalpasswort (OTP) mit Merksatz nach der Satzbaulogik.
+ */
 final class CsvImporter
 {
-    /** @return array{created: int, updated: int, errors: array<int, string>} */
+    /**
+     * @return array{created: int, updated: int, errors: array<int, string>, otps: array<int, array{name: string, class: ?string, login: string, otp: string, sentence: string}>}
+     */
     public static function import(string $csvText): array
     {
-        $result = ['created' => 0, 'updated' => 0, 'errors' => []];
+        $result = ['created' => 0, 'updated' => 0, 'errors' => [], 'otps' => []];
 
         $csvText = trim($csvText);
         if (str_starts_with($csvText, "\xEF\xBB\xBF")) {
@@ -82,10 +89,17 @@ final class CsvImporter
 
                 $existing = User::findByName($firstName, $lastName);
                 if ($existing === null) {
-                    User::create($firstName, $lastName, $role, $classId, null, null, null);
+                    $login = Otp::loginNameFor($firstName, $lastName);
+                    $user = User::create($firstName, $lastName, $role, $classId, $login, null, null);
+                    $otp = Otp::issueTo($user);
+                    $result['otps'][] = ['name' => $user->fullName(), 'class' => $className !== '' ? $className : null, 'login' => $otp['login'], 'otp' => $otp['otp'], 'sentence' => $otp['sentence']];
                     $result['created']++;
                 } else {
                     User::updateRoleAndClass($existing->id, $classId, $role);
+                    if ($existing->passwordHash === null) {
+                        $otp = Otp::issueTo($existing);
+                        $result['otps'][] = ['name' => $existing->fullName(), 'class' => $className !== '' ? $className : null, 'login' => $otp['login'], 'otp' => $otp['otp'], 'sentence' => $otp['sentence']];
+                    }
                     $result['updated']++;
                 }
             }

@@ -93,11 +93,14 @@ final class SqlTemplate
 
     public static function grant(int $templateId, int $userId, string $permission): void
     {
-        $sql = Database::driver() === 'mysql'
-            ? 'INSERT INTO sql_grants (template_id, user_id, permission) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE permission = ?'
-            : 'INSERT INTO sql_grants (template_id, user_id, permission) VALUES (?, ?, ?) ON CONFLICT(template_id, user_id) DO UPDATE SET permission = excluded.permission';
-        $stmt = Database::pdo()->prepare($sql);
-        $stmt->execute($sql === '' ? [] : [$templateId, $userId, $permission, $permission]);
+        $pdo = Database::pdo();
+        if (Database::driver() === 'mysql') {
+            $stmt = $pdo->prepare('INSERT INTO sql_grants (template_id, user_id, permission) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE permission = ?');
+            $stmt->execute([$templateId, $userId, $permission, $permission]);
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO sql_grants (template_id, user_id, permission) VALUES (?, ?, ?) ON CONFLICT(template_id, user_id) DO UPDATE SET permission = excluded.permission');
+            $stmt->execute([$templateId, $userId, $permission]);
+        }
     }
 
     public static function revoke(int $grantId): void
@@ -136,11 +139,14 @@ final class SqlTemplate
 
     public static function solve(int $grantId, int $missionId): void
     {
-        $sql = Database::driver() === 'mysql'
-            ? 'INSERT INTO sql_solves (grant_id, mission_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE solved_at = CURRENT_TIMESTAMP'
-            : 'INSERT INTO sql_solves (grant_id, mission_id) VALUES (?, ?) ON CONFLICT(grant_id, mission_id) DO NOTHING';
-        $stmt = Database::pdo()->prepare($sql);
-        $stmt->execute([$grantId, $missionId]);
+        $pdo = Database::pdo();
+        if (Database::driver() === 'mysql') {
+            $stmt = $pdo->prepare('INSERT INTO sql_solves (grant_id, mission_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE solved_at = CURRENT_TIMESTAMP');
+            $stmt->execute([$grantId, $missionId]);
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO sql_solves (grant_id, mission_id) VALUES (?, ?) ON CONFLICT(grant_id, mission_id) DO NOTHING');
+            $stmt->execute([$grantId, $missionId]);
+        }
     }
 
     /**
