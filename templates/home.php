@@ -6,9 +6,10 @@
 
 <div class="cards">
     <?php foreach ($modules as $module): ?>
-    <a class="card" href="<?= url('modul/' . $module['slug']) ?>">
+    <?php $cardTitle = ($user !== null && $user->role === 'student' && $module['slug'] === 'tasks') ? 'Meine Aufgaben' : $module['title']; ?>
+    <a class="card" href="<?= url($module['route'] ?? 'modul/' . $module['slug']) ?>">
         <div class="card-icon"><?= $module['icon'] ?></div>
-        <h2><?= e($module['title']) ?></h2>
+        <h2><?= e($cardTitle) ?></h2>
         <p class="card-desc"><?= e($module['description']) ?></p>
         <div class="card-meta">
             <span class="status status-<?= e($module['status']) ?>"><?= e($module['status']) ?></span>
@@ -23,12 +24,12 @@
         <h3>🚀 Roadmap</h3>
         <ul class="phase-list">
             <li><span class="status status-fertig">fertig</span> <strong>Phase 1:</strong> Grundgerüst, Anmeldung (SSO/CSV/Demo), Rollen</li>
-            <li><span class="status status-geplant">geplant</span> <strong>Phase 2:</strong> SQL-Werkstatt (Shop-Modell, Diagramme, Adventure)</li>
+            <li><span class="status status-fertig">fertig</span> <strong>Phase 2:</strong> SQL-Werkstatt (Shop-Modell, Instagram, Adventure, Rechte)</li>
             <li><span class="status status-geplant">geplant</span> <strong>Phase 3:</strong> HTML-WYSIWYG-Editor</li>
-            <li><span class="status status-geplant">geplant</span> <strong>Phase 4:</strong> Code-Werkstatt (Java/Python-IDE)</li>
+            <li><span class="status status-in-arbeit">in Arbeit</span> <strong>Phase 4:</strong> Code-Werkstatt (Projekte/Ordner fertig, IDE folgt)</li>
             <li><span class="status status-geplant">geplant</span> <strong>Phase 5:</strong> Quiz-Arena &amp; Prüfungsmodus</li>
             <li><span class="status status-geplant">geplant</span> <strong>Phase 6:</strong> Wiki, Präsentationen, Lernvideos</li>
-            <li><span class="status status-geplant">geplant</span> <strong>Phase 7:</strong> Aufgabenpool &amp; Austeilen</li>
+            <li><span class="status status-in-arbeit">in Arbeit</span> <strong>Phase 7:</strong> Aufgabenpool &amp; Austeilen (Basis fertig)</li>
         </ul>
         <p class="muted">Details: docs/ROADMAP.md im Repository.</p>
     </section>
@@ -41,6 +42,7 @@
             <tr><th>PHP</th><td><?= e(PHP_VERSION) ?></td></tr>
         </table>
         <h3>🎓 LehrplanPLUS</h3>
-        <p>Jedes Modul dokumentiert seinen Bezug zum bayerischen LehrplanPLUS Informatik, damit Unterricht und Prüfungen curricular sauber bleiben. Siehe docs/lehrplan.md.</p>
+        <p>Jedes Modul dokumentiert seinen Bezug zum bayerischen LehrplanPLUS Informatik. Sichtbar ist ein Arbeitsbereich für Schülerinnen und Schüler erst ab der Jahrgangsstufe, in der er dran ist.</p>
     </section>
 </div>
+

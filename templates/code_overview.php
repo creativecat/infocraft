@@ -1,0 +1,112 @@
+<?php $classNames = []; foreach ($classes as $class) { $classNames[$class->id] = $class->name; } ?>
+<section class="hero">
+    <div class="hero-emoji">💻</div>
+    <h1>Code-Werkstatt</h1>
+    <p>Deine Projekte, organisiert in Ordnern. Zieh Projekte einfach per Drag &amp; Drop in einen Ordner.</p>
+</section>
+
+<div class="two-col">
+    <section class="panel">
+        <h3>➕ Neues anlegen</h3>
+        <form method="post" action="<?= url('werkstatt/code/projekt') ?>" class="form">
+            <?= csrf_field() ?>
+            <label class="field"><span>Projekttitel</span><input type="text" name="title" required placeholder="z. B. Mein erstes Programm"></label>
+            <div class="two-col">
+                <label class="field"><span>Art</span>
+                    <select name="type">
+                        <option value="code">Code (Java/Python)</option>
+                        <option value="html">HTML-Seite</option>
+                    </select>
+                </label>
+                <label class="field"><span>Sprache (bei Code)</span>
+                    <select name="language">
+                        <option value="python">Python</option>
+                        <option value="java">Java</option>
+                    </select>
+                </label>
+            </div>
+            <label class="field"><span>Ordner</span>
+                <select name="folder_id">
+                    <option value="0">Ohne Ordner</option>
+                    <?php foreach ($folders as $folder): ?>
+                    <option value="<?= (int) $folder->id ?>"><?= e($folder->name) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <div class="btn-row"><button class="btn btn-primary" type="submit">Projekt anlegen</button></div>
+        </form>
+        <form method="post" action="<?= url('werkstatt/code/ordner') ?>" class="form">
+            <?= csrf_field() ?>
+            <label class="field"><span>Neuer Ordner</span><input type="text" name="name" required placeholder="z. B. Hausaufgaben"></label>
+            <div class="btn-row"><button class="btn btn-ghost" type="submit">Ordner anlegen</button></div>
+        </form>
+        <?php if ($isTeacher && $projects !== []): ?>
+        <h3>📤 Projekt an Klasse oder Person verteilen</h3>
+        <form method="post" action="<?= url('werkstatt/code/verteilen') ?>" class="form">
+            <?= csrf_field() ?>
+            <label class="field"><span>Projekt</span>
+                <select name="project_id">
+                    <?php foreach ($projects as $project): ?>
+                    <option value="<?= (int) $project->id ?>"><?= e($project->title) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <div class="two-col">
+                <label class="field"><span>Ganze Klasse</span>
+                    <select name="class_id">
+                        <option value="0">- keine -</option>
+                        <?php foreach ($classes as $class): ?>
+                        <option value="<?= (int) $class->id ?>">Klasse <?= e($class->name) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label class="field"><span>Einzelne Person</span>
+                    <select name="user_id">
+                        <option value="0">- keine -</option>
+                        <?php foreach ($studentsByClass as $classId => $students): ?>
+                        <optgroup label="Klasse <?= e($classNames[$classId] ?? '') ?>">
+                            <?php foreach ($students as $student): ?>
+                            <option value="<?= (int) $student->id ?>"><?= e($student->fullName()) ?></option>
+                            <?php endforeach; ?>
+                        </optgroup>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+            </div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit">Kopie austeilen</button></div>
+        </form>
+        <?php endif; ?>
+    </section>
+    <section class="panel">
+        <h3>🗂️ Ordner</h3>
+        <p class="muted">Projekte per Drag &amp; Drop hierher ziehen.</p>
+        <ul class="folder-list">
+            <li class="folder-item" data-folder="0">📁 <strong>Ohne Ordner</strong> <span class="pill"><?= (int) ($counts[0] ?? 0) ?></span></li>
+            <?php foreach ($folders as $folder): ?>
+            <li class="folder-item" data-folder="<?= (int) $folder->id ?>">📁 <strong><?= e($folder->name) ?></strong> <span class="pill"><?= (int) ($counts[$folder->id] ?? 0) ?></span></li>
+            <?php endforeach; ?>
+        </ul>
+    </section>
+</div>
+
+<div class="cards" data-move-url="<?= url('werkstatt/code/move') ?>">
+    <?php foreach ($projects as $project): ?>
+    <div class="card project-card" draggable="true" data-id="<?= (int) $project->id ?>" title="Zum Verschieben in einen Ordner ziehen">
+        <div class="card-icon"><?= $project->type === 'html' ? '🌐' : ($project->language === 'java' ? '☕' : '🐍') ?></div>
+        <h2><?= e($project->title) ?></h2>
+        <p class="card-desc muted"><?= e($folderNames[$project->folderId ?? 0] ?? 'Ohne Ordner') ?></p>
+        <div class="card-meta">
+            <a class="btn btn-primary" href="<?= url('werkstatt/code/' . (int) $project->id) ?>">Öffnen</a>
+            <form method="post" action="<?= url('werkstatt/code/loeschen') ?>" class="form-inline" onsubmit="return confirm('Projekt wirklich löschen?');">
+                <?= csrf_field() ?>
+                <input type="hidden" name="project_id" value="<?= (int) $project->id ?>">
+                <button class="btn btn-ghost" type="submit" title="Löschen">🗑️</button>
+            </form>
+        </div>
+    </div>
+    <?php endforeach; ?>
+    <?php if ($projects === []): ?>
+    <p class="muted">Noch keine Projekte. Lege oben dein erstes Projekt an.</p>
+    <?php endif; ?>
+</div>
+
