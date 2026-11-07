@@ -119,6 +119,9 @@ $router->get('/pruefungen/{id}/ergebnis', [ExamController::class, 'result']);
 $router->get('/aufgaben', [TaskController::class, 'index']);
 $router->post('/aufgaben/anlegen', [TaskController::class, 'create']);
 $router->post('/aufgaben/austeilen', [TaskController::class, 'assign']);
+$router->post('/aufgaben/katalog', [TaskController::class, 'import']);
+$router->post('/aufgaben/katalog/stufe', [TaskController::class, 'importLevel']);
+$router->post('/aufgaben/{id}/loeschen', [TaskController::class, 'delete']);
 
 // Wiki: Nachschlage-Seiten mit Stufen-Filter (Lehrkräfte verwalten)
 $router->get('/wiki', [WikiController::class, 'index']);

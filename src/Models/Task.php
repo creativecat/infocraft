@@ -130,4 +130,18 @@ final class Task
         }
         return $list;
     }
+
+    /** Prueft, ob eine Lehrkraft bereits eine Aufgabe mit diesem Titel im Pool hat. */
+    public static function hasTitle(int $teacherId, string $title): bool
+    {
+        $stmt = Database::pdo()->prepare('SELECT COUNT(*) FROM tasks WHERE teacher_id = ? AND LOWER(title) = LOWER(?)');
+        $stmt->execute([$teacherId, trim($title)]);
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    public static function delete(int $id): void
+    {
+        $stmt = Database::pdo()->prepare('DELETE FROM tasks WHERE id = ?');
+        $stmt->execute([$id]);
+    }
 }

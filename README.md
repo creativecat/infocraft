@@ -8,7 +8,7 @@ Digitale Informatik-Werkstatt für den bayerischen LehrplanPLUS (Gymnasium): SQL
 | --- | --- | --- |
 | SQL-Werkstatt (Shop, Instagram, Dateninsel-Adventure) | 9 | fertig (Basis) |
 | Code-Werkstatt (Projekte, Ordner, Austeilen; Python und Java laufen im Browser; Java mit mehreren Dateien, Konsole und Fehlerkonsole) | 6 | in Arbeit (Python und Java fertig) |
-| Aufgaben / Meine Aufgaben | 6 | in Arbeit (Basis fertig) |
+| Aufgaben / Meine Aufgaben (Pool, Katalog, Austeilen) | 6 | fertig (Basis) |
 | HTML-Werkstatt (WYSIWYG-Editor mit Sofortvorschau, Vorlagen) | 6 | fertig (Basis) |
 | Quiz-Arena (Quiz anlegen, austellen, spielen, Ergebnisse) | 6 | in Arbeit (Basis fertig) |
 | Prüfungen & Schularbeiten (Gruppen mit Vorlagen, BE, Sperre, Korrektur, API-Vorschläge) | 6 | fertig (Basis) |
@@ -24,7 +24,7 @@ Schülerinnen und Schüler sehen nur die Bereiche, die laut LehrplanPLUS für ih
 - **SQL-Werkstatt:** Lehrkräfte teilen Datenbankvorlagen an Klassen aus, mit Rechten pro Person: nur lesen, lesen und schreiben oder Tabellen anlegen. Jede Person arbeitet an ihrer eigenen Kopie, ER-Diagramme (Mermaid) und Missionen inklusive.
 - **Code-Werkstatt:** Projekte anlegen, in Ordnern per Drag & Drop sortieren, von Lehrkräften an Klassen oder Einzelne austellen. Python-Programme laufen direkt im Browser (Pyodide), Java-Programme über eine eigene Java-Simulation direkt im Browser: mehrere Dateien pro Projekt (eine Klasse pro Datei), Ausgaben in der Konsole, Fehler mit Datei und Zeile plus deutscher Hilfestellung in einer eigenen Fehlerkonsole. Es wird kein Code auf dem Server ausgeführt.
 - **Syntax-Highlighting:** Alle Code-Editoren (HTML, Python, Java, SQL, Mermaid) heben Schlüsselwörter, Zeichenketten, Zahlen und Kommentare farbig hervor, live beim Tippen und in Musterlösungen. Umgesetzt als Overlay (transparente Textarea über farbigem Code), highlight.js per CDN, alles clientseitig ohne Servercode.
-- **Aufgabenpool:** Aufgaben anlegen und austeilen, Schülerinnen und Schüler sehen nur Aufgaben bis zu ihrer Jahrgangsstufe.
+- **Aufgabenpool:** Aufgaben anlegen und austeilen, Schülerinnen und Schüler sehen nur Aufgaben bis zu ihrer Jahrgangsstufe. Dazu ein kuratierter Aufgabenkatalog mit fertigen Aufgaben passend zum LehrplanPLUS (Jahrgangsstufen 6 bis 13, filterbar nach Stufe und Typ): einzelne Aufgaben oder alle einer Jahrgangsstufe lassen sich mit einem Klick als Kopie in den eigenen Pool übernehmen (Duplikate werden übersprungen); eigene Aufgaben können gelöscht werden.
 - **Wiki:** Lehrkräfte legen Nachschlage-Seiten zu Fachbegriffen und Konzepten an (einfache Markdown-Formatierung: Überschriften, Listen, fett, kursiv, Code). Seiten sind ab der eingestellten Jahrgangsstufe sichtbar; bearbeiten und löschen kann sie die erstellende Lehrkraft (Admin alle).
 - **Quiz-Arena:** Quiz mit vier Antworten pro Frage anlegen, an Klassen oder Einzelne austellen. Spielen mit sofortigem Feedback, Bestwertungen und Ergebnisliste für Lehrkräfte.
 - **Prüfungsmodus:** Prüfungen und Schularbeiten mit Gruppen und einer Vorlage pro Gruppe, Teilaufgaben mit BE und Musterlösung. Während der Prüfung sind für Teilnehmende alle anderen Bereiche gesperrt (Server-Umleitung und reduzierte Oberfläche), Eingaben speichern automatisch. Korrektur manuell oder anonymisiert per API; Vorschläge müssen gegengeprüft werden. Nach der Herausgabe: Punkte, Note, Feedback und der Vergleich eigene Lösung vs. Musterlösung.
@@ -103,7 +103,7 @@ Erwartete Antwort:
 
 ## Qualitätssicherung
 
-GitHub Actions prüft jeden Push mit PHP 8.3 und 8.5: Syntax, Migration (inkl. Idempotenz), Node-Tests des Java-Interpreters (37 Fälle: Ausgaben, Typen, Kontrollfluss, Objekte, Vererbung, Fehlerfälle mit Hilfestellungen) und Smoke-Tests über HTTP (Login, Werkstatt-Seiten, SQL-Ausführung, Rechtevergabe, Stufen-Filterung, Quiz-Runden, kompletter Prüfungs-Durchlauf mit Sperre, Abgabe, Korrektur, API-Korrektur und Herausgabe; Klassendiagramme: Anlegen, Speichern, Auto-Erzeugung aus Java/Python/SQL, Lehrer-Schalter pro Klasse und Löschen; Java-Multi-Datei-Projekte: Datei anlegen, speichern, synchron halten und löschen; Wiki: Seite anlegen, Schüleransicht, Stufen-Filter, bearbeiten und löschen; Syntax-Highlighting präsent in HTML-, Code-, SQL- und Diagramm-Editor).
+GitHub Actions prüft jeden Push mit PHP 8.3 und 8.5: Syntax, Migration (inkl. Idempotenz), Node-Tests des Java-Interpreters (37 Fälle: Ausgaben, Typen, Kontrollfluss, Objekte, Vererbung, Fehlerfälle mit Hilfestellungen) und Smoke-Tests über HTTP (Login, Werkstatt-Seiten, SQL-Ausführung, Rechtevergabe, Stufen-Filterung, Quiz-Runden, kompletter Prüfungs-Durchlauf mit Sperre, Abgabe, Korrektur, API-Korrektur und Herausgabe; Klassendiagramme: Anlegen, Speichern, Auto-Erzeugung aus Java/Python/SQL, Lehrer-Schalter pro Klasse und Löschen; Java-Multi-Datei-Projekte: Datei anlegen, speichern, synchron halten und löschen; Wiki: Seite anlegen, Schüleransicht, Stufen-Filter, bearbeiten und löschen; Aufgabenkatalog: filtern, einzelne und alle Aufgaben einer Jahrgangsstufe übernehmen, Duplikat-Schutz und Löschen; Syntax-Highlighting präsent in HTML-, Code-, SQL- und Diagramm-Editor).
 
 ## Dokumentation
 
