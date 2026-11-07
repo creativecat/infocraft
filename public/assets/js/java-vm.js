@@ -209,25 +209,30 @@
     function parseUnit() {
       skipImports();
       var classes = [];
+      var stmts = [];
       skipSemi();
       while (!at('eof')) {
         if (at('kw', 'interface')) { err('interface wird noch nicht unterstuetzt.', 'Nutze class (die Simulation kennt erst Klassen ohne interfaces).'); }
         if (at('kw', 'enum')) { err('enum wird noch nicht unterstuetzt.', 'Nutze eine class mit konstanten Werten als statische Felder.'); }
         if (at('kw', 'record')) { err('record wird noch nicht unterstuetzt.', 'Nutze eine normale class mit Konstruktor und Attributen.'); }
-        if (!at('kw', 'class')) { parseModifiers(); }
-        if (!at('kw', 'class')) { err('Erwartet: class, gefunden: ' + describe(peek()), 'Jede Datei enthaelt eine Klasse: public class Name { ... }'); }
-        classes.push(parseClass());
+        if (at('kw', 'class') || at('kw', 'public') || at('kw', 'private') || at('kw', 'protected') || at('kw', 'static') || at('kw', 'final') || at('kw', 'abstract')) {
+          classes.push(parseClass());
+        } else {
+          /* Anweisungen direkt in der Datei: Objekte erzeugen, ausgeben, rechnen ... */
+          stmts.push(parseStatement());
+        }
         skipSemi();
       }
-      return classes;
+      return { classes: classes, stmts: stmts };
     }
 
     function parseClass() {
-      parseModifiers(); /* Klassen-Sichtbarkeit (public etc.) ist fuer die Simulation irrelevant */
+      var mods = parseModifiers(); /* Sichtbarkeit merken, Rest ist fuer die Simulation irrelevant */
+      if (!at('kw', 'class')) { err('Erwartet: class, gefunden: ' + describe(peek()), 'In einer Datei duerfen mehrere Klassen stehen (public class Name { ... }), und auch Anweisungen direkt ohne Klasse, z. B.: Test t = new Test();'); }
       next(); /* class */
       if (!at('id')) { err('Nach class folgt der Name der Klasse.', 'z. B. public class Auto { ... }'); }
       var nameTok = next();
-      var cls = { name: nameTok.v, parent: null, fields: [], ctors: [], methods: [], line: nameTok.line, srcFile: srcFile };
+      var cls = { name: nameTok.v, parent: null, isPublic: mods.visibility === 'public', fields: [], ctors: [], methods: [], line: nameTok.line, srcFile: srcFile };
       if (at('kw', 'extends')) {
         next();
         if (!at('id')) { err('Nach extends folgt der Name der Oberklasse.', 'z. B. class Hund extends Tier'); }
@@ -782,11 +787,12 @@
     var classes = [];
     var classMap = Object.create(null);
     var fileNames = [];
+    var toplevel = [];
     var k;
     for (k in files) { if (Object.prototype.hasOwnProperty.call(files, k)) { fileNames.push(k); } }
 
     var pre = precheck(files);
-    if (pre) { errors.push(pre); return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames }; }
+    if (pre) { errors.push(pre); return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames, toplevel: toplevel }; }
 
     for (var fi = 0; fi < fileNames.length; fi++) {
       var fname = fileNames[fi];
@@ -794,31 +800,36 @@
       var toks = lex(fname, files[fname], perrs);
       if (!toks || perrs.length) {
         if (perrs.length) { errors.push(perrs[0]); }
-        return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames };
+        return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames, toplevel: toplevel };
       }
       try {
         var parsed = new Parser(fname, toks, perrs).parseUnit();
-        for (var pj = 0; pj < parsed.length; pj++) {
-          if (classMap[parsed[pj].name]) {
-            errors.push(JError('compile', fname, parsed[pj].line, 'Die Klasse ' + parsed[pj].name + ' existiert doppelt.', 'Jede Klasse darf nur einmal definiert werden (auch ueber mehrere Dateien hinweg).'));
-            return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames };
+        for (var pj = 0; pj < parsed.classes.length; pj++) {
+          if (classMap[parsed.classes[pj].name]) {
+            errors.push(JError('compile', fname, parsed.classes[pj].line, 'Die Klasse ' + parsed.classes[pj].name + ' existiert doppelt.', 'Jede Klasse darf nur einmal definiert werden (auch ueber mehrere Dateien hinweg).'));
+            return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames, toplevel: toplevel };
           }
-          parsed[pj].srcFile = fname;
-          classes.push(parsed[pj]);
-          classMap[parsed[pj].name] = parsed[pj];
+          parsed.classes[pj].srcFile = fname;
+          classes.push(parsed.classes[pj]);
+          classMap[parsed.classes[pj].name] = parsed.classes[pj];
+        }
+        /* Anweisungen direkt in der Datei (Reihenfolge ueber Dateien wahren) */
+        for (var sj = 0; sj < parsed.stmts.length; sj++) {
+          parsed.stmts[sj].srcFile = fname;
+          toplevel.push(parsed.stmts[sj]);
         }
       } catch (e) {
         if (perrs.length) { errors.push(perrs[0]); }
         else { throw e; }
-        return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames };
+        return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames, toplevel: toplevel };
       }
-      if (perrs.length) { errors.push(perrs[0]); return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames }; }
+      if (perrs.length) { errors.push(perrs[0]); return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames, toplevel: toplevel }; }
     }
 
-    if (!compileChecks(classes, classMap, errors)) {
-      return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames };
+    if (!compileChecks(classes, classMap, errors, files)) {
+      return { ok: false, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames, toplevel: toplevel };
     }
-    return { ok: true, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames };
+    return { ok: true, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames, toplevel: toplevel };
   }
 
   function run(files) {
@@ -842,10 +853,16 @@
     };
     RUN_VM = vm;
 
+    var sessionEnv = newEnv(null);
+    var session = makeSession(comp, vm, sessionEnv);
+
     var mainFound = null;
     try {
       var ci;
       for (ci = 0; ci < comp.classes.length; ci++) { initStatics(comp.classes[ci], vm); }
+      /* Anweisungen direkt in der Datei laufen zuerst (Objekte erzeugen u. a.),
+       * danach – falls vorhanden – die main-Methode. Beides sieht die Objektkonsole. */
+      runToplevel(comp, vm, sessionEnv, errors);
       for (ci = 0; ci < comp.classes.length; ci++) {
         var mm = findMethod(comp.classes[ci], 'main', 1);
         if (mm && mm.m.isStatic) { mainFound = mm; break; }
@@ -862,7 +879,7 @@
       else { throw e; }
     }
 
-    return finish(makeSession(comp, vm), !!mainFound);
+    return finish(session, !!mainFound);
 
     function finish(session, ranMain) {
       var all = [];
@@ -881,6 +898,26 @@
    * Alle erzeugten Objekte zeigt das Objektdiagramm. Eine main-Methode ist
    * dafuer nicht noetig (und wird in den Startpaketen bewusst nicht benutzt).
    */
+  /* Anweisungen direkt in der Datei ausfuehren (ohne umgebende Klasse),
+   * z. B. Objekte erzeugen: Test t = new Test();  Fehler landen in errors. */
+  function runToplevel(comp, vm, env, errors) {
+    var i2;
+    for (i2 = 0; i2 < comp.toplevel.length; i2++) {
+      var st = comp.toplevel[i2];
+      var ctx2 = { file: st.srcFile || '', line: st.line || 1, cls: null, thisVal: null, vm: vm };
+      try {
+        execBlock([st], env, ctx2);
+      } catch (e) {
+        if (e && e.jerr) { errors.push(e.jerr); return; }
+        if (e && (e.ctrl === 'return' || e.ctrl === 'break' || e.ctrl === 'continue')) {
+          errors.push(JError('syntax', ctx2.file, st.line || 1, 'return, break und continue gehoeren in Methoden und Schleifen deiner Klasse.', 'Direkt in der Datei stehen normale Anweisungen, z. B.: Test t = new Test();'));
+          return;
+        }
+        throw e;
+      }
+    }
+  }
+
   function openSession(files) {
     var comp = compileAll(files);
     if (!comp.ok) { return { ok: false, errors: comp.errors, session: null }; }
@@ -890,15 +927,25 @@
     RUN_DB = Object.create(null);
     var vm = { out: out, errCards: errCards, statics: Object.create(null), steps: 0, depth: 0, objects: [] };
     RUN_VM = vm;
+    var env = newEnv(null);
     try {
       for (var ci = 0; ci < comp.classes.length; ci++) { initStatics(comp.classes[ci], vm); }
+      var terrs = [];
+      runToplevel(comp, vm, env, terrs);
+      if (terrs.length > 0) {
+        var tall = [];
+        var tei;
+        for (tei = 0; tei < errCards.length; tei++) { tall.push(errCards[tei]); }
+        for (tei = 0; tei < terrs.length; tei++) { tall.push(terrs[tei]); }
+        return { ok: false, errors: tall, session: null };
+      }
     } catch (e) {
       if (e && e.jerr) { return { ok: false, errors: [e.jerr], session: null }; }
       throw e;
     }
     var initErrs = [];
     for (var ei = 0; ei < errCards.length; ei++) { initErrs.push(errCards[ei]); }
-    return { ok: true, errors: initErrs, session: makeSession(comp, vm) };
+    return { ok: true, errors: initErrs, session: makeSession(comp, vm, env) };
   }
 
   function sessionMainClassName(comp) {
@@ -1014,8 +1061,8 @@
     return ident;
   }
 
-  function makeSession(comp, vm) {
-    var env = newEnv(null);
+  function makeSession(comp, vm, envIn) {
+    var env = envIn || newEnv(null);
     var classMap = comp.classMap;
     var s = { vm: vm, hasMain: sessionMainClassName(comp) !== null };
 
@@ -1251,14 +1298,14 @@
     return null;
   }
 
-  function compileChecks(classes, classMap, errors) {
+  function compileChecks(classes, classMap, errors, files) {
     /* Alle new-Vorkommen: die Klasse muss existieren. */
     var names = [];
     var n;
-    for (n in files0) { if (Object.prototype.hasOwnProperty.call(files0, n)) { names.push(n); } }
+    for (n in files) { if (Object.prototype.hasOwnProperty.call(files, n)) { names.push(n); } }
     var re = /new\s+([A-Z][A-Za-z0-9_]*)\s*\(/g;
     for (var ni = 0; ni < names.length; ni++) {
-      var lines = files0[names[ni]].split(NL);
+      var lines = files[names[ni]].split(NL);
       for (var li = 0; li < lines.length; li++) {
         re.lastIndex = 0;
         var m = re.exec(lines[li]);
@@ -1271,13 +1318,26 @@
         }
       }
     }
+    /* Klassenname und Dateiname: Bei einer Klasse pro Datei muss der Name
+     * passen (Schul-Konvention). Bei mehreren Klassen in einer Datei gilt
+     * die Java-Regel: Nur die public-Klasse muss wie die Datei heissen. */
+    var perFile = Object.create(null);
+    var ci2;
+    for (ci2 = 0; ci2 < classes.length; ci2++) {
+      perFile[classes[ci2].srcFile] = (perFile[classes[ci2].srcFile] || 0) + 1;
+    }
     for (var i = 0; i < classes.length; i++) {
       var cls = classes[i];
       var base = cls.srcFile;
       if (base.length > 5 && base.slice(base.length - 5) === '.java') { base = base.slice(0, base.length - 5); }
       if (cls.name !== base) {
-        errors.push(JError('compile', cls.srcFile, cls.line, 'Die Klasse ' + cls.name + ' heisst anders als die Datei ' + cls.srcFile + '.', 'In Java muss der Name der (einzigen) Klasse genau dem Dateinamen entsprechen: ' + cls.name + '.java'));
-        return false;
+        if (perFile[cls.srcFile] === 1 || cls.isPublic) {
+          errors.push(JError('compile', cls.srcFile, cls.line, 'Die Klasse ' + cls.name + ' heisst anders als die Datei ' + cls.srcFile + '.',
+            perFile[cls.srcFile] === 1
+              ? 'In Java muss der Name der (einzigen) Klasse genau dem Dateinamen entsprechen: ' + cls.name + '.java'
+              : 'Bei mehreren Klassen in einer Datei muss die public-Klasse wie die Datei heissen (oder schreibe class ' + cls.name + ' ohne public)'));
+          return false;
+        }
       }
       if (cls.parent && !classMap[cls.parent]) {
         errors.push(JError('compile', cls.srcFile, cls.line, 'Die Oberklasse ' + cls.parent + ' von ' + cls.name + ' fehlt.', 'Lege eine Datei ' + cls.parent + '.java an (oder korrigiere den Namen hinter extends).'));
@@ -2878,7 +2938,7 @@
       renderObjects();
       updateReplHint();
       if (!res.ok) { showPane('errors'); }
-      else if (!res.ranMain) { showPane('repl'); }
+      else if (!res.ranMain && res.output === '') { showPane('repl'); }
       else { showPane('out'); }
     }
     runBtn.addEventListener('click', doRun);
@@ -2934,9 +2994,28 @@
       var it = acItems[idx];
       var caret = replIn.selectionStart;
       var text = replIn.value;
-      var head = text.substring(0, acFrom);
-      replIn.value = head + it.insert + text.substring(caret);
-      var newCaret = head.length + it.insert.length;
+      /* Einfuegepunkt an der AKTUELLEN Cursor-Position frisch berechnen
+       * (nicht den beim Tippen gemerkten acFrom verwenden: Der Cursor kann
+       * inzwischen woanders stehen, z. B. nach einem Mausklick). */
+      var from = caret;
+      if (session) {
+        var compl = session.complete(text.substring(0, caret));
+        var ki;
+        for (ki = 0; ki < compl.items.length; ki++) {
+          if (compl.items[ki].label === it.label && compl.items[ki].insert === it.insert) { from = compl.from; break; }
+        }
+      }
+      /* Wort-Rest hinter dem Cursor mit ersetzen (mitten im Wort) */
+      var wordEnd = caret;
+      while (wordEnd < text.length && isIdentChar(text.charAt(wordEnd))) { wordEnd++; }
+      if (text.substring(from, wordEnd) === it.insert) {
+        /* Wort steht schon vollstaendig da: nur Vorschlaege schliessen, Cursor bleibt, wo er ist. */
+        acHide();
+        replIn.focus();
+        return;
+      }
+      replIn.value = text.substring(0, from) + it.insert + text.substring(wordEnd);
+      var newCaret = from + it.insert.length;
       replIn.setSelectionRange(newCaret, newCaret);
       acHide();
       replIn.focus();
@@ -2945,6 +3024,12 @@
       if (!session || !replIn || !acBox) { acHide(); return; }
       var caret = replIn.selectionStart;
       var head = replIn.value.substring(0, caret);
+      /* Nach abgeschlossener Anweisung (;, }, )) keine Vorschlaege mehr:
+       * dort beginnt kein Bezeichner, und die Box wuerde nur beim Tab-Druck
+       * den Cursor verschieben oder Text anhaengen. */
+      var lw = head.length - 1;
+      while (lw >= 0 && (head.charAt(lw) === ' ' || head.charAt(lw) === String.fromCharCode(9))) { lw--; }
+      if (lw >= 0 && (head.charAt(lw) === ';' || head.charAt(lw) === '}' || head.charAt(lw) === ')')) { acHide(); return; }
       var compl = session.complete(head);
       acFrom = compl.from;
       acItems = compl.items.slice(0, 8);
@@ -2954,6 +3039,7 @@
     }
     if (replIn) {
       replIn.addEventListener('input', acUpdate);
+      replIn.addEventListener('mouseup', acUpdate);
       replIn.addEventListener('keyup', function (e) {
         if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { acUpdate(); }
       });
@@ -2970,9 +3056,13 @@
         if (e.key === 'Enter') {
           e.preventDefault();
           var input = replIn.value;
+          if (!session) {
+            /* Noch keine Session: Eingabe NICHT loeschen, damit nichts verloren geht. */
+            updateReplHint();
+            return;
+          }
           replIn.value = '';
           acHide();
-          if (!session) { return; }
           var res = session.evalLine(input);
           replLine(input, res);
           renderObjects();

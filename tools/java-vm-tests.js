@@ -503,6 +503,104 @@ t('SessionNachMainLauf', {
   if (r3.result !== 'Opel') { throw new Error('Opel erwartet: ' + JSON.stringify(r3.result)); }
 });
 
+/* ===== Neue Datei-Form: mehrere Klassen pro Datei, Anweisungen direkt in der Datei ===== */
+
+t('MehrereKlassenInEinerDatei', {
+  'Zoo.java': 'class Tier {' + NL +
+    '    protected String name;' + NL +
+    '    public Tier(String nameStart) { name = nameStart; }' + NL +
+    '    public String getName() { return name; }' + NL +
+    '}' + NL +
+    'class Hund extends Tier {' + NL +
+    '    public Hund(String nameStart) { super(nameStart); }' + NL +
+    '    public void bellen() { System.out.println(name + " sagt: Wuff!"); }' + NL +
+    '}' + NL +
+    'public class Zoo {' + NL +
+    '    public static void main(String[] args) {' + NL +
+    '        Hund h = new Hund("Bello");' + NL +
+    '        h.bellen();' + NL +
+    '    }' + NL +
+    '}'
+}, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'Bello sagt: Wuff!' + NL, 'Ausgabe');
+  eq(r.ranMain, true, 'ranMain');
+  if (!r.session) { throw new Error('Session erwartet'); }
+  var names = r.session.classNames();
+  if (names.length !== 3 || names[0] !== 'Tier' || names[1] !== 'Hund' || names[2] !== 'Zoo') {
+    throw new Error('3 Klassen in einer Datei erwartet: ' + JSON.stringify(names));
+  }
+});
+
+t('ObjekteDirektInDerDatei', {
+  'Auto.java': 'public class Auto {' + NL +
+    '    private String marke;' + NL +
+    '    public Auto(String markeStart) { marke = markeStart; }' + NL +
+    '    public String getMarke() { return marke; }' + NL +
+    '}' + NL +
+    'Auto a = new Auto("BMW");' + NL +
+    'System.out.println(a.getMarke());'
+}, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'BMW' + NL, 'Ausgabe');
+  eq(r.ranMain, false, 'ranMain');
+  if (!r.session) { throw new Error('Session erwartet'); }
+  var objs = r.session.objects();
+  if (objs.length !== 1 || objs[0].name !== 'a' || objs[0].cls !== 'Auto') {
+    throw new Error('Objekt a : Auto erwartet: ' + JSON.stringify(objs));
+  }
+  /* Variable aus der Datei bleibt in der Objektkonsole nutzbar */
+  var r2 = r.session.evalLine('a.getMarke()');
+  if (r2.result !== 'BMW') { throw new Error('BMW erwartet: ' + JSON.stringify(r2.result)); }
+});
+
+t('DateiNurAnweisungenOhneKlasse', {
+  'Start.java': 'int summe = 0;' + NL +
+    'for (int i = 1; i <= 5; i++) { summe = summe + i; }' + NL +
+    'System.out.println("Summe: " + summe);'
+}, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'Summe: 15' + NL, 'Ausgabe');
+  eq(r.ranMain, false, 'ranMain');
+  if (!r.session) { throw new Error('Session erwartet'); }
+  var r2 = r.session.evalLine('summe');
+  if (r2.result !== '15') { throw new Error('15 erwartet: ' + JSON.stringify(r2.result)); }
+});
+
+t('DateiAnweisungMitFehler', {
+  'Test.java': 'public class Test {' + NL +
+    '    public void hallo() { System.out.println("hi"); }' + NL +
+    '}' + NL +
+    'Test t = new Test();' + NL +
+    't.gibtsnicht();'
+}, r => {
+  if (r.ok) { throw new Error('Fehler erwartet'); }
+  if (r.errors.length === 0) { throw new Error('Fehlermeldung erwartet'); }
+  var e0 = r.errors[0];
+  if (e0.file !== 'Test.java') { throw new Error('Datei im Fehler erwartet: ' + JSON.stringify(e0.file)); }
+  if (!e0.line || e0.line < 4) { throw new Error('Zeile im Fehler erwartet: ' + JSON.stringify(e0.line)); }
+  if (e0.message.indexOf('gibtsnicht') === -1) { throw new Error('Methodenname im Fehlertext: ' + JSON.stringify(e0.message)); }
+});
+
+sesOk('SessionNachDateiAnweisungen', {
+  'Auto.java': AUTO_JAVA + NL + 'Auto parker = new Auto("Audi");'
+}, s => {
+  var objs = s.objects();
+  if (objs.length !== 1 || objs[0].name !== 'parker' || objs[0].cls !== 'Auto') {
+    throw new Error('Objekt parker : Auto aus Datei-Anweisung erwartet: ' + JSON.stringify(objs));
+  }
+  var r1 = s.evalLine('parker.fahren(40);');
+  if (r1.errors.length > 0) { throw new Error('fahren sollte klappen: ' + JSON.stringify(r1.errors)); }
+  var objs2 = s.objects();
+  if (objs2[0].fields.length !== 2 || objs2[0].fields[1].text !== '40') {
+    throw new Error('km sollte 40 sein: ' + JSON.stringify(objs2[0].fields));
+  }
+  var labels = labelsOf(s.complete('parker.'));
+  if (labels.indexOf('fahren(') === -1 || labels.indexOf('getMarke(') === -1 || labels.indexOf('marke') === -1) {
+    throw new Error('Mitglieder von parker erwartet: ' + JSON.stringify(labels));
+  }
+});
+
 console.log('');
 console.log(failed === 0 ? ('Alle ' + count + ' Tests bestanden.') : (failed + ' von ' + count + ' Tests fehlgeschlagen.'));
 process.exit(failed === 0 ? 0 : 1);

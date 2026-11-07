@@ -345,9 +345,11 @@ final class CodeController
             if ($name === '') {
                 $name = 'MeineKlasse';
             }
-            /* Bewusst ohne main-Methode: Schuelerinnen und Schueler erzeugen sich
-             * Objekte in der Objektkonsole und rufen Methoden auf (Objektdiagramm). */
-            return "public class " . $name . " {\n    private String name;\n\n    public " . $name . "(String nameStart) {\n        name = nameStart;\n    }\n\n    public String getName() {\n        return name;\n    }\n\n    public void vorstellen() {\n        System.out.println(\"Ich bin \" + name);\n    }\n}\n";
+            /* Bewusst ohne main-Methode: Objekte lassen sich direkt in der Datei
+             * erzeugen (siehe unten) und danach in der Objektkonsole weiter
+             * benutzen (Objektdiagramm). */
+            $var = lcfirst($name);
+            return "public class " . $name . " {\n    private String name;\n\n    public " . $name . "(String nameStart) {\n        name = nameStart;\n    }\n\n    public String getName() {\n        return name;\n    }\n\n    public void vorstellen() {\n        System.out.println(\"Ich bin \" + name);\n    }\n}\n\n" . $name . " " . $var . " = new " . $name . "(\"Alex\");\n" . $var . ".vorstellen();\n";
         }
         return "# " . $title . "\nprint(\"Hallo InfoCraft!\")\n";
     }
