@@ -40,6 +40,8 @@ final class Migrator
             self::seedDemoQuizzes($pdo);
             self::seedDemoExams($pdo);
             self::seedDemoDiagrams($pdo);
+            self::seedWikiPages($pdo);
+            self::seedPresentations($pdo);
         }
 
         return ['statements' => count($statements), 'classes' => $classes, 'users' => $users];
@@ -407,6 +409,105 @@ final class Migrator
         $mermaid = "classDiagram\nclass Tier {\n  <<abstract>>\n  +String name\n}\nclass Hund {\n  +gib_laut()\n}\nclass Katze {\n  +gib_laut()\n}\nTier <|-- Hund\nTier <|-- Katze\n";
         $stmt = $pdo->prepare('INSERT INTO class_diagrams (owner_id, title, kind, mermaid) VALUES (?, ?, ?, ?)');
         $stmt->execute([(int) $lenaId, 'Beispiel: Tiere', 'manuell', $mermaid]);
+    }
+
+    /**
+     * Wiki-Startseiten: Anleitung für Lehrkräfte plus ein paar Beispiel-Fachbegriffe,
+     * die den Stufen-Filter zeigen. Idempotent: nur fehlende Titel werden ergänzt.
+     */
+    private static function seedWikiPages(PDO $pdo): void
+    {
+        $idFor = static function (PDO $pdo, string $login): int {
+            $stmt = $pdo->prepare('SELECT id FROM users WHERE login_name = ?');
+            $stmt->execute([$login]);
+            $id = $stmt->fetchColumn();
+            return $id === false || $id === null ? 1 : (int) $id;
+        };
+        $adminId = $idFor($pdo, 'matthias.glienke');
+
+        $pages = [
+            ['Anleitung für Lehrkräfte', 6, self::wikiTeacherGuide()],
+            ['Algorithmus', 6, "# Algorithmus\n\nEin **Algorithmus** ist eine eindeutige Handlungsvorschrift zur Lösung eines Problems: endlich viele, klar festgelegte Schritte in einer festen Reihenfolge.\n\n## Beispiele\n- Rezept für Pfannkuchen\n- Bauanleitung für ein Regal\n- Ein Programm in Java oder Python\n\n## Merksatz\n\nAlgorithmen sind *eindeutig*, *endlich* und *allgemein* gültig."],
+            ['SQL', 9, "# SQL\n\n**SQL** (Structured Query Language) ist die Sprache, um Daten in relationalen Datenbanken zu beschreiben, abzufragen und zu ändern.\n\n## Die wichtigsten Befehle\n- `SELECT` - Daten abfragen\n- `INSERT INTO` - Daten einfügen\n- `UPDATE` - Daten ändern\n- `DELETE FROM` - Daten löschen\n- `CREATE TABLE` - Tabelle anlegen\n\n```sql\nSELECT name, note FROM schueler\nWHERE note >= 2\nORDER BY name;\n```"],
+            ['Objektorientierung', 10, "# Objektorientierung\n\nEin **Objekt** fasst zusammen, was eine Sache weiß (Attribute) und was sie kann (Methoden). Die **Klasse** ist der Bauplan für solche Objekte.\n\n## Begriffe\n- **Klasse**: Bauplan (z. B. `Auto`)\n- **Objekt**: konkrete Ausprägung (z. B. Lenas rotes Auto)\n- **Attribut**: Eigenschaft, z. B. `farbe`\n- **Methode**: Fähigkeit, z. B. `fahren()`\n- **Vererbung**: Spezialklassen erben von einer allgemeinen Klasse\n\n```java\nclass Auto {\n    String farbe;\n\n    void fahren() {\n        System.out.println(\"Das \" + farbe + \" Auto faehrt los.\");\n    }\n}\n```"],
+        ];
+
+        $exists = $pdo->prepare('SELECT COUNT(*) FROM wiki_pages WHERE title = ?');
+        $insert = $pdo->prepare('INSERT INTO wiki_pages (teacher_id, title, content, level, position) VALUES (?, ?, ?, ?, ?)');
+        $position = 0;
+        foreach ($pages as [$title, $level, $content]) {
+            $exists->execute([$title]);
+            if ((int) $exists->fetchColumn() > 0) {
+                continue;
+            }
+            $position += 1;
+            $insert->execute([$adminId, $title, $content, $level, $position]);
+        }
+    }
+
+    /**
+     * Beispiel-Präsentationen für die Jahrgangsstufen 9 und 10, je mit
+     * Code-Folien für Live-Demos. Läuft nur, wenn die Tabelle leer ist.
+     */
+    private static function seedPresentations(PDO $pdo): void
+    {
+        if ((int) $pdo->query('SELECT COUNT(*) FROM presentations')->fetchColumn() > 0) {
+            return;
+        }
+        $stmt = $pdo->prepare('SELECT id FROM users WHERE login_name = ?');
+        $stmt->execute(['matthias.glienke']);
+        $adminId = (int) $stmt->fetchColumn();
+        if ($adminId === 0) {
+            return;
+        }
+
+        $insert = $pdo->prepare('INSERT INTO presentations (teacher_id, title, level, content, position) VALUES (?, ?, ?, ?, ?)');
+
+        // Jahrgangsstufe 9: Datenbanken und SQL
+        $insert->execute([$adminId, 'Datenbanken: Tabellen, Datensätze, Primärschlüssel', 9, json_encode([
+            ['type' => 'text', 'title' => 'Was ist eine Datenbank?', 'body' => "Eine **Datenbank** speichert große Mengen zusammengehöriger Daten dauerhaft und übersichtlich.\n\n## Wichtige Begriffe\n- **Tabelle**: Themensammlung, z. B. alle Schülerinnen und Schüler\n- **Datensatz (Zeile)**: ein Objekt, z. B. eine Schülerin\n- **Attribut/Spalte**: eine Eigenschaft, z. B. der Name\n- **Primärschlüssel**: eindeutiges Merkmal jedes Datensatzes"],
+            ['type' => 'text', 'title' => 'Von der Tabelle zum Datenmodell', 'body' => "- **Entity-Relationship-Modell**: Kasten für Entitäten, Raute für Beziehungen\n- **Kardinalitäten**: 1:1, 1:n, n:m\n- Jede Tabelle bekommt einen **Primärschlüssel**\n- Bei 1:n wandert der Primärschlüssel als **Fremdschlüssel** in die n-Seite"],
+            ['type' => 'code', 'title' => 'Live-Demo: Eine Tabelle anlegen', 'lang' => 'sql', 'code' => "CREATE TABLE schueler (\n    id INTEGER PRIMARY KEY,\n    name TEXT,\n    klasse TEXT,\n    note REAL\n);\n\nINSERT INTO schueler (id, name, klasse, note)\nVALUES (1, 'Lena', '9R', 1.7);"],
+        ], JSON_UNESCAPED_UNICODE), 1]);
+
+        $insert->execute([$adminId, 'SQL: Abfragen mit SELECT, WHERE und ORDER BY', 9, json_encode([
+            ['type' => 'text', 'title' => 'Abfragen stellen', 'body' => "Mit **SELECT** holst du Daten aus einer Tabelle. Der Aufbau:\n\n```sql\nSELECT spalten FROM tabelle\nWHERE bedingung\nORDER BY spalte;\n```\n\n- `WHERE` filtert Zeilen\n- `ORDER BY` sortiert das Ergebnis (absteigend mit `DESC`)\n- `LIKE` vergleicht Texte mit `%` als Platzhalter"],
+            ['type' => 'code', 'title' => 'Live-Demo: Abfragen in der SQL-Werkstatt', 'lang' => 'sql', 'code' => "-- Alle Schueler der 9R alphabetisch\nSELECT name, note FROM schueler\nWHERE klasse = '9R'\nORDER BY name;\n\n-- Nur Namen mit L und Note besser als 2\nSELECT * FROM schueler\nWHERE name LIKE 'L%' AND note < 2;"],
+            ['type' => 'text', 'title' => 'Merkhilfe', 'body' => "**SELECT** *was* **FROM** *woher* **WHERE** *Bedingung* **ORDER BY** *Reihenfolge*.\n\nDie Reihenfolge der Schlüsselwörter ist fest - ein gutes Beispiel für einen *Algorithmus*."],
+        ], JSON_UNESCAPED_UNICODE), 2]);
+
+        $insert->execute([$adminId, 'SQL: Daten einfügen, ändern, löschen', 9, json_encode([
+            ['type' => 'text', 'title' => 'CRUD: Die vier Grundoperationen', 'body' => "- **C**reate: `INSERT INTO` - neue Datensätze\n- **R**ead: `SELECT` - Datensätze lesen\n- **U**pdate: `UPDATE` - Datensätze ändern\n- **D**elete: `DELETE FROM` - Datensätze löschen"],
+            ['type' => 'code', 'title' => 'Live-Demo: Einfügen, Ändern, Löschen', 'lang' => 'sql', 'code' => "INSERT INTO schueler (id, name, klasse, note)\nVALUES (2, 'Jonas', '9R', 2.3);\n\n-- Note verbessern (WHERE nicht vergessen!)\nUPDATE schueler SET note = 1.0\nWHERE id = 2;\n\n-- Datensatz entfernen\nDELETE FROM schueler WHERE id = 2;"],
+            ['type' => 'text', 'title' => 'Achtung Falle', 'body' => "Ohne `WHERE` trifft `UPDATE` und `DELETE` **jede Zeile** der Tabelle!\n\nImmer erst mit `SELECT` prüfen, welche Zeilen die Bedingung trifft - dann erst ändern oder löschen."],
+        ], JSON_UNESCAPED_UNICODE), 3]);
+
+        // Jahrgangsstufe 10: Java (mit Mini-Datenbank)
+        $insert->execute([$adminId, 'Java: Klassen und Objekte', 10, json_encode([
+            ['type' => 'text', 'title' => 'Vom Bauplan zum Objekt', 'body' => "Eine **Klasse** ist der Bauplan, ein **Objekt** ist die konkrete Ausprägung.\n\n## Syntax einer Klasse\n- `class Name { ... }`\n- **Attribute** beschreiben die Eigenschaften\n- **Konstruktor** legt die Startwerte fest\n- `new Name(...)` erzeugt ein Objekt"],
+            ['type' => 'code', 'title' => 'Live-Demo: Klasse Schueler', 'lang' => 'java', 'code' => 'class Schueler {\n    String name;\n    int alter;\n\n    Schueler(String n, int a) {\n        name = n;\n        alter = a;\n    }\n\n    void vorstellen() {\n        System.out.println(\"Ich heisse \" + name + \" und bin \" + alter + \".\");\n    }\n}\n\nSchueler lena = new Schueler(\"Lena\", 16);\nlena.vorstellen();'],
+        ], JSON_UNESCAPED_UNICODE), 4]);
+
+        $insert->execute([$adminId, 'Java: Methoden, Parameter und Rückgaben', 10, json_encode([
+            ['type' => 'text', 'title' => 'Methoden strukturieren Programme', 'body' => "Eine **Methode** ist ein benannter Arbeitsschritt.\n\n## Aufbau\n`Rückgabetyp name(typ parameter) { ... return wert; }`\n\n- `void`: gibt nichts zurück\n- `return`: gibt genau einen Wert zurück und beendet die Methode\n- Methoden sparen doppelten Code (DRY: *Don't Repeat Yourself*)"],
+            ['type' => 'code', 'title' => 'Live-Demo: Rechner mit Rückgabe', 'lang' => 'java', 'code' => 'int addiere(int a, int b) {\n    return a + b;\n}\n\nString noteText(double punkte) {\n    if (punkte >= 90) {\n        return \"sehr gut\";\n    }\n    return \"weiter ueben\";\n}\n\nSystem.out.println(addiere(7, 8));\nSystem.out.println(noteText(95));'],
+        ], JSON_UNESCAPED_UNICODE), 5]);
+
+        $insert->execute([$adminId, 'Java: Vererbung und ArrayList', 10, json_encode([
+            ['type' => 'text', 'title' => 'Vererbung: nicht doppelt schreiben', 'body' => "Mit `extends` erbt eine Klasse alle Attribute und Methoden einer anderen.\n\n- **Oberklasse**: allgemein, z. B. `Tier`\n- **Unterklasse**: speziell, z. B. `Hund`\n- `@Override` ersetzt eine geerbte Methode\n- Die **ArrayList** verwaltet beliebig viele Objekte"],
+            ['type' => 'code', 'title' => 'Live-Demo: Tiere und Liste', 'lang' => 'java', 'code' => 'class Tier {\n    String name;\n    Tier(String n) { name = n; }\n\n    void gib_laut() {\n        System.out.println(name + \" macht ein Geraeusch.\");\n    }\n}\n\nclass Hund extends Tier {\n    Hund(String n) { super(n); }\n\n    @Override\n    void gib_laut() {\n        System.out.println(name + \" bellt: Wuff!\");\n    }\n}\n\nTier bello = new Hund(\"Bello");\nbello.gib_laut();'],
+        ], JSON_UNESCAPED_UNICODE), 6]);
+
+        $insert->execute([$adminId, 'Java trifft Datenbank: die Klasse Datenbank', 10, json_encode([
+            ['type' => 'text', 'title' => 'SQL direkt in Java', 'body' => "In der Code-Werkstatt gibt es die eingebaute Klasse **Datenbank**.\n\n## Die wichtigsten Methoden\n- `Datenbank.ausfuehren(sql)` - Tabelle anlegen, Daten einfügen, ändern, löschen\n- `Datenbank.abfrage(sql)` - SELECT als formatierte Tabelle\n- `Datenbank.anzahl(sql)` - Zeilen zählen\n- `Datenbank.wert(sql)` - genau einen Wert holen\n- `Datenbank.tabellen()` - alle Tabellen zeigen\n\nDie Datenbank ist pro Programmlauf neu: kein Server, kein Setup."],
+            ['type' => 'code', 'title' => 'Live-Demo: Datenbank in Java ansteuern', 'lang' => 'java', 'code' => 'Datenbank.ausfuehren("CREATE TABLE schueler (id, name, klasse, note)");\n\nDatenbank.ausfuehren("INSERT INTO schueler (id, name, klasse, note) VALUES (1, \'Lena\', \'10G\', 1.7)");\nDatenbank.ausfuehren("INSERT INTO schueler (id, name, klasse, note) VALUES (2, \'Jonas\', \'10G\', 2.3)");\n\nSystem.out.println(Datenbank.tabellen());\nSystem.out.println(Datenbank.abfrage("SELECT name, note FROM schueler ORDER BY note"));\n\nint gesamt = Datenbank.anzahl("SELECT * FROM schueler");\nSystem.out.println("Schueler insgesamt: " + gesamt);\n\nString beste = Datenbank.wert("SELECT name FROM schueler ORDER BY note LIMIT 1");\nSystem.out.println("Beste Note hat: " + beste);'],
+        ], JSON_UNESCAPED_UNICODE), 7]);
+    }
+
+    /** Text der Wiki-Anleitung für Lehrkräfte (Markdown-lite). */
+    private static function wikiTeacherGuide(): string
+    {
+        return "# Anleitung für Lehrkräfte\n\nWillkommen bei **InfoCraft**! Diese Seite fasst die wichtigsten Arbeitsschritte zusammen. Du kannst sie hier bearbeiten und um eigene Hinweise ergänzen.\n\n## Erste Schritte\n\n1. Anmelden über die Startseite.\n2. Unter **Nutzer** Konten für Schülerinnen und Schüler anlegen oder per **CSV-Import** ganze Klassen einspielen.\n3. Unter **Meine Klassen** deinem Konto Klassen zuordnen: Du siehst dann nur deine Klassen und deine Schülerinnen und Schüler.\n\n## Module passend zum Lehrplan freigeben\n\nUnter **Meine Klassen** legst du für jede Klasse fest, welche Arbeitsbereiche sichtbar sind:\n\n- **Standard**: Der LehrplanPLUS-Stufe des Moduls folgt (z. B. SQL erst ab Jgst. 9).\n- **Freigeben**: Die Klasse sieht das Modul früher.\n- **Sperren**: Die Klasse sieht das Modul nicht.\n\nDas gilt auch für die direkte URL: gesperrte Module sind nicht aufrufbar.\n\n## Arbeiten austeilen\n\n- **Code-Werkstatt**: Projekte anlegen und an Klassen oder Einzelne austeilen; über die Schüleransicht erreichst du die Projekte deiner Schülerinnen und Schüler.\n- **SQL-Werkstatt**: Vorlagen (Datenbanken) ausgeben mit Rechten für *nur lesen*, *lesen und schreiben* oder *Tabellen anlegen*.\n- **Aufgabenpool**: eigene Aufgaben anlegen oder fertige Aufgaben (Jgst. 6 bis 13) aus dem Katalog übernehmen und austeilen.\n\n## Präsentieren und Nachschlagen\n\n- **Wiki**: Diese Nachschlage-Seiten hier. Der Stufen-Filter blendet Seiten aus, die über der Klassenstufe liegen.\n- **Präsentationen**: Folien aus Text und Code. Im Präsentationsmodus:\n    - **Vollbild** über den Knopf oder Taste **F**\n    - **Pfeiltasten** oder Leertaste blättern\n    - Code-Folien lassen sich über *Code verändern* direkt während der Präsentation bearbeiten und speichern\n\n## Prüfungen und Schularbeiten\n\nUnter **Prüfungen & Arbeiten** legst du Gruppen mit eigenen Vorlagen an und startest die Prüfung. Während der Prüfung sind für die betroffene Klasse alle anderen Bereiche gesperrt - andere Klassen arbeiten normal weiter. Korrektur mit Punkten und Noten, optional anonymisiert; Schularbeiten ohne Sperre sind ebenfalls möglich.";
     }
 }
 

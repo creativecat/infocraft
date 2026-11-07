@@ -374,3 +374,27 @@ body.sidebar-hidden .sidebar { display: none; }
 .wiki-content code { background: #f1f4f9; border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; font-size: 0.88em; font-family: ui-monospace, Consolas, monospace; }
 .wiki-content pre { margin: 10px 0; padding: 12px 14px; border-radius: 10px; overflow-x: auto; }
 .wiki-content pre code { background: none; border: none; padding: 0; }
+
+
+/* ===== Präsentationen: Folien, Vollbild-Modus ===== */
+.slide-stage { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 18px 22px 22px; }
+.slide-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.slide-counter { margin-left: auto; display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--muted, #64748b); }
+.slide { display: none; }
+.slide.slide-active { display: block; animation: slide-fade 180ms ease-out; }
+@keyframes slide-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.slide-title { margin: 6px 0 14px; font-size: 1.5rem; display: flex; align-items: center; gap: 12px; }
+.slide-text { font-size: 1.08rem; line-height: 1.65; }
+.slide-code { font-size: 1rem; max-height: 58vh; overflow: auto; }
+.slide-edit { margin-top: 14px; }
+.slide-edit .hlwrap { margin-top: 6px; }
+
+/* Vollbild über der Folien-Bühne: nur Folien und Steuerung, nichts sonst. */
+.slide-stage:fullscreen { border-radius: 0; border: none; padding: 28px 48px; overflow-y: auto; background: #fff; }
+.slide-stage:fullscreen .slide-title { font-size: 2rem; margin-top: 20px; }
+.slide-stage:fullscreen .slide-text { font-size: 1.3rem; }
+.slide-stage:fullscreen .slide-code { font-size: 1.15rem; max-height: 64vh; }
+.slide-stage:fullscreen .slide-active { max-width: 1200px; margin: 0 auto; }
+
+/* Im eigenen Präsentieren-Schalter der Kopfzeile größere Schrift (app.js). */
+:root.presenting .slide-text { font-size: 1.2rem; }

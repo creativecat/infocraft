@@ -28,7 +28,7 @@
             <li><span class="status status-geplant">geplant</span> <strong>Phase 3:</strong> HTML-WYSIWYG-Editor</li>
             <li><span class="status status-in-arbeit">in Arbeit</span> <strong>Phase 4:</strong> Code-Werkstatt (Projekte/Ordner fertig, IDE folgt)</li>
             <li><span class="status status-geplant">geplant</span> <strong>Phase 5:</strong> Quiz-Arena &amp; Prüfungsmodus</li>
-            <li><span class="status status-geplant">geplant</span> <strong>Phase 6:</strong> Wiki, Präsentationen, Lernvideos</li>
+            <li><span class="status status-in-arbeit">in Arbeit</span> <strong>Phase 6:</strong> Wiki &amp; Präsentationen (fertig), Lernvideos folgen</li>
             <li><span class="status status-in-arbeit">in Arbeit</span> <strong>Phase 7:</strong> Aufgabenpool &amp; Austeilen (Basis fertig)</li>
         </ul>
         <p class="muted">Details: docs/ROADMAP.md im Repository.</p>

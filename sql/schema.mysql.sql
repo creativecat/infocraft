@@ -347,3 +347,20 @@ CREATE TABLE IF NOT EXISTS module_settings (
     PRIMARY KEY (class_id, module_key),
     CONSTRAINT fk_ms_class FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Präsentationen der Lehrkräfte: Folien als JSON (Text- und Code-Folien),
+-- sichtbar für Schülerinnen und Schüler ab der angegebenen Jahrgangsstufe.
+CREATE TABLE IF NOT EXISTS presentations (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    teacher_id INT UNSIGNED NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    level INT NOT NULL DEFAULT 6,
+    content MEDIUMTEXT NOT NULL,
+    position INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_pres_teacher (teacher_id),
+    KEY idx_pres_level (level),
+    CONSTRAINT fk_pres_teacher FOREIGN KEY (teacher_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

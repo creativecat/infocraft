@@ -19,6 +19,7 @@ use Infocraft\Controllers\ExamController;
 use Infocraft\Controllers\HomeController;
 use Infocraft\Controllers\HtmlController;
 use Infocraft\Controllers\ModuleController;
+use Infocraft\Controllers\PresentationController;
 use Infocraft\Controllers\QuizController;
 use Infocraft\Controllers\SqlWorkshopController;
 use Infocraft\Controllers\TaskController;
@@ -133,6 +134,19 @@ $router->get('/wiki/{id}', [WikiController::class, 'show']);
 $router->get('/wiki/{id}/bearbeiten', [WikiController::class, 'edit']);
 $router->post('/wiki/{id}', [WikiController::class, 'save']);
 $router->post('/wiki/{id}/loeschen', [WikiController::class, 'delete']);
+
+// Präsentationen: Folien mit Vollbild-Modus, Code-Folien sind im
+// Präsentationsmodus direkt editierbar (Syntax-Highlighting).
+$router->get('/praesentationen', [PresentationController::class, 'index']);
+$router->post('/praesentationen/anlegen', [PresentationController::class, 'create']);
+$router->get('/praesentationen/{id}', [PresentationController::class, 'edit']);
+$router->post('/praesentationen/{id}', [PresentationController::class, 'saveMeta']);
+$router->get('/praesentationen/{id}/zeigen', [PresentationController::class, 'show']);
+$router->post('/praesentationen/{id}/folie', [PresentationController::class, 'addSlide']);
+$router->post('/praesentationen/{id}/folie/{pos}', [PresentationController::class, 'saveSlide']);
+$router->post('/praesentationen/{id}/folie/{pos}/loeschen', [PresentationController::class, 'deleteSlide']);
+$router->post('/praesentationen/{id}/folie/{pos}/{dir}', [PresentationController::class, 'moveSlide']);
+$router->post('/praesentationen/{id}/loeschen', [PresentationController::class, 'delete']);
 
 // Verwaltung
 $router->get('/admin/users', [AdminController::class, 'users']);

@@ -10,7 +10,8 @@ Zusätzlich kann jede Lehrkraft pro Klasse und Arbeitsbereich zwischen drei Eins
 | HTML-Werkstatt | 6 | Webseiten gestalten: HTML, CSS, Layout und Gestaltung |
 | Aufgaben (Übung und Abfrage) | 6 | Übergreifend: Anwendung und Festigung aller Themen |
 | Quiz-Arena | 6 | Übergreifend: Wiederholung und Wissenssicherung |
-| Wiki & Präsentationen | 6 | Übergreifend: Fachbegriffe, Konzepte, Selbstlernen |
+| Wiki | 6 | Übergreifend: Fachbegriffe, Konzepte, Selbstlernen |
+| Präsentationen | 6 | Übergreifend: Unterrichtsbegleitung und Demonstration aller Themen |
 | SQL-Werkstatt | 9 | Datenbanken: Datenerfassung und -verwaltung, SQL-Grundlagen (SELECT, JOIN, GROUP BY, INSERT/UPDATE), Datenmodellierung |
 
 ## SQL-Werkstatt im Detail

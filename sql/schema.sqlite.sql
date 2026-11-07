@@ -265,3 +265,16 @@ CREATE TABLE IF NOT EXISTS module_settings (
     mode TEXT NOT NULL,
     PRIMARY KEY (class_id, module_key)
 );
+
+-- Präsentationen der Lehrkräfte: Folien als JSON (Text- und Code-Folien),
+-- sichtbar für Schülerinnen und Schüler ab der angegebenen Jahrgangsstufe.
+CREATE TABLE IF NOT EXISTS presentations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    teacher_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    level INTEGER NOT NULL DEFAULT 6,
+    content TEXT NOT NULL DEFAULT '[]',
+    position INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
