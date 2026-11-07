@@ -6,6 +6,7 @@ namespace Infocraft\Controllers;
 use Infocraft\Auth;
 use Infocraft\Models\Folder;
 use Infocraft\Models\Project;
+use Infocraft\Models\ProjectFile;
 use Infocraft\Models\SchoolClass;
 use Infocraft\Models\User;
 
@@ -188,10 +189,17 @@ final class CodeController
             render('error', ['title' => 'Projekt nicht gefunden', 'message' => 'Dieses Projekt gibt es nicht oder gehört dir nicht.']);
             return;
         }
+        $files = ProjectFile::allForProject($project->id);
+        if ($files === [] && $project->type === 'code' && $project->language === 'java') {
+            // Noch keine Dateien: virtuelle Datei aus dem Projektinhalt anbieten.
+            $name = self::javaFileName($project->content, $project->title);
+            $files = [new ProjectFile(0, $project->id, $name, $project->content, 0, null)];
+        }
         render('code_project', [
             'title' => $project->title,
             'active' => 'module-code',
             'project' => $project,
+            'files' => $files,
             'user' => $user,
             'diagramAuto' => SchoolClass::diagramAutoForUser($user),
         ]);
@@ -213,9 +221,115 @@ final class CodeController
         if ($title === '') {
             $title = $project->title;
         }
-        $project->save($title, (string) ($_POST['content'] ?? ''));
+        $isJava = $project->type === 'code' && $project->language === 'java';
+        $postedFiles = $_POST['files'] ?? null;
+        if ($isJava && is_array($postedFiles)) {
+            $files = ProjectFile::allForProject($project->id);
+            $combined = '';
+            $map = [];
+            foreach ($files as $file) {
+                $map[$file->id] = $file;
+            }
+            foreach ($postedFiles as $fileId => $fileContent) {
+                $fileId = (int) $fileId;
+                $content = (string) $fileContent;
+                if ($fileId === 0) {
+                    // Virtuelle Datei (Projekt hatte noch keine Dateien): erste echte Datei anlegen.
+                    ProjectFile::create($project->id, self::javaFileName($content, $title), $content);
+                } elseif (isset($map[$fileId])) {
+                    $map[$fileId]->save($content);
+                }
+            }
+            $fresh = ProjectFile::allForProject($project->id);
+            foreach ($fresh as $file) {
+                $combined .= $file->content . "\n";
+            }
+            $project->save($title, rtrim($combined, "\n"));
+            flash('success', 'Gespeichert.');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        // Kompatibilitaet: Save ohne Dateiliste (z. B. aeltere clients, E2E, Python/HTML).
+        $content = (string) ($_POST['content'] ?? '');
+        $project->save($title, $content);
+        $files = ProjectFile::allForProject($project->id);
+        if ($files !== []) {
+            $files[0]->save($content);
+        }
         flash('success', 'Gespeichert.');
         redirect('/werkstatt/code/' . $project->id);
+    }
+
+    public static function addFile(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $project = Project::find((int) ($params['id'] ?? 0));
+        if ($project === null || $project->ownerId !== $user->id || $project->type !== 'code' || $project->language !== 'java') {
+            flash('error', 'Projekt nicht gefunden.');
+            redirect('/werkstatt/code');
+        }
+        $name = trim((string) ($_POST['name'] ?? ''));
+        if (!preg_match('/^[A-Za-z][A-Za-z0-9_]{0,50}\.java$/', $name)) {
+            flash('error', 'Der Dateiname muss wie eine Java-Klasse aufgebaut sein, z. B. Auto.java.');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        $files = ProjectFile::allForProject($project->id);
+        if ($files === []) {
+            // Bisher lag der Quelltext nur im Projektinhalt (virtuelle Datei):
+            // als echte Datei uebernehmen, damit nichts verloren geht.
+            ProjectFile::create($project->id, self::javaFileName($project->content, $project->title), $project->content);
+            $files = ProjectFile::allForProject($project->id);
+        }
+        if (count($files) >= 20) {
+            flash('error', 'Mehr als 20 Dateien sind pro Projekt nicht möglich.');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        foreach ($files as $file) {
+            if (strcasecmp($file->name, $name) === 0) {
+                flash('error', 'Eine Datei mit diesem Namen existiert bereits.');
+                redirect('/werkstatt/code/' . $project->id);
+            }
+        }
+        $class = substr($name, 0, -5);
+        ProjectFile::create($project->id, $name, "public class " . $class . " {\n    \n}\n");
+        flash('success', 'Datei angelegt.');
+        redirect('/werkstatt/code/' . $project->id);
+    }
+
+    public static function deleteFile(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $project = Project::find((int) ($params['id'] ?? 0));
+        $file = ProjectFile::find((int) ($params['fileId'] ?? 0));
+        if ($project === null || $project->ownerId !== $user->id || $file === null || $file->projectId !== $project->id) {
+            flash('error', 'Datei nicht gefunden.');
+            redirect('/werkstatt/code');
+        }
+        $files = ProjectFile::allForProject($project->id);
+        if (count($files) <= 1) {
+            flash('error', 'Mindestens eine Datei muss bleiben.');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        ProjectFile::delete($file->id);
+        flash('success', 'Datei gelöscht.');
+        redirect('/werkstatt/code/' . $project->id);
+    }
+
+    /** Dateiname fuer eine virtuelle Java-Datei: erste Klasse im Quelltext oder Main.java. */
+    private static function javaFileName(string $content, string $title): string
+    {
+        if (preg_match('/(?:class|interface)\s+([A-Za-z][A-Za-z0-9_]*)/', $content, $m) === 1) {
+            return $m[1] . '.java';
+        }
+        $clean = preg_replace('/[^A-Za-z0-9]/', '', $title);
+        return ($clean === '' ? 'Main' : $clean) . '.java';
     }
 
     private static function starterContent(string $type, string $language, string $title): string

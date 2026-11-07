@@ -6,13 +6,49 @@
     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="form">
         <?= csrf_field() ?>
         <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
-        <label class="field"><span>Inhalt <?= $project->type === 'html' ? '(HTML)' : '(' . e($project->language ?? 'Code') . ')' ?></span>
-            <div class="hlwrap" data-hl="<?= e($project->type === 'html' ? 'xml' : ($project->language ?? 'plaintext')) ?>">
-                <textarea name="content" id="code-editor" rows="18" class="mono code-editor" spellcheck="false"><?= e($project->content) ?></textarea>
+        <?php if ($project->type === 'code' && $project->language === 'java'): ?>
+            <div class="field">
+                <span>Dateien (eine Klasse pro Datei)</span>
+                <div class="file-tabs">
+                    <?php foreach ($files as $i => $file): ?>
+                        <button type="button" class="file-tab<?= $i === 0 ? ' active' : '' ?>" data-file-tab="<?= (int) $file->id ?>"><?= e($file->name) ?></button>
+                    <?php endforeach; ?>
+                </div>
+                <?php foreach ($files as $i => $file): ?>
+                    <div class="file-pane" data-file-pane="<?= (int) $file->id ?>" data-file-name="<?= e($file->name) ?>"<?= $i === 0 ? '' : ' hidden' ?>>
+                        <div class="hlwrap" data-hl="java">
+                            <textarea name="files[<?= (int) $file->id ?>]" rows="18" class="mono code-editor" spellcheck="false"><?= e($file->content) ?></textarea>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
-        </label>
+        <?php else: ?>
+            <label class="field"><span>Inhalt <?= $project->type === 'html' ? '(HTML)' : '(' . e($project->language ?? 'Code') . ')' ?></span>
+                <div class="hlwrap" data-hl="<?= e($project->type === 'html' ? 'xml' : ($project->language ?? 'plaintext')) ?>">
+                    <textarea name="content" id="code-editor" rows="18" class="mono code-editor" spellcheck="false"><?= e($project->content) ?></textarea>
+                </div>
+            </label>
+        <?php endif; ?>
         <div class="btn-row"><button class="btn btn-primary" type="submit">💾 Speichern</button></div>
     </form>
+
+    <?php if ($project->type === 'code' && $project->language === 'java'): ?>
+    <div class="file-manage">
+        <?php foreach ($files as $file): ?>
+            <?php if ($file->id > 0): ?>
+            <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/datei/' . (int) $file->id . '/loeschen') ?>" class="form-inline">
+                <?= csrf_field() ?>
+                <button class="btn btn-ghost" type="submit" title="Datei löschen">🗑 <?= e($file->name) ?></button>
+            </form>
+            <?php endif; ?>
+        <?php endforeach; ?>
+        <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/datei') ?>" class="form-inline">
+            <?= csrf_field() ?>
+            <input type="text" name="name" placeholder="Auto.java" pattern="[A-Za-z][A-Za-z0-9_]*\.java" required>
+            <button class="btn btn-primary" type="submit">＋ Neue Datei</button>
+        </form>
+    </div>
+    <?php endif; ?>
 </section>
 
 <?php if ($project->type === 'code' && ($project->language === 'java' || $project->language === 'python')): ?>
@@ -47,11 +83,20 @@
 </section>
 <?php elseif ($project->type === 'code' && $project->language === 'java'): ?>
 <section class="panel">
-    <div class="notice">
-        <strong>☕ Java</strong>
-        <p>Java-Programme kannst du hier bearbeiten, speichern und von Lehrkräften austauschen lassen. Das direkte Ausführen von Java in der Werkstatt folgt noch.</p>
+    <div class="panel-head">
+        <h3>☕ Java ausführen</h3>
+        <button class="btn btn-primary" id="run-java" type="button">▶ Ausführen</button>
+    </div>
+    <p class="muted">Dein Programm läuft vollständig in deinem Browser: InfoCraft übersetzt den Java-Quelltext selbst und zeigt die Ausgaben hier. Es wird kein Code auf dem Server ausgeführt. Mit Strg + Enter startest du ebenfalls.</p>
+    <pre id="java-console" class="code">Noch nichts ausgeführt.</pre>
+    <div class="java-errors" id="java-errors">
+        <div class="panel-head">
+            <h4>🚨 Fehlerkonsole <span class="err-badge" id="java-error-badge">0</span></h4>
+            <button class="btn btn-ghost" id="java-clear" type="button">Leeren</button>
+        </div>
     </div>
 </section>
+<script src="<?= url('assets/js/java-vm.js') ?>"></script>
 <?php elseif ($project->type === 'html'): ?>
 <section class="panel">
     <div class="notice">

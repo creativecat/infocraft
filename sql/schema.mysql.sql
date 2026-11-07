@@ -65,6 +65,21 @@ CREATE TABLE IF NOT EXISTS projects (
     CONSTRAINT fk_projects_folder FOREIGN KEY (folder_id) REFERENCES folders (id) ON DELETE SET NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- Java-Projekte: mehrere Quelldateien pro Projekt (eine Klasse pro Datei).
+-- projects.content bleibt die Konkatenation aller Dateien (Kompatibilitaet).
+CREATE TABLE IF NOT EXISTS project_files (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    project_id INT UNSIGNED NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    content MEDIUMTEXT NOT NULL,
+    position INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_pfiles_project (project_id),
+    CONSTRAINT fk_pfiles_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS tasks (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     teacher_id INT UNSIGNED NOT NULL,

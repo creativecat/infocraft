@@ -63,6 +63,8 @@ $router->post('/werkstatt/code/verteilen', [CodeController::class, 'distribute']
 $router->post('/werkstatt/code/loeschen', [CodeController::class, 'delete']);
 $router->get('/werkstatt/code/{id}', [CodeController::class, 'open']);
 $router->post('/werkstatt/code/{id}', [CodeController::class, 'save']);
+$router->post('/werkstatt/code/{id}/datei', [CodeController::class, 'addFile']);
+$router->post('/werkstatt/code/{id}/datei/{fileId}/loeschen', [CodeController::class, 'deleteFile']);
 
 // HTML-Werkstatt (WYSIWYG-Editor, nutzt die Projektverwaltung der Code-Werkstatt)
 $router->get('/werkstatt/html', [HtmlController::class, 'index']);
