@@ -270,3 +270,12 @@ body.sidebar-hidden .sidebar { display: none; }
 
 /* Code-Werkstatt: Ausgaben-Fenster (Python/Pyodide) */
 #code-output { min-height: 60px; white-space: pre-wrap; margin: 10px 0 0; }
+
+/* Quiz-Arena */
+.quiz-progress { font-weight: 700; color: var(--muted); margin: 6px 0 16px; }
+.quiz-option { display: flex; align-items: center; gap: 12px; border: 2px solid var(--border); border-radius: 10px; padding: 12px 16px; cursor: pointer; margin-bottom: 10px; }
+.quiz-option:hover { border-color: var(--primary); background: #eef2ff; }
+.quiz-option input { width: auto; }
+.review-correct { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 14px; }
+.review-wrong { background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 14px; }
+.score-big { font-size: 2rem; font-weight: 800; color: var(--primary); }

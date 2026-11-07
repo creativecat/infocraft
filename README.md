@@ -10,7 +10,7 @@ Digitale Informatik-Werkstatt für den bayerischen LehrplanPLUS (Gymnasium): SQL
 | Code-Werkstatt (Projekte, Ordner, Austeilen; Python läuft im Browser) | 6 | in Arbeit (Python fertig) |
 | Aufgaben / Meine Aufgaben | 6 | in Arbeit (Basis fertig) |
 | HTML-Werkstatt (WYSIWYG-Editor mit Sofortvorschau, Vorlagen) | 6 | fertig (Basis) |
-| Quiz-Arena | 6 | geplant |
+| Quiz-Arena (Quiz anlegen, austellen, spielen, Ergebnisse) | 6 | in Arbeit (Basis fertig) |
 | Wiki & Präsentationen | 6 | geplant |
 
 Schülerinnen und Schüler sehen nur die Bereiche, die laut LehrplanPLUS für ihre Klassenstufe relevant sind. Ausgeteilte Inhalte (z. B. Datenbanken) bleiben auch darunter sichtbar.
@@ -22,6 +22,7 @@ Schülerinnen und Schüler sehen nur die Bereiche, die laut LehrplanPLUS für ih
 - **SQL-Werkstatt:** Lehrkräfte teilen Datenbankvorlagen an Klassen aus, mit Rechten pro Person: nur lesen, lesen und schreiben oder Tabellen anlegen. Jede Person arbeitet an ihrer eigenen Kopie, ER-Diagramme (Mermaid) und Missionen inklusive.
 - **Code-Werkstatt:** Projekte anlegen, in Ordnern per Drag & Drop sortieren, von Lehrkräften an Klassen oder Einzelne austellen. Python-Programme laufen direkt im Browser (Pyodide), es wird kein Code auf dem Server ausgeführt.
 - **Aufgabenpool:** Aufgaben anlegen und austeilen, Schülerinnen und Schüler sehen nur Aufgaben bis zu ihrer Jahrgangsstufe.
+- **Quiz-Arena:** Quiz mit vier Antworten pro Frage anlegen, an Klassen oder Einzelne austellen. Spielen mit sofortigem Feedback, Bestwertungen und Ergebnisliste für Lehrkräfte.
 - **Präsentationsmodus:** Ansicht per Klick vergrößern.
 
 ## Schnellstart (lokal)
@@ -58,7 +59,7 @@ Ohne Composer, ohne Node-Build: nur PHP mit PDO.
 
 ## Qualitätssicherung
 
-GitHub Actions prüft jeden Push mit PHP 8.3 und 8.5: Syntax, Migration (inkl. Idempotenz) und Smoke-Tests über HTTP (Login, Werkstatt-Seiten, SQL-Ausführung, Rechtevergabe, Stufen-Filterung).
+GitHub Actions prüft jeden Push mit PHP 8.3 und 8.5: Syntax, Migration (inkl. Idempotenz) und Smoke-Tests über HTTP (Login, Werkstatt-Seiten, SQL-Ausführung, Rechtevergabe, Stufen-Filterung, Quiz-Runden).
 
 ## Dokumentation
 

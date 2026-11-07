@@ -17,6 +17,7 @@ use Infocraft\Controllers\CodeController;
 use Infocraft\Controllers\HomeController;
 use Infocraft\Controllers\HtmlController;
 use Infocraft\Controllers\ModuleController;
+use Infocraft\Controllers\QuizController;
 use Infocraft\Controllers\SqlWorkshopController;
 use Infocraft\Controllers\TaskController;
 use Infocraft\Controllers\TeacherController;
@@ -66,6 +67,17 @@ $router->get('/werkstatt/html', [HtmlController::class, 'index']);
 $router->post('/werkstatt/html/projekt', [HtmlController::class, 'create']);
 $router->get('/werkstatt/html/{id}', [HtmlController::class, 'open']);
 $router->post('/werkstatt/html/{id}', [HtmlController::class, 'save']);
+
+// Quiz-Arena (Lehrkraefte verwalten, Schuelerinnen und Schueler spielen)
+$router->get('/quiz', [QuizController::class, 'index']);
+$router->post('/quiz/anlegen', [QuizController::class, 'create']);
+$router->get('/quiz/{id}', [QuizController::class, 'manage']);
+$router->post('/quiz/{id}/frage', [QuizController::class, 'addQuestion']);
+$router->post('/quiz/{id}/austeilen', [QuizController::class, 'distribute']);
+$router->get('/quiz/{id}/ergebnisse', [QuizController::class, 'results']);
+$router->get('/quiz/{id}/spielen', [QuizController::class, 'play']);
+$router->post('/quiz/{id}/antwort', [QuizController::class, 'answer']);
+$router->get('/quiz/{id}/ergebnis', [QuizController::class, 'result']);
 
 // Aufgabenpool (Lehrkräfte) bzw. Meine Aufgaben (Schülerinnen und Schüler)
 $router->get('/aufgaben', [TaskController::class, 'index']);

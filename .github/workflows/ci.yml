@@ -65,7 +65,21 @@ jobs:
           grep -q "Gespeichert" htmlsave.html && HTML_SAVE_OK=1 || HTML_SAVE_OK=0
           grep -q "werkstatt/html" home_lena.html && LENA_HTML=1 || LENA_HTML=0
           grep -q "werkstatt/html" home_emma.html && EMMA_HTML=1 || EMMA_HTML=0
-          echo "login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK py:$CODE_PYED/$PY_RUN_OK query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE/$EMMA_HTML lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML"
+          QID=$(sqlite3 "$DB" "SELECT id FROM quizzes WHERE title = 'SQL-Begriffe'")
+          CODE_QUIZ=$(curl -sS -o quiz.html -w "%{http_code}" -b cookies2.txt http://127.0.0.1:8080/quiz)
+          grep -q "SQL-Begriffe" quiz.html && QUIZ_LIST_OK=1 || QUIZ_LIST_OK=0
+          CODE_PLAY=$(curl -sS -o play.html -w "%{http_code}" -b cookies2.txt http://127.0.0.1:8080/quiz/$QID/spielen)
+          CSRF6=$(grep -o 'value="[a-f0-9]*"' play.html | head -n1 | cut -d'"' -f2)
+          CODE_ANSWER=$(curl -sS -L -o answered.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt -d "csrf=$CSRF6" -d "position=1" -d "answer=1" http://127.0.0.1:8080/quiz/$QID/antwort)
+          grep -q "Frage 2 von 4" answered.html && QUIZ_NEXT_OK=1 || QUIZ_NEXT_OK=0
+          CLAUDIA=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'claudia.fischer'")
+          curl -sS -o login4.html -c cookies4.txt http://127.0.0.1:8080/login
+          CSRF7=$(grep -o 'value="[a-f0-9]*"' login4.html | head -n1 | cut -d'"' -f2)
+          CODE_CLAUDIA=$(curl -sS -L -o home_claudia.html -w "%{http_code}" -b cookies4.txt -c cookies4.txt -d "csrf=$CSRF7" -d "user_id=$CLAUDIA" http://127.0.0.1:8080/login/demo)
+          CODE_QMANAGE=$(curl -sS -o qmanage.html -w "%{http_code}" -b cookies4.txt http://127.0.0.1:8080/quiz/$QID)
+          grep -q "Neue Frage" qmanage.html && QMANAGE_OK=1 || QMANAGE_OK=0
+          CODE_QRES=$(curl -sS -o qres.html -w "%{http_code}" -b cookies4.txt http://127.0.0.1:8080/quiz/$QID/ergebnisse)
+          echo "login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK py:$CODE_PYED/$PY_RUN_OK query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE/$EMMA_HTML lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK qmanage:$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES"
           FAILED=0
           [ "$CODE_LOGIN" = "200" ] || FAILED=1
           [ "$CODE_DEMO" = "200" ] || FAILED=1
@@ -90,9 +104,18 @@ jobs:
           [ "$LENA_HTML" = "1" ] || FAILED=1
           [ "$CODE_PYED" = "200" ] || FAILED=1
           [ "$PY_RUN_OK" = "1" ] || FAILED=1
+          [ "$CODE_QUIZ" = "200" ] || FAILED=1
+          [ "$QUIZ_LIST_OK" = "1" ] || FAILED=1
+          [ "$CODE_PLAY" = "200" ] || FAILED=1
+          [ "$CODE_ANSWER" = "200" ] || FAILED=1
+          [ "$QUIZ_NEXT_OK" = "1" ] || FAILED=1
+          [ "$CODE_CLAUDIA" = "200" ] || FAILED=1
+          [ "$CODE_QMANAGE" = "200" ] || FAILED=1
+          [ "$QMANAGE_OK" = "1" ] || FAILED=1
+          [ "$CODE_QRES" = "200" ] || FAILED=1
           if [ "$FAILED" = "0" ]; then
             echo "Alle Smoke-Tests bestanden."
           else
-            echo "::error::DIAG | login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK py:$CODE_PYED/$PY_RUN_OK | errors: $(grep 'InfoCraft:' server.log | head -n 5 | tr '\n' ' ')"
+            echo "::error::DIAG | login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK py:$CODE_PYED/$PY_RUN_OK quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK/$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES | errors: $(grep 'InfoCraft:' server.log | head -n 5 | tr '\n' ' ')"
             exit 1
           fi
