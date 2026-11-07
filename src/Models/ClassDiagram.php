@@ -6,9 +6,12 @@ namespace Infocraft\Models;
 use Infocraft\Database;
 
 /**
- * Klassendiagramm einer Person: selbst gezeichnet (manuell) oder automatisch
- * aus Java-, Python- bzw. SQL-Quellen erzeugt. Der Mermaid-Quelltext bleibt
- * immer editierbar und exportierbar.
+ * Diagramm einer Person: selbst gezeichnet (manuell) oder automatisch
+ * aus Java-, Python- bzw. SQL-Quellen erzeugt. Neben Klassendiagrammen
+ * (Mermaid classDiagram) verwaltet die Tabelle auch Struktogramme
+ * (Nassi-Shneiderman) und Datenflussdiagramme mit eigener, an Mermaid
+ * angelehnter DSL (src/DiagramDsl.php). Der Quelltext bleibt immer
+ * editierbar und exportierbar.
  */
 final class ClassDiagram
 {
@@ -18,6 +21,8 @@ final class ClassDiagram
         'java' => '☕ aus Java',
         'python' => '🐍 aus Python',
         'sql' => '🗄️ aus SQL',
+        'struktogramm' => '🧱 Struktogramm',
+        'datenfluss' => '🌊 Datenflussdiagramm',
     ];
 
     public function __construct(

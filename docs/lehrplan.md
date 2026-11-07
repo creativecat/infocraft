@@ -13,6 +13,7 @@ Zusätzlich kann jede Lehrkraft pro Klasse und Arbeitsbereich zwischen drei Eins
 | Wiki | 6 | Übergreifend: Fachbegriffe, Konzepte, Selbstlernen |
 | Präsentationen | 6 | Übergreifend: Unterrichtsbegleitung und Demonstration aller Themen. Seed-Präsentationen decken die Lehrplanbereiche ab: Jgst. 9 (funktionale Modellierung und Tabellenkalkulation, Datenmodellierung, SQL-Grundlagen, Java-OO mit Vererbung, Datenschutz mit DSGVO, Mehrbenutzerproblematik, Data-Mining) und Jgst. 10 (Java-Wiederholung, relationale Datenbanken mit Primär-/Fremdschlüssel und JOIN, Arrays und Referenzen, Datenkapselung, Polymorphismus, Projekt). Jede Präsentation endet mit einer Übungsaufgabe und Musterlösung; passende Katalog-Aufgaben liegen im Aufgabenpool. |
 | SQL-Werkstatt | 9 | Datenbanken: Datenerfassung und -verwaltung, SQL-Grundlagen (SELECT, JOIN, GROUP BY, INSERT/UPDATE), Datenmodellierung |
+| Diagramme | 6 | Algorithmen und Programmieren: Struktogramme (Nassi-Shneiderman) mit Sequenz, Verzweigung (wenn/sonst) und Schleifen (solange, wiederhole/bis); funktionale Modellierung: Datenflussdiagramme mit Quellen, Senken, Prozessen, Datenspeichern und Datenflüssen; OO-Modellierung: Klassendiagramme (Mermaid) inklusive Auto-Erzeugung aus Java-, Python- und SQL-Quellen. Eigene, Mermaid-ähnliche Syntax mit unmittelbarer Vorschau und verständlichen Fehlermeldungen. |
 
 ## SQL-Werkstatt im Detail
 

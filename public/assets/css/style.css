@@ -401,3 +401,22 @@ body.sidebar-hidden .sidebar { display: none; }
 
 /* Übersicht: Gruppierung nach Jahrgangsstufe (praesentation_overview.php) */
 .level-heading { margin: 1.4rem 0 0.4rem; font-size: 1.15rem; color: var(--text, #222); border-bottom: 2px solid var(--primary, #4a6); padding-bottom: 0.25rem; }
+
+/* ===== Struktogramme (Nassi-Shneiderman, gebaut aus der Diagramm-DSL) ===== */
+.nassi-wrap { overflow-x: auto; padding: 0.25rem 0; }
+.nassi { display: inline-block; min-width: 280px; border: 2px solid var(--text); background: var(--surface); color: var(--text); text-align: left; }
+.nassi-seq { display: flex; flex-direction: column; }
+.nassi-seq > * + * { border-top: 1px solid var(--text); }
+.nassi-stmt { padding: 0.45rem 0.7rem; min-height: 1.7rem; }
+.nassi-cond { position: relative; padding: 0.45rem 0.7rem 0.45rem 2.7rem; background: #eef0fd; min-height: 2.1rem; }
+.nassi-tri { position: absolute; left: 0; top: 0; bottom: 0; width: 2.2rem; background: var(--surface); clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.nassi-branches { display: flex; align-items: stretch; }
+.nassi-branch { flex: 1 1 50%; min-width: 0; }
+.nassi-branch + .nassi-branch { border-left: 2px solid var(--text); }
+.nassi-branch-title { text-align: center; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; padding: 0.12rem; background: #e3e7fc; border-bottom: 1px solid var(--text); }
+.nassi-empty { min-height: 2.2rem; background: repeating-linear-gradient(45deg, transparent, transparent 7px, rgba(22, 32, 47, 0.16) 7px, rgba(22, 32, 47, 0.16) 14px); }
+.nassi-loop { position: relative; padding-right: 0.9rem; }
+.nassi-loop::after { content: ""; position: absolute; top: 0; bottom: 0; right: 0; width: 0.9rem; border-right: 2px solid var(--text); }
+.nassi-while::after { border-bottom: 2px solid var(--text); }
+.nassi-loop-head { padding: 0.45rem 0.7rem; background: #eef0fd; min-height: 1.7rem; }
+.nassi-loop > * + * { border-top: 1px solid var(--text); }

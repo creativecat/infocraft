@@ -290,6 +290,7 @@
   var pngBtn = document.getElementById('diagram-png');
   var timer = null;
   var seq = 0;
+  var kind = page.getAttribute('data-diagram-kind') || '';
 
   function escapeText(text) {
     return String(text).replace(/[&<>]/g, function (ch) {
@@ -297,10 +298,92 @@
     });
   }
 
+  /* Datenfluss-DSL (wie src/DiagramDsl.php) fuer die Live-Vorschau nach Mermaid uebersetzen.
+     Vollstaendige Zeilentreffer statt Anker: kein Rueckwaerts-Suchen, prueft index und Laenge. */
+  function dfFull(re, line) {
+    var m = line.match(re);
+    if (!m || m.index !== 0 || m[0].length !== line.length) { return null; }
+    return m;
+  }
+
+  function dfClean(text) {
+    return String(text).replace(/["\[\]()<>|]/g, '');
+  }
+
+  function transpileDatenfluss(src) {
+    var NL = String.fromCharCode(10);
+    var node = '(?:(quelle|senke|speicher)\\s+"([^"]*)"|\\(([A-Za-z_][A-Za-z0-9_]*)\\))';
+    var reEdgeLabel = new RegExp(node + '\\s*-->\\s*\\|([^|]*)\\|\\s*' + node);
+    var reEdge = new RegExp(node + '\\s*-->\\s*' + node);
+    var reNode = new RegExp(node);
+    var ids = {};
+    var order = 0;
+    var shapes = [];
+    var edges = [];
+
+    function register(m, off) {
+      var isExt = m[off] !== undefined && m[off] !== '';
+      var shapeKind = isExt ? m[off] : 'funktion';
+      var text = isExt ? m[off + 1] : m[off + 2];
+      var key = shapeKind + ':' + text;
+      if (!Object.prototype.hasOwnProperty.call(ids, key)) {
+        order += 1;
+        ids[key] = 'N' + order;
+        if (shapeKind === 'funktion') {
+          shapes.push('N' + order + '(("' + dfClean(text) + '"))');
+        } else if (shapeKind === 'speicher') {
+          shapes.push('N' + order + '[("' + dfClean(text) + '")]');
+        } else {
+          shapes.push('N' + order + '["' + dfClean(text) + '"]');
+        }
+      }
+      return ids[key];
+    }
+
+    var lines = String(src).split(NL);
+    for (var i = 0; i < lines.length; i++) {
+      var t = lines[i].trim();
+      if (t === '' || t.indexOf('%%') === 0 || t.indexOf('//') === 0) { continue; }
+      if (t.slice(0, 10).toLowerCase() === 'datenfluss') { continue; }
+      var m = dfFull(reEdgeLabel, t);
+      if (m) {
+        var from = register(m, 1);
+        var to = register(m, 5);
+        edges.push(from + ' -->|' + dfClean(m[4]) + '| ' + to);
+        continue;
+      }
+      m = dfFull(reEdge, t);
+      if (m) {
+        edges.push(register(m, 1) + ' --> ' + register(m, 4));
+        continue;
+      }
+      m = dfFull(reNode, t);
+      if (m) {
+        register(m, 1);
+        continue;
+      }
+      return { error: 'Zeile ' + (i + 1) + ': "' + t + '" verstehe ich nicht. Erlaubt sind: quelle "Name", senke "Name", speicher "Name", (funktionsName) und Pfeile --> bzw. -->|Daten|.', mermaid: '' };
+    }
+    if (order === 0) {
+      return { error: 'Das Datenflussdiagramm ist leer. Beginne zum Beispiel mit: quelle "Eingabe" --> (verarbeiten)', mermaid: '' };
+    }
+    var out = ['flowchart LR'].concat(shapes, edges);
+    return { error: '', mermaid: out.join(NL) };
+  }
+
   function render() {
     if (!preview || !source) { return; }
+    var text = source.value;
+    if (kind === 'datenfluss') {
+      var t = transpileDatenfluss(text);
+      if (t.error) {
+        preview.innerHTML = '<div class="notice"><strong>Datenflussdiagramm kann nicht gezeichnet werden</strong><p>' + escapeText(t.error) + '</p></div>';
+        return;
+      }
+      text = t.mermaid;
+    }
     seq += 1;
-    window.mermaid.render('dg-svg-' + seq, source.value).then(function (out) {
+    window.mermaid.render('dg-svg-' + seq, text).then(function (out) {
       preview.innerHTML = out.svg;
     }).catch(function (err) {
       preview.innerHTML = '<div class="notice"><strong>Diagramm kann nicht gezeichnet werden</strong><p>' + escapeText(err && err.message ? err.message : 'Unbekannter Fehler im Mermaid-Quelltext.') + '</p></div>';
@@ -363,8 +446,7 @@
         case_insensitive: true,
         keywords: 'classDiagram erDiagram direction class interface enum record abstract static implements extends LR TB note',
         contains: [
-          hljs.COMMENT('%%', '
-),
+          hljs.COMMENT('%%', NL),
           { className: 'string', begin: '"', end: '"' },
           { className: 'meta', begin: '<<', end: '>>' },
           { className: 'number', begin: '[0-9]+' },

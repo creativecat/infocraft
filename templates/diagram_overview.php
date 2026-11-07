@@ -1,7 +1,7 @@
 <section class="hero">
     <div class="hero-emoji">📐</div>
-    <h1>Klassendiagramme</h1>
-    <p>Klassen sichtbar machen: Zeichne selbst Diagramme oder erzeuge sie automatisch aus Java-, Python- und SQL-Skripten. Alles bleibt gespeichert und lässt sich als PNG exportieren.</p>
+    <h1>Diagramme</h1>
+    <p>Struktur sichtbar machen: Klassendiagramme (Mermaid), Struktogramme (Nassi-Shneiderman) und Datenflussdiagramme zeichnen - oder Klassendiagramme automatisch aus Java-, Python- und SQL-Skripten erzeugen. Alles bleibt gespeichert und lässt sich exportieren.</p>
 </section>
 
 <section class="panel">
@@ -10,7 +10,14 @@
     </div>
     <form method="post" action="<?= url('diagramme/anlegen') ?>" class="form form-row">
         <?= csrf_field() ?>
-        <label class="field"><span>Titel</span><input type="text" name="title" required maxlength="200" placeholder="z. B. Schulverwaltung"></label>
+        <label class="field"><span>Titel</span><input type="text" name="title" required maxlength="200" placeholder="z. B. Notenrechner"></label>
+        <label class="field"><span>Typ</span>
+            <select name="kind">
+                <option value="manuell">📐 Klassendiagramm (Mermaid)</option>
+                <option value="struktogramm">🧱 Struktogramm (Nassi-Shneiderman)</option>
+                <option value="datenfluss">🌊 Datenflussdiagramm</option>
+            </select>
+        </label>
         <button class="btn btn-primary" type="submit">Anlegen und bearbeiten</button>
     </form>
     <?php if (!$diagramAuto): ?>
@@ -24,13 +31,13 @@
 <?php if ($diagrams === []): ?>
 <div class="notice">
     <strong>Noch keine Diagramme</strong>
-    <p>Lege oben dein erstes Klassendiagramm an oder erzeuge eins aus einem Java- oder Python-Skript (Code-Werkstatt) bzw. aus einer SQL-Datenbank (SQL-Werkstatt).</p>
+    <p>Lege oben dein erstes Diagramm an: ein Klassendiagramm, ein Struktogramm oder ein Datenflussdiagramm. Klassendiagramme lassen sich zusätzlich aus einem Java- oder Python-Skript (Code-Werkstatt) bzw. aus einer SQL-Datenbank (SQL-Werkstatt) erzeugen.</p>
 </div>
 <?php else: ?>
 <div class="cards">
     <?php foreach ($diagrams as $diagram): ?>
     <div class="card">
-        <div class="card-icon">📐</div>
+        <div class="card-icon"><?= e($diagram->kind === 'struktogramm' ? '🧱' : ($diagram->kind === 'datenfluss' ? '🌊' : '📐')) ?></div>
         <h2><?= e($diagram->title) ?></h2>
         <p class="card-desc muted"><?= e($diagram->kindLabel()) ?></p>
         <div class="card-meta">

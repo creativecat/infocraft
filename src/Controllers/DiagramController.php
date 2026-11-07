@@ -5,6 +5,7 @@ namespace Infocraft\Controllers;
 
 use Infocraft\Auth;
 use Infocraft\ClassDiagramGen;
+use Infocraft\DiagramDsl;
 use Infocraft\Models\ClassDiagram;
 use Infocraft\Models\Project;
 use Infocraft\Models\SchoolClass;
@@ -13,10 +14,12 @@ use Infocraft\Models\User;
 use Infocraft\SqlWorkshop;
 
 /**
- * Klassendiagramme: eigener Mermaid-Editor je Person sowie automatische
- * Erzeugung aus Java-/Python-Skripten (Code-Werkstatt) und aus SQL-Tabellen.
- * Lehrkraefte koennen das automatische Erzeugen pro Klasse deaktivieren,
- * selbst zeichnen Schuelerinnen und Schueler immer.
+ * Diagramme: Klassendiagramme als Mermaid-Editor je Person mit automatischer
+ * Erzeugung aus Java-/Python-Skripten (Code-Werkstatt) und aus SQL-Tabellen;
+ * Struktogramme (Nassi-Shneiderman) und Datenflussdiagramme mit eigener,
+ * an Mermaid angelehnter DSL (src/DiagramDsl.php). Lehrkraefte koennen das
+ * automatische Erzeugen pro Klasse deaktivieren, selbst zeichnen Schuelerinnen
+ * und Schueler immer.
  */
 final class DiagramController
 {
@@ -27,7 +30,7 @@ final class DiagramController
             redirect('/login');
         }
         render('diagram_overview', [
-            'title' => 'Klassendiagramme',
+            'title' => 'Diagramme',
             'active' => 'module-diagramme',
             'diagrams' => ClassDiagram::all($user->id),
             'diagramAuto' => SchoolClass::diagramAutoForUser($user),
@@ -46,8 +49,19 @@ final class DiagramController
             flash('error', 'Bitte einen Titel angeben.');
             redirect('/diagramme');
         }
-        $starter = "classDiagram\nclass Tier {\n  +String name\n}\nclass Hund {\n  +gib_laut()\n}\nTier <|-- Hund\n";
-        $diagram = ClassDiagram::create($user->id, $title, 'manuell', null, $starter);
+        // Typ des Diagramms (Klassendiagramm, Struktogramm oder Datenflussdiagramm).
+        $kind = (string) ($_POST['kind'] ?? 'manuell');
+        if (!in_array($kind, ['manuell', 'struktogramm', 'datenfluss'], true)) {
+            $kind = 'manuell';
+        }
+        if ($kind === 'struktogramm') {
+            $starter = "struktogramm\nanweisung \"Erster Schritt\"\nwenn \"Bedingung\" dann\n  anweisung \"wahr-Zweig\"\nsonst\n  anweisung \"falsch-Zweig\"\nende\nsolange \"weitere Runde?\"\n  anweisung \"wiederholen\"\nende\n";
+        } elseif ($kind === 'datenfluss') {
+            $starter = "datenfluss\nquelle \"Eingabe\" --> (verarbeiten)\n(verarbeiten) -->|Ergebnis| senke \"Ausgabe\"\n";
+        } else {
+            $starter = "classDiagram\nclass Tier {\n  +String name\n}\nclass Hund {\n  +gib_laut()\n}\nTier <|-- Hund\n";
+        }
+        $diagram = ClassDiagram::create($user->id, $title, $kind, null, $starter);
         flash('success', 'Diagramm angelegt. Zeichne los!');
         redirect('/diagramme/' . $diagram->id);
     }
@@ -59,10 +73,16 @@ final class DiagramController
             redirect('/login');
         }
         $diagram = self::requireOwn($user, (int) ($params['id'] ?? 0));
+        // Struktogramm: Struktur wird serverseitig aus der DSL gebaut (kein Mermaid nötig).
+        $struktogramm = $diagram->kind === 'struktogramm' ? DiagramDsl::struktogrammHtml($diagram->mermaid) : null;
+        // Datenfluss: DSL wird für die Vorschau in ein Mermaid-flowchart übersetzt.
+        $datenfluss = $diagram->kind === 'datenfluss' ? DiagramDsl::datenflussToMermaid($diagram->mermaid) : null;
         render('diagram_edit', [
             'title' => $diagram->title,
             'active' => 'module-diagramme',
             'diagram' => $diagram,
+            'struktogramm' => $struktogramm,
+            'datenfluss' => $datenfluss,
         ]);
     }
 
@@ -79,7 +99,8 @@ final class DiagramController
             $title = $diagram->title;
         }
         $diagram->save($title, (string) ($_POST['mermaid'] ?? ''));
-        flash('success', 'Klassendiagramm gespeichert.');
+        $label = $diagram->kind === 'struktogramm' ? 'Struktogramm' : ($diagram->kind === 'datenfluss' ? 'Datenflussdiagramm' : 'Klassendiagramm');
+        flash('success', $label . ' gespeichert.');
         redirect('/diagramme/' . $diagram->id);
     }
 
