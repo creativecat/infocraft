@@ -3742,7 +3742,11 @@
     el.appendChild(title);
     el.appendChild(canvas);
     el.appendChild(guiLayer);
-    document.body.appendChild(el);
+    /* Eigene Zeile unterhalb der Konsole (gfx-dock); ohne Dock (z. B. alte
+     * Seiten) bleibt das Fenster wie bisher ein Overlay am Seitenrand. */
+    var host = document.getElementById('gfx-dock');
+    if (!host) { host = document.body; }
+    host.appendChild(el);
     st = { el: el, canvas: canvas, guiLayer: guiLayer, label: label, hidden: false };
     el.__gfxState = st;
     /* Ereignisse: Tastatur und Maus gehen an die Objekte des laufenden Programms */
@@ -3758,10 +3762,20 @@
   function gfxHideWindow() {
     var st = gfxWindowFind();
     if (st) { st.hidden = true; if (st.el.style) { st.el.style.display = 'none'; } }
+    gfxDockSync(false);
   }
   function gfxShowWindow(vm) {
     var st = vm.gfx.windowState || gfxEnsureWindow(vm);
     if (st) { st.hidden = false; if (st.el.style) { st.el.style.display = ''; } }
+    gfxDockSync(true);
+  }
+  /* Sichtbarkeit der Dock-Zeile unterhalb der Konsole mitführen */
+  function gfxDockSync(show) {
+    if (typeof document === 'undefined' || !document.getElementById) { return; }
+    var dock = document.getElementById('gfx-dock');
+    if (!dock) { return; }
+    if (show) { dock.removeAttribute('hidden'); }
+    else { dock.setAttribute('hidden', 'hidden'); }
   }
 
   function gfxEnsureWorld(vm) {
@@ -5088,6 +5102,7 @@
     var stepInfo = document.getElementById('java-step-info');
     var stepBtn = document.getElementById('java-step');
     var restBtn = document.getElementById('java-run-rest');
+    var stopBtn = document.getElementById('java-stop');
     var fmtBtn = document.getElementById('java-format');
     var gutterMap = Object.create(null);
     function setupGutters() {
@@ -5445,8 +5460,19 @@
       if (stepInfo) { stepInfo.textContent = res.ok ? 'Programm bis zum Ende ausgeführt (' + stepCount + ' Schritte).' : ''; }
       afterRun(res);
     }
+    /* Stopp: hält das Programm an. Die act()-Animation des Grafik-Fensters
+     * stoppt (das Bild bleibt stehen), ein angefangener Einzelschritt wird
+     * abgebrochen: Der nächste Einzelschritt beginnt wieder von vorn. */
+    function doStop() {
+      gfxStopLoop();
+      lastPaused = false;
+      stepCount = 0;
+      clearLineMarks();
+      if (stepInfo) { stepInfo.textContent = 'Programm gestoppt.'; }
+    }
     if (stepBtn) { stepBtn.addEventListener('click', doStep); }
     if (restBtn) { restBtn.addEventListener('click', doRest); }
+    if (stopBtn) { stopBtn.addEventListener('click', doStop); }
     setupGutters();
 
     /* Objektdiagramm: alle erzeugten Objekte mit ihren Attributwerten.
@@ -5520,6 +5546,76 @@
     }
 
     runBtn.addEventListener('click', doRun);
+
+    /* ---------- API-Hilfe in einem eigenen Fenster ----------
+     * Klick auf 📖 API-Hilfe öffnet die Doku als eigenes Fenster: Sie bleibt
+     * offen, während im Editor weiterprogrammiert wird. Blockiert der Browser
+     * Popup-Fenster, erscheint sie als schwebendes Fenster in der Seite. */
+    var apiBtn = document.getElementById('java-api-open');
+    var apiFallbackWin = null;
+    function apiPopupCss() {
+      return 'body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:0;background:#f1f5f9;color:#0f172a;}'
+        + 'h1{font-size:1.05rem;margin:12px 14px 0;color:#3730a3;}'
+        + '.muted{color:#64748b;font-size:0.85rem;margin:2px 14px 8px;}'
+        + '.api-docs{font-size:0.9rem;padding:0 10px 20px;}'
+        + '.api-docs details{border:1px solid #e2e8f0;border-radius:10px;margin:8px 0;background:#ffffff;overflow:hidden;}'
+        + '.api-docs summary{cursor:pointer;padding:9px 12px;font-weight:700;color:#3730a3;background:#eef2ff;border-bottom:1px solid #e0e7ff;}'
+        + '.api-docs details[open] summary{border-bottom:1px solid #e2e8f0;}'
+        + '.api-docs summary:hover{background:#e0e7ff;}'
+        + '.api-docs table{width:100%;border-collapse:collapse;}'
+        + '.api-docs td{vertical-align:top;padding:8px 10px;border-bottom:1px solid #e2e8f0;}'
+        + '.api-docs td:first-child{width:46%;}'
+        + '.api-docs pre{margin:0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:0.78rem;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}'
+        + '.api-docs p{margin:8px 10px;}'
+        + '.api-docs code{background:#eef2ff;border-radius:4px;padding:0 4px;}'
+        + 'a{color:#4f46e5;}';
+    }
+    function openApiHelp() {
+      var src = document.getElementById('java-api-src');
+      var inner = src && src.innerHTML ? src.innerHTML : '';
+      var pop = null;
+      try {
+        if (typeof window !== 'undefined' && window.open) {
+          pop = window.open('', 'infocraft-api-hilfe', 'width=640,height=800,resizable=yes,scrollbars=yes,menubar=no,toolbar=no,location=no,status=no');
+        }
+      } catch (ePop) { pop = null; }
+      if (pop && pop.document && pop.document.write) {
+        var d = pop.document;
+        d.open();
+        d.write('<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>InfoCraft API-Hilfe</title><style>' + apiPopupCss() + '</style></head><body><h1>📖 API-Hilfe</h1><p class="muted">Alle fertigen Klassen von InfoCraft. Zum Aufklappen auf die Überschrift klicken. Dieses Fenster bleibt offen, während du weiterprogrammierst.</p><div class="api-docs">' + inner + '</div></body></html>');
+        d.close();
+        if (pop.focus) { try { pop.focus(); } catch (eFocus) { } }
+        return;
+      }
+      /* Popup blockiert: schwebendes Fenster in der Seite, Klick schließt/öffnet es. */
+      if (apiFallbackWin) {
+        if (apiFallbackWin.style && apiFallbackWin.style.display === 'none') { apiFallbackWin.style.display = ''; }
+        else { apiFallbackWin.style.display = 'none'; }
+        return;
+      }
+      var win = document.createElement('div');
+      win.className = 'api-window';
+      var head = document.createElement('div');
+      head.className = 'api-window-head';
+      var label = document.createElement('span');
+      label.textContent = '📖 API-Hilfe';
+      var close = document.createElement('button');
+      close.className = 'gfx-close';
+      close.type = 'button';
+      close.setAttribute('title', 'API-Hilfe schließen');
+      close.textContent = String.fromCharCode(215);
+      head.appendChild(label);
+      head.appendChild(close);
+      var body = document.createElement('div');
+      body.className = 'api-window-body api-docs';
+      body.innerHTML = inner;
+      win.appendChild(head);
+      win.appendChild(body);
+      document.body.appendChild(win);
+      close.addEventListener('click', function () { win.style.display = 'none'; });
+      apiFallbackWin = win;
+    }
+    if (apiBtn) { apiBtn.addEventListener('click', openApiHelp); }
 
     /* Klassendiagramm direkt in der IDE (Idee von BlueJ): live aus dem Code gelesen,
      * ohne das Programm auszuführen. Parse-Fehler stören nicht: Der lesbare Stand

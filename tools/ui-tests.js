@@ -269,12 +269,23 @@ var tabOut = consoleTab('out', 'Ausgabe', true);
 var tabClasses = consoleTab('classes', 'Klassen', false);
 var tabRepl = consoleTab('repl', 'Objektkonsole', false);
 var tabObjects = consoleTab('objects', 'Objekte', false);
-var tabApi = consoleTab('api', 'API-Hilfe', false);
+/* API-Hilfe als eigener Knopf (java-api-open) + versteckte Quelle, Stopp-Knopf,
+ * Dock-Zeile unterhalb der Konsole (wie templates/code_project.php) */
+var apiBtn = new FakeEl('button');
+doc.register(apiBtn, 'java-api-open');
+var apiSrc = new FakeEl('div');
+doc.register(apiSrc, 'java-api-src');
+apiSrc.innerHTML = '<p>Mini-Datenbank: <code>Datenbank.ausfuehren(...)</code> und <code>Input.readString</code></p>';
+var stopBtn = new FakeEl('button');
+doc.register(stopBtn, 'java-stop');
+var gfxDock = new FakeEl('div');
+doc.register(gfxDock, 'gfx-dock');
+gfxDock.setAttribute('hidden', 'hidden');
+doc.body.appendChild(gfxDock);
 var paneOut = consolePane('out', true);
 var paneClasses = consolePane('classes', false);
 var paneRepl = consolePane('repl', false);
 var paneObjects = consolePane('objects', false);
-var paneApi = consolePane('api', false);
 
 var runBtn = new FakeEl('button');
 doc.register(runBtn, 'run-java');
@@ -473,6 +484,13 @@ setTimeout(function () {
     ok(consoleEl.textContent === 'eins' + NLt + 'zwei' + NLt, 'T14e zweiter Schritt zeigt beide Ausgaben');
     ok(stepInfo.textContent.indexOf('durchgelaufen') !== -1, 'T14f Info meldet das Ende');
 
+    /* T14g: Stopp-Knopf haelt an und bricht einen Einzelschritt ab: Der
+     *      naechste Einzelschritt beginnt wieder bei Schritt 1. */
+    stopBtn.dispatch('click');
+    ok(stepInfo.textContent.indexOf('gestoppt') !== -1, 'T14g Stopp meldet das Anhalten');
+    stepBtn.dispatch('click');
+    ok(stepInfo.textContent.indexOf('Schritt 1') !== -1, 'T14h nach Stopp beginnt der Einzelschritt wieder bei Schritt 1');
+
     /* T15: Fehlerzeile wird in den Zeilennummern rot markiert. */
     ta.value = 'class C {' + NLt + 'void x() { y = ; }' + NLt + '}';
     ta.dispatch('input');
@@ -480,10 +498,22 @@ setTimeout(function () {
     var errCells = pane1.querySelector('.ln-gutter').querySelectorAll('.ln-err');
     ok(errCells.length >= 1, 'T15 Fehlerzeile in den Zeilennummern markiert');
 
-    /* T16: API-Hilfe-Tab. */
-    tabApi.dispatch('click');
-    ok(!hidden(paneApi), 'T16a API-Hilfe-Fenster oeffnet');
-    ok(hidden(paneOut), 'T16b Ausgabe-Fenster weicht');
+    /* T16: API-Hilfe oeffnet in einem eigenen Fenster. Ohne window.open (wie
+     *     hier im Fake-DOM) erscheint sie als schwebendes Fenster in der Seite. */
+    apiBtn.dispatch('click');
+    var apiWin = doc.querySelector('.api-window');
+    ok(apiWin !== null, 'T16a API-Hilfe-Fenster oeffnet');
+    var apiBody = apiWin ? apiWin.querySelector('.api-window-body') : null;
+    ok(apiBody !== null && apiBody.innerHTML.indexOf('Mini-Datenbank') !== -1, 'T16b API-Hilfe-Fenster enthaelt die Doku');
+    if (apiWin) {
+      var apiClose = apiWin.querySelector('.gfx-close');
+      if (apiClose) {
+        apiClose.dispatch('click');
+        ok(apiWin.style.display === 'none', 'T16c Schliessen-Knopf versteckt das API-Hilfe-Fenster');
+        apiBtn.dispatch('click');
+        ok(apiWin.style.display === '', 'T16d Erneuter Klick holt die API-Hilfe zurueck');
+      }
+    }
 
     /* T17: Grafik-Fenster oeffnet sich bei World/Figuren. */
     ta.value = 'class Auto extends Circle {' + NLt +
@@ -496,6 +526,8 @@ setTimeout(function () {
     runBtn.dispatch('click');
     var win = doc.querySelector('#gfx-window');
     ok(win !== null, 'T17a Grafik-Fenster ist geoeffnet');
+    ok(win.parent === gfxDock, 'T17a2 Grafik-Fenster liegt in der eigenen Zeile unterhalb der Konsole');
+    ok(!hidden(gfxDock), 'T17a3 Die Grafik-Zeile unterhalb der Konsole ist sichtbar');
     var shapes = vm.gfxSnapshot();
     ok(shapes.length === 1 && shapes[0].kind === 'circle' && shapes[0].fill === 'rgb(255, 0, 0)', 'T17b Ball liegt als roter Kreis im Fenster');
     ok(shapes[0].r === 10, 'T17c Kreis-Radius stimmt');

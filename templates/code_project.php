@@ -62,9 +62,10 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
         </div>
         <div class="ide-console">
             <div class="console-run">
-                <button class="btn btn-primary" id="run-java" type="button">▶ Ausführen</button>
-                <button class="btn btn-ghost" id="java-step" type="button" title="Führt genau eine Anweisung aus und zeigt in den Zeilennummern, welche Zeile als Nächstes dran ist.">👣 Einzelschritt</button>
-                <button class="btn btn-ghost" id="java-run-rest" type="button" title="Lässt dein Programm vom Pausenpunkt an bis zum Ende laufen.">⏩ Weiter</button>
+                <button class="btn btn-primary run-icon" id="run-java" type="button" title="Ausführen (Strg + Enter): dein Programm läuft komplett in deinem Browser." aria-label="Ausführen">▶</button>
+                <button class="btn btn-ghost run-icon" id="java-step" type="button" title="Einzelschritt: führt genau eine Anweisung aus und zeigt in den Zeilennummern, welche Zeile als Nächstes dran ist." aria-label="Einzelschritt">👣</button>
+                <button class="btn btn-ghost run-icon" id="java-run-rest" type="button" title="Weiter: lässt dein Programm vom Pausenpunkt an bis zum Ende laufen." aria-label="Weiter">⏩</button>
+                <button class="btn btn-ghost run-icon" id="java-stop" type="button" title="Stopp: hält dein Programm an – die act()-Animation stoppt und ein angefangener Einzelschritt wird abgebrochen." aria-label="Stopp">⏹</button>
                 <span class="muted">Strg + Enter funktioniert auch. Dein Programm läuft komplett in deinem Browser.</span>
             </div>
             <div id="java-step-info" class="step-info"></div>
@@ -73,7 +74,7 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
                 <button type="button" class="console-tab" data-ctab="classes">📐 Klassen</button>
                 <button type="button" class="console-tab" data-ctab="repl">🧪 Objektkonsole</button>
                 <button type="button" class="console-tab" data-ctab="objects">🧩 Objekte <span class="err-badge" id="java-obj-badge">0</span></button>
-                <button type="button" class="console-tab" data-ctab="api">📖 API-Hilfe</button>
+                <button type="button" class="console-tab api-open" id="java-api-open" title="Öffnet die API-Hilfe in einem eigenen Fenster. Es bleibt offen, während du weiterprogrammierst.">📖 API-Hilfe ↗</button>
             </div>
             <div class="console-pane" data-cpane="out">
                 <pre id="java-console" class="code ide-console-out">Noch nichts ausgeführt.</pre>
@@ -99,7 +100,7 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
                 </div>
                 <div id="java-repl-ac" class="ac-box" hidden></div>
             </div>
-            <div class="console-pane" data-cpane="api" hidden>
+            <div class="api-docs" id="java-api-src" hidden>
                 <div class="api-docs">
                     <p class="muted">Hier stehen alle fertigen Klassen, die du in deinen Java-Programmen benutzen kannst. Zum Aufklappen auf die Überschrift klicken.</p>
 
@@ -388,7 +389,8 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
                 <div class="java-errors" id="java-errors">Noch nichts ausgeführt – hier erscheinen Fehler mit Datei, Zeile und Tipp.</div>
                 <button class="btn btn-ghost" id="java-clear" type="button">Leeren</button>
             </div>
-        </div>
+            </div>
+            <div class="gfx-dock" id="gfx-dock" hidden></div>
         </div>
     </div>
     <?php else: ?>
