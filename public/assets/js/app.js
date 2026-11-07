@@ -142,33 +142,196 @@
     });
   }
 })();
-/* InfoCraft Phase 3: HTML-Werkstatt Sofortvorschau, Strg+S speichern */
+/* InfoCraft Phase 3: HTML-Werkstatt – Gestalten (WYSIWYG), Quelltext, Vorschau,
+   Vorschau in neuem Fenster, HTML öffnen/herunterladen, Tag-Erklärungen */
 (function () {
   'use strict';
 
   var htmlEditor = document.getElementById('html-editor');
   var htmlPreview = document.getElementById('html-preview');
-  if (htmlEditor && htmlPreview) {
-    var updatePreview = function () {
-      htmlPreview.srcdoc = htmlEditor.value;
-    };
-    var previewTimer = null;
-    htmlEditor.addEventListener('input', function () {
-      if (previewTimer) { clearTimeout(previewTimer); }
-      previewTimer = setTimeout(updatePreview, 400);
-    });
+  var wyFrame = document.getElementById('html-wysiwyg');
+  var saveForm = document.getElementById('html-form');
+  if (!htmlEditor || !htmlPreview || !saveForm || !wyFrame) { return; }
+
+  var wyDoc = null;
+  var activeTab = 'wy';
+  var ioNote = document.getElementById('html-io-note');
+
+  function note(text) {
+    if (ioNote) { ioNote.textContent = text; }
+  }
+
+  function updatePreview() {
+    htmlPreview.srcdoc = htmlEditor.value;
+  }
+
+  /* WYSIWYG: die ganze Seite in den iframe laden (Skripte laufen dort nicht, sandbox ohne allow-scripts). */
+  function wyLoad() {
+    wyDoc = null;
+    wyFrame.srcdoc = htmlEditor.value;
+  }
+
+  wyFrame.addEventListener('load', function () {
+    try { wyDoc = wyFrame.contentDocument; } catch (err) { wyDoc = null; }
+    if (wyDoc) { wyDoc.designMode = 'on'; }
+  });
+
+  /* Zurück in die Textarea: nur den Bereich zwischen <body...> und </body> ersetzen (per indexOf, ohne Regex). */
+  function wySave() {
+    if (!wyDoc || !wyDoc.body) { return; }
+    var inner = wyDoc.body.innerHTML;
+    var src = htmlEditor.value;
+    var low = src.toLowerCase();
+    var ob = low.indexOf('<body');
+    var cb = low.lastIndexOf('</body>');
+    if (ob === -1 || cb === -1 || cb < ob) { return; }
+    var gt = src.indexOf('>', ob);
+    if (gt === -1 || gt > cb) { return; }
+    htmlEditor.value = src.slice(0, gt + 1) + inner + src.slice(cb);
     updatePreview();
   }
 
-  var saveForm = document.getElementById('html-form');
-  if (saveForm) {
-    saveForm.addEventListener('keydown', function (e) {
-      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
-        e.preventDefault();
-        saveForm.submit();
+  /* Tabs: Gestalten / Quelltext / Vorschau */
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.vw-tab[data-vtab]'));
+  var panes = Array.prototype.slice.call(document.querySelectorAll('[data-vpane]'));
+  function setTab(name) {
+    if (activeTab === 'wy' && name !== 'wy') { wySave(); }
+    activeTab = name;
+    tabs.forEach(function (t) {
+      var on = t.getAttribute('data-vtab') === name;
+      t.classList.toggle('vw-on', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    panes.forEach(function (p) {
+      if (p.getAttribute('data-vpane') === name) { p.removeAttribute('hidden'); }
+      else { p.setAttribute('hidden', ''); }
+    });
+    if (name === 'wy') { wyLoad(); }
+    if (name === 'view') { updatePreview(); }
+  }
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () { setTab(t.getAttribute('data-vtab')); });
+  });
+  setTab('wy');
+
+  /* Sofortvorschau beim Tippen im Quelltext */
+  var previewTimer = null;
+  htmlEditor.addEventListener('input', function () {
+    if (previewTimer) { clearTimeout(previewTimer); }
+    previewTimer = setTimeout(updatePreview, 400);
+  });
+
+  /* WYSIWYG-Werkzeuge: Absatz, F/K/U, Listen, Farbe, Link, Rückgängig */
+  function wyExec(cmd, val) {
+    if (!wyDoc) { return; }
+    if (wyFrame.contentWindow) { wyFrame.contentWindow.focus(); }
+    wyDoc.execCommand(cmd, false, val || null);
+  }
+  var wyButtons = Array.prototype.slice.call(document.querySelectorAll('[data-wycmd]'));
+  wyButtons.forEach(function (b) {
+    b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    b.addEventListener('click', function (e) {
+      e.preventDefault();
+      var cmd = b.getAttribute('data-wycmd');
+      if (cmd === 'createLink') {
+        var ziel = window.prompt('Wohin soll der Link führen? (z. B. https://www.wikipedia.de)', 'https://');
+        if (ziel && ziel !== 'https://') { wyExec('createLink', ziel); }
+        return;
       }
+      wyExec(cmd);
+    });
+  });
+  var wyBlock = document.getElementById('wy-block');
+  if (wyBlock) {
+    wyBlock.addEventListener('change', function () {
+      if (wyBlock.value) { wyExec('formatBlock', '<' + wyBlock.value + '>'); }
     });
   }
+  var wyColor = document.getElementById('wy-color');
+  if (wyColor) {
+    wyColor.addEventListener('input', function () { wyExec('foreColor', wyColor.value); });
+  }
+
+  /* HTML öffnen (hochladen): Datei in die Textarea laden */
+  var uploadBtn = document.getElementById('html-upload-btn');
+  var uploadInput = document.getElementById('html-upload');
+  if (uploadBtn && uploadInput) {
+    uploadBtn.addEventListener('click', function () { uploadInput.click(); });
+    uploadInput.addEventListener('change', function () {
+      var file = uploadInput.files && uploadInput.files[0];
+      if (!file) { return; }
+      var reader = new FileReader();
+      reader.onload = function () {
+        htmlEditor.value = String(reader.result || '');
+        updatePreview();
+        setTab('src');
+        note('Datei geladen: ' + file.name + '. Schau sie dir im Quelltext an und speichere dann mit dem Speichern-Knopf in InfoCraft.');
+      };
+      reader.readAsText(file);
+      uploadInput.value = '';
+    });
+  }
+
+  /* HTML herunterladen: Dateiname aus dem Titel (Umlaute und Sonderzeichen zu Bindestrichen) */
+  var dlBtn = document.getElementById('html-download');
+  var titleInput = saveForm.querySelector('input[name="title"]');
+  if (dlBtn) {
+    dlBtn.addEventListener('click', function () {
+      if (activeTab === 'wy') { wySave(); }
+      var base = (titleInput && titleInput.value ? titleInput.value : 'webseite').toLowerCase();
+      base = base.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss');
+      base = base.replace(/[^a-z0-9]+/g, '-');
+      while (base.charAt(0) === '-') { base = base.slice(1); }
+      while (base.length > 0 && base.charAt(base.length - 1) === '-') { base = base.slice(0, base.length - 1); }
+      if (!base) { base = 'webseite'; }
+      var blob = new Blob([htmlEditor.value], { type: 'text/html' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = base + '.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      note('HTML-Datei heruntergeladen. Mit dem Öffnen-Knopf kannst du sie später wieder hochladen.');
+    });
+  }
+
+  /* Vorschau in neuem Fenster */
+  var newWinBtn = document.getElementById('html-newwin');
+  if (newWinBtn) {
+    newWinBtn.addEventListener('click', function () {
+      if (activeTab === 'wy') { wySave(); }
+      var blob = new Blob([htmlEditor.value], { type: 'text/html' });
+      window.open(URL.createObjectURL(blob), '_blank');
+      note('Vorschau in neuem Fenster geöffnet.');
+    });
+  }
+
+  /* Tag-Erklärungen: Karte zum gewählten Tag zeigen */
+  var tagSelect = document.getElementById('tag-explain');
+  var tagCards = Array.prototype.slice.call(document.querySelectorAll('[data-tag-card]'));
+  if (tagSelect && tagCards.length > 0) {
+    tagSelect.addEventListener('change', function () {
+      var v = tagSelect.value;
+      tagCards.forEach(function (card) {
+        if (card.getAttribute('data-tag-card') === v) { card.removeAttribute('hidden'); }
+        else { card.setAttribute('hidden', ''); }
+      });
+    });
+  }
+
+  /* Speichern: Gestalten-Inhalt vor dem Speichern zurück in die Textarea */
+  saveForm.addEventListener('submit', function () {
+    if (activeTab === 'wy') { wySave(); }
+  });
+  saveForm.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+      e.preventDefault();
+      if (activeTab === 'wy') { wySave(); }
+      saveForm.submit();
+    }
+  });
 })();
 /* InfoCraft Phase 4: Python direkt im Browser ausführen (Pyodide) */
 (function () {

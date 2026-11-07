@@ -573,3 +573,50 @@ body.sidebar-hidden .sidebar { display: none; }
 @media (max-width: 800px) {
     .ide { grid-template-columns: 1fr; }
 }
+
+/* HTML-Werkstatt: drei Ansichten (Gestalten / Quelltext / Vorschau) */
+.vw-bar { display: flex; gap: 8px; margin: 14px 0 0; flex-wrap: wrap; }
+.vw-tab {
+    border: 1px solid var(--border); border-bottom: none; background: #f1f4f9;
+    border-radius: 10px 10px 0 0; padding: 8px 14px; font: inherit; font-weight: 600;
+    cursor: pointer; color: var(--muted);
+}
+.vw-tab:hover { background: #e8edf5; }
+.vw-tab.vw-on { background: var(--surface); color: var(--primary); }
+.vw-pane {
+    border: 1px solid var(--border); border-radius: 0 10px 10px 10px;
+    padding: 14px; background: var(--surface); margin-bottom: 4px;
+}
+.vw-pane[hidden] { display: none; }
+.html-io { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 10px 0 0; }
+#html-io-note { font-size: 0.85rem; color: var(--muted); }
+.wy-toolbar {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 10px; border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 10px; background: #f8fafc;
+}
+.wy-tool { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; color: var(--text); }
+.wy-btn {
+    border: 1px solid var(--border); background: var(--surface); border-radius: 8px;
+    padding: 6px 10px; font: inherit; cursor: pointer; min-width: 38px; color: var(--text);
+}
+.wy-btn:hover { background: #eef2f7; }
+#html-wysiwyg { width: 100%; min-height: 480px; background: #fff; border: 1px solid var(--border); border-radius: 10px; }
+.vw-hint { font-size: 0.85rem; color: var(--muted); margin: 10px 0 0; }
+.tag-help { margin-bottom: 12px; }
+.tag-cards { margin-top: 10px; }
+.tag-card {
+    border: 1px solid var(--border); border-left: 4px solid var(--primary);
+    background: #f8fafc; border-radius: 10px; padding: 12px 14px;
+}
+.tag-card[hidden] { display: none; }
+.tag-card strong { display: block; margin-bottom: 6px; }
+.tag-card p { margin: 0 0 8px; font-size: 0.9rem; }
+.tag-card pre {
+    margin: 0; padding: 10px; background: #0f172a; color: #e2e8f0;
+    border-radius: 8px; font-size: 0.8rem; overflow-x: auto; white-space: pre-wrap;
+}
+@media (max-width: 800px) {
+    #html-wysiwyg { min-height: 360px; }
+    .preview-frame { min-height: 360px; }
+}
