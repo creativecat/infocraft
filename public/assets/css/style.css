@@ -227,8 +227,8 @@ body.sidebar-mini .nav-item { justify-content: center; padding: 10px 8px; }
 body.sidebar-hidden .sidebar { display: none; }
 
 /* Code-Werkstatt: Ordner und Drag & Drop */
-.folder-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
-.folder-item { border: 2px dashed var(--border); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: border-color 0.1s ease, background 0.1s ease; }
+.folder-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
+.folder-item { border: 1px dashed var(--border); border-radius: 8px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; transition: border-color 0.1s ease, background 0.1s ease; }
 .folder-item:hover, .folder-item.drop-hover { border-color: var(--primary); background: #eef2ff; }
 .project-card { cursor: grab; }
 .project-card:active { cursor: grabbing; }
@@ -307,6 +307,8 @@ body.sidebar-hidden .sidebar { display: none; }
     white-space: pre-wrap; overflow-wrap: break-word; tab-size: 4;
     background: transparent; color: transparent; caret-color: var(--text);
     position: relative; z-index: 2; display: block; width: 100%; resize: vertical;
+    /* exakt wie das farbige pre-Overlay darunter: sonst wirkt der Cursor verschoben */
+    padding: 10px 12px; border: 1px solid var(--border);
 }
 .hlwrap.sql > textarea { font-size: 0.95rem; }
 .hlwrap > textarea::placeholder { color: #94a3b8; opacity: 1; }
@@ -428,7 +430,7 @@ body.sidebar-hidden .sidebar { display: none; }
 
 /* Java-Projektseiten nutzen die volle Breite (Dateien, Editor, Konsole nebeneinander) */
 .content:has(.ide) { max-width: none; }
-.ide { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 14px; align-items: stretch; }
+.ide { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 14px; align-items: stretch; }
 .ide-work {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
@@ -439,35 +441,35 @@ body.sidebar-hidden .sidebar { display: none; }
     min-width: 0;
 }
 .ide-side {
-    background: var(--surface);
+    background: var(--bg);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 10px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     min-width: 0;
 }
-.ide-side-title { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding: 2px 4px; }
-.ide-side-files { display: flex; flex-direction: column; gap: 4px; }
+.ide-side-title { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding: 2px 4px; }
+.ide-side-files { display: flex; flex-direction: column; gap: 3px; }
 .ide-file { display: flex; gap: 4px; align-items: center; }
 .ide-file-btn {
     flex: 1;
     min-width: 0;
     text-align: left;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 0.85rem;
-    padding: 7px 10px;
+    font-size: 0.8rem;
+    padding: 5px 8px;
     border: 1px solid transparent;
-    border-radius: 9px;
+    border-radius: 8px;
     background: transparent;
-    color: var(--text);
+    color: var(--muted);
     cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.ide-file-btn:hover { background: var(--bg); }
+.ide-file-btn:hover { background: var(--surface); color: var(--text); }
 .ide-file-btn.active, .ide-file.active .ide-file-btn { background: #eef0fe; border-color: #c7d2fe; color: var(--primary-2); font-weight: 600; }
 .ide-file-del { flex-shrink: 0; }
 .ide-file-del .btn { padding: 3px 8px; font-size: 0.8rem; border-color: transparent; }
@@ -477,14 +479,15 @@ body.sidebar-hidden .sidebar { display: none; }
 
 .ide-main { min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px; }
 .ide-hlwrap {
-    border: 2px solid #c7d2fe;
+    border: 2px solid #a5b4fc;
     border-radius: 12px;
     background: var(--surface);
-    box-shadow: var(--shadow), 0 0 0 4px rgba(79, 70, 229, 0.08);
+    box-shadow: var(--shadow), 0 0 0 4px rgba(79, 70, 229, 0.12);
     overflow: hidden;
 }
-.ide-hlwrap > textarea { border: none; }
-.ide-editor { min-height: 56vh; resize: vertical; }
+.ide-hlwrap > textarea { border: 1px solid transparent; }
+.ide-hlwrap > textarea, .ide-hlwrap > pre { font-size: 0.95rem; }
+.ide-editor { min-height: 62vh; resize: vertical; }
 .ide-help { border: 1px dashed var(--border); border-radius: 10px; padding: 8px 12px; }
 .ide-help summary { cursor: pointer; }
 .ide-help pre { margin: 8px 0; }
@@ -620,3 +623,47 @@ body.sidebar-hidden .sidebar { display: none; }
     #html-wysiwyg { min-height: 360px; }
     .preview-frame { min-height: 360px; }
 }
+
+/* ===== Projekte nach Ordnern: kompakte gruppierte Liste (Code- und HTML-Werkstatt) ===== */
+.proj-groups { display: flex; flex-direction: column; gap: 16px; margin: 20px 0 28px; }
+.proj-group { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
+.proj-group-title { margin: 0 0 10px; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.proj-group-title .pill { font-size: 0.72rem; }
+.proj-list { display: flex; flex-direction: column; gap: 6px; }
+.proj-row {
+    display: flex; align-items: center; gap: 10px;
+    background: #fbfcfe; border: 1px solid var(--border); border-radius: 10px;
+    padding: 7px 12px;
+}
+.proj-row:hover { border-color: #c7d2fe; background: #fff; }
+.proj-icon { font-size: 1.05rem; flex-shrink: 0; }
+.proj-title {
+    flex: 1; min-width: 0; font-weight: 600; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.proj-title:hover { color: var(--primary); }
+.proj-kind { flex-shrink: 0; font-size: 0.72rem; }
+.proj-open { flex-shrink: 0; padding: 4px 12px; font-size: 0.8rem; }
+.proj-row .form-inline { flex-shrink: 0; }
+.proj-row .form-inline .btn { padding: 4px 8px; font-size: 0.8rem; }
+.proj-empty { margin: 0; font-size: 0.88rem; }
+
+/* ===== Klassendiagramm direkt in der Java-IDE (BlueJ-Idee) ===== */
+.umldiag { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px; align-items: flex-start; }
+.uml-class {
+    border: 2px solid #1d4ed8; border-radius: 8px; background: var(--surface);
+    min-width: 180px; max-width: 280px; overflow: hidden;
+    box-shadow: var(--shadow);
+}
+.uml-name {
+    background: #dbeafe; border-bottom: 1px solid #93c5fd;
+    font-weight: 700; text-align: center; padding: 6px 8px;
+    font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem;
+}
+.uml-sec { padding: 6px 10px; }
+.uml-row { font-family: ui-monospace, Consolas, monospace; font-size: 0.78rem; padding: 1px 0; word-break: break-word; }
+.uml-parent {
+    font-size: 0.75rem; color: var(--muted); padding: 4px 10px 6px;
+    border-top: 1px dashed var(--border); margin-top: 4px;
+}
+.uml-empty { color: var(--muted); font-style: italic; }

@@ -63,6 +63,7 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
         <div class="ide-console">
             <div class="console-tabs" role="tablist">
                 <button type="button" class="console-tab active" data-ctab="out">▶ Ausgabe</button>
+                <button type="button" class="console-tab" data-ctab="classes">📐 Klassen</button>
                 <button type="button" class="console-tab" data-ctab="repl">🧪 Objektkonsole</button>
                 <button type="button" class="console-tab" data-ctab="objects">🧩 Objekte <span class="err-badge" id="java-obj-badge">0</span></button>
                 <button type="button" class="console-tab" data-ctab="errors">🚨 Fehlerkonsole <span class="err-badge" id="java-error-badge">0</span></button>
@@ -73,6 +74,18 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
                     <span class="muted">Strg + Enter funktioniert auch. Dein Programm läuft komplett in deinem Browser.</span>
                 </div>
                 <pre id="java-console" class="code ide-console-out">Noch nichts ausgeführt.</pre>
+            </div>
+            <div class="console-pane" data-cpane="classes" hidden>
+                <p class="muted">Dein Klassendiagramm wie in BlueJ: live aus deinem Code, ganz ohne Ausführen. Jede Klasse mit Attributen und Methoden (+ öffentlich, - privat, # geschützt, ↳ Vererbung). Ändere den Code – das Diagramm folgt sofort.</p>
+                <div id="java-classes" class="umldiag"></div>
+                <?php if ($diagramAuto): ?>
+                <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/diagramm') ?>" class="form-inline">
+                    <?= csrf_field() ?>
+                    <button class="btn btn-ghost" type="submit" title="In der Diagramm-Werkstatt weiterbearbeiten und als PNG exportieren">📐 Als Diagramm übernehmen (PNG-Export)</button>
+                </form>
+                <?php else: ?>
+                <p class="muted">Das Übernehmen in die Diagramm-Werkstatt hat deine Lehrkraft für deine Klasse deaktiviert.</p>
+                <?php endif; ?>
             </div>
             <div class="console-pane" data-cpane="repl" hidden>
                 <p class="muted" id="java-repl-hint">Erst ▶ Ausführen klicken, dann kannst du hier Objekte erzeugen und Methoden aufrufen.</p>
@@ -108,7 +121,7 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
     <?php endif; ?>
 </section>
 
-<?php if ($project->type === 'code' && ($project->language === 'java' || $project->language === 'python')): ?>
+<?php if ($project->type === 'code' && $project->language === 'python'): ?>
 <section class="panel">
     <div class="panel-head">
         <h3>📐 Klassendiagramm</h3>

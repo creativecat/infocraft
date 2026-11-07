@@ -6,8 +6,8 @@ Zusätzlich kann jede Lehrkraft pro Klasse und Arbeitsbereich zwischen drei Eins
 
 | Bereich | Ab Jgst. | Lehrplanbezug |
 | --- | --- | --- |
-| Code-Werkstatt | 6 | Algorithmen und Programmieren: Grundlagen, Kontrollstrukturen, Methoden (Java/Python); Objektorientierte Modellierung: Klassen und Objekte (mehrere Klassen pro Datei), Objekte direkt in der Datei erzeugen, Objektdiagramm (alle erzeugten Objekte mit Attributwerten), Arbeiten mit Objekten in der Objektkonsole |
-| HTML-Werkstatt | 6 | Webseiten gestalten: HTML, CSS, Layout und Gestaltung; drei Ansichten (Gestalten, Quelltext, Vorschau), Tag-Erklärungen zum Nachschlagen, HTML-Dateien öffnen und herunterladen |
+| Code-Werkstatt | 6 | Algorithmen und Programmieren: Grundlagen, Kontrollstrukturen, Methoden (Java als Standard); Objektorientierte Modellierung: Klassen und Objekte (mehrere Klassen pro Datei), Klassendiagramm live in der IDE nach dem BlueJ-Prinzip (UML-Boxen ohne Ausführen), Objekte direkt in der Datei erzeugen, Objektdiagramm (alle erzeugten Objekte mit Attributwerten), Arbeiten mit Objekten in der Objektkonsole; Projekte nach Ordnern gruppiert |
+| HTML-Werkstatt | 6 | Webseiten gestalten: HTML, CSS, Layout und Gestaltung; drei Ansichten (Gestalten, Quelltext, Vorschau), Tag-Erklärungen zum Nachschlagen, HTML-Dateien öffnen und herunterladen; Seiten nach Ordnern gruppiert (Drag & Drop) |
 | Aufgaben (Übung und Abfrage) | 6 | Übergreifend: Anwendung und Festigung aller Themen |
 | Quiz-Arena | 6 | Übergreifend: Wiederholung und Wissenssicherung |
 | Wiki | 6 | Übergreifend: Fachbegriffe, Konzepte, Selbstlernen |

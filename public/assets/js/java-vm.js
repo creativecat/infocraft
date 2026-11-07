@@ -268,13 +268,13 @@
         next();
         if (!at('id')) { err('Nach void folgt der Methodenname.', 'z. B. void drucken() { ... }'); }
         var vname = next().v;
-        cls.methods.push({ name: vname, ret: { name: 'void', arr: false, void: true }, isStatic: mods.isStatic, params: parseParams(), body: parseBlock(), line: t.line });
+        cls.methods.push({ name: vname, ret: { name: 'void', arr: false, void: true }, isStatic: mods.isStatic, visibility: mods.visibility, params: parseParams(), body: parseBlock(), line: t.line });
         return;
       }
       /* Konstruktor: Name == Klassenname */
       if (t.k === 'id' && t.v === cls.name && peek(1).k === 'p' && peek(1).v === '(') {
         next();
-        cls.ctors.push({ params: parseParams(), body: parseBlock(), line: t.line });
+        cls.ctors.push({ params: parseParams(), visibility: mods.visibility, body: parseBlock(), line: t.line });
         return;
       }
       /* Attribute und Methoden mit Rueckgabetyp */
@@ -296,7 +296,7 @@
       if (!at('id')) { err('Hier fehlt ein Name.', 'z. B. ' + ty.name + ' wert;'); }
       var nameTok = next();
       if (at('p', '(')) {
-        cls.methods.push({ name: nameTok.v, ret: ty, isStatic: mods.isStatic, params: parseParams(), body: parseBlock(), line: nameTok.line });
+        cls.methods.push({ name: nameTok.v, ret: ty, isStatic: mods.isStatic, visibility: mods.visibility, params: parseParams(), body: parseBlock(), line: nameTok.line });
         return;
       }
       /* Attribut(e) */
@@ -306,7 +306,7 @@
           next();
           init = at('p', '{') ? parseArrayLiteral(ty.name, ty.arr) : parseExpr();
         }
-        cls.fields.push({ name: nameTok.v, type: ty, isStatic: mods.isStatic, init: init, line: nameTok.line });
+        cls.fields.push({ name: nameTok.v, type: ty, isStatic: mods.isStatic, visibility: mods.visibility, init: init, line: nameTok.line });
         if (at('p', ',')) { next(); if (!at('id')) { err('Nach dem Komma folgt ein weiterer Name.', 'z. B. int a, b;'); } nameTok = next(); continue; }
         break;
       }
@@ -2759,17 +2759,31 @@
     if (typeof document === 'undefined') { return; }
     var tabs = document.querySelectorAll('[data-file-tab]');
     var panes = document.querySelectorAll('[data-file-pane]');
+    var fileRows = document.querySelectorAll('.ide-file[data-file-row]');
     var i;
+    /* Datei im Editor anzeigen: das hidden-Attribut steuert die Sichtbarkeit der Panes,
+     * active nur fuer die Optik von Tab und Zeile. */
+    function selectFile(id) {
+      var j;
+      for (j = 0; j < tabs.length; j++) { tabs[j].classList.remove('active'); }
+      for (j = 0; j < fileRows.length; j++) {
+        if (fileRows[j].getAttribute('data-file-row') === id) { fileRows[j].classList.add('active'); }
+        else { fileRows[j].classList.remove('active'); }
+      }
+      for (j = 0; j < panes.length; j++) {
+        var hit = panes[j].getAttribute('data-file-pane') === id;
+        if (hit) { panes[j].removeAttribute('hidden'); }
+        else { panes[j].setAttribute('hidden', 'hidden'); }
+        var area = panes[j].querySelector('textarea');
+        if (hit && area && typeof area.focus === 'function') { area.focus(); }
+      }
+      for (j = 0; j < tabs.length; j++) {
+        if (tabs[j].getAttribute('data-file-tab') === id) { tabs[j].classList.add('active'); }
+      }
+    }
     for (i = 0; i < tabs.length; i++) {
       tabs[i].addEventListener('click', function (ev) {
-        var id = ev.currentTarget.getAttribute('data-file-tab');
-        var j;
-        for (j = 0; j < tabs.length; j++) { tabs[j].classList.remove('active'); }
-        for (j = 0; j < panes.length; j++) {
-          if (panes[j].getAttribute('data-file-pane') === id) { panes[j].classList.add('active'); }
-          else { panes[j].classList.remove('active'); }
-        }
-        ev.currentTarget.classList.add('active');
+        selectFile(ev.currentTarget.getAttribute('data-file-tab'));
       });
     }
     var runBtn = document.getElementById('run-java');
@@ -2937,11 +2951,87 @@
       if (b) { b.textContent = res.errors.length === 0 ? '0' : String(res.errors.length); }
       renderObjects();
       updateReplHint();
+      renderClasses();
       if (!res.ok) { showPane('errors'); }
       else if (!res.ranMain && res.output === '') { showPane('repl'); }
       else { showPane('out'); }
     }
     runBtn.addEventListener('click', doRun);
+
+    /* Klassendiagramm direkt in der IDE (Idee von BlueJ): live aus dem Code gelesen,
+     * ohne das Programm auszufuehren. Parse-Fehler stoeren nicht: Der lesbare Stand
+     * wird gezeigt. */
+    var classBox = document.getElementById('java-classes');
+    function collectFiles() {
+      var files = {};
+      var panes3 = document.querySelectorAll('[data-file-pane]');
+      var k;
+      for (k = 0; k < panes3.length; k++) {
+        var nm = panes3[k].getAttribute('data-file-name');
+        var ta = panes3[k].querySelector('textarea');
+        if (nm && ta) { files[nm] = ta.value; }
+      }
+      return files;
+    }
+    function typeName(ty) {
+      if (!ty) { return ''; }
+      return ty.name + (ty.arr ? '[]' : '');
+    }
+    function visMark(v) {
+      if (v === 'public') { return '+ '; }
+      if (v === 'private') { return '- '; }
+      if (v === 'protected') { return '# '; }
+      return '';
+    }
+    function renderClasses() {
+      if (!classBox) { return; }
+      var comp;
+      try { comp = compileAll(collectFiles()); } catch (e) { comp = null; }
+      if (!comp || comp.classes.length === 0) {
+        classBox.innerHTML = '<p class="muted">Noch keine Klasse erkannt. Schreibe eine Klasse wie in BlueJ - sie erscheint sofort hier.</p>';
+        return;
+      }
+      var html = '';
+      var ci;
+      for (ci = 0; ci < comp.classes.length; ci++) {
+        var cls = comp.classes[ci];
+        var rows = '';
+        var fi;
+        for (fi = 0; fi < cls.fields.length; fi++) {
+          var fd = cls.fields[fi];
+          rows = rows + '<div class="uml-row">' + visMark(fd.visibility) + escapeHtml(fd.name) + ' : ' + escapeHtml(typeName(fd.type)) + '</div>';
+        }
+        for (fi = 0; fi < cls.ctors.length; fi++) {
+          var ct = cls.ctors[fi];
+          var cp = [];
+          var pi;
+          for (pi = 0; pi < ct.params.length; pi++) { cp.push(escapeHtml(typeName(ct.params[pi].type) + ' ' + ct.params[pi].name)); }
+          rows = rows + '<div class="uml-row">' + visMark(ct.visibility) + escapeHtml(cls.name) + '(' + cp.join(', ') + ')</div>';
+        }
+        for (fi = 0; fi < cls.methods.length; fi++) {
+          var mt = cls.methods[fi];
+          var mp = [];
+          var pj;
+          for (pj = 0; pj < mt.params.length; pj++) { mp.push(escapeHtml(typeName(mt.params[pj].type) + ' ' + mt.params[pj].name)); }
+          var ret = (mt.ret && mt.ret.void) ? '' : ' : ' + escapeHtml(typeName(mt.ret));
+          rows = rows + '<div class="uml-row">' + visMark(mt.visibility) + escapeHtml(mt.name) + '(' + mp.join(', ') + ')' + ret + '</div>';
+        }
+        if (rows === '') { rows = '<div class="uml-row uml-empty">(noch ohne Attribute und Methoden)</div>'; }
+        var parentNote = cls.parent ? '<div class="uml-parent">↳ erbt von ' + escapeHtml(cls.parent) + '</div>' : '';
+        html = html + '<div class="uml-class"><div class="uml-name">' + escapeHtml(cls.name) + '</div><div class="uml-sec">' + rows + '</div>' + parentNote + '</div>';
+      }
+      if (!comp.ok) { html = html + '<p class="muted">Achtung: Der Code enthaelt noch Fehler - das Diagramm zeigt den bisher lesbaren Stand.</p>'; }
+      classBox.innerHTML = html;
+    }
+    var classTimer = null;
+    var paneAreas = document.querySelectorAll('[data-file-pane] textarea');
+    for (i = 0; i < paneAreas.length; i++) {
+      paneAreas[i].addEventListener('input', function () {
+        if (classTimer) { clearTimeout(classTimer); }
+        classTimer = setTimeout(renderClasses, 500);
+      });
+    }
+    renderClasses();
 
     /* Strg + Enter fuehrt aus, egal welcher Editor fokussiert ist */
     var pe;
