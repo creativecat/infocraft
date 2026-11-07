@@ -5,15 +5,21 @@ namespace Infocraft;
 
 final class Router
 {
-    /** @var array<int, array{method: string, pattern: string, handler: callable}> */
+    /** @var array<int, array{method: string, pattern: string, handler: array|callable}> */
     private array $routes = [];
 
-    public function get(string $pattern, callable $handler): void
+    /**
+     * Handler als Array [Klasse, Methode] oder callable.
+     * Wichtig: array|callable statt callable, weil PHP bei der Typprüfung
+     * einer [Klasse, Methode]-Angabe den Autoloader NICHT auslöst und die
+     * Controller-Klassen erst beim Dispatch bekannt sind.
+     */
+    public function get(string $pattern, array|callable $handler): void
     {
         $this->routes[] = ['method' => 'GET', 'pattern' => $pattern, 'handler' => $handler];
     }
 
-    public function post(string $pattern, callable $handler): void
+    public function post(string $pattern, array|callable $handler): void
     {
         $this->routes[] = ['method' => 'POST', 'pattern' => $pattern, 'handler' => $handler];
     }
@@ -32,7 +38,7 @@ final class Router
                         $params[$key] = $value;
                     }
                 }
-                ($route['handler'])($params);
+                call_user_func($route['handler'], $params);
                 return;
             }
         }
