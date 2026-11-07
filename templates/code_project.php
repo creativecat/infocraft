@@ -7,7 +7,9 @@
         <?= csrf_field() ?>
         <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
         <label class="field"><span>Inhalt <?= $project->type === 'html' ? '(HTML)' : '(' . e($project->language ?? 'Code') . ')' ?></span>
-            <textarea name="content" id="code-editor" rows="18" class="mono code-editor" spellcheck="false"><?= e($project->content) ?></textarea>
+            <div class="hlwrap" data-hl="<?= e($project->type === 'html' ? 'xml' : ($project->language ?? 'plaintext')) ?>">
+                <textarea name="content" id="code-editor" rows="18" class="mono code-editor" spellcheck="false"><?= e($project->content) ?></textarea>
+            </div>
         </label>
         <div class="btn-row"><button class="btn btn-primary" type="submit">💾 Speichern</button></div>
     </form>
@@ -32,6 +34,7 @@
     <?php endif; ?>
 </section>
 <?php endif; ?>
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
 
 <?php if ($project->type === 'code' && $project->language === 'python'): ?>
 <section class="panel">

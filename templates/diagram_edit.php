@@ -7,7 +7,9 @@
         <?= csrf_field() ?>
         <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($diagram->title) ?>" required maxlength="200"></label>
         <label class="field"><span>Mermaid-Quelltext (classDiagram), die Vorschau aktualisiert sich beim Tippen</span>
-            <textarea name="mermaid" id="diagram-source" rows="14" class="mono" spellcheck="false"><?= e($diagram->mermaid) ?></textarea>
+            <div class="hlwrap" data-hl="mermaid">
+                <textarea name="mermaid" id="diagram-source" rows="14" class="mono" spellcheck="false"><?= e($diagram->mermaid) ?></textarea>
+            </div>
         </label>
         <div class="btn-row"><button class="btn btn-primary" type="submit">💾 Speichern</button></div>
     </form>
@@ -30,8 +32,9 @@
     </div>
     <details>
         <summary class="muted">Mermaid-Quelltext anzeigen (zum Weiterverwenden, z. B. in Präsentationen)</summary>
-        <pre class="code"><?= e($diagram->mermaid) ?></pre>
+        <pre class="code"><code class="language-mermaid"><?= e($diagram->mermaid) ?></code></pre>
     </details>
 </section>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
 <script>if (window.mermaid) { mermaid.initialize({ startOnLoad: false }); }</script>

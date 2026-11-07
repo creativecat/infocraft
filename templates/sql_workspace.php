@@ -10,7 +10,9 @@
         <?= csrf_field() ?>
         <label class="field">
             <span>SQL-Anweisung (Strg + Enter führt aus)</span>
-            <textarea name="sql" rows="5" class="mono sql-input" placeholder="SELECT * FROM ..."><?= e($lastSql) ?></textarea>
+            <div class="hlwrap sql" data-hl="sql">
+                <textarea name="sql" rows="5" class="mono sql-input" placeholder="SELECT * FROM ..."><?= e($lastSql) ?></textarea>
+            </div>
         </label>
         <div class="btn-row"><button class="btn btn-primary" type="submit">▶ Ausführen</button></div>
     </form>
@@ -55,7 +57,7 @@
         <div class="mermaid"><?= e($er) ?></div>
         <details>
             <summary class="muted">Mermaid-Quelltext anzeigen (zum Weiterverwenden, z. B. in Präsentationen)</summary>
-            <pre class="code"><?= e($er) ?></pre>
+            <pre class="code"><code class="language-mermaid"><?= e($er) ?></code></pre>
         </details>
         <?php if ($diagramAuto): ?>
         <form method="post" action="<?= url('werkstatt/sql/' . $template->slug . '/diagramm') ?>" class="form-inline" style="margin-top:10px;">
@@ -68,6 +70,7 @@
     </section>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
 <script>if (window.mermaid) { mermaid.initialize({ startOnLoad: true }); }</script>
 
 <section class="panel" id="aufgaben">
@@ -86,14 +89,16 @@
         <?php if ($isSolved): ?>
         <details>
             <summary class="muted">Musterlösung ansehen</summary>
-            <pre class="code"><?= e($mission['solution_sql']) ?></pre>
+            <pre class="code"><code class="language-sql"><?= e($mission['solution_sql']) ?></code></pre>
         </details>
         <?php else: ?>
         <form method="post" action="<?= url('werkstatt/sql/' . $template->slug . '/mission/' . (int) $mission['id']) ?>" class="form">
             <?= csrf_field() ?>
             <label class="field">
                 <span>Deine SQL-Anweisung<?= ($mission['kind'] ?? 'query') === 'action' ? ' (verändert die Daten, Schreibrechte nötig)' : '' ?></span>
-                <textarea name="mission_sql" rows="3" class="mono" placeholder="SELECT ..."></textarea>
+                <div class="hlwrap sql" data-hl="sql">
+                    <textarea name="mission_sql" rows="3" class="mono" placeholder="SELECT ..."></textarea>
+                </div>
             </label>
             <div class="btn-row"><button class="btn btn-primary" type="submit">Prüfen</button></div>
         </form>

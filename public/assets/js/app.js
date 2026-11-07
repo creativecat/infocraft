@@ -351,3 +351,58 @@
     });
   }
 })();
+/* InfoCraft: Syntax-Highlighting in allen Editoren (highlight.js, Overlay-Technik) */
+(function () {
+  'use strict';
+  if (typeof hljs === 'undefined') { return; }
+  var NL = String.fromCharCode(10);
+
+  if (hljs.getLanguage && !hljs.getLanguage('mermaid')) {
+    hljs.registerLanguage('mermaid', function () {
+      return {
+        case_insensitive: true,
+        keywords: 'classDiagram erDiagram direction class interface enum record abstract static implements extends LR TB note',
+        contains: [
+          hljs.COMMENT('%%', '
+),
+          { className: 'string', begin: '"', end: '"' },
+          { className: 'meta', begin: '<<', end: '>>' },
+          { className: 'number', begin: '[0-9]+' },
+          { className: 'title', begin: '[A-Z][A-Za-z0-9_]*' }
+        ]
+      };
+    });
+  }
+
+  // Statische Code-Blöcke (Musterloesungen, ER-Quelltext, Mermaid-Quelltext)
+  document.querySelectorAll('pre.code code').forEach(function (el) {
+    var m = el.className.match(/language-([a-z]+)/);
+    if (!m || !hljs.getLanguage(m[1])) { return; }
+    el.innerHTML = hljs.highlight(el.textContent, { language: m[1] }).value;
+  });
+
+  // Editierbare Textareas: farbiges pre hinter transparentem Textarea
+  document.querySelectorAll('[data-hl]').forEach(function (wrap) {
+    var area = wrap.querySelector('textarea');
+    if (!area) { return; }
+    var lang = wrap.getAttribute('data-hl');
+    if (!hljs.getLanguage(lang)) { return; }
+    var pre = document.createElement('pre');
+    var code = document.createElement('code');
+    code.className = 'language-' + lang;
+    pre.appendChild(code);
+    wrap.appendChild(pre);
+    var sync = function () {
+      pre.scrollTop = area.scrollTop;
+      pre.scrollLeft = area.scrollLeft;
+    };
+    var render = function () {
+      code.innerHTML = hljs.highlight(area.value + NL, { language: lang }).value;
+      sync();
+    };
+    render();
+    area.addEventListener('input', render);
+    area.addEventListener('scroll', sync);
+  });
+})();
+
