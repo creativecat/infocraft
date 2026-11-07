@@ -5,8 +5,8 @@ namespace Infocraft\Controllers;
 
 use Infocraft\Auth;
 use Infocraft\Config;
+use Infocraft\Models\User;
 use Infocraft\SsoM365;
-use Infocraft\User;
 
 final class AuthController
 {

@@ -41,7 +41,7 @@
         </a>
         <nav class="nav">
             <a href="<?= url('/') ?>" class="nav-item<?= $active === 'home' ? ' active' : '' ?>"><span>🏠</span> Start</a>
-            <?php foreach (Infocraft\ModuleController::modules() as $module): ?>
+            <?php foreach (\Infocraft\Controllers\ModuleController::modules() as $module): ?>
             <a href="<?= url('modul/' . $module['slug']) ?>" class="nav-item<?= $active === 'module-' . $module['slug'] ? ' active' : '' ?>"><span><?= $module['icon'] ?></span> <?= e($module['title']) ?></a>
             <?php endforeach; ?>
             <?php if ($user !== null && ($user->role === 'teacher' || $user->role === 'admin')): ?>

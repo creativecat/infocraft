@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Infocraft;
 
+use Infocraft\Models\User;
+
 final class Auth
 {
     public static function user(): ?User

@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace Infocraft;
 
+use InfocraftModelsSchoolClass;
+use InfocraftModelsUser;
+
 final class CsvImporter
 {
     /** @return array{created: int, updated: int, errors: array<int, string>} */

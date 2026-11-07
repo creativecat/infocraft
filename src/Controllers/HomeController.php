@@ -6,7 +6,6 @@ namespace Infocraft\Controllers;
 use Infocraft\Auth;
 use Infocraft\Config;
 use Infocraft\Database;
-use Infocraft\ModuleController;
 use Infocraft\SsoM365;
 
 final class HomeController

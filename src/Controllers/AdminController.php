@@ -6,8 +6,8 @@ namespace Infocraft\Controllers;
 use Infocraft\Auth;
 use Infocraft\Config;
 use Infocraft\CsvImporter;
-use Infocraft\SchoolClass;
-use Infocraft\User;
+use Infocraft\Models\SchoolClass;
+use Infocraft\Models\User;
 
 final class AdminController
 {
