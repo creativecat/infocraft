@@ -46,9 +46,11 @@ if ($path === '') {
 try {
     $router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', $path);
 } catch (PDOException $e) {
+    error_log('InfoCraft: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
     http_response_code(500);
     echo 'Datenbankfehler. Bitte prüfen, ob das Schema eingespielt ist (php tools/migrate.php) und ob config/config.php korrekt ist.';
 } catch (Throwable $e) {
+    error_log('InfoCraft: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
     http_response_code(500);
     echo 'Interner Fehler. Details stehen im Server-Log.';
 }

@@ -36,6 +36,6 @@ jobs:
           if [ "$CODE_LOGIN" = "200" ] && [ "$CODE_DEMO" = "200" ] && [ "$CODE_MODULE" = "200" ]; then
             echo "Alle Smoke-Tests bestanden."
           else
-            echo "::error::DIAG | GET /login: $CODE_LOGIN | POST /login/demo: $CODE_DEMO | GET /modul/sql: $CODE_MODULE | CSRF: ${CSRF:0:8} | login: $(head -c 150 login.html | tr "\n" " ") | home: $(head -c 150 home.html | tr "\n" " ") | server: $(tail -n 6 server.log | tr "\n" " ")"
+            echo "::error::DIAG | GET /login: $CODE_LOGIN | POST /login/demo: $CODE_DEMO | GET /modul/sql: $CODE_MODULE | CSRF: ${CSRF:0:8} | login: $(head -c 120 login.html | tr "\n" " ") | errors: $(grep "InfoCraft:" server.log | head -n 3 | tr "\n" " ")"
             exit 1
           fi
