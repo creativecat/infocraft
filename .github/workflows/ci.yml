@@ -188,7 +188,7 @@ jobs:
           grep -q "java-objects" jsave.html && J_OBJ_OK=1 || J_OBJ_OK=0
           grep -q "java-repl-in" jsave.html && J_REPL_OK=1 || J_REPL_OK=0
           grep -q "ide-work" jsave.html && J_WIDE_OK=1 || J_WIDE_OK=0
-          grep -q "vorstellen();" jproj.html && J_TOP_OK=1 || J_TOP_OK=0
+          grep -q "vorstellen();" <<<"$JSTARTER" && J_TOP_OK=1 || J_TOP_OK=0
           CODE_JFILE=$(curl -sS -L -o jfile.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" -d "name=Garage.java" http://127.0.0.1:8080/werkstatt/code/$JPROJ/datei)
           grep -q "Garage.java" jfile.html && J_FILE_OK=1 || J_FILE_OK=0
           grep -q "data-file-tab" jfile.html && J_TABS_OK=1 || J_TABS_OK=0
