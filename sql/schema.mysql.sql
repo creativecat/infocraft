@@ -80,6 +80,8 @@ CREATE TABLE IF NOT EXISTS project_files (
     CONSTRAINT fk_pfiles_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- Aufgabenpool (Lehrkräfte) und Austeilen an Klassen oder Einzelne.
+-- shared = 1: Aufgabe liegt bewusst im gemeinsamen Pool aller Lehrkräfte.
 CREATE TABLE IF NOT EXISTS tasks (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     teacher_id INT UNSIGNED NOT NULL,
@@ -87,9 +89,12 @@ CREATE TABLE IF NOT EXISTS tasks (
     description TEXT NOT NULL,
     type VARCHAR(20) NOT NULL DEFAULT 'allgemein',
     level INT NOT NULL DEFAULT 6,
+    shared TINYINT(1) NOT NULL DEFAULT 0,
+    sample_solution TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_tasks_teacher (teacher_id),
+    KEY idx_tasks_shared (shared),
     CONSTRAINT fk_tasks_teacher FOREIGN KEY (teacher_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
@@ -98,6 +103,7 @@ CREATE TABLE IF NOT EXISTS task_targets (
     task_id INT UNSIGNED NOT NULL,
     class_id INT UNSIGNED NULL,
     user_id INT UNSIGNED NULL,
+    due_at VARCHAR(16) NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_tt_task (task_id),
@@ -106,6 +112,49 @@ CREATE TABLE IF NOT EXISTS task_targets (
     CONSTRAINT fk_tt_task FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE,
     CONSTRAINT fk_tt_class FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE,
     CONSTRAINT fk_tt_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Abgaben der Schülerinnen und Schüler (eine je Aufgabe, überschreibbar)
+CREATE TABLE IF NOT EXISTS task_submissions (
+    task_id INT UNSIGNED NOT NULL,
+    student_id INT UNSIGNED NOT NULL,
+    content MEDIUMTEXT NOT NULL,
+    submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (task_id, student_id),
+    KEY idx_ts_student (student_id),
+    CONSTRAINT fk_ts_task FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE,
+    CONSTRAINT fk_ts_student FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Korrektur je Abgabe: source 'lk' = Lehrkraft, 'api' = KI-Vorschlag
+-- (checked = 0, bis die Lehrkraft ihn übernommen hat)
+CREATE TABLE IF NOT EXISTS task_gradings (
+    task_id INT UNSIGNED NOT NULL,
+    student_id INT UNSIGNED NOT NULL,
+    grade VARCHAR(10) NOT NULL DEFAULT '',
+    comment TEXT NOT NULL,
+    source VARCHAR(4) NOT NULL DEFAULT 'lk',
+    checked TINYINT(1) NOT NULL DEFAULT 1,
+    graded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (task_id, student_id),
+    KEY idx_tg_student (student_id),
+    CONSTRAINT fk_tg_task FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE,
+    CONSTRAINT fk_tg_student FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- KI-Schnittstelle: je Lehrkraft (user_id) oder schulweit (user_id NULL).
+-- mode 'chat' = OpenAI-/Mistral-kompatible Chat-API, 'json' = eigener Endpunkt.
+CREATE TABLE IF NOT EXISTS ai_settings (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id INT UNSIGNED NULL UNIQUE,
+    url VARCHAR(255) NOT NULL DEFAULT '',
+    api_key VARCHAR(255) NOT NULL DEFAULT '',
+    model VARCHAR(100) NOT NULL DEFAULT '',
+    mode VARCHAR(4) NOT NULL DEFAULT 'chat',
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_ai_user (user_id),
+    CONSTRAINT fk_ai_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS sql_templates (

@@ -62,7 +62,8 @@ CREATE TABLE IF NOT EXISTS project_files (
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Aufgabenpool (Lehrkräfte) und Austeilen an Klassen oder Einzelne
+-- Aufgabenpool (Lehrkräfte) und Austeilen an Klassen oder Einzelne.
+-- shared = 1: Aufgabe liegt bewusst im gemeinsamen Pool aller Lehrkräfte.
 CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     teacher_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -70,6 +71,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     description TEXT NOT NULL DEFAULT '',
     type TEXT NOT NULL DEFAULT 'allgemein',
     level INTEGER NOT NULL DEFAULT 6,
+    shared INTEGER NOT NULL DEFAULT 0,
+    sample_solution TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -78,8 +81,44 @@ CREATE TABLE IF NOT EXISTS task_targets (
     task_id INTEGER NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
     class_id INTEGER NULL REFERENCES classes (id) ON DELETE CASCADE,
     user_id INTEGER NULL REFERENCES users (id) ON DELETE CASCADE,
+    due_at TEXT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Abgaben der Schülerinnen und Schüler (eine je Aufgabe, überschreibbar)
+CREATE TABLE IF NOT EXISTS task_submissions (
+    task_id INTEGER NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+    student_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    content TEXT NOT NULL DEFAULT '',
+    submitted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (task_id, student_id)
+);
+
+-- Korrektur je Abgabe: source 'lk' = Lehrkraft, 'api' = KI-Vorschlag
+-- (checked = 0, bis die Lehrkraft ihn übernommen hat)
+CREATE TABLE IF NOT EXISTS task_gradings (
+    task_id INTEGER NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+    student_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    grade TEXT NOT NULL DEFAULT '',
+    comment TEXT NOT NULL DEFAULT '',
+    source TEXT NOT NULL DEFAULT 'lk',
+    checked INTEGER NOT NULL DEFAULT 1,
+    graded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (task_id, student_id)
+);
+
+-- KI-Schnittstelle: je Lehrkraft (user_id) oder schulweit (user_id NULL).
+-- mode 'chat' = OpenAI-/Mistral-kompatible Chat-API, 'json' = eigener Endpunkt.
+CREATE TABLE IF NOT EXISTS ai_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
+    url TEXT NOT NULL DEFAULT '',
+    api_key TEXT NOT NULL DEFAULT '',
+    model TEXT NOT NULL DEFAULT '',
+    mode TEXT NOT NULL DEFAULT 'chat',
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 
 -- SQL-Werkstatt: Vorlagen, Missionen (Adventure/Aufgaben), Zuweisungen mit Rechten
 CREATE TABLE IF NOT EXISTS sql_templates (

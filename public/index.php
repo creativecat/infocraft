@@ -123,8 +123,20 @@ $router->get('/pruefungen/{id}/ergebnis', [ExamController::class, 'result']);
 $router->get('/aufgaben', [TaskController::class, 'index']);
 $router->post('/aufgaben/anlegen', [TaskController::class, 'create']);
 $router->post('/aufgaben/austeilen', [TaskController::class, 'assign']);
+$router->post('/aufgaben/termin', [TaskController::class, 'dueDate']);
+$router->get('/aufgaben/ki', [TaskController::class, 'aiSettings']);
+$router->post('/aufgaben/ki', [TaskController::class, 'aiSave']);
+$router->post('/aufgaben/ki/schule', [TaskController::class, 'aiSchool']);
+$router->post('/aufgaben/pool/{id}/uebernehmen', [TaskController::class, 'adopt']);
 $router->post('/aufgaben/katalog', [TaskController::class, 'import']);
 $router->post('/aufgaben/katalog/stufe', [TaskController::class, 'importLevel']);
+$router->get('/aufgaben/{id}/bearbeiten', [TaskController::class, 'edit']);
+$router->post('/aufgaben/{id}/bearbeiten', [TaskController::class, 'update']);
+$router->post('/aufgaben/{id}/teilen', [TaskController::class, 'share']);
+$router->get('/aufgaben/{id}/korrektur', [TaskController::class, 'correction']);
+$router->post('/aufgaben/{id}/korrigieren', [TaskController::class, 'grade']);
+$router->post('/aufgaben/{id}/ki', [TaskController::class, 'aiGrade']);
+$router->post('/aufgaben/{id}/abgeben', [TaskController::class, 'submit']);
 $router->post('/aufgaben/{id}/loeschen', [TaskController::class, 'delete']);
 
 // Wiki: Nachschlage-Seiten mit Stufen-Filter (Lehrkräfte verwalten)

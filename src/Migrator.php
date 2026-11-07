@@ -33,6 +33,11 @@ final class Migrator
         // damit aktualisierte Seed-Präsentationen sicher erkannt werden.
         self::ensurePresentationSeedVersionColumn($pdo, $driver);
 
+        // Bestehende Installationen: Aufgaben-Pool (Teilen, Musterlösung) und
+        // Abgabetermine idempotent nachziehen.
+        self::ensureTaskSharedAndSolutionColumns($pdo, $driver);
+        self::ensureTaskTargetDueAtColumn($pdo, $driver);
+
         $classes = 0;
         $users = 0;
         if ($withDemoData) {
@@ -262,15 +267,18 @@ final class Migrator
         $class6R = $classIdFor($pdo, '6R');
         $class9R = $classIdFor($pdo, '9R');
 
-        $insertTask = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level) VALUES (?, ?, ?, ?, ?)');
-        $insertTarget = $pdo->prepare('INSERT INTO task_targets (task_id, class_id, user_id) VALUES (?, ?, NULL)');
+        $insertTask = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level, shared, sample_solution) VALUES (?, ?, ?, ?, ?, 0, ?)');
+        $insertTarget = $pdo->prepare('INSERT INTO task_targets (task_id, class_id, user_id, due_at) VALUES (?, ?, NULL, ?)');
 
-        $insertTask->execute([$stefanId, 'HTML-Grundgerüst entwerfen', 'Erstelle eine eigene Seite mit Überschrift, Absatz und Liste. Nutze die Code-Werkstatt.', 'html', 6]);
-        $insertTarget->execute([(int) $pdo->lastInsertId(), $class6R]);
-        $insertTask->execute([$stefanId, 'Python-Schleifen üben', 'Schreibe ein Programm, das die Zahlen von 1 bis 10 untereinander ausgibt.', 'code', 6]);
-        $insertTarget->execute([(int) $pdo->lastInsertId(), $class6R]);
-        $insertTask->execute([$claudiaId, 'SQL-Einstieg: SELECT üben', 'Öffne die verteilte Shop-Datenbank und löse die ersten zwei Missionen.', 'sql', 9]);
-        $insertTarget->execute([(int) $pdo->lastInsertId(), $class9R]);
+        $insertTask->execute([$stefanId, 'HTML-Grundgerüst entwerfen', 'Erstelle eine eigene Seite mit Überschrift, Absatz und Liste. Nutze die Code-Werkstatt.', 'html', 6, '']);
+        $insertTarget->execute([(int) $pdo->lastInsertId(), $class6R, '2030-12-31 14:00']);
+        $insertTask->execute([$stefanId, 'Python-Schleifen üben', 'Schreibe ein Programm, das die Zahlen von 1 bis 10 untereinander ausgibt.', 'code', 6, "for i in range(1, 11):\n    print(i)"]);
+        $insertTarget->execute([(int) $pdo->lastInsertId(), $class6R, null]);
+        // Von Claudia für alle Lehrkräfte geteilte Aufgabe (gemeinsamer Pool)
+        $insertSharedTask = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level, shared, sample_solution) VALUES (?, ?, ?, ?, ?, 1, ?)');
+        $insertSharedTask->execute([$claudiaId, 'ER-Modell Schulbibliothek (geteilt)', 'Modelliere eine kleine Bibliothek: Buch, Ausleihe und Mitglied mit Beziehungen und Kardinalitäten. Zeichne das ER-Modell in dein Heft.', 'sql', 10, 'Buch (1) – (n) Ausleihe (n) – (1) Mitglied']);
+        $insertTask->execute([$claudiaId, 'SQL-Einstieg: SELECT üben', 'Öffne die verteilte Shop-Datenbank und löse die ersten zwei Missionen.', 'sql', 9, '']);
+        $insertTarget->execute([(int) $pdo->lastInsertId(), $class9R, null]);
     }
 
     private static function seedDemoQuizzes(PDO $pdo): void
@@ -497,6 +505,51 @@ final class Migrator
             }
         }
         $pdo->exec('ALTER TABLE presentations ADD COLUMN seed_version INTEGER NOT NULL DEFAULT 0');
+    }
+
+    /** Aufgaben: shared (gemeinsamer Pool) und sample_solution (Musterlösung) nachziehen. */
+    private static function ensureTaskSharedAndSolutionColumns(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $exists = $pdo->query("SHOW COLUMNS FROM tasks LIKE 'shared'")->fetchColumn();
+            if ($exists === false || $exists === null) {
+                $pdo->exec('ALTER TABLE tasks ADD COLUMN shared TINYINT(1) NOT NULL DEFAULT 0');
+            }
+            $exists = $pdo->query("SHOW COLUMNS FROM tasks LIKE 'sample_solution'")->fetchColumn();
+            if ($exists === false || $exists === null) {
+                $pdo->exec("ALTER TABLE tasks ADD COLUMN sample_solution TEXT NOT NULL");
+                $pdo->exec("UPDATE tasks SET sample_solution = ''");
+            }
+            return;
+        }
+        $columns = [];
+        foreach ($pdo->query('PRAGMA table_info(tasks)')->fetchAll() as $column) {
+            $columns[] = (string) ($column['name'] ?? '');
+        }
+        if (!in_array('shared', $columns, true)) {
+            $pdo->exec('ALTER TABLE tasks ADD COLUMN shared INTEGER NOT NULL DEFAULT 0');
+        }
+        if (!in_array('sample_solution', $columns, true)) {
+            $pdo->exec("ALTER TABLE tasks ADD COLUMN sample_solution TEXT NOT NULL DEFAULT ''");
+        }
+    }
+
+    /** Abgabetermin an Aufgaben-Zuweisungen nachziehen. */
+    private static function ensureTaskTargetDueAtColumn(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $exists = $pdo->query("SHOW COLUMNS FROM task_targets LIKE 'due_at'")->fetchColumn();
+            if ($exists === false || $exists === null) {
+                $pdo->exec('ALTER TABLE task_targets ADD COLUMN due_at VARCHAR(16) NULL');
+            }
+            return;
+        }
+        foreach ($pdo->query('PRAGMA table_info(task_targets)')->fetchAll() as $column) {
+            if ((string) ($column['name'] ?? '') === 'due_at') {
+                return;
+            }
+        }
+        $pdo->exec('ALTER TABLE task_targets ADD COLUMN due_at TEXT NULL');
     }
 
     /**
