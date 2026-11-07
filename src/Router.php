@@ -30,7 +30,7 @@ final class Router
             if ($route['method'] !== $method) {
                 continue;
             }
-            $regex = '#^' . preg_replace('#\{([a-z_][a-z0-9_]*)\}#', '(?P<$1>[^/]+)', $route['pattern']) . '$#';
+            $regex = '#^' . preg_replace('#\{([a-zA-Z_][a-zA-Z0-9_]*)\}#', '(?P<$1>[^/]+)', $route['pattern']) . '$#';
             if (preg_match($regex, $path, $matches) === 1) {
                 $params = [];
                 foreach ($matches as $key => $value) {

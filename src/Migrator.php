@@ -300,6 +300,11 @@ final class Migrator
      */
     private static function seedDemoExams(PDO $pdo): void
     {
+        // Nachtrag: Fruehere Seeds legten die Demo-Schularbeit mit Phase
+        // durchfuehrung an. Hier idempotent auf herausgegeben korrigieren,
+        // damit auch bestehende Installationen nach dem Migrieren stimmen.
+        $fix = $pdo->prepare("UPDATE exams SET phase = 'herausgegeben', released_at = ? WHERE kind = 'arbeit' AND phase = 'durchfuehrung' AND title = 'Schularbeit: SQL-Grundlagen'");
+        $fix->execute([date('Y-m-d H:i:s')]);
         if ((int) $pdo->query('SELECT COUNT(*) FROM exams')->fetchColumn() > 0) {
             return;
         }
@@ -341,7 +346,8 @@ final class Migrator
         $insertWork->execute([$examId, $jonasId, $groupId, $workProjectId, $now]);
 
         // 2) Herausgegebene SQL-Schularbeit (9R, Emma): Ergebnisvergleich.
-        $insertExam->execute([$claudiaId, 'arbeit', 'Schularbeit: SQL-Grundlagen', 'SELECT, WHERE und ORDER BY am Shop-Modell.', 9, $now]);
+        $insertExamB = $pdo->prepare('INSERT INTO exams (teacher_id, kind, title, description, level, phase, started_at, released_at) VALUES (?, ?, ?, ?, ?, \'herausgegeben\', ?, ?)');
+        $insertExamB->execute([$claudiaId, 'arbeit', 'Schularbeit: SQL-Grundlagen', 'SELECT, WHERE und ORDER BY am Shop-Modell.', 9, $now, $now]);
         $examBId = (int) $pdo->lastInsertId();
 
         $insertGroupB = $pdo->prepare('INSERT INTO exam_groups (exam_id, name) VALUES (?, ?)');
