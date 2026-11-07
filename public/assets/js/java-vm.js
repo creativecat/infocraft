@@ -759,6 +759,7 @@
   /* Laufzeitkontext aller laufenden Programme (pro run-Aufruf neu). */
   var RUN_CLASS_MAP = Object.create(null);
   var RUN_VM = null;
+  var RUN_DB = null;
   var files0 = Object.create(null);
 
   /* ================= run(files) ================= */
@@ -806,6 +807,7 @@
     if (!compileChecks(classes, classMap, errors)) { return finish(); }
 
     RUN_CLASS_MAP = classMap;
+    RUN_DB = Object.create(null);
     var vm = {
       out: out,
       errCards: errCards,
@@ -1555,6 +1557,7 @@
     if (target.type === 'name' && target.v === 'Integer') { return integerCall(name, args, ctx, e.line); }
     if (target.type === 'name' && target.v === 'Double') { return doubleCall(name, args, ctx, e.line); }
     if (target.type === 'name' && target.v === 'String') { return stringStaticCall(name, args, ctx, e.line); }
+    if (target.type === 'name' && target.v === 'Datenbank') { return dbCall(name, args, ctx, e.line); }
 
     /* super.methode(): Suche ab der Oberklasse */
     if (target.type === 'super') {
@@ -1658,6 +1661,598 @@
   function stringStaticCall(name, args, ctx, line) {
     if (name === 'valueOf' && args.length === 1) { return mkStr(javaStr(args[0], ctx, line)); }
     throw rt(ctx, line, 'String.' + name + ' wird nicht unterstuetzt.', 'Verfuegbar: String.valueOf(...).');
+  }
+
+  /* ===== Datenbank: eingebaute Mini-SQL-Datenbank (im Speicher, pro Lauf neu) =====
+   * Fuer Schuelerinnen und Schueler: Tabellen anlegen, befuellen und abfragen,
+   * ganz ohne Installation. SQL-Kenntnisse aus der SQL-Werkstatt lassen sich
+   * so direkt im Java-Programm nutzen.
+   */
+  function dbTables() {
+    if (!RUN_DB) { RUN_DB = Object.create(null); }
+    return RUN_DB;
+  }
+
+  function dbText(v) {
+    if (v.t === 'String') { return v.v; }
+    if (v.t === 'int') { return String(v.v); }
+    if (v.t === 'double') { return fmtDouble(v.v); }
+    if (v.t === 'boolean') { return v.v ? 'true' : 'false'; }
+    if (v.t === 'char') { return String.fromCharCode(v.v); }
+    return 'null';
+  }
+
+  function dbPad(s, w) {
+    var r = String(s);
+    while (r.length < w) { r += ' '; }
+    return r;
+  }
+
+  function dbDashes(w) {
+    var r = '';
+    while (r.length < w) { r += '-'; }
+    return r;
+  }
+
+  function dbStrip(s) {
+    var r = String(s);
+    while (r.length > 0) {
+      var last = r.charAt(r.length - 1);
+      if (last === ';' || last === ' ' || last === String.fromCharCode(9) || last === String.fromCharCode(13)) { r = r.slice(0, r.length - 1); }
+      else { break; }
+    }
+    return r;
+  }
+
+  /* Regex-Treffer muss die komplette Zeichenkette abdecken (statt Anker am Ende). */
+  function dbFull(re, s) {
+    var m = re.exec(s);
+    if (!m) { return null; }
+    if (m.index + m[0].length !== s.length) { return null; }
+    return m;
+  }
+
+  function dbFindTable(name, ctx, line) {
+    var t = dbTables()[String(name).toLowerCase()];
+    if (!t) {
+      throw rt(ctx, line, 'Die Tabelle ' + name + ' gibt es noch nicht.', 'Lege sie zuerst an: Datenbank.ausfuehren("CREATE TABLE ' + name + ' (spalte TYP, ...)")');
+    }
+    return t;
+  }
+
+  function dbColIdx(table, name, ctx, line) {
+    var low = String(name).toLowerCase();
+    var i;
+    for (i = 0; i < table.cols.length; i++) {
+      if (table.cols[i].name.toLowerCase() === low) { return i; }
+    }
+    var alle = [];
+    for (i = 0; i < table.cols.length; i++) { alle.push(table.cols[i].name); }
+    throw rt(ctx, line, 'Die Spalte ' + name + ' gibt es in der Tabelle ' + table.name + ' nicht.', 'Verfuegbare Spalten: ' + alle.join(', '));
+  }
+
+  /* Teilt an Kommas auf oberster Ebene, ignoriert Kommas in 'Texten' und Klammern. */
+  function dbSplitTop(s) {
+    var parts = [];
+    var cur = '';
+    var depth = 0;
+    var inQ = false;
+    var i;
+    var c;
+    for (i = 0; i < s.length; i++) {
+      c = s.charAt(i);
+      if (inQ) {
+        cur += c;
+        if (c === "'") {
+          if (s.charAt(i + 1) === "'") { cur += s.charAt(i + 1); i++; }
+          else { inQ = false; }
+        }
+        continue;
+      }
+      if (c === "'") { inQ = true; cur += c; continue; }
+      if (c === '(') { depth++; cur += c; continue; }
+      if (c === ')') { depth--; cur += c; continue; }
+      if (c === ',' && depth === 0) { parts.push(cur); cur = ''; continue; }
+      cur += c;
+    }
+    parts.push(cur);
+    return parts;
+  }
+
+  /* Sucht ein Schluesselwort (WHERE, ORDER BY, LIMIT) ausserhalb von 'Texten'
+   * und liefert [davor, danach] oder null. */
+  function dbCutWord(s, word) {
+    var w = word.toLowerCase();
+    var i;
+    var c;
+    var inQ = false;
+    for (i = 0; i < s.length; i++) {
+      c = s.charAt(i);
+      if (inQ) {
+        if (c === "'") {
+          if (s.charAt(i + 1) === "'") { i++; continue; }
+          inQ = false;
+        }
+        continue;
+      }
+      if (c === "'") { inQ = true; continue; }
+      if (c !== ' ' && c !== String.fromCharCode(9)) { continue; }
+      if (s.substr(i + 1, w.length).toLowerCase() !== w) { continue; }
+      var after = s.charAt(i + 1 + w.length);
+      if (after !== ' ' && after !== String.fromCharCode(9) && after !== '') { continue; }
+      return [s.slice(0, i), s.slice(i + 1 + w.length)];
+    }
+    return null;
+  }
+
+  /* String-Literal: '...' mit verdoppeltem Anfuehrungszeichen '' als Escape. */
+  function dbParseString(raw) {
+    var out = '';
+    var i;
+    for (i = 1; i < raw.length - 1; i++) {
+      if (raw.charAt(i) === "'" && raw.charAt(i + 1) === "'") { out += "'"; i++; continue; }
+      out += raw.charAt(i);
+    }
+    return out;
+  }
+
+  function dbParseLiteral(raw, ctx, line) {
+    var s = String(raw).replace(/^\s+/, '');
+    s = dbStrip(s).replace(/^\s+/, '');
+    if (s.length >= 2 && s.charAt(0) === "'" && s.charAt(s.length - 1) === "'") {
+      return { t: 'String', v: dbParseString(s) };
+    }
+    if (s === 'true') { return { t: 'boolean', v: true }; }
+    if (s === 'false') { return { t: 'boolean', v: false }; }
+    if (s === 'null') { return { t: 'null', v: null }; }
+    var im = /^-?[0-9]+/.exec(s);
+    if (im && im[0] === s) { return { t: 'int', v: parseInt(s, 10) }; }
+    var dm = /^-?[0-9]+\.[0-9]+/.exec(s);
+    if (dm && dm[0] === s) { return { t: 'double', v: parseFloat(s) }; }
+    throw rt(ctx, line, 'Der Wert ' + dbStrip(raw) + ' ist kein gueltiger SQL-Wert.', 'Text gehoert in einfache Anfuehrungszeichen: ' + "'Anna'" + '. Zahlen schreibt man ohne: 12 oder 1.5');
+  }
+
+  var DB_WHERE_TOK = /'(?:[^']|'')*'|<=|>=|<>|!=|[A-Za-z_][A-Za-z0-9_]*|[0-9]+(?:\.[0-9]+)?|[=<>]/g;
+
+  /* WHERE in Gruppen zerlegen: OR trennt Gruppen, AND verknuepft innerhalb. */
+  function dbParseWhere(cond, table, ctx, line) {
+    var toks = [];
+    var m;
+    DB_WHERE_TOK.lastIndex = 0;
+    while ((m = DB_WHERE_TOK.exec(cond))) { toks.push(m[0]); }
+    if (toks.length === 0) {
+      throw rt(ctx, line, 'Die WHERE-Bedingung ist unvollstaendig.', 'z. B. WHERE name = ' + "'Anna'" + ' oder WHERE punkte > 10');
+    }
+    var groups = [[]];
+    var i = 0;
+    var w;
+    while (i < toks.length) {
+      w = toks[i].toUpperCase();
+      if (w === 'OR') {
+        if (groups[groups.length - 1].length === 0) { throw rt(ctx, line, 'Bei WHERE fehlt vor OR ein Vergleich.', 'z. B. WHERE a = 1 OR b = 2'); }
+        groups.push([]);
+        i++;
+        continue;
+      }
+      if (w === 'AND') {
+        if (groups[groups.length - 1].length === 0) { throw rt(ctx, line, 'Bei WHERE fehlt vor AND ein Vergleich.', 'z. B. WHERE a = 1 AND b = 2'); }
+        i++;
+        continue;
+      }
+      if (i + 2 >= toks.length) {
+        throw rt(ctx, line, 'Der Vergleich bei WHERE ist unvollstaendig.', 'Jeder Vergleich hat die Form spalte OP wert, z. B. punkte > 10.');
+      }
+      var op = toks[i + 1].toUpperCase();
+      if (op !== '=' && op !== '!=' && op !== '<>' && op !== '<' && op !== '>' && op !== '<=' && op !== '>=' && op !== 'LIKE') {
+        throw rt(ctx, line, 'Den Vergleich ' + toks[i + 1] + ' kenne ich nicht.', 'Erlaubt: = != < > <= >= und LIKE (mit % als Platzhalter).');
+      }
+      if (op === '<>') { op = '!='; }
+      groups[groups.length - 1].push({
+        idx: dbColIdx(table, toks[i], ctx, line),
+        op: op,
+        val: dbParseLiteral(toks[i + 2], ctx, line)
+      });
+      i += 3;
+    }
+    if (groups[groups.length - 1].length === 0) {
+      throw rt(ctx, line, 'Der WHERE-Teil ist unvollstaendig.', 'z. B. WHERE name = ' + "'Anna'");
+    }
+    return groups;
+  }
+
+  function dbLikeToRegex(pat) {
+    var rx = '';
+    var i;
+    var c;
+    for (i = 0; i < pat.length; i++) {
+      c = pat.charAt(i);
+      if (c === '%') { rx += '.*'; continue; }
+      if (c === '_') { rx += '.'; continue; }
+      if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === ' ') { rx += c; continue; }
+      rx += '\\' + c;
+    }
+    return rx;
+  }
+
+  function dbCmp(a, op, b) {
+    if (a.t === 'null' || b.t === 'null') {
+      if (op === '=') { return a.t === 'null' && b.t === 'null'; }
+      if (op === '!=') { return !(a.t === 'null' && b.t === 'null'); }
+      return false;
+    }
+    if (op === 'LIKE') {
+      var pat = dbLikeToRegex(String(b.t === 'String' ? b.v : dbText(b)));
+      return new RegExp('^' + pat, 'i').test(String(a.t === 'String' ? a.v : dbText(a)));
+    }
+    var an = (a.t === 'int' || a.t === 'double') ? a.v : null;
+    var bn = (b.t === 'int' || b.t === 'double') ? b.v : null;
+    var av;
+    var bv;
+    if ((an === null) !== (bn === null)) {
+      av = dbText(a);
+      bv = dbText(b);
+    } else if (an !== null) {
+      av = an;
+      bv = bn;
+    } else {
+      av = dbText(a);
+      bv = dbText(b);
+    }
+    if (op === '=') { return av === bv; }
+    if (op === '!=') { return av !== bv; }
+    if (op === '<') { return av < bv; }
+    if (op === '>') { return av > bv; }
+    if (op === '<=') { return av <= bv; }
+    if (op === '>=') { return av >= bv; }
+    return false;
+  }
+
+  function dbEvalWhere(groups, row) {
+    var g;
+    var c;
+    for (g = 0; g < groups.length; g++) {
+      var ok = true;
+      for (c = 0; c < groups[g].length; c++) {
+        if (!dbCmp(row[groups[g][c].idx], groups[g][c].op, groups[g][c].val)) { ok = false; break; }
+      }
+      if (ok) { return true; }
+    }
+    return false;
+  }
+
+  /* Ausfuehren von CREATE TABLE / INSERT / UPDATE / DELETE / DROP TABLE. */
+  function dbExec(sqlText, ctx, line) {
+    var sql = dbStrip(String(sqlText).replace(/^\s+/, ''));
+    var km = /^\s*([A-Za-z]+)/.exec(sql);
+    var kw = km ? km[1].toUpperCase() : '';
+    if (kw === '') {
+      throw rt(ctx, line, 'Der SQL-Befehl ist leer.', 'z. B. Datenbank.ausfuehren("CREATE TABLE tabelle (spalte TEXT)")');
+    }
+    var m;
+    var table;
+    var i;
+    if (kw === 'CREATE') {
+      m = dbFull(/^\s*CREATE\s+TABLE\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([\s\S]*)\)/i, sql);
+      if (!m) {
+        throw rt(ctx, line, 'CREATE TABLE verstehe ich nicht.', 'Form: CREATE TABLE name (spalte TYP, ...) – z. B. CREATE TABLE schueler (name TEXT, punkte INT)');
+      }
+      if (dbTables()[m[1].toLowerCase()]) {
+        throw rt(ctx, line, 'Die Tabelle ' + m[1] + ' existiert bereits.', 'Waehle einen anderen Namen oder loesche sie vorher: DROP TABLE ' + m[1]);
+      }
+      var colParts = dbSplitTop(m[2]);
+      var cols = [];
+      for (i = 0; i < colParts.length; i++) {
+        var cm = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s+(TEXT|STRING|VARCHAR|CHAR|INT|INTEGER|DOUBLE|REAL|FLOAT|DECIMAL)\s*/i.exec(colParts[i]);
+        if (!cm || cm[0] !== colParts[i]) {
+          throw rt(ctx, line, 'Die Spaltenangabe ' + colParts[i].trim() + ' verstehe ich nicht.', 'Form: spalte TYP mit TYP = TEXT, INT oder DOUBLE, z. B. name TEXT');
+        }
+        var ty = cm[2].toUpperCase();
+        var kind = (ty === 'TEXT' || ty === 'STRING' || ty === 'VARCHAR' || ty === 'CHAR') ? 'text' : ((ty === 'INT' || ty === 'INTEGER') ? 'int' : 'double');
+        cols.push({ name: cm[1], kind: kind });
+      }
+      if (cols.length === 0) {
+        throw rt(ctx, line, 'Eine Tabelle braucht mindestens eine Spalte.', 'z. B. CREATE TABLE schueler (name TEXT)');
+      }
+      dbTables()[m[1].toLowerCase()] = { name: m[1], cols: cols, rows: [] };
+      return;
+    }
+    if (kw === 'DROP') {
+      m = dbFull(/^\s*DROP\s+TABLE\s+([A-Za-z_][A-Za-z0-9_]*)/i, sql);
+      if (!m) {
+        throw rt(ctx, line, 'DROP TABLE verstehe ich nicht.', 'Form: DROP TABLE name');
+      }
+      table = dbFindTable(m[1], ctx, line);
+      delete dbTables()[m[1].toLowerCase()];
+      return;
+    }
+    if (kw === 'INSERT') {
+      m = dbFull(/^\s*INSERT\s+INTO\s+([A-Za-z_][A-Za-z0-9_]*)\s*(\([^)]*\)\s*)?VALUES\s+([\s\S]*)/i, sql);
+      if (!m) {
+        throw rt(ctx, line, 'INSERT verstehe ich nicht.', 'Form: INSERT INTO tabelle VALUES (wert, ...) – Text in einfachen Anfuehrungszeichen.');
+      }
+      table = dbFindTable(m[1], ctx, line);
+      var targetCols = null;
+      if (m[2]) {
+        var inner = m[2].slice(1, m[2].indexOf(')'));
+        targetCols = [];
+        var colNames = dbSplitTop(inner);
+        for (i = 0; i < colNames.length; i++) { targetCols.push(dbColIdx(table, colNames[i].trim(), ctx, line)); }
+      }
+      var tupParts = dbSplitTop(m[3]);
+      var ti;
+      for (ti = 0; ti < tupParts.length; ti++) {
+        var tp = tupParts[ti].trim();
+        var tm = /^\(([\s\S]*)\)/.exec(tp);
+        if (!tm) {
+          throw rt(ctx, line, 'Werte bei INSERT muessen in Klammern stehen.', 'z. B. INSERT INTO ' + table.name + ' VALUES (' + "'Anna'" + ', 12)');
+        }
+        var lits = dbSplitTop(tm[1]);
+        var useCols = targetCols;
+        if (!useCols) {
+          if (lits.length !== table.cols.length) {
+            throw rt(ctx, line, 'INSERT hat ' + lits.length + ' Wert(e), die Tabelle ' + table.name + ' hat aber ' + table.cols.length + ' Spalte(n).', 'Gib alle Werte an oder benenne die Spalten: INSERT INTO tabelle (spalte) VALUES (...).');
+          }
+          useCols = [];
+          for (i = 0; i < table.cols.length; i++) { useCols.push(i); }
+        }
+        if (lits.length !== useCols.length) {
+          throw rt(ctx, line, 'INSERT hat ' + lits.length + ' Wert(e), erwartet werden aber ' + useCols.length + '.', 'Anzahl der Werte und Spalten muss uebereinstimmen.');
+        }
+        var row = [];
+        for (i = 0; i < table.cols.length; i++) { row.push({ t: 'null', v: null }); }
+        var wi;
+        for (wi = 0; wi < lits.length; wi++) {
+          var val = dbParseLiteral(lits[wi], ctx, line);
+          var colIdx = useCols[wi];
+          var colName = table.cols[colIdx].name;
+          var kind = table.cols[colIdx].kind;
+          if (kind === 'int') {
+            if (val.t === 'double') { val = { t: 'int', v: Math.trunc(val.v) }; }
+            else if (val.t === 'String') {
+              throw rt(ctx, line, 'In die Spalte ' + colName + ' (INT) gehoert eine Zahl ohne Anfuehrungszeichen.', 'z. B. 12 statt ' + "'" + val.v + "'");
+            }
+          } else if (kind === 'text') {
+            if (val.t === 'int' || val.t === 'double') {
+              throw rt(ctx, line, 'In die Spalte ' + colName + ' (TEXT) gehoert ein Text in einfachen Anfuehrungszeichen.', "z. B. 'Anna' statt " + val.v);
+            }
+          }
+          row[colIdx] = val;
+        }
+        table.rows.push(row);
+      }
+      return;
+    }
+    if (kw === 'UPDATE') {
+      m = dbFull(/^\s*UPDATE\s+([A-Za-z_][A-Za-z0-9_]*)\s+SET\s+([\s\S]*)/i, sql);
+      if (!m) {
+        throw rt(ctx, line, 'UPDATE verstehe ich nicht.', 'Form: UPDATE tabelle SET spalte = wert WHERE ...');
+      }
+      table = dbFindTable(m[1], ctx, line);
+      var setPart = m[2];
+      var whereSql = null;
+      var wcut = dbCutWord(m[2], 'WHERE');
+      if (wcut) { setPart = wcut[0]; whereSql = wcut[1]; }
+      var assigns = dbSplitTop(setPart);
+      if (assigns.length === 0 || dbStrip(assigns[0]) === '') {
+        throw rt(ctx, line, 'UPDATE braucht mindestens ein SET spalte = wert.', 'z. B. UPDATE schueler SET punkte = 10 WHERE name = ' + "'Ben'");
+      }
+      var sets = [];
+      for (i = 0; i < assigns.length; i++) {
+        var am = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]*)/.exec(assigns[i]);
+        if (!am) {
+          throw rt(ctx, line, 'Die Zuweisung ' + assigns[i].trim() + ' verstehe ich nicht.', 'Form: spalte = wert, z. B. punkte = 10');
+        }
+        sets.push({ idx: dbColIdx(table, am[1], ctx, line), val: dbParseLiteral(am[2], ctx, line) });
+      }
+      var groups = whereSql ? dbParseWhere(whereSql, table, ctx, line) : null;
+      for (i = 0; i < table.rows.length; i++) {
+        if (!groups || dbEvalWhere(groups, table.rows[i])) {
+          var si;
+          for (si = 0; si < sets.length; si++) { table.rows[i][sets[si].idx] = sets[si].val; }
+        }
+      }
+      return;
+    }
+    if (kw === 'DELETE') {
+      m = dbFull(/^\s*DELETE\s+FROM\s+([A-Za-z_][A-Za-z0-9_]*)([\s\S]*)/i, sql);
+      if (!m) {
+        throw rt(ctx, line, 'DELETE verstehe ich nicht.', 'Form: DELETE FROM tabelle WHERE ...');
+      }
+      table = dbFindTable(m[1], ctx, line);
+      var groups2 = null;
+      var rest2 = m[2];
+      if (dbStrip(rest2) !== '') {
+        var wcut2 = dbCutWord(rest2, 'WHERE');
+        if (!wcut2 || dbStrip(wcut2[0]) !== '') {
+          throw rt(ctx, line, 'Bei DELETE ist nur WHERE erlaubt.', 'z. B. DELETE FROM tabelle WHERE punkte < 5');
+        }
+        groups2 = dbParseWhere(wcut2[1], table, ctx, line);
+      }
+      var kept = [];
+      for (i = 0; i < table.rows.length; i++) {
+        if (groups2 && dbEvalWhere(groups2, table.rows[i])) { continue; }
+        kept.push(table.rows[i]);
+      }
+      table.rows = kept;
+      return;
+    }
+    if (kw === 'SELECT') {
+      throw rt(ctx, line, 'SELECT gehoert in Datenbank.abfrage(...), nicht in ausfuehren(...).', 'z. B. System.out.println(Datenbank.abfrage("SELECT * FROM tabelle"));');
+    }
+    throw rt(ctx, line, 'Den SQL-Befehl ' + kw + ' unterstuetzt die Mini-Datenbank nicht.', 'Verfuegbar: CREATE TABLE, INSERT INTO, UPDATE, DELETE FROM, DROP TABLE, SELECT.');
+  }
+
+  /* SELECT ausfuehren: Spalten, WHERE, ORDER BY, LIMIT, COUNT(*). */
+  function dbSelect(sqlText, ctx, line) {
+    var sql = dbStrip(String(sqlText).replace(/^\s+/, ''));
+    var m = dbFull(/^\s*SELECT\s+([\s\S]*?)\s+FROM\s+([A-Za-z_][A-Za-z0-9_]*)([\s\S]*)/i, sql);
+    if (!m) {
+      throw rt(ctx, line, 'SELECT verstehe ich nicht.', 'Form: SELECT spalten FROM tabelle [WHERE ...] [ORDER BY ...] – oder SELECT * FROM tabelle.');
+    }
+    var table = dbFindTable(m[2], ctx, line);
+    var colSpec = m[1].trim();
+    var rest = m[3];
+    var whereSql = null;
+    var orderCol = null;
+    var orderDir = 'ASC';
+    var limit = -1;
+    var cut = dbCutWord(rest, 'LIMIT');
+    if (cut) {
+      var limVal = dbStrip(cut[1]).replace(/^\s+/, '');
+      var lmv = /^[0-9]+/.exec(limVal);
+      if (!lmv || lmv[0] !== limVal) {
+        throw rt(ctx, line, 'LIMIT braucht eine ganze Zahl.', 'z. B. LIMIT 5');
+      }
+      limit = parseInt(limVal, 10);
+      rest = cut[0];
+    }
+    cut = dbCutWord(rest, 'ORDER BY');
+    if (cut) {
+      var om = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(ASC|DESC)?\s*/i.exec(cut[1]);
+      if (!om) {
+        throw rt(ctx, line, 'ORDER BY braucht eine Spalte.', 'z. B. ORDER BY punkte DESC');
+      }
+      orderCol = om[1];
+      orderDir = om[2] ? om[2].toUpperCase() : 'ASC';
+      var afterOrd = dbStrip(cut[1].slice(om[0].length));
+      if (afterOrd !== '') {
+        throw rt(ctx, line, 'Nach ORDER BY ' + om[1] + ' steht etwas Unerwartetes.', 'Erlaubt: ORDER BY spalte ASC oder ORDER BY spalte DESC.');
+      }
+      rest = cut[0];
+    }
+    cut = dbCutWord(rest, 'WHERE');
+    if (cut) { whereSql = cut[1]; rest = cut[0]; }
+    if (dbStrip(rest) !== '') {
+      throw rt(ctx, line, 'Den Zusatz ' + dbStrip(rest) + ' verstehe ich nicht.', 'Erlaubt nach FROM tabelle: WHERE ..., ORDER BY spalte [ASC|DESC], LIMIT zahl.');
+    }
+    /* Spalten */
+    var selCols = [];
+    var i;
+    var j;
+    if (colSpec === '*') {
+      for (i = 0; i < table.cols.length; i++) { selCols.push({ name: table.cols[i].name, idx: i }); }
+      if (table.cols.length === 0) {
+        throw rt(ctx, line, 'Die Tabelle ' + table.name + ' hat keine Spalten.', 'Pruefe das CREATE TABLE.');
+      }
+    } else {
+      var namesList = dbSplitTop(colSpec);
+      for (i = 0; i < namesList.length; i++) {
+        var nm = namesList[i].trim();
+        var cntM = /^COUNT\s*\(\s*\*\s*\)/i.exec(nm);
+        if (cntM && cntM[0] === nm) { selCols.push({ name: 'COUNT(*)', count: true }); continue; }
+        selCols.push({ name: nm, idx: dbColIdx(table, nm, ctx, line) });
+      }
+      if (selCols.length === 0) {
+        throw rt(ctx, line, 'SELECT braucht mindestens eine Spalte.', 'z. B. SELECT * FROM tabelle oder SELECT name FROM tabelle');
+      }
+    }
+    /* Zeilen filtern */
+    var groups = whereSql ? dbParseWhere(whereSql, table, ctx, line) : null;
+    var rows = [];
+    for (i = 0; i < table.rows.length; i++) {
+      if (!groups || dbEvalWhere(groups, table.rows[i])) { rows.push(table.rows[i]); }
+    }
+    /* Sortieren */
+    if (orderCol) {
+      var oIdx = dbColIdx(table, orderCol, ctx, line);
+      var desc = orderDir === 'DESC';
+      rows.sort(function (a, b) {
+        var av = a[oIdx];
+        var bv = b[oIdx];
+        var an2 = (av.t === 'int' || av.t === 'double') ? av.v : null;
+        var bn2 = (bv.t === 'int' || bv.t === 'double') ? bv.v : null;
+        var cmp;
+        if (an2 !== null && bn2 !== null) { cmp = an2 < bn2 ? -1 : (an2 > bn2 ? 1 : 0); }
+        else {
+          var as2 = dbText(av);
+          var bs2 = dbText(bv);
+          cmp = as2 < bs2 ? -1 : (as2 > bs2 ? 1 : 0);
+        }
+        return desc ? -cmp : cmp;
+      });
+    }
+    if (limit >= 0 && rows.length > limit) { rows = rows.slice(0, limit); }
+    /* Ergebnis aufbauen */
+    var resCols = [];
+    var resRows = [];
+    var hasCount = false;
+    for (i = 0; i < selCols.length; i++) { resCols.push(selCols[i].name); if (selCols[i].count) { hasCount = true; } }
+    if (hasCount) {
+      var cntRow = [];
+      for (i = 0; i < selCols.length; i++) { cntRow.push(selCols[i].count ? { t: 'int', v: rows.length } : rows.length > 0 ? rows[0][selCols[i].idx] : { t: 'null', v: null }); }
+      resRows.push(cntRow);
+    } else {
+      for (i = 0; i < rows.length; i++) {
+        var outRow = [];
+        for (j = 0; j < selCols.length; j++) { outRow.push(rows[i][selCols[j].idx]); }
+        resRows.push(outRow);
+      }
+    }
+    return { cols: resCols, rows: resRows };
+  }
+
+  /* Ergebnis als ausgerichtete Texttabelle. */
+  function dbFormat(res) {
+    if (res.rows.length === 0) { return '(keine Zeilen)'; }
+    var w = [];
+    var i;
+    var j;
+    for (i = 0; i < res.cols.length; i++) {
+      w[i] = res.cols[i].length;
+      for (j = 0; j < res.rows.length; j++) {
+        var t = dbText(res.rows[j][i]);
+        if (t.length > w[i]) { w[i] = t.length; }
+      }
+    }
+    var lines = [];
+    var head = [];
+    for (i = 0; i < res.cols.length; i++) { head.push(dbPad(res.cols[i], w[i])); }
+    lines.push(head.join(' | '));
+    var sep = [];
+    for (i = 0; i < res.cols.length; i++) { sep.push(dbDashes(w[i])); }
+    lines.push(sep.join('-+-'));
+    for (j = 0; j < res.rows.length; j++) {
+      var cells = [];
+      for (i = 0; i < res.cols.length; i++) { cells.push(dbPad(dbText(res.rows[j][i]), w[i])); }
+      lines.push(cells.join(' | '));
+    }
+    return lines.join(NL);
+  }
+
+  function dbCall(name, args, ctx, line) {
+    function wantSql(method) {
+      if (args.length !== 1 || args[0].t !== 'String') {
+        throw rt(ctx, line, 'Datenbank.' + method + ' braucht genau 1 Parameter: den SQL-Befehl als Text.', 'z. B. Datenbank.' + method + '("SELECT * FROM tabelle")');
+      }
+      return args[0].v;
+    }
+    if (name === 'ausfuehren') {
+      dbExec(wantSql('ausfuehren'), ctx, line);
+      return VOIDV;
+    }
+    if (name === 'abfrage') {
+      return mkStr(dbFormat(dbSelect(wantSql('abfrage'), ctx, line)));
+    }
+    if (name === 'anzahl') {
+      return mkInt(dbSelect(wantSql('anzahl'), ctx, line).rows.length);
+    }
+    if (name === 'wert') {
+      var res = dbSelect(wantSql('wert'), ctx, line);
+      if (res.rows.length === 0 || res.rows[0].length === 0) { return mkStr(''); }
+      return mkStr(dbText(res.rows[0][0]));
+    }
+    if (name === 'tabellen') {
+      if (args.length !== 0) {
+        throw rt(ctx, line, 'Datenbank.tabellen braucht keine Parameter.', 'z. B. System.out.println(Datenbank.tabellen());');
+      }
+      var alle = [];
+      var k;
+      for (k in dbTables()) {
+        if (Object.prototype.hasOwnProperty.call(dbTables(), k)) { alle.push(dbTables()[k].name); }
+      }
+      return mkStr(alle.length === 0 ? '(noch keine Tabellen)' : alle.join(', '));
+    }
+    throw rt(ctx, line, 'Datenbank.' + name + ' wird nicht unterstuetzt.', 'Verfuegbar: ausfuehren(sql), abfrage(sql), anzahl(sql), wert(sql), tabellen().');
   }
 
   function stringCall(recv, name, args, ctx, line) {
@@ -1812,3 +2407,4 @@
   if (typeof module !== 'undefined' && module.exports) { module.exports = global.InfoCraftJavaVM; }
   if (typeof document !== 'undefined') { wireUi(); }
 })(typeof window !== 'undefined' ? window : globalThis);
+

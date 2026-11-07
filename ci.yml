@@ -1,0 +1,397 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.3", "8.5"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_sqlite, curl
+      - name: Syntaxpruefung (php -l)
+        run: find . -name "*.php" -print0 | xargs -0 -n1 php -l
+      - name: Migration mit Beispieldaten
+        run: php tools/migrate.php --driver sqlite
+      - name: Migration erneut ausfuehren (Idempotenz)
+        run: php tools/migrate.php --driver sqlite
+      - name: Java-Interpreter-Tests (Node)
+        run: node tools/java-vm-tests.js
+      - name: Smoke-Tests (Werkstatt, Rechte, Stufen)
+        run: |
+          php -S 127.0.0.1:8080 -t public public/index.php &> server.log &
+          sleep 2
+          DB="database/infocraft.sqlite"
+          CODE_LOGIN=$(curl -sS -o login.html -w "%{http_code}" -c cookies.txt http://127.0.0.1:8080/login)
+          CSRF=$(grep -o 'value="[a-f0-9]*"' login.html | head -n1 | cut -d'"' -f2)
+          CODE_DEMO=$(curl -sS -L -o home.html -w "%{http_code}" -b cookies.txt -c cookies.txt -d "csrf=$CSRF" -d "user_id=1" http://127.0.0.1:8080/login/demo)
+          CODE_SQL=$(curl -sS -o sql.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/sql)
+          CODE_CODE=$(curl -sS -o code.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/code)
+          CODE_TASKS=$(curl -sS -o tasks.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/aufgaben)
+          CODE_WS=$(curl -sS -o ws.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/sql/shop)
+          CODE_HTML=$(curl -sS -o html.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/html)
+          PYID=$(sqlite3 "$DB" "SELECT id FROM projects WHERE title = 'Begrüßung mit Python'")
+          CODE_PYED=$(curl -sS -o pyed.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/code/$PYID)
+          grep -q "run-python" pyed.html && PY_RUN_OK=1 || PY_RUN_OK=0
+          grep -q "hlwrap" pyed.html && HL_CODE_OK=1 || HL_CODE_OK=0
+          CSRF2=$(grep -o 'value="[a-f0-9]*"' ws.html | head -n1 | cut -d'"' -f2)
+          grep -q "hlwrap" ws.html && HL_SQL_OK=1 || HL_SQL_OK=0
+          curl -sS -L -b cookies.txt -c cookies.txt -o query.html --data-urlencode "csrf=$CSRF2" --data-urlencode "sql=SELECT COUNT(*) AS n FROM produkte" http://127.0.0.1:8080/werkstatt/sql/shop
+          grep -q 'data-result="ok"' query.html && QUERY_OK=1 || QUERY_OK=0
+          CLASS6=$(sqlite3 "$DB" "SELECT id FROM classes WHERE name = '6R'")
+          CODE_OTP=$(curl -sS -L -o otp.html -w "%{http_code}" -b cookies.txt -c cookies.txt -d "csrf=$CSRF2" -d "class_id=$CLASS6" http://127.0.0.1:8080/unterricht/passwort)
+          grep -q "Satzbaulogik" otp.html && OTP_OK=1 || OTP_OK=0
+          EMMA=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'emma.krueger'")
+          LENA=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'lena.müller'")
+          curl -sS -o login2.html -c cookies2.txt http://127.0.0.1:8080/login
+          CSRF3=$(grep -o 'value="[a-f0-9]*"' login2.html | head -n1 | cut -d'"' -f2)
+          CODE_EMMA=$(curl -sS -L -o home_emma.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt -d "csrf=$CSRF3" -d "user_id=$EMMA" http://127.0.0.1:8080/login/demo)
+          grep -q "werkstatt/sql" home_emma.html && EMMA_SQL=1 || EMMA_SQL=0
+          grep -q "werkstatt/code" home_emma.html && EMMA_CODE=1 || EMMA_CODE=0
+          curl -sS -o login3.html -c cookies3.txt http://127.0.0.1:8080/login
+          CSRF4=$(grep -o 'value="[a-f0-9]*"' login3.html | head -n1 | cut -d'"' -f2)
+          CODE_LENA=$(curl -sS -L -o home_lena.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" -d "user_id=$LENA" http://127.0.0.1:8080/login/demo)
+          grep -q "werkstatt/sql" home_lena.html && LENA_SQL=1 || LENA_SQL=0
+          grep -q "werkstatt/code" home_lena.html && LENA_CODE=1 || LENA_CODE=0
+          HTMLID=$(sqlite3 "$DB" "SELECT id FROM projects WHERE title = 'Lenas Webseite' AND owner_id = $LENA")
+          CODE_HTMLED=$(curl -sS -o htmled.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/werkstatt/html/$HTMLID)
+          grep -q "hlwrap" htmled.html && HL_HTML_OK=1 || HL_HTML_OK=0
+          CSRF5=$(grep -o 'value="[a-f0-9]*"' htmled.html | head -n1 | cut -d'"' -f2)
+          CODE_HTMLSAVE=$(curl -sS -L -o htmlsave.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF5" -d "title=Lenas Webseite" --data-urlencode "content=<h1>Geaendert</h1>" http://127.0.0.1:8080/werkstatt/html/$HTMLID)
+          grep -q "Gespeichert" htmlsave.html && HTML_SAVE_OK=1 || HTML_SAVE_OK=0
+          grep -q "werkstatt/html" home_lena.html && LENA_HTML=1 || LENA_HTML=0
+          grep -q "werkstatt/html" home_emma.html && EMMA_HTML=1 || EMMA_HTML=0
+          QID=$(sqlite3 "$DB" "SELECT id FROM quizzes WHERE title = 'SQL-Begriffe'")
+          CODE_QUIZ=$(curl -sS -o quiz.html -w "%{http_code}" -b cookies2.txt http://127.0.0.1:8080/quiz)
+          grep -q "SQL-Begriffe" quiz.html && QUIZ_LIST_OK=1 || QUIZ_LIST_OK=0
+          CODE_PLAY=$(curl -sS -o play.html -w "%{http_code}" -b cookies2.txt http://127.0.0.1:8080/quiz/$QID/spielen)
+          CSRF6=$(grep -o 'value="[a-f0-9]*"' play.html | head -n1 | cut -d'"' -f2)
+          CODE_ANSWER=$(curl -sS -L -o answered.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt -d "csrf=$CSRF6" -d "position=1" -d "answer=1" http://127.0.0.1:8080/quiz/$QID/antwort)
+          grep -q "Frage 2 von 4" answered.html && QUIZ_NEXT_OK=1 || QUIZ_NEXT_OK=0
+          CLAUDIA=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'claudia.fischer'")
+          curl -sS -o login4.html -c cookies4.txt http://127.0.0.1:8080/login
+          CSRF7=$(grep -o 'value="[a-f0-9]*"' login4.html | head -n1 | cut -d'"' -f2)
+          CODE_CLAUDIA=$(curl -sS -L -o home_claudia.html -w "%{http_code}" -b cookies4.txt -c cookies4.txt -d "csrf=$CSRF7" -d "user_id=$CLAUDIA" http://127.0.0.1:8080/login/demo)
+          CODE_QMANAGE=$(curl -sS -o qmanage.html -w "%{http_code}" -b cookies4.txt http://127.0.0.1:8080/quiz/$QID)
+          grep -q "Neue Frage" qmanage.html && QMANAGE_OK=1 || QMANAGE_OK=0
+          CODE_QRES=$(curl -sS -o qres.html -w "%{http_code}" -b cookies4.txt http://127.0.0.1:8080/quiz/$QID/ergebnisse)
+          # Prüfungsmodus: kompletter Durchlauf (Vorbereitung, Sperre, Abgabe, Korrektur, Herausgabe)
+          STEFAN=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'stefan.schmidt'")
+          curl -sS -o login5.html -c cookies5.txt http://127.0.0.1:8080/login
+          CSRF8=$(grep -o 'value="[a-f0-9]*"' login5.html | head -n1 | cut -d'"' -f2)
+          CODE_STEFAN=$(curl -sS -L -o stefan_home.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "user_id=$STEFAN" http://127.0.0.1:8080/login/demo)
+          CODE_EXAM=$(curl -sS -o exams.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt http://127.0.0.1:8080/pruefungen)
+          grep -q "Neue Prüfung oder Schularbeit anlegen" exams.html && EX_OVER_OK=1 || EX_OVER_OK=0
+          CODE_EXCREATE=$(curl -sS -L -o excreate.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Pruefung HTML" -d "kind=pruefung" -d "level=6" http://127.0.0.1:8080/pruefungen/anlegen)
+          EXID=$(sqlite3 "$DB" "SELECT id FROM exams WHERE title = 'CI Pruefung HTML'")
+          [ -n "$EXID" ] && EX_CREATE_OK=1 || EX_CREATE_OK=0
+          CODE_EXGROUP=$(curl -sS -L -o exgroup.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "name=Gruppe A" http://127.0.0.1:8080/pruefungen/$EXID/gruppe)
+          GID=$(sqlite3 "$DB" "SELECT id FROM exam_groups WHERE exam_id = $EXID")
+          CODE_EXMEMBER=$(curl -sS -L -o exmember.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "group_id=$GID" -d "user_id=$LENA" http://127.0.0.1:8080/pruefungen/$EXID/mitglied)
+          grep -q "Lena Müller" exmember.html && EX_MEMBER_OK=1 || EX_MEMBER_OK=0
+          CODE_EXPROJ=$(curl -sS -L -o exproj.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Vorlage HTML" -d "type=html" http://127.0.0.1:8080/werkstatt/code/projekt)
+          PROJ=$(sqlite3 "$DB" "SELECT id FROM projects WHERE title = 'CI Vorlage HTML' AND owner_id = $STEFAN")
+          CODE_EXTPL=$(curl -sS -L -o extpl.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "group_id=$GID" -d "project_id=$PROJ" http://127.0.0.1:8080/pruefungen/$EXID/vorlage)
+          grep -q "Vorlage: CI Vorlage HTML" extpl.html && EX_TPL_OK=1 || EX_TPL_OK=0
+          CODE_EXTASK1=$(curl -sS -L -o extask1.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=Ueberschrift" -d "be=4" -d "description=Schreibe eine passende Ueberschrift" --data-urlencode "sample_solution=h1 Ueberschrift als HTML" http://127.0.0.1:8080/pruefungen/$EXID/aufgabe)
+          CODE_EXTASK2=$(curl -sS -L -o extask2.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=Absatz" -d "be=4" -d "description=Schreibe einen kurzen Text" --data-urlencode "sample_solution=p Kurzer Text" http://127.0.0.1:8080/pruefungen/$EXID/aufgabe)
+          grep -q "8 BE" extask2.html && EX_TASKS_OK=1 || EX_TASKS_OK=0
+          CODE_EXSTART=$(curl -sS -L -o exstart.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/start)
+          grep -q "Live-Monitor" exstart.html && EX_START_OK=1 || EX_START_OK=0
+          CODE_EXHOME=$(curl -sS -L -o exlock_home.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/)
+          grep -q "Prüfungsmodus aktiv" exlock_home.html && LOCK_OK=1 || LOCK_OK=0
+          CODE_EXQUIZ=$(curl -sS -L -o exlock_quiz.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/quiz)
+          grep -q "gesperrt" exlock_quiz.html && LOCK_REDIRECT_OK=1 || LOCK_REDIRECT_OK=0
+          CODE_EXWORK=$(curl -sS -o ex_work.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/pruefungen/$EXID/arbeit)
+          grep -q "Endgültig abgeben" ex_work.html && EX_WORK_OK=1 || EX_WORK_OK=0
+          CSRF9=$(grep -o 'value="[a-f0-9]*"' ex_work.html | head -n1 | cut -d'"' -f2)
+          T1=$(sqlite3 "$DB" "SELECT id FROM exam_tasks WHERE exam_id = $EXID ORDER BY position LIMIT 1")
+          T2=$(sqlite3 "$DB" "SELECT id FROM exam_tasks WHERE exam_id = $EXID ORDER BY position LIMIT 1 OFFSET 1")
+          CODE_EXSAVE=$(curl -sS -o exsave.json -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF9" -d "task_id=$T1" --data-urlencode "answer=Meine Ueberschrift steht" http://127.0.0.1:8080/pruefungen/$EXID/antwort)
+          grep -q '"ok":true' exsave.json && EXSAVE_OK=1 || EXSAVE_OK=0
+          CODE_EXSUBMIT=$(curl -sS -L -o exsubmit.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF9" http://127.0.0.1:8080/pruefungen/$EXID/abgeben)
+          grep -q "abgegeben" exsubmit.html && EX_SUBMIT_OK=1 || EX_SUBMIT_OK=0
+          CODE_EXEND=$(curl -sS -L -o exend.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/ende)
+          grep -q "API-Korrektur" exend.html && EX_END_OK=1 || EX_END_OK=0
+          CODE_EXCORRECT=$(curl -sS -o ex_correct.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/pruefungen/$EXID/korrektur/$LENA)
+          grep -q "Musterlösung" ex_correct.html && EX_CORRECT_OK=1 || EX_CORRECT_OK=0
+          CODE_EXGRADE=$(curl -sS -L -o exgrade.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "user_id=$LENA" -d "be_$T1=3" -d "be_$T2=2" --data-urlencode "comment_$T1=Fast perfekt" http://127.0.0.1:8080/pruefungen/$EXID/bewertung)
+          grep -q "Fast perfekt" exgrade.html && EX_GRADE_OK=1 || EX_GRADE_OK=0
+          CODE_EXAPI=$(curl -sS -L -o exapi.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/api-korrektur)
+          grep -q "nicht konfiguriert" exapi.html && EX_API_OK=1 || EX_API_OK=0
+          CODE_EXRELEASE=$(curl -sS -L -o exrelease.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/herausgeben)
+          grep -q "Herausgegeben" exrelease.html && EX_RELEASE_OK=1 || EX_RELEASE_OK=0
+          CODE_EXRESULT=$(curl -sS -o exresult.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/pruefungen/$EXID/ergebnis)
+          grep -q "Musterlösung" exresult.html && EX_RESULT_OK=1 || EX_RESULT_OK=0
+          grep -q "Fast perfekt" exresult.html && EX_FEEDBACK_OK=1 || EX_FEEDBACK_OK=0
+          CODE_EXUNLOCK=$(curl -sS -o exunlock.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/)
+          grep -q "Prüfungsmodus aktiv" exunlock.html && EX_UNLOCK_OK=0 || EX_UNLOCK_OK=1
+          JONAS=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'jonas.wagner'")
+          curl -sS -o login6.html -c cookies6.txt http://127.0.0.1:8080/login
+          CSRF10=$(grep -o 'value="[a-f0-9]*"' login6.html | head -n1 | cut -d'"' -f2)
+          CODE_JONAS=$(curl -sS -L -o jonas_home.html -w "%{http_code}" -b cookies6.txt -c cookies6.txt -d "csrf=$CSRF10" -d "user_id=$JONAS" http://127.0.0.1:8080/login/demo)
+          grep -q "Prüfungsmodus aktiv" jonas_home.html && JONAS_LOCK_OK=1 || JONAS_LOCK_OK=0
+          ARBEIT=$(sqlite3 "$DB" "SELECT id FROM exams WHERE kind = 'arbeit'")
+          CODE_ARBEITRES=$(curl -sS -o arbeit_res.html -w "%{http_code}" -b cookies2.txt http://127.0.0.1:8080/pruefungen/$ARBEIT/ergebnis)
+          grep -q "Musterlösung" arbeit_res.html && ARBEIT_RES_OK=1 || ARBEIT_RES_OK=0
+          # Klassendiagramme: Editor, Auto-Erzeugung aus Java/Python/SQL, Lehrer-Schalter
+          CODE_DLIST=$(curl -sS -o dlist.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/diagramme)
+          grep -q "Neues Diagramm anlegen" dlist.html && DIAG_OVER_OK=1 || DIAG_OVER_OK=0
+          CODE_DCREATE=$(curl -sS -L -o dcreate.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" -d "title=Mein Diagramm" http://127.0.0.1:8080/diagramme/anlegen)
+          DID=$(sqlite3 "$DB" "SELECT id FROM class_diagrams WHERE title = 'Mein Diagramm' AND owner_id = $LENA")
+          [ -n "$DID" ] && DIAG_CREATE_OK=1 || DIAG_CREATE_OK=0
+          grep -q "PNG herunterladen" dcreate.html && DIAG_EDIT_OK=1 || DIAG_EDIT_OK=0
+          CODE_DSAVE=$(curl -sS -L -o dsave.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" -d "title=Mein Diagramm" --data-urlencode "mermaid=classDiagram;class Schule;Schule : +String name" http://127.0.0.1:8080/diagramme/$DID)
+          grep -q "gespeichert" dsave.html && DIAG_SAVE_OK=1 || DIAG_SAVE_OK=0
+          CODE_PYPROJ=$(curl -sS -L -o pyproj.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" -d "title=Diagramm Quelle Python" -d "type=code" -d "language=python" http://127.0.0.1:8080/werkstatt/code/projekt)
+          PYPROJ=$(sqlite3 "$DB" "SELECT id FROM projects WHERE title = 'Diagramm Quelle Python' AND owner_id = $LENA")
+          { echo 'class Tier:'; echo '    def __init__(self, name):'; echo '        self.name = name'; echo ''; echo 'class Hund(Tier):'; echo '    def gib_laut(self):'; echo '        print("Wuff")'; } > pysource.txt
+          CODE_PYSAVE=$(curl -sS -L -o pysave.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" -d "title=Diagramm Quelle Python" --data-urlencode "content@pysource.txt" http://127.0.0.1:8080/werkstatt/code/$PYPROJ)
+          grep -q "Gespeichert" pysave.html && PY_SAVE_OK=1 || PY_SAVE_OK=0
+          CODE_PYDIAG=$(curl -sS -L -o pydiag.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" http://127.0.0.1:8080/werkstatt/code/$PYPROJ/diagramm)
+          grep -q "PNG herunterladen" pydiag.html && PY_DIAG_OK=1 || PY_DIAG_OK=0
+          grep -q "Hund" pydiag.html && PY_DIAG_CLASS_OK=1 || PY_DIAG_CLASS_OK=0
+          grep -q "hlwrap" pydiag.html && HL_DIAG_OK=1 || HL_DIAG_OK=0
+          PYMER=$(sqlite3 "$DB" "SELECT mermaid FROM class_diagrams WHERE kind = 'python' AND owner_id = $LENA ORDER BY id DESC LIMIT 1")
+          grep -q "Tier <|-- Hund" <<<"$PYMER" && PY_DIAG_REL_OK=1 || PY_DIAG_REL_OK=0
+          grep -q "gib_laut()" <<<"$PYMER" && PY_DIAG_METH_OK=1 || PY_DIAG_METH_OK=0
+          CODE_JPROJ=$(curl -sS -L -o jproj.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" -d "title=Diagramm Quelle Java" -d "type=code" -d "language=java" http://127.0.0.1:8080/werkstatt/code/projekt)
+          JPROJ=$(sqlite3 "$DB" "SELECT id FROM projects WHERE title = 'Diagramm Quelle Java' AND owner_id = $LENA")
+          { echo 'public class Auto {'; echo '    private String farbe;'; echo '    public void fahren() {'; echo '        System.out.println("Brumm");'; echo '    }'; echo '}'; } > javasource.txt
+          CODE_JSAVE=$(curl -sS -L -o jsave.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" -d "title=Diagramm Quelle Java" --data-urlencode "content@javasource.txt" http://127.0.0.1:8080/werkstatt/code/$JPROJ)
+          grep -q "Gespeichert" jsave.html && J_SAVE_OK=1 || J_SAVE_OK=0
+          CODE_JDIAG=$(curl -sS -L -o jdiag.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" http://127.0.0.1:8080/werkstatt/code/$JPROJ/diagramm)
+          grep -q "PNG herunterladen" jdiag.html && JAVA_DIAG_OK=1 || JAVA_DIAG_OK=0
+          JMER=$(sqlite3 "$DB" "SELECT mermaid FROM class_diagrams WHERE kind = 'java' AND owner_id = $LENA ORDER BY id DESC LIMIT 1")
+          grep -q "farbe" <<<"$JMER" && JAVA_DIAG_FIELD_OK=1 || JAVA_DIAG_FIELD_OK=0
+          grep -q "fahren()" <<<"$JMER" && JAVA_DIAG_METH_OK=1 || JAVA_DIAG_METH_OK=0
+          # Java: Multi-Datei-Projekt mit Konsole und Fehlerkonsole
+          grep -q "Neue Datei" jsave.html && J_UI_OK=1 || J_UI_OK=0
+          grep -q "run-java" jsave.html && J_RUN_OK=1 || J_RUN_OK=0
+          grep -q "java-console" jsave.html && J_CONSOLE_OK=1 || J_CONSOLE_OK=0
+          grep -q "Fehlerkonsole" jsave.html && J_ERR_OK=1 || J_ERR_OK=0
+          grep -q "Datenbank" jsave.html && J_DBHINT_OK=1 || J_DBHINT_OK=0
+          grep -q "Mini-Datenbank" jsave.html && J_DBHELP_OK=1 || J_DBHELP_OK=0
+          CODE_JFILE=$(curl -sS -L -o jfile.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" -d "name=Garage.java" http://127.0.0.1:8080/werkstatt/code/$JPROJ/datei)
+          grep -q "Garage.java" jfile.html && J_FILE_OK=1 || J_FILE_OK=0
+          grep -q "data-file-tab" jfile.html && J_TABS_OK=1 || J_TABS_OK=0
+          JGID=$(sqlite3 "$DB" "SELECT id FROM project_files WHERE project_id = $JPROJ AND name = 'Garage.java'")
+          [ -n "$JGID" ] && J_GID_OK=1 || J_GID_OK=0
+          { echo 'public class Garage {'; echo '    private int plaetze;'; echo '    public int getPlaetze() { return plaetze; }'; echo '}'; } > jgarage.txt
+          CODE_JFILESAVE=$(curl -sS -L -o jfilesave.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" -d "title=Diagramm Quelle Java" --data-urlencode "files[$JGID]@jgarage.txt" http://127.0.0.1:8080/werkstatt/code/$JPROJ)
+          grep -q "Gespeichert" jfilesave.html && J_FILE_SAVE_OK=1 || J_FILE_SAVE_OK=0
+          JSYNC=$(sqlite3 "$DB" "SELECT content FROM projects WHERE id = $JPROJ")
+          grep -q "class Garage" <<<"$JSYNC" && J_SYNC_OK=1 || J_SYNC_OK=0
+          CODE_JFDEL=$(curl -sS -L -o jfdel.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" http://127.0.0.1:8080/werkstatt/code/$JPROJ/datei/$JGID/loeschen)
+          grep -q "gelöscht" jfdel.html && J_FDEL_OK=1 || J_FDEL_OK=0
+          # Wiki: Seite anlegen, Schueleransicht, Stufen-Filter, Bearbeiten, Loeschen
+          CODE_WIKI=$(curl -sS -o wiki.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/wiki)
+          grep -q "Neue Wiki-Seite" wiki.html && WIKI_OK=1 || WIKI_OK=0
+          { echo '# Was ist ein Algorithmus?'; echo 'Ein Algorithmus ist eine **eindeutige** Handlungsvorschrift.'; echo '## Eigenschaften'; echo '- eindeutige Schritte'; echo '- endlich viele Schritte'; } > wikipage.txt
+          CODE_WCREATE=$(curl -sS -L -o wcreate.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=Was ist ein Algorithmus?" --data-urlencode "content@wikipage.txt" -d "level=6" http://127.0.0.1:8080/wiki/anlegen)
+          grep -q "Seite angelegt" wcreate.html && WCREATE_OK=1 || WCREATE_OK=0
+          WPID=$(sqlite3 "$DB" "SELECT id FROM wiki_pages WHERE title = 'Was ist ein Algorithmus?'")
+          [ -n "$WPID" ] && W_GID_OK=1 || W_GID_OK=0
+          CODE_WPAGE=$(curl -sS -o wpage.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/wiki/$WPID)
+          grep -q "eindeutige" wpage.html && WPAGE_OK=1 || WPAGE_OK=0
+          CODE_WEDIT=$(curl -sS -L -o wedit.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=Was ist ein Algorithmus?" --data-urlencode "content@wikipage.txt" -d "level=6" http://127.0.0.1:8080/wiki/$WPID)
+          grep -q "Gespeichert" wedit.html && WSAVE_OK=1 || WSAVE_OK=0
+          CODE_WCREATE9=$(curl -sS -L -o wcreate9.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=Oberstufenbegriff" --data-urlencode "content@wikipage.txt" -d "level=9" http://127.0.0.1:8080/wiki/anlegen)
+          WPID9=$(sqlite3 "$DB" "SELECT id FROM wiki_pages WHERE title = 'Oberstufenbegriff'")
+          CODE_WLOCK=$(curl -sS -o wlock.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/wiki/$WPID9)
+          grep -q "höheren Jahrgangsstufe" wlock.html && WLOCK_OK=1 || WLOCK_OK=0
+          CODE_WDEL=$(curl -sS -L -o wdel.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/wiki/$WPID9/loeschen)
+          grep -q "gelöscht" wdel.html && WDEL_OK=1 || WDEL_OK=0
+          # Aufgabenpool: Katalog, Stufen-Filter, Uebernahme, Duplikat, Sammel-Import, Loeschen
+          CODE_TCAT=$(curl -sS -o tcat.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/aufgaben?level=6")
+          grep -q "Aufgabenkatalog" tcat.html && TCAT_OK=1 || TCAT_OK=0
+          grep -q "Alltag" tcat.html && TCAT_LEVEL_OK=1 || TCAT_LEVEL_OK=0
+          grep -q "Normalisierung" tcat.html && TCAT_NOLEAK_OK=0 || TCAT_NOLEAK_OK=1
+          CODE_TIMPORT=$(curl -sS -L -o timport.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "template_id=1" http://127.0.0.1:8080/aufgaben/katalog)
+          grep -q "übernommen" timport.html && TIMPORT_OK=1 || TIMPORT_OK=0
+          TCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM tasks WHERE teacher_id = $STEFAN AND title = 'Einen Alltag als Algorithmus beschreiben'")
+          [ "$TCNT" = "1" ] && TIMPORT_DB_OK=1 || TIMPORT_DB_OK=0
+          CODE_TDUP=$(curl -sS -L -o tdup.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "template_id=1" http://127.0.0.1:8080/aufgaben/katalog)
+          grep -q "schon im Pool" tdup.html && TDUP_OK=1 || TDUP_OK=0
+          CODE_TLEVEL=$(curl -sS -L -o tlevel.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "level=6" http://127.0.0.1:8080/aufgaben/katalog/stufe)
+          grep -q "übernommen" tlevel.html && TLEVEL_OK=1 || TLEVEL_OK=0
+          TLCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM tasks WHERE teacher_id = $STEFAN AND level = 6")
+          [ "$TLCNT" -ge 5 ] && TLEVEL_DB_OK=1 || TLEVEL_DB_OK=0
+          TID=$(sqlite3 "$DB" "SELECT id FROM tasks WHERE teacher_id = $STEFAN AND title = 'Einen Alltag als Algorithmus beschreiben'")
+          CODE_TDEL=$(curl -sS -L -o tdel.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/aufgaben/$TID/loeschen)
+          grep -q "gelöscht" tdel.html && TDEL_OK=1 || TDEL_OK=0
+          TDELCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM tasks WHERE id = $TID")
+          [ "$TDELCNT" = "0" ] && TDEL_DB_OK=1 || TDEL_DB_OK=0
+          CODE_SQLDIAG=$(curl -sS -L -o sqldiag.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt -d "csrf=$CSRF3" http://127.0.0.1:8080/werkstatt/sql/shop/diagramm)
+          grep -q "PNG herunterladen" sqldiag.html && SQL_DIAG_OK=1 || SQL_DIAG_OK=0
+          SMER=$(sqlite3 "$DB" "SELECT mermaid FROM class_diagrams WHERE kind = 'sql' AND owner_id = $EMMA ORDER BY id DESC LIMIT 1")
+          grep -q "classDiagram" <<<"$SMER" && SQL_DIAG_MER_OK=1 || SQL_DIAG_MER_OK=0
+          CODE_DCLASSES=$(curl -sS -o dclasses.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/unterricht/klassen)
+          grep -q "Klassendiagramme" dclasses.html && DIAG_CLASSES_OK=1 || DIAG_CLASSES_OK=0
+          CODE_DTOGGLE=$(curl -sS -L -o dtoggle_off.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "class_id=$CLASS6" -d "enabled=0" http://127.0.0.1:8080/unterricht/klassen/diagramm)
+          grep -q "deaktiviert" dtoggle_off.html && DIAG_TOGGLE_OFF_OK=1 || DIAG_TOGGLE_OFF_OK=0
+          CODE_DLOCK=$(curl -sS -L -o dlock.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" http://127.0.0.1:8080/werkstatt/code/$PYPROJ/diagramm)
+          grep -q "deaktiviert" dlock.html && DIAG_LOCK_OK=1 || DIAG_LOCK_OK=0
+          CODE_DTUNTOGGLE=$(curl -sS -L -o dtoggle_on.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "class_id=$CLASS6" -d "enabled=1" http://127.0.0.1:8080/unterricht/klassen/diagramm)
+          grep -q "erlaubt" dtoggle_on.html && DIAG_TOGGLE_ON_OK=1 || DIAG_TOGGLE_ON_OK=0
+          CODE_DDELETE=$(curl -sS -L -o ddelete.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" http://127.0.0.1:8080/diagramme/$DID/loeschen)
+          grep -q "Mein Diagramm" ddelete.html && DIAG_DEL_OK=0 || DIAG_DEL_OK=1
+          echo "login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK py:$CODE_PYED/$PY_RUN_OK query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE/$EMMA_HTML lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK qmanage:$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES exam:$CODE_STEFAN/$CODE_EXAM/$EX_OVER_OK/$EX_CREATE_OK/$EX_MEMBER_OK/$EX_TPL_OK/$EX_TASKS_OK/$CODE_EXSTART/$EX_START_OK/$LOCK_OK/$LOCK_REDIRECT_OK/$CODE_EXWORK/$EX_WORK_OK/$CODE_EXSAVE/$EXSAVE_OK/$EX_SUBMIT_OK/$EX_END_OK/$CODE_EXCORRECT/$EX_CORRECT_OK/$EX_GRADE_OK/$EX_API_OK/$EX_RELEASE_OK/$EX_RESULT_OK/$EX_FEEDBACK_OK/$EX_UNLOCK_OK/$CODE_JONAS/$JONAS_LOCK_OK/$CODE_ARBEITRES/$ARBEIT_RES_OK diagram:$CODE_DLIST/$DIAG_OVER_OK/$CODE_DCREATE/$DIAG_CREATE_OK/$DIAG_EDIT_OK/$CODE_DSAVE/$DIAG_SAVE_OK/$CODE_PYPROJ/$CODE_PYSAVE/$PY_SAVE_OK/$CODE_PYDIAG/$PY_DIAG_OK/$PY_DIAG_CLASS_OK/$PY_DIAG_REL_OK/$PY_DIAG_METH_OK/$CODE_JPROJ/$CODE_JSAVE/$J_SAVE_OK/$CODE_JDIAG/$JAVA_DIAG_OK/$JAVA_DIAG_FIELD_OK/$JAVA_DIAG_METH_OK/$J_UI_OK/$J_RUN_OK/$J_DBHINT_OK/$J_DBHELP_OK/$J_FILE_OK/$J_GID_OK/$J_FILE_SAVE_OK/$J_SYNC_OK/$J_FDEL_OK wiki:$CODE_WIKI/$WIKI_OK/$CODE_WCREATE/$WCREATE_OK/$W_GID_OK/$CODE_WPAGE/$WPAGE_OK/$CODE_WEDIT/$WSAVE_OK/$CODE_WCREATE9/$WLOCK_OK/$CODE_WDEL/$WDEL_OK katalog:$CODE_TCAT/$TCAT_OK/$TCAT_LEVEL_OK/$TCAT_NOLEAK_OK/$CODE_TIMPORT/$TIMPORT_OK/$TIMPORT_DB_OK/$CODE_TDUP/$TDUP_OK/$CODE_TLEVEL/$TLEVEL_OK/$TLEVEL_DB_OK/$CODE_TDEL/$TDEL_OK/$TDEL_DB_OK $CODE_SQLDIAG/$SQL_DIAG_OK/$SQL_DIAG_MER_OK/$CODE_DCLASSES/$DIAG_CLASSES_OK/$CODE_DTOGGLE/$DIAG_TOGGLE_OFF_OK/$CODE_DLOCK/$DIAG_LOCK_OK/$CODE_DTUNTOGGLE/$DIAG_TOGGLE_ON_OK/$CODE_DDELETE/$DIAG_DEL_OK hl:$HL_HTML_OK/$HL_CODE_OK/$HL_SQL_OK/$HL_DIAG_OK"
+          FAILED=0
+          [ "$CODE_LOGIN" = "200" ] || FAILED=1
+          [ "$CODE_DEMO" = "200" ] || FAILED=1
+          [ "$CODE_SQL" = "200" ] || FAILED=1
+          [ "$CODE_CODE" = "200" ] || FAILED=1
+          [ "$CODE_TASKS" = "200" ] || FAILED=1
+          [ "$CODE_WS" = "200" ] || FAILED=1
+          [ "$QUERY_OK" = "1" ] || FAILED=1
+          [ "$CODE_OTP" = "200" ] || FAILED=1
+          [ "$OTP_OK" = "1" ] || FAILED=1
+          [ "$CODE_EMMA" = "200" ] || FAILED=1
+          [ "$EMMA_SQL" = "1" ] || FAILED=1
+          [ "$EMMA_CODE" = "1" ] || FAILED=1
+          [ "$CODE_LENA" = "200" ] || FAILED=1
+          [ "$LENA_SQL" = "0" ] || FAILED=1
+          [ "$LENA_CODE" = "1" ] || FAILED=1
+          [ "$CODE_HTML" = "200" ] || FAILED=1
+          [ "$CODE_HTMLED" = "200" ] || FAILED=1
+          [ "$CODE_HTMLSAVE" = "200" ] || FAILED=1
+          [ "$HTML_SAVE_OK" = "1" ] || FAILED=1
+          [ "$EMMA_HTML" = "1" ] || FAILED=1
+          [ "$LENA_HTML" = "1" ] || FAILED=1
+          [ "$CODE_PYED" = "200" ] || FAILED=1
+          [ "$PY_RUN_OK" = "1" ] || FAILED=1
+          [ "$HL_HTML_OK" = "1" ] || FAILED=1
+          [ "$HL_CODE_OK" = "1" ] || FAILED=1
+          [ "$HL_SQL_OK" = "1" ] || FAILED=1
+          [ "$HL_DIAG_OK" = "1" ] || FAILED=1
+          [ "$CODE_QUIZ" = "200" ] || FAILED=1
+          [ "$QUIZ_LIST_OK" = "1" ] || FAILED=1
+          [ "$CODE_PLAY" = "200" ] || FAILED=1
+          [ "$CODE_ANSWER" = "200" ] || FAILED=1
+          [ "$QUIZ_NEXT_OK" = "1" ] || FAILED=1
+          [ "$CODE_CLAUDIA" = "200" ] || FAILED=1
+          [ "$CODE_QMANAGE" = "200" ] || FAILED=1
+          [ "$QMANAGE_OK" = "1" ] || FAILED=1
+          [ "$CODE_QRES" = "200" ] || FAILED=1
+          [ "$CODE_STEFAN" = "200" ] || FAILED=1
+          [ "$CODE_EXAM" = "200" ] || FAILED=1
+          [ "$EX_OVER_OK" = "1" ] || FAILED=1
+          [ "$EX_CREATE_OK" = "1" ] || FAILED=1
+          [ "$EX_MEMBER_OK" = "1" ] || FAILED=1
+          [ "$EX_TPL_OK" = "1" ] || FAILED=1
+          [ "$EX_TASKS_OK" = "1" ] || FAILED=1
+          [ "$CODE_EXSTART" = "200" ] || FAILED=1
+          [ "$EX_START_OK" = "1" ] || FAILED=1
+          [ "$CODE_EXHOME" = "200" ] || FAILED=1
+          [ "$LOCK_OK" = "1" ] || FAILED=1
+          [ "$LOCK_REDIRECT_OK" = "1" ] || FAILED=1
+          [ "$CODE_EXWORK" = "200" ] || FAILED=1
+          [ "$EX_WORK_OK" = "1" ] || FAILED=1
+          [ "$CODE_EXSAVE" = "200" ] || FAILED=1
+          [ "$EXSAVE_OK" = "1" ] || FAILED=1
+          [ "$EX_SUBMIT_OK" = "1" ] || FAILED=1
+          [ "$EX_END_OK" = "1" ] || FAILED=1
+          [ "$CODE_EXCORRECT" = "200" ] || FAILED=1
+          [ "$EX_CORRECT_OK" = "1" ] || FAILED=1
+          [ "$EX_GRADE_OK" = "1" ] || FAILED=1
+          [ "$EX_API_OK" = "1" ] || FAILED=1
+          [ "$EX_RELEASE_OK" = "1" ] || FAILED=1
+          [ "$EX_RESULT_OK" = "1" ] || FAILED=1
+          [ "$EX_FEEDBACK_OK" = "1" ] || FAILED=1
+          [ "$EX_UNLOCK_OK" = "1" ] || FAILED=1
+          [ "$CODE_JONAS" = "200" ] || FAILED=1
+          [ "$JONAS_LOCK_OK" = "1" ] || FAILED=1
+          [ "$CODE_ARBEITRES" = "200" ] || FAILED=1
+          [ "$ARBEIT_RES_OK" = "1" ] || FAILED=1
+          [ "$CODE_DLIST" = "200" ] || FAILED=1
+          [ "$DIAG_OVER_OK" = "1" ] || FAILED=1
+          [ "$CODE_DCREATE" = "200" ] || FAILED=1
+          [ "$DIAG_CREATE_OK" = "1" ] || FAILED=1
+          [ "$DIAG_EDIT_OK" = "1" ] || FAILED=1
+          [ "$CODE_DSAVE" = "200" ] || FAILED=1
+          [ "$DIAG_SAVE_OK" = "1" ] || FAILED=1
+          [ "$CODE_PYPROJ" = "200" ] || FAILED=1
+          [ "$CODE_PYSAVE" = "200" ] || FAILED=1
+          [ "$PY_SAVE_OK" = "1" ] || FAILED=1
+          [ "$CODE_PYDIAG" = "200" ] || FAILED=1
+          [ "$PY_DIAG_OK" = "1" ] || FAILED=1
+          [ "$PY_DIAG_CLASS_OK" = "1" ] || FAILED=1
+          [ "$PY_DIAG_REL_OK" = "1" ] || FAILED=1
+          [ "$PY_DIAG_METH_OK" = "1" ] || FAILED=1
+          [ "$CODE_JPROJ" = "200" ] || FAILED=1
+          [ "$CODE_JSAVE" = "200" ] || FAILED=1
+          [ "$J_SAVE_OK" = "1" ] || FAILED=1
+          [ "$CODE_JDIAG" = "200" ] || FAILED=1
+          [ "$JAVA_DIAG_OK" = "1" ] || FAILED=1
+          [ "$JAVA_DIAG_FIELD_OK" = "1" ] || FAILED=1
+          [ "$JAVA_DIAG_METH_OK" = "1" ] || FAILED=1
+          [ "$J_UI_OK" = "1" ] || FAILED=1
+          [ "$J_RUN_OK" = "1" ] || FAILED=1
+          [ "$J_CONSOLE_OK" = "1" ] || FAILED=1
+          [ "$J_ERR_OK" = "1" ] || FAILED=1
+          [ "$J_DBHINT_OK" = "1" ] || FAILED=1
+          [ "$J_DBHELP_OK" = "1" ] || FAILED=1
+          [ "$J_FILE_OK" = "1" ] || FAILED=1
+          [ "$J_TABS_OK" = "1" ] || FAILED=1
+          [ "$J_GID_OK" = "1" ] || FAILED=1
+          [ "$J_FILE_SAVE_OK" = "1" ] || FAILED=1
+          [ "$J_SYNC_OK" = "1" ] || FAILED=1
+          [ "$J_FDEL_OK" = "1" ] || FAILED=1
+          [ "$CODE_WIKI" = "200" ] || FAILED=1
+          [ "$WIKI_OK" = "1" ] || FAILED=1
+          [ "$CODE_WCREATE" = "200" ] || FAILED=1
+          [ "$WCREATE_OK" = "1" ] || FAILED=1
+          [ "$W_GID_OK" = "1" ] || FAILED=1
+          [ "$CODE_WPAGE" = "200" ] || FAILED=1
+          [ "$WPAGE_OK" = "1" ] || FAILED=1
+          [ "$CODE_WEDIT" = "200" ] || FAILED=1
+          [ "$WSAVE_OK" = "1" ] || FAILED=1
+          [ "$CODE_WCREATE9" = "200" ] || FAILED=1
+          [ "$CODE_WLOCK" = "404" ] || FAILED=1
+          [ "$WLOCK_OK" = "1" ] || FAILED=1
+          [ "$CODE_WDEL" = "200" ] || FAILED=1
+          [ "$WDEL_OK" = "1" ] || FAILED=1
+          [ "$CODE_TCAT" = "200" ] || FAILED=1
+          [ "$TCAT_OK" = "1" ] || FAILED=1
+          [ "$TCAT_LEVEL_OK" = "1" ] || FAILED=1
+          [ "$TCAT_NOLEAK_OK" = "1" ] || FAILED=1
+          [ "$CODE_TIMPORT" = "200" ] || FAILED=1
+          [ "$TIMPORT_OK" = "1" ] || FAILED=1
+          [ "$TIMPORT_DB_OK" = "1" ] || FAILED=1
+          [ "$CODE_TDUP" = "200" ] || FAILED=1
+          [ "$TDUP_OK" = "1" ] || FAILED=1
+          [ "$CODE_TLEVEL" = "200" ] || FAILED=1
+          [ "$TLEVEL_OK" = "1" ] || FAILED=1
+          [ "$TLEVEL_DB_OK" = "1" ] || FAILED=1
+          [ "$CODE_TDEL" = "200" ] || FAILED=1
+          [ "$TDEL_OK" = "1" ] || FAILED=1
+          [ "$TDEL_DB_OK" = "1" ] || FAILED=1
+          [ "$CODE_SQLDIAG" = "200" ] || FAILED=1
+          [ "$SQL_DIAG_OK" = "1" ] || FAILED=1
+          [ "$SQL_DIAG_MER_OK" = "1" ] || FAILED=1
+          [ "$CODE_DCLASSES" = "200" ] || FAILED=1
+          [ "$DIAG_CLASSES_OK" = "1" ] || FAILED=1
+          [ "$CODE_DTOGGLE" = "200" ] || FAILED=1
+          [ "$DIAG_TOGGLE_OFF_OK" = "1" ] || FAILED=1
+          [ "$CODE_DLOCK" = "200" ] || FAILED=1
+          [ "$DIAG_LOCK_OK" = "1" ] || FAILED=1
+          [ "$CODE_DTUNTOGGLE" = "200" ] || FAILED=1
+          [ "$DIAG_TOGGLE_ON_OK" = "1" ] || FAILED=1
+          [ "$CODE_DDELETE" = "200" ] || FAILED=1
+          [ "$DIAG_DEL_OK" = "1" ] || FAILED=1
+          if [ "$FAILED" = "0" ]; then
+            echo "Alle Smoke-Tests bestanden."
+          else
+            echo "::error::DIAG | login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE tasks:$CODE_TASKS ws:$CODE_WS query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK py:$CODE_PYED/$PY_RUN_OK quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK/$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES exam:$CODE_STEFAN/$CODE_EXAM/$EX_OVER_OK/$EX_CREATE_OK/$EX_MEMBER_OK/$EX_TPL_OK/$EX_TASKS_OK/$CODE_EXSTART/$EX_START_OK/$LOCK_OK/$LOCK_REDIRECT_OK/$CODE_EXWORK/$EX_WORK_OK/$CODE_EXSAVE/$EXSAVE_OK/$EX_SUBMIT_OK/$EX_END_OK/$CODE_EXCORRECT/$EX_CORRECT_OK/$EX_GRADE_OK/$EX_API_OK/$EX_RELEASE_OK/$EX_RESULT_OK/$EX_FEEDBACK_OK/$EX_UNLOCK_OK/$CODE_JONAS/$JONAS_LOCK_OK/$CODE_ARBEITRES/$ARBEIT_RES_OK diagram:$CODE_DLIST/$DIAG_OVER_OK/$CODE_PYDIAG/$PY_DIAG_OK/$PY_DIAG_REL_OK/$PY_DIAG_METH_OK/$CODE_JDIAG/$JAVA_DIAG_OK/$JAVA_DIAG_FIELD_OK/$JAVA_DIAG_METH_OK/$J_UI_OK/$J_RUN_OK/$J_DBHINT_OK/$J_FILE_OK/$J_FILE_SAVE_OK/$J_FDEL_OK wiki:$CODE_WIKI/$WIKI_OK/$WCREATE_OK/$W_GID_OK/$WPAGE_OK/$WSAVE_OK/$WLOCK_OK/$WDEL_OK katalog:$TCAT_OK/$TCAT_LEVEL_OK/$TIMPORT_OK/$TIMPORT_DB_OK/$TDUP_OK/$TLEVEL_OK/$TLEVEL_DB_OK/$TDEL_OK/$TDEL_DB_OK $CODE_SQLDIAG/$SQL_DIAG_OK/$CODE_DTOGGLE/$DIAG_TOGGLE_OFF_OK/$CODE_DLOCK/$DIAG_LOCK_OK/$CODE_DTUNTOGGLE/$DIAG_TOGGLE_ON_OK/$CODE_DDELETE/$DIAG_DEL_OK hl:$HL_HTML_OK/$HL_CODE_OK/$HL_SQL_OK/$HL_DIAG_OK | errors: $(grep 'InfoCraft:' server.log | head -n 5 | tr '\n' ' ')"
+            exit 1
+          fi

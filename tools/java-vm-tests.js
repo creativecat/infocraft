@@ -218,6 +218,127 @@ t('StringArgVerkettetMitZahl', { 'Main.java': mainOf('        double preis = 1.5
   eq(r.output, 'Preis: 1.5 EUR' + NL, 'double in String-Konkatenation');
 });
 
+/* --- Mini-Datenbank (eingebaute Klasse Datenbank) --- */
+t('DbCreateInsertSelect', { 'Main.java': mainOf(
+  '        Datenbank.ausfuehren("CREATE TABLE schueler (name TEXT, punkte INT)");' + NL +
+  "        Datenbank.ausfuehren(\"INSERT INTO schueler VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
+  '        System.out.println(Datenbank.abfrage("SELECT * FROM schueler"));') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'name | punkte' + NL + '-----+-------' + NL + 'Anna | 12    ' + NL + 'Ben  | 8     ' + NL, 'tabellenausgabe');
+});
+t('DbSelectWhere', { 'Main.java': mainOf(
+  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
+  '        System.out.println(Datenbank.abfrage("SELECT name FROM s WHERE punkte > 10"));') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'name' + NL + '----' + NL + 'Anna' + NL, 'gefilterte ausgabe');
+});
+t('DbSelectOrderByLimit', { 'Main.java': mainOf(
+  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
+  '        System.out.println(Datenbank.abfrage("SELECT name FROM s ORDER BY punkte DESC LIMIT 1"));') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'name' + NL + '----' + NL + 'Anna' + NL, 'sortiert und begrenzt');
+});
+t('DbAnzahlUndCount', { 'Main.java': mainOf(
+  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
+  '        System.out.println(Datenbank.anzahl("SELECT * FROM s WHERE punkte > 10"));' + NL +
+  '        System.out.println(Datenbank.abfrage("SELECT COUNT(*) FROM s"));') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '1' + NL + 'COUNT(*)' + NL + '--------' + NL + '2       ' + NL, 'anzahl und COUNT(*)');
+});
+t('DbWert', { 'Main.java': mainOf(
+  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
+  '        String beste = Datenbank.wert("SELECT name FROM s ORDER BY punkte DESC");' + NL +
+  '        System.out.println("Beste: " + beste);' + NL +
+  '        System.out.println("[" + Datenbank.wert("SELECT name FROM s WHERE punkte > 99") + "]");') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'Beste: Anna' + NL + '[]' + NL, 'wert und leerer wert');
+});
+t('DbUpdate', { 'Main.java': mainOf(
+  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
+  "        Datenbank.ausfuehren(\"UPDATE s SET punkte = 20 WHERE name = 'Ben'\");" + NL +
+  '        System.out.println(Datenbank.abfrage("SELECT * FROM s WHERE punkte >= 20"));') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'name | punkte' + NL + '-----+-------' + NL + 'Ben  | 20    ' + NL, 'nach update');
+});
+t('DbDelete', { 'Main.java': mainOf(
+  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
+  '        Datenbank.ausfuehren("DELETE FROM s WHERE punkte < 10");' + NL +
+  '        System.out.println(Datenbank.anzahl("SELECT * FROM s"));') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '1' + NL, 'zeilen geloescht');
+});
+t('DbInsertSpaltenlisteNull', { 'Main.java': mainOf(
+  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Datenbank.ausfuehren(\"INSERT INTO s (name) VALUES ('Caesar')\");" + NL +
+  '        String erg = Datenbank.abfrage("SELECT * FROM s");' + NL +
+  '        if (erg.indexOf("Caesar") < 0) { System.out.println("FEHLER"); }' + NL +
+  '        else { System.out.println("OK"); }' + NL +
+  '        System.out.println(Datenbank.wert("SELECT punkte FROM s"));') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'OK' + NL + 'null' + NL, 'nicht genannte spalte ist null');
+});
+t('DbLike', { 'Main.java': mainOf(
+  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT)");' + NL +
+  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna'), ('Ben'), ('Clara')\");" + NL +
+  '        System.out.println(Datenbank.abfrage("SELECT name FROM s WHERE name LIKE ' + "'%an%'" + '"));') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'name' + NL + '----' + NL + 'Anna' + NL, 'like mit platzhalter');
+});
+t('DbUndOder', { 'Main.java': mainOf(
+  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8), ('Clara', 3)\");" + NL +
+  '        System.out.println(Datenbank.anzahl("SELECT * FROM s WHERE punkte > 5 AND punkte < 20"));' + NL +
+  "        System.out.println(Datenbank.anzahl(\"SELECT * FROM s WHERE name = 'Anna' OR name = 'Clara'\"));") }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '2' + NL + '2' + NL, 'AND und OR');
+});
+t('DbTabellen', { 'Main.java': mainOf(
+  '        Datenbank.ausfuehren("CREATE TABLE schueler (name TEXT)");' + NL +
+  '        Datenbank.ausfuehren("CREATE TABLE produkte (titel TEXT)");' + NL +
+  '        System.out.println(Datenbank.tabellen());') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'schueler, produkte' + NL, 'tabellenliste');
+});
+t('DbResetProLauf', { 'Main.java': mainOf(
+  '        System.out.println(Datenbank.tabellen());') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '(noch keine Tabellen)' + NL, 'datenbank ist pro lauf neu');
+});
+t('DbFehlerTabelleUnbekannt', { 'Main.java': mainOf(
+  '        System.out.println(Datenbank.abfrage("SELECT * FROM fehlt_ganz"));') }, r => {
+  err1(r, 'runtime');
+  if (r.errors[0].message.indexOf('gibt es noch nicht') < 0) { throw new Error('Tabellen-Fehlermeldung erwartet'); }
+});
+t('DbFehlerSpalteUnbekannt', { 'Main.java': mainOf(
+  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT)");' + NL +
+  '        System.out.println(Datenbank.abfrage("SELECT falsch FROM s"));') }, r => {
+  err1(r, 'runtime');
+  if (r.errors[0].message.indexOf('Spalte') < 0) { throw new Error('Spalten-Fehlermeldung erwartet'); }
+});
+t('DbFehlerSelectBeiAusfuehren', { 'Main.java': mainOf(
+  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT)");' + NL +
+  '        Datenbank.ausfuehren("SELECT * FROM s");') }, r => {
+  err1(r, 'runtime');
+  if (r.errors[0].message.indexOf('abfrage') < 0) { throw new Error('Hinweis auf abfrage erwartet'); }
+});
+t('DbFehlerFehlendeAnfuehrungszeichen', { 'Main.java': mainOf(
+  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT)");' + NL +
+  '        Datenbank.ausfuehren("INSERT INTO s VALUES (Anna)");') }, r => {
+  err1(r, 'runtime');
+  if (r.errors[0].message.indexOf('gueltiger SQL-Wert') < 0) { throw new Error('Literal-Fehlermeldung erwartet'); }
+});
+t('DbFehlerMethodeUnbekannt', { 'Main.java': mainOf(
+  '        Datenbank.speichern("irgendwas");') }, r => {
+  err1(r, 'runtime');
+});
+
 console.log('');
 console.log(failed === 0 ? ('Alle ' + count + ' Tests bestanden.') : (failed + ' von ' + count + ' Tests fehlgeschlagen.'));
 process.exit(failed === 0 ? 0 : 1);
+

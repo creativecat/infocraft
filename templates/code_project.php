@@ -88,6 +88,18 @@
         <button class="btn btn-primary" id="run-java" type="button">▶ Ausführen</button>
     </div>
     <p class="muted">Dein Programm läuft vollständig in deinem Browser: InfoCraft übersetzt den Java-Quelltext selbst und zeigt die Ausgaben hier. Es wird kein Code auf dem Server ausgeführt. Mit Strg + Enter startest du ebenfalls.</p>
+    <div class="notice">
+        <strong>💾 Mini-Datenbank: SQL direkt in Java</strong>
+        <p>Die eingebaute Klasse <code>Datenbank</code> speichert Tabellen im Speicher deines Browsers – ganz ohne Installation oder Vorkenntnisse:</p>
+        <pre class="code">Datenbank.ausfuehren("CREATE TABLE schueler (name TEXT, punkte INT)");
+Datenbank.ausfuehren("INSERT INTO schueler VALUES ('Anna', 12), ('Ben', 8)");
+System.out.println(Datenbank.abfrage("SELECT * FROM schueler WHERE punkte > 10"));
+
+int anzahl = Datenbank.anzahl("SELECT * FROM schueler");   // Zeilen einer Abfrage
+String beste = Datenbank.wert("SELECT name FROM schueler ORDER BY punkte DESC");
+System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre>
+        <p class="muted">Verfügbar: <code>ausfuehren</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>abfrage</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>anzahl</code> die Zeilenanzahl, <code>wert</code> den ersten Wert, <code>tabellen</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank startet bei jedem Ausführen neu und leer.</p>
+    </div>
     <pre id="java-console" class="code">Noch nichts ausgeführt.</pre>
     <div class="java-errors" id="java-errors">
         <div class="panel-head">
@@ -105,4 +117,5 @@
     </div>
 </section>
 <?php endif; ?>
+
 
