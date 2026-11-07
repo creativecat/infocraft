@@ -143,3 +143,60 @@ CREATE TABLE IF NOT EXISTS sql_solves (
     CONSTRAINT fk_solves_grant FOREIGN KEY (grant_id) REFERENCES sql_grants (id) ON DELETE CASCADE,
     CONSTRAINT fk_solves_mission FOREIGN KEY (mission_id) REFERENCES sql_missions (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Quiz-Arena: Quizze, Fragen, Austeilung, Ergebnisse
+CREATE TABLE IF NOT EXISTS quizzes (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    teacher_id INT UNSIGNED NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description TEXT NOT NULL,
+    level INT NOT NULL DEFAULT 6,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_quizzes_teacher (teacher_id),
+    CONSTRAINT fk_quizzes_teacher FOREIGN KEY (teacher_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS quiz_questions (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    quiz_id INT UNSIGNED NOT NULL,
+    position INT NOT NULL DEFAULT 0,
+    question VARCHAR(500) NOT NULL,
+    answer_1 VARCHAR(300) NOT NULL,
+    answer_2 VARCHAR(300) NOT NULL,
+    answer_3 VARCHAR(300) NOT NULL,
+    answer_4 VARCHAR(300) NOT NULL,
+    correct TINYINT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_questions_quiz (quiz_id),
+    CONSTRAINT fk_questions_quiz FOREIGN KEY (quiz_id) REFERENCES quizzes (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS quiz_targets (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    quiz_id INT UNSIGNED NOT NULL,
+    class_id INT UNSIGNED NULL,
+    user_id INT UNSIGNED NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_quiz_targets_quiz (quiz_id),
+    CONSTRAINT fk_qt_quiz FOREIGN KEY (quiz_id) REFERENCES quizzes (id) ON DELETE CASCADE,
+    CONSTRAINT fk_qt_class FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE,
+    CONSTRAINT fk_qt_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS quiz_attempts (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    quiz_id INT UNSIGNED NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    score INT NOT NULL DEFAULT 0,
+    total INT NOT NULL DEFAULT 0,
+    answers MEDIUMTEXT NULL,
+    finished_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_attempts_quiz (quiz_id),
+    KEY idx_attempts_user (user_id),
+    CONSTRAINT fk_attempts_quiz FOREIGN KEY (quiz_id) REFERENCES quizzes (id) ON DELETE CASCADE,
+    CONSTRAINT fk_attempts_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

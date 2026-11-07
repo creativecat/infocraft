@@ -34,6 +34,7 @@ final class Migrator
             self::seedDemoGrants($pdo);
             self::seedDemoProjects($pdo);
             self::seedDemoTasks($pdo);
+            self::seedDemoQuizzes($pdo);
         }
 
         return ['statements' => count($statements), 'classes' => $classes, 'users' => $users];
@@ -257,4 +258,36 @@ final class Migrator
         $insertTask->execute([$claudiaId, 'SQL-Einstieg: SELECT üben', 'Öffne die verteilte Shop-Datenbank und löse die ersten zwei Missionen.', 'sql', 9]);
         $insertTarget->execute([(int) $pdo->lastInsertId(), $class9R]);
     }
+
+    private static function seedDemoQuizzes(PDO $pdo): void
+    {
+        if ((int) $pdo->query('SELECT COUNT(*) FROM quizzes')->fetchColumn() > 0) {
+            return;
+        }
+        $stmt = $pdo->prepare('SELECT id FROM users WHERE login_name = ?');
+        $stmt->execute(['claudia.fischer']);
+        $claudiaId = (int) $stmt->fetchColumn();
+        $stmt = $pdo->prepare('SELECT id FROM classes WHERE name = ?');
+        $stmt->execute(['9R']);
+        $class9R = (int) $stmt->fetchColumn();
+
+        $insertQuiz = $pdo->prepare('INSERT INTO quizzes (teacher_id, title, description, level) VALUES (?, ?, ?, ?)');
+        $insertQuiz->execute([$claudiaId, 'SQL-Begriffe', 'Kurzes Warm-up vor den Missionen in der SQL-Werkstatt.', 9]);
+        $quizId = (int) $pdo->lastInsertId();
+
+        $insertQuestion = $pdo->prepare('INSERT INTO quiz_questions (quiz_id, position, question, answer_1, answer_2, answer_3, answer_4, correct) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+        $questions = [
+            ['Mit welchem Befehl liest man Zeilen aus einer Tabelle?', 'SELECT', 'UPDATE', 'INSERT', 'DROP', 1],
+            ['Was macht ein JOIN?', 'Er loescht Zeilen', 'Er verbindet zwei Tabellen ueber eine Spalte', 'Er sortiert Zeilen', 'Er zaehlt Zeilen', 2],
+            ['Welche Funktion zaehlt Zeilen?', 'COUNT', 'SUM', 'AVG', 'MAX', 1],
+            ['Wie heisst eine Spalte, die jede Zeile eindeutig macht?', 'Primaerschluessel', 'Fremdschluessel', 'Index', 'View', 1],
+        ];
+        foreach ($questions as $index => $question) {
+            $insertQuestion->execute([$quizId, $index + 1, $question[0], $question[1], $question[2], $question[3], $question[4], $question[5]]);
+        }
+
+        $insertTarget = $pdo->prepare('INSERT INTO quiz_targets (quiz_id, class_id, user_id) VALUES (?, ?, NULL)');
+        $insertTarget->execute([$quizId, $class9R]);
+    }
 }
+
