@@ -1,6 +1,7 @@
 <?php
 /** @var \Infocraft\Models\Task $task */
 /** @var list<array{student: \Infocraft\Models\User, submission: array{content: string, submittedAt: string, firstName: string, lastName: string}|null, grading: array{grade: string, comment: string, source: string, checked: bool}|null, dueAt: string|null, late: bool}> $rows */
+$topic = $task->topicId > 0 ? \Infocraft\Models\TaskTopic::find($task->topicId) : null;
 ?>
 <section class="hero">
     <div class="hero-emoji">✅</div>
@@ -10,10 +11,10 @@
 
 <section class="panel">
     <div class="panel-head">
-        <h3><span class="pill"><?= e($task->type) ?> · Jgst. <?= (int) $task->level ?><?= $task->maxPoints > 0 ? ' · max. ' . (int) $task->maxPoints . ' Punkte' : '' ?><?= $task->lateLock === 1 ? ' · 🔒 Frist-Sperre' : '' ?></span> <?= e($task->title) ?></h3>
+        <h3><span class="pill"><?= e($task->type) ?> · Jgst. <?= (int) $task->level ?><?= $topic !== null ? ' · 📁 ' . e($topic->name) : '' ?><?= $task->maxPoints > 0 ? ' · max. ' . (int) $task->maxPoints . ' Punkte' : '' ?><?= $task->lateLock === 1 ? ' · 🔒 Frist-Sperre' : '' ?></span> <?= e($task->title) ?></h3>
         <a class="btn btn-ghost" href="<?= url('aufgaben') ?>">← Zurück zum Aufgabenpool</a>
     </div>
-    <?php if ($task->description !== ''): ?><p class="muted"><?= e($task->description) ?></p><?php endif; ?>
+    <?php if ($task->description !== ''): ?><div class="task-desc"><?= $task->descriptionHtml() ?></div><?php endif; ?>
     <div class="btn-row">
         <?php if ($aiConfigured): ?>
         <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/ki') ?>" class="form-inline">

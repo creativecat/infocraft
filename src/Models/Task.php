@@ -31,7 +31,28 @@ final class Task
         public readonly int $lateLock = 0,
         public readonly int $maxPoints = 0,
         public readonly string $rubric = '',
+        public readonly int $topicId = 0,
+        public readonly string $descriptionFormat = 'text',
+        public readonly int $variantOf = 0,
     ) {
+    }
+
+    /** Themengebiet-Objekt, falls gesetzt (sonst null). */
+    public function topic(): ?TaskTopic
+    {
+        return TaskTopic::find($this->topicId);
+    }
+
+    /** Beschreibung als sicheres HTML (formatiert) oder als Escape-Text. */
+    public function descriptionHtml(): string
+    {
+        if ($this->descriptionFormat === 'html') {
+            return HtmlSanitizer::clean($this->description);
+        }
+        if ($this->description === '') {
+            return '';
+        }
+        return '<p>' . nl2br(htmlspecialchars($this->description, ENT_QUOTES, 'UTF-8')) . '</p>';
     }
 
     /** @param array<string, mixed> $row */
@@ -49,6 +70,9 @@ final class Task
             (int) ($row['late_lock'] ?? 0),
             (int) ($row['max_points'] ?? 0),
             (string) ($row['rubric'] ?? ''),
+            (int) ($row['topic_id'] ?? 0),
+            ($row['description_format'] ?? 'text') === 'html' ? 'html' : 'text',
+            (int) ($row['variant_of'] ?? 0),
         );
     }
 
@@ -155,10 +179,10 @@ final class Task
         return self::createFull($teacherId, $title, $description, $type, $level, 0, '');
     }
 
-    public static function createFull(int $teacherId, string $title, string $description, string $type, int $level, int $shared, string $sampleSolution, int $lateLock = 0, int $maxPoints = 0, string $rubric = ''): self
+    public static function createFull(int $teacherId, string $title, string $description, string $type, int $level, int $shared, string $sampleSolution, int $lateLock = 0, int $maxPoints = 0, string $rubric = '', int $topicId = 0, string $descriptionFormat = 'text', int $variantOf = 0): self
     {
         $pdo = Database::pdo();
-        $stmt = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level, shared, sample_solution, late_lock, max_points, rubric) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level, shared, sample_solution, late_lock, max_points, rubric, topic_id, description_format, variant_of) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $stmt->execute([
             $teacherId,
             substr(trim($title), 0, 200),
@@ -170,6 +194,9 @@ final class Task
             $lateLock === 1 ? 1 : 0,
             max(0, min(1000, $maxPoints)),
             $rubric,
+            max(0, $topicId),
+            $descriptionFormat === 'html' ? 'html' : 'text',
+            max(0, $variantOf),
         ]);
         $stmt2 = $pdo->prepare('SELECT * FROM tasks WHERE id = ?');
         $stmt2->execute([(int) $pdo->lastInsertId()]);
@@ -178,9 +205,9 @@ final class Task
     }
 
     /** Eigene Aufgabe nachträglich bearbeiten. */
-    public static function update(int $id, string $title, string $description, string $type, int $level, string $sampleSolution, int $lateLock = 0, int $maxPoints = 0, string $rubric = ''): void
+    public static function update(int $id, string $title, string $description, string $type, int $level, string $sampleSolution, int $lateLock = 0, int $maxPoints = 0, string $rubric = '', int $topicId = 0, string $descriptionFormat = 'text'): void
     {
-        $stmt = Database::pdo()->prepare('UPDATE tasks SET title = ?, description = ?, type = ?, level = ?, sample_solution = ?, late_lock = ?, max_points = ?, rubric = ? WHERE id = ?');
+        $stmt = Database::pdo()->prepare('UPDATE tasks SET title = ?, description = ?, type = ?, level = ?, sample_solution = ?, late_lock = ?, max_points = ?, rubric = ?, topic_id = ?, description_format = ? WHERE id = ?');
         $stmt->execute([
             substr(trim($title), 0, 200),
             $description,
@@ -190,6 +217,8 @@ final class Task
             $lateLock === 1 ? 1 : 0,
             max(0, min(1000, $maxPoints)),
             $rubric,
+            max(0, $topicId),
+            $descriptionFormat === 'html' ? 'html' : 'text',
             $id,
         ]);
     }
@@ -238,6 +267,31 @@ final class Task
             $source->lateLock,
             $source->maxPoints,
             $source->rubric,
+            $source->topicId,
+            $source->descriptionFormat,
+        );
+    }
+
+    /**
+     * Aufgabe als Java-/Python-Variante duplizieren (mit Rückverweis über
+     * variant_of). Materialien und ToDo-Vorlagen kopiert der Controller mit.
+     */
+    public static function duplicateAsVariant(self $source, int $teacherId, string $title, string $sampleSolution, int $variantOf): self
+    {
+        return self::createFull(
+            $teacherId,
+            $title,
+            $source->description,
+            $source->type,
+            $source->level,
+            0,
+            $sampleSolution,
+            $source->lateLock,
+            $source->maxPoints,
+            $source->rubric,
+            $source->topicId,
+            $source->descriptionFormat,
+            $variantOf,
         );
     }
 

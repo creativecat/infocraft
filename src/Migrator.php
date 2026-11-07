@@ -38,6 +38,8 @@ final class Migrator
         self::ensureTaskSharedAndSolutionColumns($pdo, $driver);
         self::ensureTaskTargetDueAtColumn($pdo, $driver);
         self::ensureTaskTimingAndGradingColumns($pdo, $driver);
+        self::ensureTaskOrganizationTables($pdo, $driver);
+        self::seedTaskTopics($pdo);
 
         $classes = 0;
         $users = 0;
@@ -595,6 +597,149 @@ final class Migrator
             }
         }
         $pdo->exec('ALTER TABLE task_targets ADD COLUMN visible_from TEXT NULL');
+    }
+
+    /**
+     * Aufgabenverwaltung 3: Tabellen für Themengebiete, Materialien und
+     * ToDos idempotent nachziehen (CREATE IF NOT EXISTS, bestehende
+     * Installationen, deren Schema-Datei noch älter war).
+     */
+    private static function ensureTaskOrganizationTables(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS task_topics (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                name VARCHAR(120) NOT NULL,
+                level INT NOT NULL DEFAULT 6,
+                sort INT NOT NULL DEFAULT 0,
+                PRIMARY KEY (id),
+                KEY idx_topics_level (level)
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+            $pdo->exec('CREATE TABLE IF NOT EXISTS task_materials (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                task_id INT UNSIGNED NOT NULL,
+                filename VARCHAR(200) NOT NULL,
+                content MEDIUMTEXT NOT NULL,
+                size INT UNSIGNED NOT NULL DEFAULT 0,
+                sort INT NOT NULL DEFAULT 0,
+                PRIMARY KEY (id),
+                KEY idx_materials_task (task_id),
+                CONSTRAINT fk_materials_task FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+            $pdo->exec('CREATE TABLE IF NOT EXISTS task_todos (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                task_id INT UNSIGNED NOT NULL,
+                student_id INT UNSIGNED NULL,
+                template_id INT UNSIGNED NULL,
+                title VARCHAR(300) NOT NULL,
+                done TINYINT(1) NOT NULL DEFAULT 0,
+                sort INT NOT NULL DEFAULT 0,
+                PRIMARY KEY (id),
+                KEY idx_todos_task (task_id),
+                KEY idx_todos_student (student_id),
+                CONSTRAINT fk_todos_task FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE,
+                CONSTRAINT fk_todos_student FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+        } else {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS task_topics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                level INTEGER NOT NULL DEFAULT 6,
+                sort INTEGER NOT NULL DEFAULT 0
+            )');
+            $pdo->exec('CREATE TABLE IF NOT EXISTS task_materials (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id INTEGER NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+                filename TEXT NOT NULL,
+                content TEXT NOT NULL,
+                size INTEGER NOT NULL DEFAULT 0,
+                sort INTEGER NOT NULL DEFAULT 0
+            )');
+            $pdo->exec('CREATE TABLE IF NOT EXISTS task_todos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id INTEGER NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+                student_id INTEGER NULL REFERENCES users (id) ON DELETE CASCADE,
+                template_id INTEGER NULL,
+                title TEXT NOT NULL,
+                done INTEGER NOT NULL DEFAULT 0,
+                sort INTEGER NOT NULL DEFAULT 0
+            )');
+        }
+        // Spalten an tasks nachziehen (beide Treiber, idempotent).
+        $taskColumns = [];
+        if ($driver === 'mysql') {
+            foreach ($pdo->query('SHOW COLUMNS FROM tasks')->fetchAll() as $column) {
+                $taskColumns[] = (string) ($column['Field'] ?? '');
+            }
+            $types = [
+                'topic_id' => 'ALTER TABLE tasks ADD COLUMN topic_id INT UNSIGNED NOT NULL DEFAULT 0',
+                'description_format' => "ALTER TABLE tasks ADD COLUMN description_format VARCHAR(8) NOT NULL DEFAULT 'text'",
+                'variant_of' => 'ALTER TABLE tasks ADD COLUMN variant_of INT UNSIGNED NOT NULL DEFAULT 0',
+            ];
+        } else {
+            foreach ($pdo->query('PRAGMA table_info(tasks)')->fetchAll() as $column) {
+                $taskColumns[] = (string) ($column['name'] ?? '');
+            }
+            $types = [
+                'topic_id' => 'ALTER TABLE tasks ADD COLUMN topic_id INTEGER NOT NULL DEFAULT 0',
+                'description_format' => "ALTER TABLE tasks ADD COLUMN description_format TEXT NOT NULL DEFAULT 'text'",
+                'variant_of' => 'ALTER TABLE tasks ADD COLUMN variant_of INTEGER NOT NULL DEFAULT 0',
+            ];
+        }
+        foreach ($types as $column => $statement) {
+            if (!in_array($column, $taskColumns, true)) {
+                $pdo->exec($statement);
+            }
+        }
+    }
+
+    /**
+     * Themengebiete kuratieren (nur bei leerer Tabelle), abgestimmt auf den
+     * LehrplanPLUS Informatik Bayern: Gymnasium NTG ab Jgst. 8 (Algorithmen
+     * und Programmierung, Datenmodellierung und relationale Datenbanken,
+     * Objektorientierte Modellierung, Projekt), davor Pluskurse bzw.
+     * Arbeitsgemeinschaften (z. B. Informationen darstellen, erste
+     * Webseiten), Oberstufe Q11/Q12 (Datenstrukturen, Theoretische
+     * Informatik, Softwareentwicklung). Eigene Themengebiete bleiben
+     * unberührt, der Seed läuft nur einmal.
+     */
+    private static function seedTaskTopics(PDO $pdo): void
+    {
+        $count = (int) $pdo->query('SELECT COUNT(*) FROM task_topics')->fetchColumn();
+        if ($count > 0) {
+            return;
+        }
+        $topics = [
+            [6, 'Informationen darstellen', 1],
+            [6, 'Gut präsentieren', 2],
+            [6, 'Erste Webseiten (HTML)', 3],
+            [6, 'Algorithmen spielen und verstehen', 4],
+            [7, 'Hypertext und Internet', 1],
+            [7, 'Digitale Kommunikation', 2],
+            [7, 'Webseiten mit HTML bauen', 3],
+            [7, 'Algorithmen und Flussdiagramme', 4],
+            [8, 'Algorithmen und Programmierung (Python)', 1],
+            [8, 'Daten und Informationen', 2],
+            [8, 'Informatik, Mensch und Gesellschaft', 3],
+            [8, 'Projekt', 4],
+            [9, 'Tabellenkalkulation und Funktionen', 1],
+            [9, 'Java: Klassen und Objekte', 2],
+            [9, 'Datenmodellierung und SQL', 3],
+            [9, 'Datenschutz und Sicherheit', 4],
+            [10, 'Relationale Datenbanken und JOINs', 1],
+            [10, 'Objektorientierte Modellierung (OOP)', 2],
+            [10, 'Java: Vererbung und Polymorphismus', 3],
+            [10, 'Projekt Informatik', 4],
+            [11, 'Algorithmen und Datenstrukturen', 1],
+            [11, 'Datenbanken fortgeschritten', 2],
+            [12, 'Softwareentwicklung und Projekte', 1],
+            [12, 'Theoretische Informatik', 2],
+            [13, 'Abiturvorbereitung Informatik', 1],
+        ];
+        $insert = $pdo->prepare('INSERT INTO task_topics (name, level, sort) VALUES (?, ?, ?)');
+        foreach ($topics as [$level, $name, $sort]) {
+            $insert->execute([$name, $level, $sort]);
+        }
     }
 
     /**

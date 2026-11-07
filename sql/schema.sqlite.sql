@@ -76,7 +76,42 @@ CREATE TABLE IF NOT EXISTS tasks (
     max_points INTEGER NOT NULL DEFAULT 0,
     rubric TEXT NOT NULL DEFAULT '',
     late_lock INTEGER NOT NULL DEFAULT 0,
+    topic_id INTEGER NOT NULL DEFAULT 0,
+    description_format TEXT NOT NULL DEFAULT 'text',
+    variant_of INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Themengebiete nach LehrplanPLUS (pro Jahrgangsstufe kuratiert, ergänzbar)
+CREATE TABLE IF NOT EXISTS task_topics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    level INTEGER NOT NULL DEFAULT 6,
+    sort INTEGER NOT NULL DEFAULT 0
+);
+
+-- Materialien/Vorlagen einer Aufgabe (Java-Starterdatei, HTML-Vorlage,
+-- SQL-Schema, ...): content = base64-kodierte Datei, size = Bytes
+CREATE TABLE IF NOT EXISTS task_materials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id INTEGER NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+    filename TEXT NOT NULL,
+    content TEXT NOT NULL,
+    size INTEGER NOT NULL DEFAULT 0,
+    sort INTEGER NOT NULL DEFAULT 0
+);
+
+-- ToDos: student_id NULL, template_id NULL = Vorlage der Lehrkraft,
+-- student_id gesetzt + template_id gesetzt = Abhak-Kopie einer Schülerin bzw.
+-- eines Schülers für eine Vorlage, student_id gesetzt und template_id NULL
+CREATE TABLE IF NOT EXISTS task_todos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id INTEGER NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+    student_id INTEGER NULL REFERENCES users (id) ON DELETE CASCADE,
+    template_id INTEGER NULL,
+    title TEXT NOT NULL,
+    done INTEGER NOT NULL DEFAULT 0,
+    sort INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS task_targets (

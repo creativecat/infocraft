@@ -94,6 +94,9 @@ CREATE TABLE IF NOT EXISTS tasks (
     max_points INT UNSIGNED NOT NULL DEFAULT 0,
     rubric TEXT NOT NULL,
     late_lock TINYINT(1) NOT NULL DEFAULT 0,
+    topic_id INT UNSIGNED NOT NULL DEFAULT 0,
+    description_format VARCHAR(8) NOT NULL DEFAULT 'text',
+    variant_of INT UNSIGNED NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_tasks_teacher (teacher_id),
@@ -144,6 +147,47 @@ CREATE TABLE IF NOT EXISTS task_gradings (
     KEY idx_tg_student (student_id),
     CONSTRAINT fk_tg_task FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE,
     CONSTRAINT fk_tg_student FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Themengebiete nach LehrplanPLUS (pro Jahrgangsstufe kuratiert, ergänzbar)
+CREATE TABLE IF NOT EXISTS task_topics (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name VARCHAR(120) NOT NULL,
+    level INT NOT NULL DEFAULT 6,
+    sort INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    KEY idx_topics_level (level)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Materialien/Vorlagen einer Aufgabe: content = base64-kodierte Datei
+CREATE TABLE IF NOT EXISTS task_materials (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    task_id INT UNSIGNED NOT NULL,
+    filename VARCHAR(200) NOT NULL,
+    content MEDIUMTEXT NOT NULL,
+    size INT UNSIGNED NOT NULL DEFAULT 0,
+    sort INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    KEY idx_materials_task (task_id),
+    CONSTRAINT fk_materials_task FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ToDos: student_id NULL, template_id NULL = Vorlage der Lehrkraft,
+-- student_id gesetzt + template_id gesetzt = Abhak-Kopie einer Schülerin bzw.
+-- eines Schülers für eine Vorlage, student_id gesetzt und template_id NULL
+CREATE TABLE IF NOT EXISTS task_todos (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    task_id INT UNSIGNED NOT NULL,
+    student_id INT UNSIGNED NULL,
+    template_id INT UNSIGNED NULL,
+    title VARCHAR(300) NOT NULL,
+    done TINYINT(1) NOT NULL DEFAULT 0,
+    sort INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    KEY idx_todos_task (task_id),
+    KEY idx_todos_student (student_id),
+    CONSTRAINT fk_todos_task FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE,
+    CONSTRAINT fk_todos_student FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- KI-Schnittstelle: je Lehrkraft (user_id) oder schulweit (user_id NULL).

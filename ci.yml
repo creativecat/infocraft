@@ -440,6 +440,69 @@ jobs:
           [ "$TAWCNT" = "0" ] && TAWITHDRAW_DB_OK=1 || TAWITHDRAW_DB_OK=0
           CODE_TAWSTUDENT=$(curl -sS -o tawstudent.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/aufgaben)
           grep -q "CI Aufgabe Start" tawstudent.html && TAWITHDRAWSTUDENT_OK=0 || TAWITHDRAWSTUDENT_OK=1
+          # Aufgabenverwaltung 4: Themengebiete, Filter, Mehrfachzuweisung, WYSIWYG, ToDos, Materialien, Variante
+          TATOPCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_topics")
+          [ "$TATOPCNT" -gt 20 ] && TATOPICS_OK=1 || TATOPICS_OK=0
+          TOPIC6=$(sqlite3 "$DB" "SELECT id FROM task_topics WHERE name = 'Erste Webseiten (HTML)' AND level = 6")
+          TOPIC9=$(sqlite3 "$DB" "SELECT id FROM task_topics WHERE name = 'Java: Klassen und Objekte' AND level = 9")
+          CODE_TANEW4=$(curl -sS -L -o tanew4.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Aufgabe Org" --data-urlencode "description=<b>Wichtig</b>: Lies genau. <script>alert(1)</script> Ende" -d "description_html=1" -d "type=code" -d "level=6" -d "topic_id=$TOPIC6" http://127.0.0.1:8080/aufgaben/anlegen)
+          grep -q "CI Aufgabe Org" tanew4.html && TANEW4_OK=1 || TANEW4_OK=0
+          TAORG=$(sqlite3 "$DB" "SELECT id FROM tasks WHERE teacher_id = $STEFAN AND title = 'CI Aufgabe Org'")
+          TAROW4=$(sqlite3 "$DB" "SELECT topic_id || '/' || description_format FROM tasks WHERE id = $TAORG")
+          [ "$TAROW4" = "$TOPIC6/html" ] && TANEW4_DB_OK=1 || TANEW4_DB_OK=0
+          TADESC=$(sqlite3 "$DB" "SELECT description FROM tasks WHERE id = $TAORG")
+          echo "$TADESC" | grep -q "<b>Wichtig</b>" && TAORG_HTML_OK=1 || TAORG_HTML_OK=0
+          echo "$TADESC" | grep -q "script" && TAORG_SAN_OK=0 || TAORG_SAN_OK=1
+          grep -q "Erste Webseiten (HTML)" tanew4.html && TAORG_TOPIC_OK=1 || TAORG_TOPIC_OK=0
+          CODE_TAKAT4=$(curl -sS -L -o takat4.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "template_id=12" http://127.0.0.1:8080/aufgaben/katalog)
+          grep -q "Aufgabe aus dem Katalog übernommen" takat4.html && TAORG_KAT_OK=1 || TAORG_KAT_OK=0
+          grep -q "Datenmodellierung und SQL" takat4.html && TAORG_KATTOPIC_OK=1 || TAORG_KATTOPIC_OK=0
+          TAKATTOP=$(sqlite3 "$DB" "SELECT topic_id FROM tasks WHERE teacher_id = $STEFAN AND title = 'SQL: gezielt suchen mit WHERE'")
+          TOPICSQL=$(sqlite3 "$DB" "SELECT id FROM task_topics WHERE name = 'Datenmodellierung und SQL' AND level = 9")
+          [ "$TAKATTOP" = "$TOPICSQL" ] && TAORG_KAT_DB_OK=1 || TAORG_KAT_DB_OK=0
+          CODE_TATODO=$(curl -sS -L -o tatodo.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" --data-urlencode "todo_title=Klasse anlegen" http://127.0.0.1:8080/aufgaben/$TAORG/todos)
+          grep -q "Klasse anlegen" tatodo.html && TAORG_TODO_OK=1 || TAORG_TODO_OK=0
+          TATODOCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_todos WHERE task_id = $TAORG AND student_id IS NULL AND template_id IS NULL")
+          [ "$TATODOCNT" = "1" ] && TAORG_TODO_DB_OK=1 || TAORG_TODO_DB_OK=0
+          CODE_TAMAT=$(curl -sS -L -o tamat.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "filename=Auto.java" --data-urlencode "material_content=public class Auto { }" http://127.0.0.1:8080/aufgaben/$TAORG/material)
+          grep -q "Auto.java" tamat.html && TAORG_MAT_OK=1 || TAORG_MAT_OK=0
+          TAMATCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_materials WHERE task_id = $TAORG")
+          [ "$TAMATCNT" = "1" ] && TAORG_MAT_DB_OK=1 || TAORG_MAT_DB_OK=0
+          CODE_TAASSIGN3=$(curl -sS -L -o taassign3.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "task_id=$TAORG" -d "class_id=0" -d "user_ids[]=$LENA" -d "user_ids[]=$JONAS" http://127.0.0.1:8080/aufgaben/austeilen)
+          grep -q "Aufgabe an 2 Person(en) ausgeteilt" taassign3.html && TAORG_ASSIGN_OK=1 || TAORG_ASSIGN_OK=0
+          TAASSCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_targets WHERE task_id = $TAORG")
+          [ "$TAASSCNT" = "2" ] && TAORG_ASSIGN_DB_OK=1 || TAORG_ASSIGN_DB_OK=0
+          CODE_TASTU4=$(curl -sS -o tastu4.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/aufgaben)
+          grep -q "CI Aufgabe Org" tastu4.html && TAORG_STUDENT_OK=1 || TAORG_STUDENT_OK=0
+          grep -q "Klasse anlegen" tastu4.html && TAORG_STODO_OK=1 || TAORG_STODO_OK=0
+          grep -q "Auto.java" tastu4.html && TAORG_SMAT_OK=1 || TAORG_SMAT_OK=0
+          grep -q "Beschreibung verbergen" tastu4.html && TAORG_STOGGLE_OK=1 || TAORG_STOGGLE_OK=0
+          TATMPL=$(sqlite3 "$DB" "SELECT id FROM task_todos WHERE task_id = $TAORG AND student_id IS NULL AND template_id IS NULL LIMIT 1")
+          CODE_TATOG=$(curl -sS -L -o tatog.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF10" -d "toggle_template_id=$TATMPL" http://127.0.0.1:8080/aufgaben/$TAORG/todos/schueler)
+          TATOGCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_todos WHERE template_id = $TATMPL AND student_id = $LENA AND done = 1")
+          [ "$TATOGCNT" = "1" ] && TAORG_TCHECK_DB_OK=1 || TAORG_TCHECK_DB_OK=0
+          CODE_TAOWN=$(curl -sS -L -o taown.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF10" --data-urlencode "todo_title=Nochmal ueben" http://127.0.0.1:8080/aufgaben/$TAORG/todos/schueler)
+          TAOWNCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_todos WHERE task_id = $TAORG AND student_id = $LENA AND template_id IS NULL")
+          [ "$TAOWNCNT" = "1" ] && TAORG_SOWN_DB_OK=1 || TAORG_SOWN_DB_OK=0
+          TAMID=$(sqlite3 "$DB" "SELECT id FROM task_materials WHERE task_id = $TAORG LIMIT 1")
+          CODE_TADL=$(curl -sS -L -o tadl.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/aufgaben/$TAORG/material/$TAMID)
+          grep -q "public class Auto" tadl.html && TAORG_DL_OK=1 || TAORG_DL_OK=0
+          CODE_TAFT6=$(curl -sS -L -o taft6.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/aufgaben?topic=$TOPIC6")
+          grep -q "CI Aufgabe Org" taft6.html && TAORG_FTOPIC_OK=1 || TAORG_FTOPIC_OK=0
+          CODE_TAFT9=$(curl -sS -L -o taft9.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/aufgaben?topic=$TOPIC9")
+          grep -q "CI Aufgabe Org" taft9.html && TAORG_FTOPIC2_OK=0 || TAORG_FTOPIC2_OK=1
+          CODE_TAFC6=$(curl -sS -L -o tafc6.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/aufgaben?class=$CLASS6")
+          grep -q "CI Aufgabe Org" tafc6.html && TAORG_FCLASS_OK=1 || TAORG_FCLASS_OK=0
+          CODE_TAFSTO=$(curl -sS -L -o tafsto.html -w "%{http_code}" -b cookies3.txt "http://127.0.0.1:8080/aufgaben?status=offen")
+          grep -q "CI Aufgabe Org" tafsto.html && TAORG_FSTAT_OK=1 || TAORG_FSTAT_OK=0
+          CODE_TAFSTA=$(curl -sS -L -o tafsta.html -w "%{http_code}" -b cookies3.txt "http://127.0.0.1:8080/aufgaben?status=abgegeben")
+          grep -q "CI Aufgabe Org" tafsta.html && TAORG_FSTAT2_OK=0 || TAORG_FSTAT2_OK=1
+          CODE_TAVAR=$(curl -sS -L -o tavar.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "target=python" http://127.0.0.1:8080/aufgaben/$TAORG/variante)
+          grep -q "Python-Variante angelegt" tavar.html && TAORG_VAR_OK=1 || TAORG_VAR_OK=0
+          TAORGVAR=$(sqlite3 "$DB" "SELECT id FROM tasks WHERE teacher_id = $STEFAN AND title = 'CI Aufgabe Org (Python-Variante)'")
+          [ -n "$TAORGVAR" ] && TAORG_VAR_DB_OK=1 || TAORG_VAR_DB_OK=0
+          TAVARMAT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_materials WHERE task_id = $TAORGVAR")
+          [ "$TAVARMAT" = "1" ] && TAORG_VARCOPY_DB_OK=1 || TAORG_VARCOPY_DB_OK=0
           CODE_SQLDIAG=$(curl -sS -L -o sqldiag.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt -d "csrf=$CSRF3" http://127.0.0.1:8080/werkstatt/sql/shop/diagramm)
           grep -q "PNG herunterladen" sqldiag.html && SQL_DIAG_OK=1 || SQL_DIAG_OK=0
           SMER=$(sqlite3 "$DB" "SELECT mermaid FROM class_diagrams WHERE kind = 'sql' AND owner_id = $EMMA ORDER BY id DESC LIMIT 1")
@@ -514,7 +577,7 @@ jobs:
           curl -sS -L -b cookies5.txt -c cookies5.txt -o modfree_reset.html -d "csrf=$CSRF8" -d "class_id=$CLASS6" -d "module=sql" -d "mode=standard" http://127.0.0.1:8080/unterricht/klassen/modul
           curl -sS -L -b cookies3.txt -c cookies3.txt -o modfree_home2.html http://127.0.0.1:8080/
           grep -q "werkstatt/sql" modfree_home2.html && MODFREE_BACK_OK=0 || MODFREE_BACK_OK=1
-          echo "login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE/$C_JDEF_OK/$C_GROUP_OK tasks:$CODE_TASKS/aufgaben2:$CODE_TANEW/$TANEW_OK/$TAEDIT_OK/$TAEDIT_DB_OK/$TASHARE_OK/$TASHARE_BADGE_OK/$CODE_TASCHOOL/$TAPOOL_OK/$TAPOOL_AUTHOR_OK/$TAADOPT_OK/$TAADOPT_DB_OK/$TAADOPT2_OK/$TAKINONE_OK/$TAASSIGN_OK/$TADUE_DB_OK/$TATERM_OK/$TATERM_DB_OK/$TATERM2_OK/$CODE_TASTUDENT/$TASTUDENT_OK/$TASTUDENT_DUE_OK/$TASUBMIT_OK/$TASUBMIT_DB_OK/$TACORR_OK/$TACORR_SUB_OK/$TACORR_SOL_OK/$TAGRADE_OK/$TAGRADE_DB_OK/$TASTUDENT_GRADE_OK/$TARESUBMIT_OK/$TAKI_OK/$TAKI_TEACHER_OK/$TAKISAVE_OK/$TAKI_DB_OK/$TAKI_ADM_OK/$TAKISCHULE_OK/$TAKISCHULE_DB_OK/$TAKINONE2_OK/aufgaben3:$CODE_TANEW3/$TANEW3_OK/$TANEW3_DB_OK/$TAASSIGN2_OK/$TAASSIGN2_DB_OK/$TALATELOCK_OK/$TALATELOCK_DB_OK/$TARUBRIC_OK/$TAMAXPTS_OK/$TAWITHDRAW_OK/$TAWITHDRAW_DB_OK/$TAWITHDRAWSTUDENT_OK/$TASTART_OK/$TASTART_DB_OK/$TASTARTHIDE_OK/$TASTART2_OK/$TASTARTSHOW_OK ws:$CODE_WS html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK/$H_WY_OK/$H_TABS_OK/$H_DL_OK/$H_UP_OK/$H_TAG_OK/$H_NW_OK/$H_FOLD_OK py:$CODE_PYED/$PY_RUN_OK query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE/$EMMA_HTML lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK qmanage:$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES exam:$CODE_STEFAN/$CODE_EXAM/$EX_OVER_OK/$EX_CREATE_OK/$EX_MEMBER_OK/$EX_TPL_OK/$EX_TASKS_OK/$CODE_EXSTART/$EX_START_OK/$LOCK_OK/$LOCK_REDIRECT_OK/$CODE_EXWORK/$EX_WORK_OK/$CODE_EXSAVE/$EXSAVE_OK/$EX_SUBMIT_OK/$EX_END_OK/$CODE_EXCORRECT/$EX_CORRECT_OK/$EX_GRADE_OK/$EX_API_OK/$EX_RELEASE_OK/$EX_RESULT_OK/$EX_FEEDBACK_OK/$EX_UNLOCK_OK/$CODE_JONAS/$JONAS_LOCK_OK/$CODE_ARBEITRES/$ARBEIT_RES_OK diagram:$CODE_DLIST/$DIAG_OVER_OK/$CODE_DCREATE/$DIAG_CREATE_OK/$DIAG_EDIT_OK/$CODE_DSAVE/$DIAG_SAVE_OK/$CODE_PYPROJ/$CODE_PYSAVE/$PY_SAVE_OK/$CODE_PYDIAG/$PY_DIAG_OK/$PY_DIAG_CLASS_OK/$PY_DIAG_REL_OK/$PY_DIAG_METH_OK/$CODE_JPROJ/$CODE_JSAVE/$J_SAVE_OK/$CODE_JDIAG/$JAVA_DIAG_OK/$JAVA_DIAG_FIELD_OK/$JAVA_DIAG_METH_OK/$J_UI_OK/$J_RUN_OK/$J_DBHINT_OK/$J_DBHELP_OK/$J_FILE_OK/$J_GID_OK/$J_FILE_SAVE_OK/$J_SYNC_OK/$J_FDEL_OK/$J_IDE_OK/$J_OBJ_OK/$J_REPL_OK/$J_WIDE_OK/$J_START_OK/$J_NOMAIN_OK/$J_TOP_OK/$J_CLTAB_OK/$J_STEP_OK/$J_STEPINFO_OK/$J_APIH_OK/$J_FMT_OK/$J_GFX_OK/$J_INPUT_OK/$J_RAND_OK/$J_ASSERT_OK/$J_MTOOL_OK/$J_VEC_OK/$J_SOUND_OK/$J_GAMEPAD_OK/$J_SECTOR_OK/$J_SYSTOOL_OK/$J_KEY_OK/$J_CPAIR_OK/$J_DIR_OK/$J_PUNKT_OK/$J_STOP_OK/$J_GFXDOCK_OK/$J_APIOPEN_OK/$J_ICON_OK/$J_ERRBOX_OK/$J_AUTOSAVE_OK wiki:$CODE_WIKI/$WIKI_OK/$CODE_WCREATE/$WCREATE_OK/$W_GID_OK/$CODE_WPAGE/$WPAGE_OK/$CODE_WEDIT/$WSAVE_OK/$CODE_WCREATE9/$WLOCK_OK/$CODE_WDEL/$WDEL_OK guide:$WGUIDE_OK/$CODE_WGUIDE/$WGUIDE_PAGE_OK praes:$CODE_PRAES/$PRAES_OVER_OK/$PRAES_SEED_OK/$CODE_PCREATE/$PRAES_CREATE_OK/$PRAES_GID_OK/$CODE_PSLIDE/$PRAES_SLIDE_OK/$CODE_PSAVE/$PRAES_SAVE_OK/$PRAES_VIEW_OK/$PRAES_FULL_OK/$PRAES_HL_OK/$PRAES_LIVE_OK/$PRAES_E9_OK/$PRAES_E9NOJ_OK/$PRAES_E6NO_OK/$PRAES_E6SEED_OK/$PRAES_E6NO7_OK/moderator:$CODE_PMOD/$PRAES_MOD_OK/$PRAES_MOD_UI_OK/$CODE_PMODDENY/$PRAES_MOD_DENY_OK/$CODE_PMODJK/$PRAES_NLFIX_OK/$PRAES_GR6_OK/$PRAES_GR6SEED_OK/$PRAES_GR7_OK/$PRAES_GR7SEED_OK/$PRAES_JAHR_OK/$PRAES_JAHR10_OK/$CODE_PDEL/$PRAES_DEL_OK/thema:$CODE_PTSLUG/$PT_SLUG_OK/$PT_UEB_OK/$PT_KONV_OK/$PT_INDEX_OK/$PT_GRUPPE_OK/$PT_KAT_OK/$PT_LOCK_OK katalog:$CODE_TCAT/$TCAT_OK/$TCAT_LEVEL_OK/$TCAT_NOLEAK_OK/$CODE_TIMPORT/$TIMPORT_OK/$TIMPORT_DB_OK/$CODE_TDUP/$TDUP_OK/$CODE_TLEVEL/$TLEVEL_OK/$TLEVEL_DB_OK/$CODE_TDEL/$TDEL_OK/$TDEL_DB_OK $CODE_SQLDIAG/$SQL_DIAG_OK/$SQL_DIAG_MER_OK/$CODE_DCLASSES/$DIAG_CLASSES_OK/$CODE_DTOGGLE/$DIAG_TOGGLE_OFF_OK/$CODE_DLOCK/$DIAG_LOCK_OK/$CODE_DTUNTOGGLE/$DIAG_TOGGLE_ON_OK/$CODE_DDELETE/$DIAG_DEL_OK/struktur:$CODE_DSTR/$DSTR_CREATE_OK/$DSTR_START_OK/$DSTR_GID_OK/$DSTR_SAVE_OK/$DSTR_RENDER_OK/$DSTR_IF_OK/$DSTR_LOOP_OK/$DSTR_ERR_OK/$DSTR_DEL_OK/datenfluss:$CODE_DDF/$DF_CREATE_OK/$DF_GID_OK/$DF_MER_OK/$DF_PNG_OK/$DF_TEXT_OK/$DF_ERR_OK/$DF_DEL_OK mods:$MODSP_OK/$MODSP_NAV_OK/$MODSP_BLOCK_OK/$MODSP_RESET_OK/$MODSP_NAV_BACK_OK/$MODFREE_OK/$MODFREE_NAV_OK/$MODFREE_BACK_OK schueler:$SPUPIL_OK/$SPUPIL_OPEN_OK/$SPUPIL_DENY_OK hl:$HL_HTML_OK/$HL_CODE_OK/$HL_SQL_OK/$HL_DIAG_OK"
+          echo "login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE/$C_JDEF_OK/$C_GROUP_OK tasks:$CODE_TASKS/aufgaben2:$CODE_TANEW/$TANEW_OK/$TAEDIT_OK/$TAEDIT_DB_OK/$TASHARE_OK/$TASHARE_BADGE_OK/$CODE_TASCHOOL/$TAPOOL_OK/$TAPOOL_AUTHOR_OK/$TAADOPT_OK/$TAADOPT_DB_OK/$TAADOPT2_OK/$TAKINONE_OK/$TAASSIGN_OK/$TADUE_DB_OK/$TATERM_OK/$TATERM_DB_OK/$TATERM2_OK/$CODE_TASTUDENT/$TASTUDENT_OK/$TASTUDENT_DUE_OK/$TASUBMIT_OK/$TASUBMIT_DB_OK/$TACORR_OK/$TACORR_SUB_OK/$TACORR_SOL_OK/$TAGRADE_OK/$TAGRADE_DB_OK/$TASTUDENT_GRADE_OK/$TARESUBMIT_OK/$TAKI_OK/$TAKI_TEACHER_OK/$TAKISAVE_OK/$TAKI_DB_OK/$TAKI_ADM_OK/$TAKISCHULE_OK/$TAKISCHULE_DB_OK/$TAKINONE2_OK/aufgaben3:$CODE_TANEW3/$TANEW3_OK/$TANEW3_DB_OK/$TAASSIGN2_OK/$TAASSIGN2_DB_OK/$TALATELOCK_OK/$TALATELOCK_DB_OK/$TARUBRIC_OK/$TAMAXPTS_OK/$TAWITHDRAW_OK/$TAWITHDRAW_DB_OK/$TAWITHDRAWSTUDENT_OK/$TASTART_OK/$TASTART_DB_OK/$TASTARTHIDE_OK/$TASTART2_OK/$TASTARTSHOW_OK/aufgaben4:$CODE_TANEW4/$TANEW4_OK/$TANEW4_DB_OK/$TAORG_HTML_OK/$TAORG_SAN_OK/$TAORG_TOPIC_OK/$TATOPICS_OK/$TAORG_KAT_OK/$TAORG_KATTOPIC_OK/$TAORG_KAT_DB_OK/$TAORG_TODO_OK/$TAORG_TODO_DB_OK/$TAORG_MAT_OK/$TAORG_MAT_DB_OK/$TAORG_ASSIGN_OK/$TAORG_ASSIGN_DB_OK/$TAORG_STUDENT_OK/$TAORG_STODO_OK/$TAORG_SMAT_OK/$TAORG_STOGGLE_OK/$TAORG_TCHECK_DB_OK/$TAORG_SOWN_DB_OK/$TAORG_DL_OK/$TAORG_FTOPIC_OK/$TAORG_FTOPIC2_OK/$TAORG_FCLASS_OK/$TAORG_FSTAT_OK/$TAORG_FSTAT2_OK/$TAORG_VAR_OK/$TAORG_VAR_DB_OK/$TAORG_VARCOPY_DB_OK ws:$CODE_WS html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK/$H_WY_OK/$H_TABS_OK/$H_DL_OK/$H_UP_OK/$H_TAG_OK/$H_NW_OK/$H_FOLD_OK py:$CODE_PYED/$PY_RUN_OK query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE/$EMMA_HTML lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK qmanage:$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES exam:$CODE_STEFAN/$CODE_EXAM/$EX_OVER_OK/$EX_CREATE_OK/$EX_MEMBER_OK/$EX_TPL_OK/$EX_TASKS_OK/$CODE_EXSTART/$EX_START_OK/$LOCK_OK/$LOCK_REDIRECT_OK/$CODE_EXWORK/$EX_WORK_OK/$CODE_EXSAVE/$EXSAVE_OK/$EX_SUBMIT_OK/$EX_END_OK/$CODE_EXCORRECT/$EX_CORRECT_OK/$EX_GRADE_OK/$EX_API_OK/$EX_RELEASE_OK/$EX_RESULT_OK/$EX_FEEDBACK_OK/$EX_UNLOCK_OK/$CODE_JONAS/$JONAS_LOCK_OK/$CODE_ARBEITRES/$ARBEIT_RES_OK diagram:$CODE_DLIST/$DIAG_OVER_OK/$CODE_DCREATE/$DIAG_CREATE_OK/$DIAG_EDIT_OK/$CODE_DSAVE/$DIAG_SAVE_OK/$CODE_PYPROJ/$CODE_PYSAVE/$PY_SAVE_OK/$CODE_PYDIAG/$PY_DIAG_OK/$PY_DIAG_CLASS_OK/$PY_DIAG_REL_OK/$PY_DIAG_METH_OK/$CODE_JPROJ/$CODE_JSAVE/$J_SAVE_OK/$CODE_JDIAG/$JAVA_DIAG_OK/$JAVA_DIAG_FIELD_OK/$JAVA_DIAG_METH_OK/$J_UI_OK/$J_RUN_OK/$J_DBHINT_OK/$J_DBHELP_OK/$J_FILE_OK/$J_GID_OK/$J_FILE_SAVE_OK/$J_SYNC_OK/$J_FDEL_OK/$J_IDE_OK/$J_OBJ_OK/$J_REPL_OK/$J_WIDE_OK/$J_START_OK/$J_NOMAIN_OK/$J_TOP_OK/$J_CLTAB_OK/$J_STEP_OK/$J_STEPINFO_OK/$J_APIH_OK/$J_FMT_OK/$J_GFX_OK/$J_INPUT_OK/$J_RAND_OK/$J_ASSERT_OK/$J_MTOOL_OK/$J_VEC_OK/$J_SOUND_OK/$J_GAMEPAD_OK/$J_SECTOR_OK/$J_SYSTOOL_OK/$J_KEY_OK/$J_CPAIR_OK/$J_DIR_OK/$J_PUNKT_OK/$J_STOP_OK/$J_GFXDOCK_OK/$J_APIOPEN_OK/$J_ICON_OK/$J_ERRBOX_OK/$J_AUTOSAVE_OK wiki:$CODE_WIKI/$WIKI_OK/$CODE_WCREATE/$WCREATE_OK/$W_GID_OK/$CODE_WPAGE/$WPAGE_OK/$CODE_WEDIT/$WSAVE_OK/$CODE_WCREATE9/$WLOCK_OK/$CODE_WDEL/$WDEL_OK guide:$WGUIDE_OK/$CODE_WGUIDE/$WGUIDE_PAGE_OK praes:$CODE_PRAES/$PRAES_OVER_OK/$PRAES_SEED_OK/$CODE_PCREATE/$PRAES_CREATE_OK/$PRAES_GID_OK/$CODE_PSLIDE/$PRAES_SLIDE_OK/$CODE_PSAVE/$PRAES_SAVE_OK/$PRAES_VIEW_OK/$PRAES_FULL_OK/$PRAES_HL_OK/$PRAES_LIVE_OK/$PRAES_E9_OK/$PRAES_E9NOJ_OK/$PRAES_E6NO_OK/$PRAES_E6SEED_OK/$PRAES_E6NO7_OK/moderator:$CODE_PMOD/$PRAES_MOD_OK/$PRAES_MOD_UI_OK/$CODE_PMODDENY/$PRAES_MOD_DENY_OK/$CODE_PMODJK/$PRAES_NLFIX_OK/$PRAES_GR6_OK/$PRAES_GR6SEED_OK/$PRAES_GR7_OK/$PRAES_GR7SEED_OK/$PRAES_JAHR_OK/$PRAES_JAHR10_OK/$CODE_PDEL/$PRAES_DEL_OK/thema:$CODE_PTSLUG/$PT_SLUG_OK/$PT_UEB_OK/$PT_KONV_OK/$PT_INDEX_OK/$PT_GRUPPE_OK/$PT_KAT_OK/$PT_LOCK_OK katalog:$CODE_TCAT/$TCAT_OK/$TCAT_LEVEL_OK/$TCAT_NOLEAK_OK/$CODE_TIMPORT/$TIMPORT_OK/$TIMPORT_DB_OK/$CODE_TDUP/$TDUP_OK/$CODE_TLEVEL/$TLEVEL_OK/$TLEVEL_DB_OK/$CODE_TDEL/$TDEL_OK/$TDEL_DB_OK $CODE_SQLDIAG/$SQL_DIAG_OK/$SQL_DIAG_MER_OK/$CODE_DCLASSES/$DIAG_CLASSES_OK/$CODE_DTOGGLE/$DIAG_TOGGLE_OFF_OK/$CODE_DLOCK/$DIAG_LOCK_OK/$CODE_DTUNTOGGLE/$DIAG_TOGGLE_ON_OK/$CODE_DDELETE/$DIAG_DEL_OK/struktur:$CODE_DSTR/$DSTR_CREATE_OK/$DSTR_START_OK/$DSTR_GID_OK/$DSTR_SAVE_OK/$DSTR_RENDER_OK/$DSTR_IF_OK/$DSTR_LOOP_OK/$DSTR_ERR_OK/$DSTR_DEL_OK/datenfluss:$CODE_DDF/$DF_CREATE_OK/$DF_GID_OK/$DF_MER_OK/$DF_PNG_OK/$DF_TEXT_OK/$DF_ERR_OK/$DF_DEL_OK mods:$MODSP_OK/$MODSP_NAV_OK/$MODSP_BLOCK_OK/$MODSP_RESET_OK/$MODSP_NAV_BACK_OK/$MODFREE_OK/$MODFREE_NAV_OK/$MODFREE_BACK_OK schueler:$SPUPIL_OK/$SPUPIL_OPEN_OK/$SPUPIL_DENY_OK hl:$HL_HTML_OK/$HL_CODE_OK/$HL_SQL_OK/$HL_DIAG_OK"
           FAILED=0
           [ "$CODE_LOGIN" = "200" ] || FAILED=1
           [ "$CODE_DEMO" = "200" ] || FAILED=1
@@ -597,3 +660,289 @@ jobs:
           [ "$CODE_DSAVE" = "200" ] || FAILED=1
           [ "$DIAG_SAVE_OK" = "1" ] || FAILED=1
           [ "$CODE_PYPROJ" = "200" ] || FAILED=1
+          [ "$CODE_PYSAVE" = "200" ] || FAILED=1
+          [ "$PY_SAVE_OK" = "1" ] || FAILED=1
+          [ "$CODE_PYDIAG" = "200" ] || FAILED=1
+          [ "$PY_DIAG_OK" = "1" ] || FAILED=1
+          [ "$PY_DIAG_CLASS_OK" = "1" ] || FAILED=1
+          [ "$PY_DIAG_REL_OK" = "1" ] || FAILED=1
+          [ "$PY_DIAG_METH_OK" = "1" ] || FAILED=1
+          [ "$CODE_JPROJ" = "200" ] || FAILED=1
+          [ "$C_JDEF_OK" = "1" ] || FAILED=1
+          [ "$C_GROUP_OK" = "1" ] || FAILED=1
+          [ "$CODE_JSAVE" = "200" ] || FAILED=1
+          [ "$J_SAVE_OK" = "1" ] || FAILED=1
+          [ "$CODE_JDIAG" = "200" ] || FAILED=1
+          [ "$JAVA_DIAG_OK" = "1" ] || FAILED=1
+          [ "$JAVA_DIAG_FIELD_OK" = "1" ] || FAILED=1
+          [ "$JAVA_DIAG_METH_OK" = "1" ] || FAILED=1
+          [ "$J_UI_OK" = "1" ] || FAILED=1
+          [ "$J_RUN_OK" = "1" ] || FAILED=1
+          [ "$J_CONSOLE_OK" = "1" ] || FAILED=1
+          [ "$J_ERR_OK" = "1" ] || FAILED=1
+          [ "$J_DBHINT_OK" = "1" ] || FAILED=1
+          [ "$J_DBHELP_OK" = "1" ] || FAILED=1
+          [ "$J_FILE_OK" = "1" ] || FAILED=1
+          [ "$J_TABS_OK" = "1" ] || FAILED=1
+          [ "$J_IDE_OK" = "1" ] || FAILED=1
+          [ "$J_OBJ_OK" = "1" ] || FAILED=1
+          [ "$J_REPL_OK" = "1" ] || FAILED=1
+          [ "$J_WIDE_OK" = "1" ] || FAILED=1
+          [ "$J_TOP_OK" = "1" ] || FAILED=1
+          [ "$J_CLTAB_OK" = "1" ] || FAILED=1
+          [ "$J_STEP_OK" = "1" ] || FAILED=1
+          [ "$J_STEPINFO_OK" = "1" ] || FAILED=1
+          [ "$J_APIH_OK" = "1" ] || FAILED=1
+          [ "$J_FMT_OK" = "1" ] || FAILED=1
+          [ "$J_GFX_OK" = "1" ] || FAILED=1
+          [ "$J_INPUT_OK" = "1" ] || FAILED=1
+          [ "$J_RAND_OK" = "1" ] || FAILED=1
+          [ "$J_ASSERT_OK" = "1" ] || FAILED=1
+          [ "$J_MTOOL_OK" = "1" ] || FAILED=1
+          [ "$J_VEC_OK" = "1" ] || FAILED=1
+          [ "$J_SOUND_OK" = "1" ] || FAILED=1
+          [ "$J_GAMEPAD_OK" = "1" ] || FAILED=1
+          [ "$J_SECTOR_OK" = "1" ] || FAILED=1
+          [ "$J_SYSTOOL_OK" = "1" ] || FAILED=1
+          [ "$J_KEY_OK" = "1" ] || FAILED=1
+          [ "$J_CPAIR_OK" = "1" ] || FAILED=1
+          [ "$J_DIR_OK" = "1" ] || FAILED=1
+          [ "$J_PUNKT_OK" = "1" ] || FAILED=1
+          [ "$J_STOP_OK" = "1" ] || FAILED=1
+          [ "$J_GFXDOCK_OK" = "1" ] || FAILED=1
+          [ "$J_APIOPEN_OK" = "1" ] || FAILED=1
+          [ "$J_ICON_OK" = "1" ] || FAILED=1
+          [ "$J_ERRBOX_OK" = "1" ] || FAILED=1
+          [ "$J_AUTOSAVE_OK" = "1" ] || FAILED=1
+          [ "$J_START_OK" = "1" ] || FAILED=1
+          [ "$J_NOMAIN_OK" = "1" ] || FAILED=1
+          [ "$J_GID_OK" = "1" ] || FAILED=1
+          [ "$J_FILE_SAVE_OK" = "1" ] || FAILED=1
+          [ "$J_SYNC_OK" = "1" ] || FAILED=1
+          [ "$J_FDEL_OK" = "1" ] || FAILED=1
+          [ "$CODE_WIKI" = "200" ] || FAILED=1
+          [ "$WIKI_OK" = "1" ] || FAILED=1
+          [ "$CODE_WCREATE" = "200" ] || FAILED=1
+          [ "$WCREATE_OK" = "1" ] || FAILED=1
+          [ "$W_GID_OK" = "1" ] || FAILED=1
+          [ "$CODE_WPAGE" = "200" ] || FAILED=1
+          [ "$WPAGE_OK" = "1" ] || FAILED=1
+          [ "$CODE_WEDIT" = "200" ] || FAILED=1
+          [ "$WSAVE_OK" = "1" ] || FAILED=1
+          [ "$CODE_WCREATE9" = "200" ] || FAILED=1
+          [ "$CODE_WLOCK" = "404" ] || FAILED=1
+          [ "$WLOCK_OK" = "1" ] || FAILED=1
+          [ "$CODE_WDEL" = "200" ] || FAILED=1
+          [ "$WDEL_OK" = "1" ] || FAILED=1
+          [ "$WGUIDE_OK" = "1" ] || FAILED=1
+          [ "$CODE_WGUIDE" = "200" ] || FAILED=1
+          [ "$WGUIDE_PAGE_OK" = "1" ] || FAILED=1
+          [ "$CODE_PRAES" = "200" ] || FAILED=1
+          [ "$PRAES_OVER_OK" = "1" ] || FAILED=1
+          [ "$PRAES_SEED_OK" = "1" ] || FAILED=1
+          [ "$CODE_PCREATE" = "200" ] || FAILED=1
+          [ "$PRAES_CREATE_OK" = "1" ] || FAILED=1
+          [ "$PRAES_GID_OK" = "1" ] || FAILED=1
+          [ "$CODE_PSLIDE" = "200" ] || FAILED=1
+          [ "$PRAES_SLIDE_OK" = "1" ] || FAILED=1
+          [ "$CODE_PSAVE" = "200" ] || FAILED=1
+          [ "$PRAES_SAVE_OK" = "1" ] || FAILED=1
+          [ "$PRAES_VIEW_OK" = "1" ] || FAILED=1
+          [ "$PRAES_FULL_OK" = "1" ] || FAILED=1
+          [ "$PRAES_HL_OK" = "1" ] || FAILED=1
+          [ "$PRAES_LIVE_OK" = "1" ] || FAILED=1
+          [ "$CODE_PEMA" = "200" ] || FAILED=1
+          [ "$PRAES_E9_OK" = "1" ] || FAILED=1
+          [ "$PRAES_E9NOJ_OK" = "1" ] || FAILED=1
+          [ "$CODE_PLENA" = "200" ] || FAILED=1
+          [ "$PRAES_E6NO_OK" = "1" ] || FAILED=1
+          [ "$CODE_PDEL" = "200" ] || FAILED=1
+          [ "$PRAES_DEL_OK" = "1" ] || FAILED=1
+          [ "$PT_SLUG_OK" = "1" ] || FAILED=1
+          [ "$PT_UEB_OK" = "1" ] || FAILED=1
+          [ "$PT_KONV_OK" = "1" ] || FAILED=1
+          [ "$PT_GRUPPE_OK" = "1" ] || FAILED=1
+          [ "$PT_INDEX_OK" = "1" ] || FAILED=1
+          [ "$PT_KAT_OK" = "1" ] || FAILED=1
+          [ "$PT_LOCK_OK" = "1" ] || FAILED=1
+          [ "$CODE_PMOD" = "200" ] || FAILED=1
+          [ "$PRAES_MOD_OK" = "1" ] || FAILED=1
+          [ "$PRAES_MOD_UI_OK" = "1" ] || FAILED=1
+          [ "$CODE_PMODDENY" = "200" ] || FAILED=1
+          [ "$PRAES_MOD_DENY_OK" = "1" ] || FAILED=1
+          [ "$CODE_PMODJK" = "200" ] || FAILED=1
+          [ "$PRAES_NLFIX_OK" = "1" ] || FAILED=1
+          [ "$PRAES_GR6_OK" = "1" ] || FAILED=1
+          [ "$PRAES_GR6SEED_OK" = "1" ] || FAILED=1
+          [ "$PRAES_GR7_OK" = "1" ] || FAILED=1
+          [ "$PRAES_GR7SEED_OK" = "1" ] || FAILED=1
+          [ "$PRAES_JAHR_OK" = "1" ] || FAILED=1
+          [ "$PRAES_JAHR10_OK" = "1" ] || FAILED=1
+          [ "$PRAES_E6SEED_OK" = "1" ] || FAILED=1
+          [ "$PRAES_E6NO7_OK" = "1" ] || FAILED=1
+          [ "$CODE_TCAT" = "200" ] || FAILED=1
+          [ "$TCAT_OK" = "1" ] || FAILED=1
+          [ "$TCAT_LEVEL_OK" = "1" ] || FAILED=1
+          [ "$TCAT_NOLEAK_OK" = "1" ] || FAILED=1
+          [ "$CODE_TIMPORT" = "200" ] || FAILED=1
+          [ "$TIMPORT_OK" = "1" ] || FAILED=1
+          [ "$TIMPORT_DB_OK" = "1" ] || FAILED=1
+          [ "$CODE_TDUP" = "200" ] || FAILED=1
+          [ "$TDUP_OK" = "1" ] || FAILED=1
+          [ "$CODE_TLEVEL" = "200" ] || FAILED=1
+          [ "$TLEVEL_OK" = "1" ] || FAILED=1
+          [ "$TLEVEL_DB_OK" = "1" ] || FAILED=1
+          [ "$CODE_TDEL" = "200" ] || FAILED=1
+          [ "$TDEL_OK" = "1" ] || FAILED=1
+          [ "$TDEL_DB_OK" = "1" ] || FAILED=1
+          [ "$CODE_TANEW" = "200" ] || FAILED=1
+          [ "$TANEW_OK" = "1" ] || FAILED=1
+          [ "$TAEDIT_OK" = "1" ] || FAILED=1
+          [ "$TAEDIT_DB_OK" = "1" ] || FAILED=1
+          [ "$TASHARE_OK" = "1" ] || FAILED=1
+          [ "$TASHARE_BADGE_OK" = "1" ] || FAILED=1
+          [ "$TAPOOL_OK" = "1" ] || FAILED=1
+          [ "$TAPOOL_AUTHOR_OK" = "1" ] || FAILED=1
+          [ "$TAADOPT_OK" = "1" ] || FAILED=1
+          [ "$TAADOPT_DB_OK" = "1" ] || FAILED=1
+          [ "$TAADOPT2_OK" = "1" ] || FAILED=1
+          [ "$TAKINONE_OK" = "1" ] || FAILED=1
+          [ "$TAASSIGN_OK" = "1" ] || FAILED=1
+          [ "$TADUE_DB_OK" = "1" ] || FAILED=1
+          [ "$TATERM_OK" = "1" ] || FAILED=1
+          [ "$TATERM_DB_OK" = "1" ] || FAILED=1
+          [ "$TATERM2_OK" = "1" ] || FAILED=1
+          [ "$CODE_TASTUDENT" = "200" ] || FAILED=1
+          [ "$TASTUDENT_OK" = "1" ] || FAILED=1
+          [ "$TASTUDENT_DUE_OK" = "1" ] || FAILED=1
+          [ "$TASUBMIT_OK" = "1" ] || FAILED=1
+          [ "$TASUBMIT_DB_OK" = "1" ] || FAILED=1
+          [ "$TACORR_OK" = "1" ] || FAILED=1
+          [ "$TACORR_SUB_OK" = "1" ] || FAILED=1
+          [ "$TACORR_SOL_OK" = "1" ] || FAILED=1
+          [ "$TAGRADE_OK" = "1" ] || FAILED=1
+          [ "$TAGRADE_DB_OK" = "1" ] || FAILED=1
+          [ "$TASTUDENT_GRADE_OK" = "1" ] || FAILED=1
+          [ "$TARESUBMIT_OK" = "1" ] || FAILED=1
+          [ "$TAKI_OK" = "1" ] || FAILED=1
+          [ "$TAKI_TEACHER_OK" = "1" ] || FAILED=1
+          [ "$TAKISAVE_OK" = "1" ] || FAILED=1
+          [ "$TAKI_DB_OK" = "1" ] || FAILED=1
+          [ "$TAKI_ADM_OK" = "1" ] || FAILED=1
+          [ "$TAKISCHULE_OK" = "1" ] || FAILED=1
+          [ "$TAKISCHULE_DB_OK" = "1" ] || FAILED=1
+          [ "$TAKINONE2_OK" = "1" ] || FAILED=1
+          [ "$TANEW3_OK" = "1" ] || FAILED=1
+          [ "$TANEW3_DB_OK" = "1" ] || FAILED=1
+          [ "$TAASSIGN2_OK" = "1" ] || FAILED=1
+          [ "$TAASSIGN2_DB_OK" = "1" ] || FAILED=1
+          [ "$TALATELOCK_OK" = "1" ] || FAILED=1
+          [ "$TALATELOCK_DB_OK" = "1" ] || FAILED=1
+          [ "$TARUBRIC_OK" = "1" ] || FAILED=1
+          [ "$TAMAXPTS_OK" = "1" ] || FAILED=1
+          [ "$TAWITHDRAW_OK" = "1" ] || FAILED=1
+          [ "$TAWITHDRAW_DB_OK" = "1" ] || FAILED=1
+          [ "$TAWITHDRAWSTUDENT_OK" = "1" ] || FAILED=1
+          [ "$TASTART_OK" = "1" ] || FAILED=1
+          [ "$TASTART_DB_OK" = "1" ] || FAILED=1
+          [ "$TASTARTHIDE_OK" = "1" ] || FAILED=1
+          [ "$TASTART2_OK" = "1" ] || FAILED=1
+          [ "$TASTARTSHOW_OK" = "1" ] || FAILED=1
+          [ "$CODE_TANEW4" = "200" ] || FAILED=1
+          [ "$TANEW4_OK" = "1" ] || FAILED=1
+          [ "$TANEW4_DB_OK" = "1" ] || FAILED=1
+          [ "$TAORG_HTML_OK" = "1" ] || FAILED=1
+          [ "$TAORG_SAN_OK" = "1" ] || FAILED=1
+          [ "$TAORG_TOPIC_OK" = "1" ] || FAILED=1
+          [ "$TATOPICS_OK" = "1" ] || FAILED=1
+          [ "$CODE_TAKAT4" = "200" ] || FAILED=1
+          [ "$TAORG_KAT_OK" = "1" ] || FAILED=1
+          [ "$TAORG_KATTOPIC_OK" = "1" ] || FAILED=1
+          [ "$TAORG_KAT_DB_OK" = "1" ] || FAILED=1
+          [ "$CODE_TATODO" = "200" ] || FAILED=1
+          [ "$TAORG_TODO_OK" = "1" ] || FAILED=1
+          [ "$TAORG_TODO_DB_OK" = "1" ] || FAILED=1
+          [ "$CODE_TAMAT" = "200" ] || FAILED=1
+          [ "$TAORG_MAT_OK" = "1" ] || FAILED=1
+          [ "$TAORG_MAT_DB_OK" = "1" ] || FAILED=1
+          [ "$CODE_TAASSIGN3" = "200" ] || FAILED=1
+          [ "$TAORG_ASSIGN_OK" = "1" ] || FAILED=1
+          [ "$TAORG_ASSIGN_DB_OK" = "1" ] || FAILED=1
+          [ "$CODE_TASTU4" = "200" ] || FAILED=1
+          [ "$TAORG_STUDENT_OK" = "1" ] || FAILED=1
+          [ "$TAORG_STODO_OK" = "1" ] || FAILED=1
+          [ "$TAORG_SMAT_OK" = "1" ] || FAILED=1
+          [ "$TAORG_STOGGLE_OK" = "1" ] || FAILED=1
+          [ "$CODE_TATOG" = "200" ] || FAILED=1
+          [ "$TAORG_TCHECK_DB_OK" = "1" ] || FAILED=1
+          [ "$CODE_TAOWN" = "200" ] || FAILED=1
+          [ "$TAORG_SOWN_DB_OK" = "1" ] || FAILED=1
+          [ "$CODE_TADL" = "200" ] || FAILED=1
+          [ "$TAORG_DL_OK" = "1" ] || FAILED=1
+          [ "$CODE_TAFT6" = "200" ] || FAILED=1
+          [ "$TAORG_FTOPIC_OK" = "1" ] || FAILED=1
+          [ "$CODE_TAFT9" = "200" ] || FAILED=1
+          [ "$TAORG_FTOPIC2_OK" = "1" ] || FAILED=1
+          [ "$CODE_TAFC6" = "200" ] || FAILED=1
+          [ "$TAORG_FCLASS_OK" = "1" ] || FAILED=1
+          [ "$CODE_TAFSTO" = "200" ] || FAILED=1
+          [ "$TAORG_FSTAT_OK" = "1" ] || FAILED=1
+          [ "$CODE_TAFSTA" = "200" ] || FAILED=1
+          [ "$TAORG_FSTAT2_OK" = "1" ] || FAILED=1
+          [ "$CODE_TAVAR" = "200" ] || FAILED=1
+          [ "$TAORG_VAR_OK" = "1" ] || FAILED=1
+          [ "$TAORG_VAR_DB_OK" = "1" ] || FAILED=1
+          [ "$TAORG_VARCOPY_DB_OK" = "1" ] || FAILED=1
+          [ "$CODE_SQLDIAG" = "200" ] || FAILED=1
+          [ "$SQL_DIAG_OK" = "1" ] || FAILED=1
+          [ "$SQL_DIAG_MER_OK" = "1" ] || FAILED=1
+          [ "$CODE_DCLASSES" = "200" ] || FAILED=1
+          [ "$DIAG_CLASSES_OK" = "1" ] || FAILED=1
+          [ "$CODE_DTOGGLE" = "200" ] || FAILED=1
+          [ "$DIAG_TOGGLE_OFF_OK" = "1" ] || FAILED=1
+          [ "$CODE_DLOCK" = "200" ] || FAILED=1
+          [ "$DIAG_LOCK_OK" = "1" ] || FAILED=1
+          [ "$CODE_DTUNTOGGLE" = "200" ] || FAILED=1
+          [ "$DIAG_TOGGLE_ON_OK" = "1" ] || FAILED=1
+          [ "$CODE_DDELETE" = "200" ] || FAILED=1
+          [ "$DIAG_DEL_OK" = "1" ] || FAILED=1
+          [ "$DSTR_CREATE_OK" = "1" ] || FAILED=1
+          [ "$DSTR_START_OK" = "1" ] || FAILED=1
+          [ "$DSTR_GID_OK" = "1" ] || FAILED=1
+          [ "$DSTR_SAVE_OK" = "1" ] || FAILED=1
+          [ "$DSTR_RENDER_OK" = "1" ] || FAILED=1
+          [ "$DSTR_IF_OK" = "1" ] || FAILED=1
+          [ "$DSTR_LOOP_OK" = "1" ] || FAILED=1
+          [ "$DSTR_ERR_OK" = "1" ] || FAILED=1
+          [ "$DSTR_DEL_OK" = "1" ] || FAILED=1
+          [ "$DF_CREATE_OK" = "1" ] || FAILED=1
+          [ "$DF_GID_OK" = "1" ] || FAILED=1
+          [ "$DF_MER_OK" = "1" ] || FAILED=1
+          [ "$DF_PNG_OK" = "1" ] || FAILED=1
+          [ "$DF_TEXT_OK" = "1" ] || FAILED=1
+          [ "$DF_ERR_OK" = "1" ] || FAILED=1
+          [ "$DF_DEL_OK" = "1" ] || FAILED=1
+          [ "$EPROJ_OK" = "1" ] || FAILED=1
+          [ "$CODE_SPUPIL" = "200" ] || FAILED=1
+          [ "$SPUPIL_OK" = "1" ] || FAILED=1
+          [ "$CODE_SPUPIL_OPEN" = "200" ] || FAILED=1
+          [ "$SPUPIL_OPEN_OK" = "1" ] || FAILED=1
+          [ "$SPUPIL_DENY_OK" = "1" ] || FAILED=1
+          [ "$CODE_MODSP" = "200" ] || FAILED=1
+          [ "$MODSP_OK" = "1" ] || FAILED=1
+          [ "$MODSP_NAV_OK" = "1" ] || FAILED=1
+          [ "$CODE_MODSP_BLOCK" = "200" ] || FAILED=1
+          [ "$MODSP_BLOCK_OK" = "1" ] || FAILED=1
+          [ "$CODE_MODSP_RESET" = "200" ] || FAILED=1
+          [ "$MODSP_RESET_OK" = "1" ] || FAILED=1
+          [ "$MODSP_NAV_BACK_OK" = "1" ] || FAILED=1
+          [ "$CODE_MODFREE" = "200" ] || FAILED=1
+          [ "$MODFREE_OK" = "1" ] || FAILED=1
+          [ "$MODFREE_NAV_OK" = "1" ] || FAILED=1
+          [ "$MODFREE_BACK_OK" = "1" ] || FAILED=1
+          if [ "$FAILED" = "0" ]; then
+            echo "Alle Smoke-Tests bestanden."
+          else
+            echo "::error::DIAG | login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL code:$CODE_CODE/$C_JDEF_OK/$C_GROUP_OK tasks:$CODE_TASKS/aufgaben2:$TANEW_OK/$TAEDIT_OK/$TASHARE_OK/$TAPOOL_OK/$TAADOPT_OK/$TAKINONE_OK/$TAASSIGN_OK/$TADUE_DB_OK/$TATERM_OK/$TASTUDENT_OK/$TASUBMIT_OK/$TACORR_OK/$TAGRADE_OK/$TASTUDENT_GRADE_OK/$TARESUBMIT_OK/$TAKI_OK/$TAKISAVE_OK/$TAKISCHULE_OK/$TAKINONE2_OK/aufgaben3:$CODE_TANEW3/$TANEW3_OK/$TANEW3_DB_OK/$TAASSIGN2_OK/$TAASSIGN2_DB_OK/$TALATELOCK_OK/$TALATELOCK_DB_OK/$TARUBRIC_OK/$TAMAXPTS_OK/$TAWITHDRAW_OK/$TAWITHDRAW_DB_OK/$TAWITHDRAWSTUDENT_OK/$TASTART_OK/$TASTART_DB_OK/$TASTARTHIDE_OK/$TASTART2_OK/$TASTARTSHOW_OK/aufgaben4:$CODE_TANEW4/$TANEW4_OK/$TANEW4_DB_OK/$TAORG_HTML_OK/$TAORG_SAN_OK/$TAORG_TOPIC_OK/$TATOPICS_OK/$TAORG_KAT_OK/$TAORG_KATTOPIC_OK/$TAORG_KAT_DB_OK/$TAORG_TODO_OK/$TAORG_TODO_DB_OK/$TAORG_MAT_OK/$TAORG_MAT_DB_OK/$TAORG_ASSIGN_OK/$TAORG_ASSIGN_DB_OK/$TAORG_STUDENT_OK/$TAORG_STODO_OK/$TAORG_SMAT_OK/$TAORG_STOGGLE_OK/$TAORG_TCHECK_DB_OK/$TAORG_SOWN_DB_OK/$TAORG_DL_OK/$TAORG_FTOPIC_OK/$TAORG_FTOPIC2_OK/$TAORG_FCLASS_OK/$TAORG_FSTAT_OK/$TAORG_FSTAT2_OK/$TAORG_VAR_OK/$TAORG_VAR_DB_OK/$TAORG_VARCOPY_DB_OK ws:$CODE_WS query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK/$H_WY_OK/$H_TABS_OK/$H_DL_OK/$H_UP_OK/$H_TAG_OK/$H_NW_OK/$H_FOLD_OK py:$CODE_PYED/$PY_RUN_OK quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK/$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES exam:$CODE_STEFAN/$CODE_EXAM/$EX_OVER_OK/$EX_CREATE_OK/$EX_MEMBER_OK/$EX_TPL_OK/$EX_TASKS_OK/$CODE_EXSTART/$EX_START_OK/$LOCK_OK/$LOCK_REDIRECT_OK/$CODE_EXWORK/$EX_WORK_OK/$CODE_EXSAVE/$EXSAVE_OK/$EX_SUBMIT_OK/$EX_END_OK/$CODE_EXCORRECT/$EX_CORRECT_OK/$EX_GRADE_OK/$EX_API_OK/$EX_RELEASE_OK/$EX_RESULT_OK/$EX_FEEDBACK_OK/$EX_UNLOCK_OK/$CODE_JONAS/$JONAS_LOCK_OK/$CODE_ARBEITRES/$ARBEIT_RES_OK diagram:$CODE_DLIST/$DIAG_OVER_OK/$CODE_PYDIAG/$PY_DIAG_OK/$PY_DIAG_REL_OK/$PY_DIAG_METH_OK/$CODE_JDIAG/$JAVA_DIAG_OK/$JAVA_DIAG_FIELD_OK/$JAVA_DIAG_METH_OK/$J_UI_OK/$J_RUN_OK/$J_DBHINT_OK/$J_FILE_OK/$J_FILE_SAVE_OK/$J_FDEL_OK/$J_IDE_OK/$J_OBJ_OK/$J_REPL_OK/$J_WIDE_OK/$J_START_OK/$J_NOMAIN_OK/$J_TOP_OK/$J_CLTAB_OK/$J_STEP_OK/$J_STEPINFO_OK/$J_APIH_OK/$J_FMT_OK/$J_GFX_OK/$J_INPUT_OK/$J_RAND_OK/$J_ASSERT_OK/$J_MTOOL_OK/$J_VEC_OK/$J_SOUND_OK/$J_GAMEPAD_OK/$J_SECTOR_OK/$J_SYSTOOL_OK/$J_KEY_OK/$J_CPAIR_OK/$J_DIR_OK/$J_PUNKT_OK/$J_STOP_OK/$J_GFXDOCK_OK/$J_APIOPEN_OK/$J_ICON_OK/$J_ERRBOX_OK/$J_AUTOSAVE_OK wiki:$CODE_WIKI/$WIKI_OK/$WCREATE_OK/$W_GID_OK/$WPAGE_OK/$WSAVE_OK/$WLOCK_OK/$WDEL_OK guide:$WGUIDE_OK/$WGUIDE_PAGE_OK praes:$CODE_PRAES/$PRAES_OVER_OK/$PRAES_SEED_OK/$PRAES_CREATE_OK/$PRAES_SLIDE_OK/$PRAES_SAVE_OK/$PRAES_VIEW_OK/$PRAES_FULL_OK/$PRAES_HL_OK/$PRAES_LIVE_OK/$PRAES_E9_OK/$PRAES_E9NOJ_OK/$PRAES_E6NO_OK/$PRAES_E6SEED_OK/$PRAES_E6NO7_OK/moderator:$CODE_PMOD/$PRAES_MOD_OK/$PRAES_MOD_UI_OK/$CODE_PMODDENY/$PRAES_MOD_DENY_OK/$CODE_PMODJK/$PRAES_NLFIX_OK/$PRAES_GR6_OK/$PRAES_GR6SEED_OK/$PRAES_GR7_OK/$PRAES_GR7SEED_OK/$PRAES_JAHR_OK/$PRAES_JAHR10_OK/$PRAES_DEL_OK/thema:$PT_SLUG_OK/$PT_UEB_OK/$PT_KONV_OK/$PT_INDEX_OK/$PT_GRUPPE_OK/$PT_KAT_OK/$PT_LOCK_OK katalog:$TCAT_OK/$TCAT_LEVEL_OK/$TIMPORT_OK/$TIMPORT_DB_OK/$TDUP_OK/$TLEVEL_OK/$TLEVEL_DB_OK/$TDEL_OK/$TDEL_DB_OK $CODE_SQLDIAG/$SQL_DIAG_OK/$CODE_DTOGGLE/$DIAG_TOGGLE_OFF_OK/$CODE_DLOCK/$DIAG_LOCK_OK/$CODE_DTUNTOGGLE/$DIAG_TOGGLE_ON_OK/$CODE_DDELETE/$DIAG_DEL_OK/struktur:$CODE_DSTR/$DSTR_CREATE_OK/$DSTR_START_OK/$DSTR_GID_OK/$DSTR_SAVE_OK/$DSTR_RENDER_OK/$DSTR_IF_OK/$DSTR_LOOP_OK/$DSTR_ERR_OK/$DSTR_DEL_OK/datenfluss:$CODE_DDF/$DF_CREATE_OK/$DF_GID_OK/$DF_MER_OK/$DF_PNG_OK/$DF_TEXT_OK/$DF_ERR_OK/$DF_DEL_OK mods:$MODSP_OK/$MODSP_NAV_OK/$MODSP_BLOCK_OK/$MODSP_RESET_OK/$MODSP_NAV_BACK_OK/$MODFREE_OK/$MODFREE_NAV_OK/$MODFREE_BACK_OK schueler:$SPUPIL_OK/$SPUPIL_OPEN_OK/$SPUPIL_DENY_OK hl:$HL_HTML_OK/$HL_CODE_OK/$HL_SQL_OK/$HL_DIAG_OK | errors: $(grep 'InfoCraft:' server.log | head -n 5 | tr '\n' ' ')"
+            exit 1
+          fi

@@ -11,10 +11,55 @@ namespace Infocraft\Models;
  */
 final class TaskCatalog
 {
-    /** @return list<array{id: int, title: string, description: string, type: string, level: int}> */
-    public static function all(): array
+    /**
+     * Themengebiete (LehrplanPLUS) je Katalog-Eintrag. Beim Übernehmen wird
+     * das Thema übernommen; existiert es noch nicht, wird es mit der Stufe
+     * des Eintrags angelegt.
+     * @return array<int, string>
+     */
+    private static function topicById(): array
     {
         return [
+            1 => 'Algorithmen spielen und verstehen',
+            2 => 'Algorithmen spielen und verstehen',
+            3 => 'Informationen darstellen',
+            4 => 'Erste Webseiten (HTML)',
+            5 => 'Algorithmen spielen und verstehen',
+            6 => 'Digitale Kommunikation',
+            7 => 'Webseiten mit HTML bauen',
+            8 => 'Algorithmen und Flussdiagramme',
+            9 => 'Algorithmen und Programmierung (Python)',
+            10 => 'Daten und Informationen',
+            11 => 'Daten und Informationen',
+            12 => 'Datenmodellierung und SQL',
+            13 => 'Datenmodellierung und SQL',
+            14 => 'Java: Klassen und Objekte',
+            15 => 'HTML und CSS: Seiten gestalten',
+            25 => 'Funktionale Modellierung',
+            26 => 'Tabellenkalkulation und Funktionen',
+            27 => 'Datenschutz und Sicherheit',
+            28 => 'Java: Klassen und Objekte',
+            16 => 'Relationale Datenbanken und JOINs',
+            17 => 'Java: Vererbung und Polymorphismus',
+            18 => 'Relationale Datenbanken und JOINs',
+            29 => 'Objektorientierte Modellierung (OOP)',
+            30 => 'Objektorientierte Modellierung (OOP)',
+            31 => 'Projekt Informatik',
+            32 => 'Relationale Datenbanken und JOINs',
+            19 => 'Datenbanken fortgeschritten',
+            20 => 'Algorithmen und Datenstrukturen',
+            21 => 'Algorithmen und Datenstrukturen',
+            22 => 'Theoretische Informatik',
+            23 => 'Softwareentwicklung und Projekte',
+            24 => 'Abiturvorbereitung Informatik',
+        ];
+    }
+
+    /** @return list<array{id: int, title: string, description: string, type: string, level: int, topic: string}> */
+    public static function all(): array
+    {
+        $topics = self::topicById();
+        $list = [
             // Jahrgangsstufe 6: Algorithmik, erste Schritte
             ['id' => 1, 'title' => 'Einen Alltag als Algorithmus beschreiben', 'description' => 'Beschreibe Schritt für Schritt, wie man einen Toast mit Butter und Marmelade zubereitet. Formuliere jede Anweisung so eindeutig, dass ein Roboter sie ausführen könnte. Vergleiche danach mit einem Mitschüler und verbessere ungenaue Stellen.', 'type' => 'allgemein', 'level' => 6],
             ['id' => 2, 'title' => 'Flussdiagramm für einen morgendlichen Ablauf zeichnen', 'description' => 'Zeichne ein Flussdiagramm für das Anziehen am Morgen: Wenn es kalt ist, ziehe eine Jacke an, sonst nur ein T-Shirt. Nutze Rauten für Entscheidungen und Rechtecke für Anweisungen. Markiere Start und Ende.', 'type' => 'allgemein', 'level' => 6],
@@ -54,9 +99,14 @@ final class TaskCatalog
             ['id' => 23, 'title' => 'SQL: Sichten und Transaktionen', 'description' => 'Erstelle eine VIEW, die nur lieferbare Produkte zeigt. Erkläre danach an einem Überweisungsbeispiel (ABBUCHEN und GUTSCHREIBEN), warum Transaktionen ALL-OR-NOTHING sein müssen (ACID).', 'type' => 'sql', 'level' => 12],
             ['id' => 24, 'title' => 'Endliche Automaten: Getränkeautomat modellieren', 'description' => 'Modelliere einen Getränkeautomaten als endlichen Automaten: Zustände (bereit, Geld eingeworfen, Ausgabe), Übergänge und Ausgabezeichen. Zeichne den Zustandsgraphen und finde eine Eingabefolge, die zu einem Fehlerzustand führt.', 'type' => 'allgemein', 'level' => 13],
         ];
+        foreach ($list as $index => $entry) {
+            $entry['topic'] = $topics[$entry['id']] ?? '';
+            $list[$index] = $entry;
+        }
+        return $list;
     }
 
-    /** @return array{id: int, title: string, description: string, type: string, level: int}|null */
+    /** @return array{id: int, title: string, description: string, type: string, level: int, topic: string}|null */
     public static function find(int $id): ?array
     {
         foreach (self::all() as $entry) {
@@ -67,7 +117,7 @@ final class TaskCatalog
         return null;
     }
 
-    /** @return list<array{id: int, title: string, description: string, type: string, level: int}> */
+    /** @return list<array{id: int, title: string, description: string, type: string, level: int, topic: string}> */
     public static function forLevel(int $level): array
     {
         return array_values(array_filter(self::all(), static fn (array $entry): bool => $entry['level'] === $level));

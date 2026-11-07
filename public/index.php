@@ -140,6 +140,11 @@ $router->post('/aufgaben/{id}/korrigieren', [TaskController::class, 'grade']);
 $router->post('/aufgaben/{id}/ki', [TaskController::class, 'aiGrade']);
 $router->post('/aufgaben/{id}/abgeben', [TaskController::class, 'submit']);
 $router->post('/aufgaben/{id}/loeschen', [TaskController::class, 'delete']);
+$router->post('/aufgaben/{id}/todos', [TaskController::class, 'todoTeacher']);
+$router->post('/aufgaben/{id}/todos/schueler', [TaskController::class, 'todoStudent']);
+$router->post('/aufgaben/{id}/material', [TaskController::class, 'materialSave']);
+$router->get('/aufgaben/{id}/material/{mid}', [TaskController::class, 'materialDownload']);
+$router->post('/aufgaben/{id}/variante', [TaskController::class, 'variant']);
 
 // Wiki: Nachschlage-Seiten mit Stufen-Filter (Lehrkräfte verwalten)
 $router->get('/wiki', [WikiController::class, 'index']);

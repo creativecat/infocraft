@@ -5,11 +5,15 @@ namespace Infocraft\Controllers;
 
 use Infocraft\Auth;
 use Infocraft\Models\AiSettings;
+use Infocraft\Models\HtmlSanitizer;
 use Infocraft\Models\SchoolClass;
 use Infocraft\Models\Task;
 use Infocraft\Models\TaskCatalog;
 use Infocraft\Models\TaskGrading;
+use Infocraft\Models\TaskMaterial;
 use Infocraft\Models\TaskSubmission;
+use Infocraft\Models\TaskTodo;
+use Infocraft\Models\TaskTopic;
 use Infocraft\Models\User;
 use RuntimeException;
 
@@ -22,16 +26,98 @@ final class TaskController
             redirect('/login');
         }
         if (Auth::isTeacher()) {
-            $tasks = Task::forTeacher($user->id);
-            $targets = [];
-            foreach ($tasks as $task) {
-                $targets[$task->id] = Task::targets($task->id);
-            }
+            $classes = SchoolClass::forTeacher($user->id, $user->role === 'admin');
+            // Filter: Klasse (kaskadiert auf deren Jahrgangsstufe), Themengebiet,
+            // Jahrgangsstufe und Typ. Alle Filter sind optional und kombinierbar.
+            $filterClassId = max(0, (int) ($_GET['class'] ?? 0));
+            $filterTopicId = max(0, (int) ($_GET['topic'] ?? 0));
             $filterLevel = max(0, min(13, (int) ($_GET['level'] ?? 0)));
             $filterType = (string) ($_GET['type'] ?? '');
             if (!in_array($filterType, ['allgemein', 'sql', 'html', 'code', 'quiz'], true)) {
                 $filterType = '';
             }
+            $filterClass = null;
+            foreach ($classes as $class) {
+                if ($class->id === $filterClassId) {
+                    $filterClass = $class;
+                }
+            }
+            if ($filterClass === null) {
+                $filterClassId = 0;
+            }
+            // Themengebiete: bei gewählter Klasse nur die der Klassenstufe.
+            $topicChoices = $filterClass !== null
+                ? TaskTopic::forLevel($filterClass->level())
+                : TaskTopic::all();
+            if ($filterTopicId > 0) {
+                $topicValid = false;
+                foreach ($topicChoices as $topic) {
+                    if ($topic->id === $filterTopicId) {
+                        $topicValid = true;
+                    }
+                }
+                if (!$topicValid) {
+                    $filterTopicId = 0;
+                }
+            }
+
+            $tasks = Task::forTeacher($user->id);
+            $allTitles = array_map(static fn (Task $task): string => mb_strtolower(trim($task->title)), $tasks);
+            $targets = [];
+            foreach ($tasks as $task) {
+                $targets[$task->id] = Task::targets($task->id);
+            }
+            if ($filterTopicId > 0) {
+                $tasks = array_values(array_filter($tasks, static fn (Task $task): bool => $task->topicId === $filterTopicId));
+            }
+            if ($filterLevel > 0) {
+                $tasks = array_values(array_filter($tasks, static fn (Task $task): bool => $task->level === $filterLevel));
+            }
+            if ($filterType !== '') {
+                $tasks = array_values(array_filter($tasks, static fn (Task $task): bool => $task->type === $filterType));
+            }
+            if ($filterClass !== null) {
+                $classStudentIds = [];
+                foreach (User::byClass($filterClass->id) as $student) {
+                    $classStudentIds[$student->id] = true;
+                }
+                $tasks = array_values(array_filter($tasks, static function (Task $task) use ($targets, $classStudentIds): bool {
+                    foreach ($targets[$task->id] as $target) {
+                        if ($target['classId'] !== null || ($target['userId'] !== null && isset($classStudentIds[$target['userId']]))) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }));
+            }
+
+            // Abgabe-Fortschritt je Zuweisung (x von y abgegeben) vorbereiten.
+            $progressByTask = [];
+            $classSizeCache = [];
+            foreach ($tasks as $task) {
+                $submissions = TaskSubmission::forTask($task->id);
+                $progressByTask[$task->id] = [];
+                foreach ($targets[$task->id] as $target) {
+                    $total = 0;
+                    $submitted = 0;
+                    if ($target['classId'] !== null) {
+                        if (!isset($classSizeCache[$target['classId']])) {
+                            $classSizeCache[$target['classId']] = User::byClass($target['classId']);
+                        }
+                        foreach ($classSizeCache[$target['classId']] as $student) {
+                            $total++;
+                            if (isset($submissions[$student->id])) {
+                                $submitted++;
+                            }
+                        }
+                    } else {
+                        $total = 1;
+                        $submitted = isset($submissions[$target['userId']]) ? 1 : 0;
+                    }
+                    $progressByTask[$task->id][$target['id']] = ['total' => $total, 'submitted' => $submitted];
+                }
+            }
+
             $catalog = TaskCatalog::all();
             if ($filterLevel > 0) {
                 $catalog = array_values(array_filter($catalog, static fn (array $entry): bool => $entry['level'] === $filterLevel));
@@ -40,34 +126,118 @@ final class TaskController
                 $catalog = array_values(array_filter($catalog, static fn (array $entry): bool => $entry['type'] === $filterType));
             }
             $pool = Task::pool($user->id);
+            if ($filterTopicId > 0) {
+                $pool = array_values(array_filter($pool, static fn (array $entry): bool => $entry['task']->topicId === $filterTopicId));
+            }
             if ($filterLevel > 0) {
                 $pool = array_values(array_filter($pool, static fn (array $entry): bool => $entry['task']->level === $filterLevel));
             }
             if ($filterType !== '') {
                 $pool = array_values(array_filter($pool, static fn (array $entry): bool => $entry['task']->type === $filterType));
             }
+
+            $taskIds = [];
+            foreach ($tasks as $task) {
+                $taskIds[] = $task->id;
+            }
             render('tasks_teacher', [
                 'title' => 'Aufgabenpool',
                 'active' => 'tasks',
                 'tasks' => $tasks,
                 'targets' => $targets,
-                'classes' => SchoolClass::forTeacher($user->id, $user->role === 'admin'),
+                'classes' => $classes,
                 'studentsByClass' => self::studentsByClass($user),
                 'catalog' => $catalog,
                 'pool' => $pool,
+                'topics' => $topicChoices,
+                'allTopics' => TaskTopic::all(),
+                'filterClassId' => $filterClassId,
+                'filterTopicId' => $filterTopicId,
                 'filterLevel' => $filterLevel,
                 'filterType' => $filterType,
-                'ownedTitles' => array_map(static fn (Task $task): string => mb_strtolower(trim($task->title)), $tasks),
+                'progress' => $progressByTask,
+                'todoCounts' => TaskTodo::templatesForTasks($taskIds),
+                'materialCounts' => TaskMaterial::forTasks($taskIds),
+                'ownedTitles' => $allTitles,
                 'aiConfigured' => AiSettings::resolve($user->id) !== null,
                 'user' => $user,
             ]);
             return;
         }
         $level = Auth::levelOf($user) ?? 0;
+        $entries = Task::forStudent($user->id, $user->classId, $level);
+        $now = date('Y-m-d H:i');
+
+        // Nächster anstehender Abgabetermin über alle Aufgaben (ungefiltert).
+        $nextDue = null;
+        foreach ($entries as $entry) {
+            if ($entry['dueAt'] !== null && $entry['dueAt'] >= $now && ($nextDue === null || $entry['dueAt'] < $nextDue)) {
+                $nextDue = $entry['dueAt'];
+            }
+        }
+
+        // Filter für Schülerinnen und Schüler: Themengebiet, Typ und Status.
+        $filterTopicId = max(0, (int) ($_GET['topic'] ?? 0));
+        $filterType = (string) ($_GET['type'] ?? '');
+        if (!in_array($filterType, ['allgemein', 'sql', 'html', 'code', 'quiz'], true)) {
+            $filterType = '';
+        }
+        $filterStatus = (string) ($_GET['status'] ?? '');
+        if (!in_array($filterStatus, ['offen', 'abgegeben', 'korrigiert', 'ueberfaellig'], true)) {
+            $filterStatus = '';
+        }
+        $topicChoices = [];
+        foreach ($entries as $entry) {
+            if ($entry['task']->topicId > 0 && !isset($topicChoices[$entry['task']->topicId])) {
+                $topic = TaskTopic::find($entry['task']->topicId);
+                if ($topic !== null) {
+                    $topicChoices[$entry['task']->topicId] = $topic;
+                }
+            }
+        }
+        $entries = array_values(array_filter($entries, static function (array $entry) use ($filterTopicId, $filterType, $filterStatus, $now): bool {
+            $task = $entry['task'];
+            if ($filterTopicId > 0 && $task->topicId !== $filterTopicId) {
+                return false;
+            }
+            if ($filterType !== '' && $task->type !== $filterType) {
+                return false;
+            }
+            if ($filterStatus !== '') {
+                $submitted = $entry['submission'] !== null;
+                $graded = $entry['grading'] !== null && ($entry['grading']['source'] === 'lk' || $entry['grading']['checked']);
+                if ($filterStatus === 'korrigiert' && !$graded) {
+                    return false;
+                }
+                if ($filterStatus === 'abgegeben' && ($graded || !$submitted)) {
+                    return false;
+                }
+                if ($filterStatus === 'offen' && $submitted) {
+                    return false;
+                }
+                if ($filterStatus === 'ueberfaellig' && ($entry['dueAt'] === null || $entry['dueAt'] >= $now || $submitted)) {
+                    return false;
+                }
+            }
+            return true;
+        }));
+
+        $taskIds = [];
+        foreach ($entries as $entry) {
+            $taskIds[] = $entry['task']->id;
+        }
         render('tasks_student', [
             'title' => 'Meine Aufgaben',
             'active' => 'module-tasks',
-            'tasks' => Task::forStudent($user->id, $user->classId, $level),
+            'tasks' => $entries,
+            'nextDue' => $nextDue,
+            'topics' => $topicChoices,
+            'filterTopicId' => $filterTopicId,
+            'filterType' => $filterType,
+            'filterStatus' => $filterStatus,
+            'todoTemplates' => TaskTodo::templatesForTasks($taskIds),
+            'studentTodos' => TaskTodo::forStudentTasks($user->id, $taskIds),
+            'materials' => TaskMaterial::forTasks($taskIds),
             'user' => $user,
         ]);
     }
@@ -95,7 +265,8 @@ final class TaskController
         $level = (int) ($_POST['level'] ?? 6);
         $lateLock = ($_POST['late_lock'] ?? '') === '1' ? 1 : 0;
         $maxPoints = max(0, min(1000, (int) ($_POST['max_points'] ?? 0)));
-        Task::createFull($user->id, $title, (string) ($_POST['description'] ?? ''), $type, $level, 0, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''));
+        [$topicId, $description, $descriptionFormat] = self::readTaskForm();
+        Task::createFull($user->id, $title, $description, $type, $level, 0, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''), $topicId, $descriptionFormat);
         flash('success', 'Aufgabe angelegt.');
         redirect('/aufgaben');
     }
@@ -116,10 +287,28 @@ final class TaskController
             flash('error', 'Aufgabe nicht gefunden.');
             redirect('/aufgaben');
         }
+        $topics = TaskTopic::forLevel($task->level);
+        if ($task->topicId > 0) {
+            $known = false;
+            foreach ($topics as $topic) {
+                if ($topic->id === $task->topicId) {
+                    $known = true;
+                }
+            }
+            if (!$known) {
+                $current = TaskTopic::find($task->topicId);
+                if ($current !== null) {
+                    $topics[] = $current;
+                }
+            }
+        }
         render('tasks_edit', [
             'title' => 'Aufgabe bearbeiten',
             'active' => 'tasks',
             'task' => $task,
+            'topics' => $topics,
+            'materials' => TaskMaterial::forTask($task->id),
+            'todos' => TaskTodo::templatesForTask($task->id),
             'user' => $user,
         ]);
     }
@@ -153,9 +342,38 @@ final class TaskController
         $level = (int) ($_POST['level'] ?? 6);
         $lateLock = ($_POST['late_lock'] ?? '') === '1' ? 1 : 0;
         $maxPoints = max(0, min(1000, (int) ($_POST['max_points'] ?? 0)));
-        Task::update($task->id, $title, (string) ($_POST['description'] ?? ''), $type, $level, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''));
+        [$topicId, $description, $descriptionFormat] = self::readTaskForm();
+        Task::update($task->id, $title, $description, $type, $level, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''), $topicId, $descriptionFormat);
         flash('success', 'Aufgabe gespeichert.');
         redirect('/aufgaben');
+    }
+
+    /**
+     * Liest Themengebiet und Beschreibung aus dem Formular. Die Beschreibung
+     * kommt entweder aus dem WYSIWYG-Editor (description_html = 1, wird mit
+     * dem Whitelist-Sanitizer gereinigt) oder als Klartext.
+     * @return array{0: int, 1: string, 2: string}
+     */
+    private static function readTaskForm(): array
+    {
+        $topicId = max(0, (int) ($_POST['topic_id'] ?? 0));
+        $newTopic = trim((string) ($_POST['new_topic'] ?? ''));
+        $level = max(1, min(13, (int) ($_POST['level'] ?? 6)));
+        if ($newTopic !== '') {
+            $topic = TaskTopic::findOrCreate($newTopic, $level);
+            $topicId = $topic->id;
+        } elseif ($topicId > 0 && TaskTopic::find($topicId) === null) {
+            $topicId = 0;
+        }
+        $description = (string) ($_POST['description'] ?? '');
+        $descriptionFormat = 'text';
+        if (($_POST['description_html'] ?? '') === '1') {
+            $descriptionFormat = 'html';
+            $description = HtmlSanitizer::clean($description);
+        } else {
+            $description = trim($description);
+        }
+        return [$topicId, $description, $descriptionFormat];
     }
 
     /** Eigene Aufgabe in den gemeinsamen Pool aller Lehrkräfte teilen oder zurückziehen. */
@@ -233,7 +451,10 @@ final class TaskController
             flash('error', 'Diese Aufgabe hast du schon im Pool.');
             redirect('/aufgaben');
         }
-        Task::create($user->id, $entry['title'], $entry['description'], $entry['type'], $entry['level']);
+        $topic = ($entry['topic'] ?? '') !== ''
+            ? TaskTopic::findOrCreate($entry['topic'], (int) $entry['level'])
+            : null;
+        Task::createFull($user->id, $entry['title'], $entry['description'], $entry['type'], $entry['level'], 0, '', 0, 0, '', $topic !== null ? $topic->id : 0, 'text');
         flash('success', 'Aufgabe aus dem Katalog übernommen.');
         redirect('/aufgaben');
     }
@@ -261,7 +482,10 @@ final class TaskController
         $count = 0;
         foreach (TaskCatalog::forLevel($level) as $entry) {
             if (!Task::hasTitle($user->id, $entry['title'])) {
-                Task::create($user->id, $entry['title'], $entry['description'], $entry['type'], $entry['level']);
+                $topic = ($entry['topic'] ?? '') !== ''
+                    ? TaskTopic::findOrCreate($entry['topic'], (int) $entry['level'])
+                    : null;
+                Task::createFull($user->id, $entry['title'], $entry['description'], $entry['type'], $entry['level'], 0, '', 0, 0, '', $topic !== null ? $topic->id : 0, 'text');
                 $count++;
             }
         }
@@ -323,7 +547,21 @@ final class TaskController
             redirect('/aufgaben');
         }
         $classId = (int) ($_POST['class_id'] ?? 0);
+        // Einzelne Personen: Auswahl im Verteilen-Panel (Mehrfachauswahl)
+        // oder klassisches Einzelfeld.
+        $userIds = [];
+        if (isset($_POST['user_ids']) && is_array($_POST['user_ids'])) {
+            foreach ($_POST['user_ids'] as $uid) {
+                $uid = (int) $uid;
+                if ($uid > 0) {
+                    $userIds[$uid] = $uid;
+                }
+            }
+        }
         $singleId = (int) ($_POST['user_id'] ?? 0);
+        if ($singleId > 0) {
+            $userIds[$singleId] = $singleId;
+        }
         if ($classId > 0) {
             if (!$isAdmin && !SchoolClass::hasTeacher($classId, $user->id)) {
                 flash('error', 'Du unterrichtest diese Klasse nicht.');
@@ -335,16 +573,29 @@ final class TaskController
                 : 'Aufgabe an die Klasse ausgeteilt. Sie erscheint am ' . $visibleFrom . ' Uhr.');
             redirect('/aufgaben');
         }
-        if ($singleId > 0) {
-            $student = User::find($singleId);
-            if ($student === null || $student->role !== 'student' || (!$isAdmin && ($student->classId === null || !SchoolClass::hasTeacher($student->classId, $user->id)))) {
-                flash('error', 'Diese Person ist nicht in einer deiner Klassen.');
+        if ($userIds !== []) {
+            $count = 0;
+            $skipped = 0;
+            foreach ($userIds as $sid) {
+                $student = User::find($sid);
+                if ($student === null || $student->role !== 'student' || (!$isAdmin && ($student->classId === null || !SchoolClass::hasTeacher((int) $student->classId, $user->id)))) {
+                    continue;
+                }
+                if (Task::assign($task->id, null, $student->id, $dueAt, $visibleFrom)) {
+                    $count++;
+                } else {
+                    $skipped++;
+                }
+            }
+            if ($count === 0 && $skipped === 0) {
+                flash('error', 'Diese Personen sind nicht in einer deiner Klassen.');
                 redirect('/aufgaben');
             }
-            Task::assign($task->id, null, $student->id, $dueAt, $visibleFrom);
-            flash('success', $visibleFrom === null
-                ? 'Aufgabe ausgeteilt.'
-                : 'Aufgabe ausgeteilt. Sie erscheint am ' . $visibleFrom . ' Uhr.');
+            flash($count > 0 ? 'success' : 'error', ($count > 0
+                ? 'Aufgabe an ' . $count . ' Person(en) ausgeteilt.'
+                : 'Es gab keine neue Zuweisung.')
+                . ($skipped > 0 ? ' Bereits zugewiesen: ' . $skipped . '.' : '')
+                . ($visibleFrom !== null ? ' Sie erscheint am ' . $visibleFrom . ' Uhr.' : ''));
             redirect('/aufgaben');
         }
         flash('error', 'Kein Ziel angegeben.');
@@ -409,6 +660,229 @@ final class TaskController
         }
         Task::deleteTarget((int) $target['id']);
         flash('success', 'Zuweisung eingezogen. Die Aufgabe ist für die Klasse bzw. Person nicht mehr sichtbar (bereits abgegebene Lösungen bleiben erhalten).');
+        redirect('/aufgaben');
+    }
+
+    /** ToDos der Lehrkraft an einer Aufgabe pflegen (Vorlage für alle Empfänger). */
+    public static function todoTeacher(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Nur Lehrkräfte können ToDos hinterlegen.');
+            redirect('/');
+        }
+        csrf_validate();
+        $task = Task::find((int) ($params['id'] ?? 0));
+        if ($task === null || !Task::ownedBy($task, $user)) {
+            flash('error', 'Aufgabe nicht gefunden.');
+            redirect('/aufgaben');
+        }
+        $deleteId = (int) ($_POST['delete_todo_id'] ?? 0);
+        if ($deleteId > 0) {
+            TaskTodo::deleteTemplate($deleteId);
+            flash('success', 'ToDo entfernt.');
+            redirect('/aufgaben/' . $task->id . '/bearbeiten');
+        }
+        $title = trim((string) ($_POST['todo_title'] ?? ''));
+        if ($title === '') {
+            flash('error', 'Bitte einen Text für das ToDo angeben.');
+            redirect('/aufgaben/' . $task->id . '/bearbeiten');
+        }
+        TaskTodo::addTemplate($task->id, $title);
+        flash('success', 'ToDo hinzugefügt. Alle Schülerinnen und Schüler der Aufgabe sehen es ab jetzt.');
+        redirect('/aufgaben/' . $task->id . '/bearbeiten');
+    }
+
+    /** ToDos der Schülerin bzw. des Schülers: Vorlage abhaken, eigene pflegen. */
+    public static function todoStudent(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (Auth::isTeacher()) {
+            flash('error', 'ToDos gehören zur Schüler-Sicht der Aufgabe.');
+            redirect('/aufgaben');
+        }
+        csrf_validate();
+        $task = Task::find((int) ($params['id'] ?? 0));
+        if ($task === null || !self::taskReachesStudent($task, $user)) {
+            flash('error', 'Diese Aufgabe ist nicht für dich ausgeteilt.');
+            redirect('/aufgaben');
+        }
+        $deleteId = (int) ($_POST['delete_todo_id'] ?? 0);
+        if ($deleteId > 0) {
+            TaskTodo::deleteStudent($deleteId, $user->id);
+            flash('success', 'Eigenes ToDo entfernt.');
+            redirect('/aufgaben');
+        }
+        $toggleId = (int) ($_POST['toggle_todo_id'] ?? 0);
+        if ($toggleId > 0) {
+            TaskTodo::toggleStudent($toggleId, $user->id);
+            redirect('/aufgaben');
+        }
+        $templateId = (int) ($_POST['toggle_template_id'] ?? 0);
+        if ($templateId > 0) {
+            TaskTodo::toggleTemplate($task->id, $user->id, $templateId);
+            redirect('/aufgaben');
+        }
+        $title = trim((string) ($_POST['todo_title'] ?? ''));
+        if ($title !== '') {
+            TaskTodo::addStudent($task->id, $user->id, $title);
+            flash('success', 'Eigenes ToDo hinzugefügt.');
+        }
+        redirect('/aufgaben');
+    }
+
+    /** Material (Datei oder Textvorlage) an einer Aufgabe speichern oder löschen. */
+    public static function materialSave(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Nur Lehrkräfte können Materialien verwalten.');
+            redirect('/');
+        }
+        csrf_validate();
+        $task = Task::find((int) ($params['id'] ?? 0));
+        if ($task === null || !Task::ownedBy($task, $user)) {
+            flash('error', 'Aufgabe nicht gefunden.');
+            redirect('/aufgaben');
+        }
+        $deleteId = (int) ($_POST['delete_material_id'] ?? 0);
+        if ($deleteId > 0) {
+            TaskMaterial::delete($deleteId);
+            flash('success', 'Material entfernt.');
+            redirect('/aufgaben/' . $task->id . '/bearbeiten');
+        }
+        $filename = trim((string) ($_FILES['file']['name'] ?? ''));
+        if ($filename !== '' && (int) ($_FILES['file']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+            if ((int) $_FILES['file']['size'] > TaskMaterial::MAX_BYTES) {
+                flash('error', 'Die Datei ist zu groß (maximal 512 KiB).');
+                redirect('/aufgaben/' . $task->id . '/bearbeiten');
+            }
+            $content = (string) file_get_contents((string) $_FILES['file']['tmp_name']);
+            if (TaskMaterial::add($task->id, $filename, $content)) {
+                flash('success', 'Material gespeichert und zum Austeilen bereit.');
+            } else {
+                flash('error', 'Das Material konnte nicht gespeichert werden.');
+            }
+            redirect('/aufgaben/' . $task->id . '/bearbeiten');
+        }
+        $filename = trim((string) ($_POST['filename'] ?? ''));
+        $content = (string) ($_POST['material_content'] ?? '');
+        if ($filename !== '' && $content !== '') {
+            if (TaskMaterial::add($task->id, $filename, $content)) {
+                flash('success', 'Material gespeichert und zum Austeilen bereit.');
+            } else {
+                flash('error', 'Das Material konnte nicht gespeichert werden (Name oder Größe ungültig).');
+            }
+            redirect('/aufgaben/' . $task->id . '/bearbeiten');
+        }
+        flash('error', 'Bitte einen Dateinamen und Inhalt angeben oder eine Datei auswählen.');
+        redirect('/aufgaben/' . $task->id . '/bearbeiten');
+    }
+
+    /** Material für Schülerinnen und Schüler oder Lehrkraft herunterladen. */
+    public static function materialDownload(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        $task = Task::find((int) ($params['id'] ?? 0));
+        $material = TaskMaterial::find((int) ($params['mid'] ?? 0));
+        if ($task === null || $material === null || $material->taskId !== $task->id) {
+            flash('error', 'Material nicht gefunden.');
+            redirect('/aufgaben');
+        }
+        if (!Task::ownedBy($task, $user) && !self::taskReachesStudent($task, $user)) {
+            flash('error', 'Dieses Material gehört nicht zu einer deiner Aufgaben.');
+            redirect('/aufgaben');
+        }
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="' . rawurlencode($material->filename) . '"');
+        header('Content-Length: ' . strlen($material->raw()));
+        echo $material->raw();
+        exit;
+    }
+
+    /**
+     * Aufgabe als Java- oder Python-Variante duplizieren: Kopie mit
+     * Rückverweis, Materialien und ToDo-Vorlagen werden mitkopiert. Ist eine
+     * Chat-KI-Schnittstelle hinterlegt, wird die Musterlösung automatisch
+     * in die Zielsprache konvertiert (sonst 1:1 übernommen).
+     */
+    public static function variant(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Nur Lehrkräfte können Varianten anlegen.');
+            redirect('/');
+        }
+        csrf_validate();
+        $task = Task::find((int) ($params['id'] ?? 0));
+        if ($task === null || !Task::ownedBy($task, $user)) {
+            flash('error', 'Aufgabe nicht gefunden.');
+            redirect('/aufgaben');
+        }
+        $target = (string) ($_POST['target'] ?? 'python');
+        if (!in_array($target, ['java', 'python'], true)) {
+            $target = 'python';
+        }
+        $label = $target === 'java' ? 'Java-Variante' : 'Python-Variante';
+        $title = $task->title;
+        if (mb_stripos($title, $label) === false) {
+            $title = mb_substr($title, 0, 200 - strlen($label) - 3) . ' (' . $label . ')';
+        }
+        if (Task::hasTitle($user->id, $title)) {
+            flash('error', 'Es gibt diese Variante bereits in deinem Pool.');
+            redirect('/aufgaben');
+        }
+        $solution = $task->sampleSolution;
+        $converted = false;
+        $settings = AiSettings::resolve($user->id);
+        if ($settings !== null && $settings['mode'] === 'chat' && $solution !== '') {
+            try {
+                $prompt = 'Konvertiere die folgende Musterlösung einer Informatikaufgabe nach '
+                    . ($target === 'java' ? 'Java' : 'Python') . '. '
+                    . 'Gib ausschließlich den fertigen Quellcode aus, ohne Erklärungen und ohne Markdown. Musterlösung:'
+                    . PHP_EOL . $solution;
+                $body = json_encode(['model' => $settings['model'], 'messages' => [['role' => 'user', 'content' => $prompt]]], JSON_UNESCAPED_UNICODE);
+                $response = self::httpPost($settings['url'], $body, $settings['key']);
+                $decoded = json_decode($response, true);
+                $content = is_array($decoded) ? (string) ($decoded['choices'][0]['message']['content'] ?? '') : '';
+                $content = trim($content);
+                if ($content !== '') {
+                    $content = preg_replace('/^```[a-zA-Z]*\s*/', '', $content) ?? $content;
+                    $content = preg_replace('/```\s*$/', '', $content) ?? $content;
+                    if (trim($content) !== '') {
+                        $solution = trim($content);
+                        $converted = true;
+                    }
+                }
+            } catch (RuntimeException $e) {
+                $converted = false;
+            }
+        }
+        $copy = Task::duplicateAsVariant($task, $user->id, $title, $solution, $task->id);
+        foreach (TaskMaterial::forTask($task->id) as $material) {
+            TaskMaterial::add($copy->id, $material->filename, $material->raw());
+        }
+        foreach (TaskTodo::templatesForTask($task->id) as $todo) {
+            TaskTodo::addTemplate($copy->id, $todo->title);
+        }
+        flash('success', $label . ' angelegt'
+            . ($converted ? ', die Musterlösung wurde von der KI konvertiert. Bitte prüfen!' : '. Materialien und ToDos wurden mitkopiert, die Musterlösung bitte anpassen.')
+            . ' Bearbeite sie unter „Bearbeiten".');
         redirect('/aufgaben');
     }
 

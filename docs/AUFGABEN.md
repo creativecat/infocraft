@@ -66,7 +66,53 @@ Zustand: ✅ umgesetzt, 🔜 geplant.
    in der Korrekturübersicht und wird der KI-Bewertung als
    Bewertungshilfe mitgegeben ([#19](https://github.com/creativecat/infocraft/issues/19)).
 
-## Phase 3: Ideen (🔜 geplant)
+## Phase 3: Aufgabenbereich 2.0 (umgesetzt)
+
+1. ✅ **Themengebiete nach LehrplanPLUS:** Kuratierte Themengebiete pro
+   Jahrgangsstufe (6 bis 13, z. B. „Erste Webseiten (HTML)" in der 6.,
+   „Algorithmen und Programmierung (Python)" in der 8., „Java: Klassen und
+   Objekte" und „Datenmodellierung und SQL" in der 9., „Relationale
+   Datenbanken und JOINs" in der 10.), frei ergänzbar. Informatik ist am
+   bayerischen Gymnasium Pflichtfach der Jahrgangsstufen 8 bis 10 im
+   naturwissenschaftlich-technologischen Profil, an der Mittelschule in den
+   Jahrgangsstufen 5 bis 10, an der Realschule Wahlpflichtfach ab der 7.
+   ([#20](https://github.com/creativecat/infocraft/issues/20))
+2. ✅ **Filter nach Klasse und Themengebiet:** Durchgängige Filterleiste im
+   Aufgabenbereich: Die Klasse kaskadiert auf die Themengebiete ihrer
+   Jahrgangsstufe, dazu Jahrgangsstufe und Typ. Der Filter gilt für die
+   eigenen Aufgaben, den gemeinsamen Pool und den Katalog und ist per URL
+   teilbar; Schülerinnen und Schüler filtern ihre Aufgaben nach
+   Themengebiet, Typ und Status (offen, abgegeben, korrigiert,
+   überfällig). ([#21](https://github.com/creativecat/infocraft/issues/21))
+3. ✅ **Verteilen 2.0:** Aufgaben pro Klasse oder an mehrere einzelne
+   Schülerinnen und Schüler gleichzeitig austeilen (Mehrfachauswahl mit
+   Checkboxen je Klasse), Start- und Abgabetermin im selben Formular. Pro
+   Zuweisung zeigt der Pool den Fortschritt (abgegeben/empfangen) und alle
+   Termine auf einen Blick, inklusive Starttermin setzen und Zuweisung
+   einziehen. ([#22](https://github.com/creativecat/infocraft/issues/22))
+4. ✅ **WYSIWYG-Beschreibung:** Aufgabenbeschreibung mit Formatierungsleiste
+   (Fett, Kursiv, Überschriften, Listen, Code-Blöcke, Links) bearbeiten, mit
+   Whitelist-Sanitizer gegen eingeschleusten Code. Schülerinnen und
+   Schüler können die Beschreibung jederzeit ein- und ausblenden (pro
+   Aufgabe gemerkt). ([#23](https://github.com/creativecat/infocraft/issues/23))
+5. ✅ **ToDos:** Lehrkräfte legen pro Aufgabe eine ToDo-Vorlage an; die
+   Schülerinnen und Schüler haken sie ab und können eigene ToDos
+   ergänzen und löschen. ([#24](https://github.com/creativecat/infocraft/issues/24),
+   deckt die Idee Unteraufgaben aus [#16](https://github.com/creativecat/infocraft/issues/16) ab)
+6. ✅ **Materialien pro Aufgabentyp:** Vorlagen austeilen, passend zum Typ:
+   Java-Starterdatei (.java), HTML-Gerüst (index.html) oder SQL-Schema
+   (.sql) für eine aufgabeneigene Datenbank, später auch kombinierbar
+   (z. B. Java-Aufgabe mit SQL-Datenbank). Upload bis 512 KiB oder direkt
+   als Text anlegen, Download für die Zielgruppe. ([#25](https://github.com/creativecat/infocraft/issues/25))
+7. ✅ **Java/Python-Varianten:** Code-Aufgaben mit einem Klick als Java- oder
+   Python-Variante duplizieren; ist eine KI-Schnittstelle hinterlegt, wird
+   die Musterlösung konvertiert (als Vorschlag, vor Veröffentlichen
+   prüfen). Materialien und ToDos werden mitkopiert. ([#26](https://github.com/creativecat/infocraft/issues/26))
+8. ✅ **Schülerbereich-Integration:** Aufgaben als übersichtliche Kacheln mit
+   Status-Pille (offen, abgegeben, korrigiert, überfällig), Hinweis auf die
+   nächste Abgabe, Materialliste und ToDos direkt in der Aufgabe. ([#27](https://github.com/creativecat/infocraft/issues/27))
+
+## Phase 4: Ideen (🔜 geplant)
 
 - 🔜 **Abgabe als Projektverweis:** Statt oder zusätzlich zum Text eine
   Lösung aus der Code-Werkstatt (Java/Python) oder HTML-Werkstatt als
@@ -80,8 +126,10 @@ Zustand: ✅ umgesetzt, 🔜 geplant.
   Abgaben. ([#14](https://github.com/creativecat/infocraft/issues/14))
 - 🔜 **Export/Import:** Aufgaben als Datei exportieren und importieren,
   um Aufgaben zwischen Schulen oder Instanzen auszutauschen. ([#15](https://github.com/creativecat/infocraft/issues/15))
-- 🔜 **Unteraufgaben:** Aufgabe in Teilschritte mit eigener
-  Erledigungs-Checkliste für Schülerinnen und Schüler. ([#16](https://github.com/creativecat/infocraft/issues/16))
+- 🔜 ~~**Unteraufgaben:** Aufgabe in Teilschritte mit eigener
+  Erledigungs-Checkliste für Schülerinnen und Schüler.~~ Bereits in
+  Phase 3 über die ToDos umgesetzt ([#16](https://github.com/creativecat/infocraft/issues/16)
+  und [#24](https://github.com/creativecat/infocraft/issues/24)).
 - 🔜 **Selbsteinschätzung:** Kurze Selbsteinschätzung vor der Abgabe
   („Wie sicher fühlst du dich?"), sichtbar nur für die Lehrkraft. ([#17](https://github.com/creativecat/infocraft/issues/17))
 - 🔜 **Wiederkehrende Aufgaben:** Aufgaben mit Wiederholrhythmus
