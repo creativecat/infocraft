@@ -605,9 +605,49 @@ setTimeout(function () {
         ok(newFileForm._submitted === 1, 'T25b nach dem Speichern wird die neue Datei angelegt');
         ok(fetchCalls.length >= 2, 'T25c vorher wurde der aktuelle Code gesichert');
 
-        console.log('');
-        if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }
-        else { console.log(failures.length + ' UI-Tests fehlgeschlagen.'); process.exit(1); }
+        /* T26: Vererbung im Klassendiagramm als Pfeil (Kind unter dem Elter). */
+        taE.value = 'class Fahrzeug {' + NLt +
+          '  protected int ps;' + NLt +
+          '}' + NLt +
+          'class Auto extends Fahrzeug {' + NLt +
+          '  public void hupen() { System.out.println("tut"); }' + NLt +
+          '}';
+        taE.dispatch('input');
+        setTimeout(function () {
+          var umlHtml = classBox.innerHTML;
+          ok(umlHtml.indexOf('uml-arrow') !== -1, 'T26a Vererbung wird als Pfeil gezeichnet');
+          ok(umlHtml.indexOf('uml-children') !== -1, 'T26b Unterklasse haengt unter dem Elter');
+          ok(umlHtml.indexOf('uml-parent') === -1, 'T26c alte Text-Notiz entfaellt bei Projekt-Klassen');
+
+          /* T27: AltGr (Strg+Alt) bremst die Klammer-Automatik nicht aus. */
+          taE.value = 'int x = 1';
+          taE.dispatch('input');
+          taE.setSelectionRange(9, 9);
+          taE.dispatch('keydown', { key: '[', ctrlKey: true, altKey: true });
+          ok(taE.value === 'int x = 1[]', 'T27a eckige Klammer schliesst sofort trotz AltGr');
+          taE.value = '    public void test()';
+          taE.dispatch('input');
+          taE.setSelectionRange(22, 22);
+          taE.dispatch('keydown', { key: '{', ctrlKey: true, altKey: true });
+          ok(taE.value === '    public void test() {' + NLt + '        ' + NLt + '    }', 'T27b Block-Oeffnung funktioniert trotz AltGr');
+
+          /* T28: Objekte aus dem Java-Programm erscheinen mit Namen im Objekte-Fenster. */
+          taE.value = 'class Auto {' + NLt +
+            '  public String marke;' + NLt +
+            '  public Auto(String m) { marke = m; }' + NLt +
+            '}' + NLt +
+            'Auto a = new Auto("BMW");';
+          taE.dispatch('input');
+          runBtn.dispatch('click');
+          tabObjects.dispatch('click');
+          var objsTxt = objBox.textOf();
+          ok(objsTxt.indexOf('a : Auto') !== -1, 'T28a Objekt aus dem Programm steht mit Namen im Objekte-Fenster');
+          ok(objsTxt.indexOf(': Auto') === -1 || objsTxt.indexOf('a : Auto') !== -1, 'T28b kein kaputter Doppelpunkt-Name mehr');
+
+          console.log('');
+          if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }
+          else { console.log(failures.length + ' UI-Tests fehlgeschlagen.'); process.exit(1); }
+        }, 700);
       }, 200);
     }, 900);
   }, 700);

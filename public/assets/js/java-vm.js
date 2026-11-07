@@ -1050,7 +1050,7 @@
     var i, j;
     for (i = 0; i < vm.objects.length; i++) {
       var reg = vm.objects[i];
-      var varName = null;
+      var varName = reg.name || null;
       for (j = 0; j < pairs.length; j++) { if (pairs[j].obj === reg.obj) { varName = pairs[j].name; } }
       var cls = comp.classMap[reg.cls];
       var fields = [];
@@ -1441,7 +1441,21 @@
 
   function newEnv(parent) { return { vars: {}, parent: parent }; }
 
-  function envDeclare(env, name, type, val) { env.vars[name] = { type: type, val: val }; }
+  /* Objektnamen merken: Wird ein Objekt einer Variablen zugewiesen (Deklaration,
+   * Parameter oder Zuweisung), landet der Name im Objekt-Diagramm - auch fuer
+   * Objekte, die in main oder Methoden erzeugt wurden. */
+  function recordObjName(vm, val, name) {
+    if (!vm || !vm.objects || !val || val.t !== 'ref' || !val.obj) { return; }
+    var i;
+    for (i = 0; i < vm.objects.length; i++) {
+      if (vm.objects[i].obj === val.obj) { vm.objects[i].name = name; return; }
+    }
+  }
+
+  function envDeclare(env, name, type, val) {
+    env.vars[name] = { type: type, val: val };
+    recordObjName(RUN_VM, val, name);
+  }
 
   function envFind(env, name) {
     var e = env;
@@ -1890,7 +1904,11 @@
       if (slot) {
         return {
           get: function () { return slot.val; },
-          set: function (nv) { checkAssign(ctx, slot, nv, e.line, e.v); slot.val = nv; }
+          set: function (nv) {
+            checkAssign(ctx, slot, nv, e.line, e.v);
+            recordObjName(ctx.vm, nv, e.v);
+            slot.val = nv;
+          }
         };
       }
       if (ctx.thisVal && ctx.thisVal.t === 'ref' && Object.prototype.hasOwnProperty.call(ctx.thisVal.obj.f, e.v)) {
@@ -4602,7 +4620,7 @@
         box.className = 'obj-box';
         var head = document.createElement('div');
         head.className = 'obj-head';
-        head.textContent = (o.name ? o.name + ' : ' : ': ') + o.cls + '  (Objekt ' + o.id + ')';
+        head.textContent = (o.name ? o.name + ' : ' : '') + o.cls + '  (Objekt ' + o.id + ')';
         box.appendChild(head);
         for (var j2 = 0; j2 < o.fields.length; j2++) {
           var row = document.createElement('div');
@@ -4690,10 +4708,25 @@
         classBox.innerHTML = '<p class="muted">Noch keine Klasse erkannt. Schreibe eine Klasse wie in BlueJ - sie erscheint sofort hier.</p>';
         return;
       }
-      var html = '';
+      var classMap = {};
       var ci;
-      for (ci = 0; ci < comp.classes.length; ci++) {
-        var cls = comp.classes[ci];
+      for (ci = 0; ci < comp.classes.length; ci++) { classMap[comp.classes[ci].name] = comp.classes[ci]; }
+      /* Vererbungsbaum: Kinder je Projekt-Klasse sammeln, Wurzeln rendern */
+      var kids = {};
+      var roots = [];
+      var name;
+      for (name in classMap) {
+        if (Object.prototype.hasOwnProperty.call(classMap, name)) { kids[name] = []; }
+      }
+      for (name in classMap) {
+        if (Object.prototype.hasOwnProperty.call(classMap, name)) {
+          var pc = classMap[name];
+          if (pc.parent && kids[pc.parent] !== undefined) { kids[pc.parent].push(name); }
+          else { roots.push(name); }
+        }
+      }
+      function nodeHtml(clsName, depth) {
+        var cls = classMap[clsName];
         var rows = '';
         var fi;
         for (fi = 0; fi < cls.fields.length; fi++) {
@@ -4716,9 +4749,21 @@
           rows = rows + '<div class="uml-row">' + visMark(mt.visibility) + escapeHtml(mt.name) + '(' + mp.join(', ') + ')' + ret + '</div>';
         }
         if (rows === '') { rows = '<div class="uml-row uml-empty">(noch ohne Attribute und Methoden)</div>'; }
-        var parentNote = cls.parent ? '<div class="uml-parent">↳ erbt von ' + escapeHtml(cls.parent) + '</div>' : '';
-        html = html + '<div class="uml-class"><div class="uml-name">' + escapeHtml(cls.name) + '</div><div class="uml-sec">' + rows + '</div>' + parentNote + '</div>';
+        /* Notiz nur fuer Eltern ausserhalb des Projekts (z.B. Grafik-Basisklassen) */
+        var parentNote = (cls.parent && kids[cls.parent] === undefined) ? '<div class="uml-parent">↳ erbt von ' + escapeHtml(cls.parent) + '</div>' : '';
+        var box = '<div class="uml-class"><div class="uml-name">' + escapeHtml(cls.name) + '</div><div class="uml-sec">' + rows + '</div>' + parentNote + '</div>';
+        var kidNames = kids[clsName] || [];
+        if (depth > 12 || kidNames.length === 0) { return box; }
+        var kidHtml = '';
+        var k;
+        for (k = 0; k < kidNames.length; k++) {
+          kidHtml = kidHtml + '<div class="uml-child"><div class="uml-arrow"></div>' + nodeHtml(kidNames[k], depth + 1) + '</div>';
+        }
+        return box + '<div class="uml-children">' + kidHtml + '</div>';
       }
+      var html = '';
+      var r;
+      for (r = 0; r < roots.length; r++) { html = html + '<div class="uml-root">' + nodeHtml(roots[r], 0) + '</div>'; }
       if (!comp.ok) { html = html + '<p class="muted">Achtung: Der Code enthaelt noch Fehler - das Diagramm zeigt den bisher lesbaren Stand.</p>'; }
       classBox.innerHTML = html;
     }
@@ -4837,7 +4882,12 @@
         if (!ta2) { return; }
         ta2.addEventListener('keydown', function (e) {
           if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); doRun(); return; }
-          if (e.ctrlKey || e.metaKey || e.altKey) { return; }
+          /* AltGr meldet sich in Chrome/Windows als Strg+Alt - die Klammer-
+           * Automatik muss fuer eckige und geschweifte Klammern trotzdem
+           * greifen. Nur reine Strg- oder reine Alt-Kombis ueberspringen wir. */
+          if (e.metaKey) { return; }
+          if (e.ctrlKey && !e.altKey) { return; }
+          if (e.altKey && !e.ctrlKey) { return; }
           if (e.key === 'Tab') {
             e.preventDefault();
             if (e.shiftKey) { outdentSelection(ta2); }

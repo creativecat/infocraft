@@ -14,7 +14,6 @@
     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="ide-savebar" id="code-save-form">
         <?= csrf_field() ?>
         <label class="field ide-title"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
-        <button class="btn btn-primary" type="submit">💾 Speichern</button>
         <button class="btn btn-ghost" type="button" id="java-format" title="Rückt deinen Java-Code automatisch ein: 4 Leerzeichen pro Ebene, sauber eingerückt und ausgerückt.">🧹 Formatieren</button>
         <span class="muted" id="java-save-info" title="Dein Code wird bei jeder Änderung automatisch gespeichert – auch ohne Speichern-Klick.">Änderungen werden automatisch gespeichert.</span>
     </form>

@@ -682,6 +682,20 @@ body.sidebar-hidden .sidebar { display: none; }
     border-top: 1px dashed var(--border); margin-top: 4px;
 }
 .uml-empty { color: var(--muted); font-style: italic; }
+/* Vererbungsbaum: Kinder haengen mit Pfeil (Spitze zeigt zum Elter) unter der Klasse */
+.uml-root { display: flex; flex-direction: column; align-items: center; }
+.uml-children { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; justify-content: center; margin-top: 0; }
+.uml-child { display: flex; flex-direction: column; align-items: center; }
+.uml-arrow {
+    width: 2px; height: 22px; background: #64748b;
+    margin: 6px auto 2px; position: relative;
+}
+.uml-arrow::after {
+    content: ""; position: absolute; top: -1px; left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-bottom: 8px solid #64748b;
+}
 
 /* ===== Zeilennummern (Gutter) in der Java-IDE ===== */
 /* Der Editor mit Gutter bricht Zeilen nicht mehr um, damit Nummern und Zeilen exakt uebereinanderliegen. */

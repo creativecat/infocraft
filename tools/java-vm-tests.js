@@ -865,6 +865,23 @@ t('VoidReturnMitWertAbgelehnt',
   { 'Auto.java': 'public class Auto {' + NL + '    public void test() { return 42; }' + NL + '}' + NL + 'Auto a = new Auto();' + NL + 'a.test();' },
   function (r) { eq(r.ok, false, 'Fehler erwartet'); });
 
+t('ObjektNameAusMain',
+  { 'Auto.java': 'public class Auto {' + NL + '    public String marke;' + NL + '    public Auto(String m) { marke = m; }' + NL + '}' + NL + 'Auto a = new Auto("BMW");' + NL + 'Auto b;' + NL + 'b = new Auto("Audi");' },
+  function (r) {
+    eq(r.ok, true, 'lauf ok');
+    var objs = r.session.objects();
+    eq(objs.length, 2, '2 Objekte aus main');
+    var byMarke = {};
+    var i, j;
+    for (i = 0; i < objs.length; i++) {
+      for (j = 0; j < objs[i].fields.length; j++) {
+        if (objs[i].fields[j].name === 'marke') { byMarke[objs[i].fields[j].text] = objs[i].name; }
+      }
+    }
+    eq(byMarke['"BMW"'], 'a', 'Objekt aus Deklaration heisst a');
+    eq(byMarke['"Audi"'], 'b', 'Objekt aus spaeter Zuweisung heisst b');
+  });
+
 console.log('');
 console.log(failed === 0 ? ('Alle ' + count + ' Tests bestanden.') : (failed + ' von ' + count + ' Tests fehlgeschlagen.'));
 process.exit(failed === 0 ? 0 : 1);
