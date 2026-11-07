@@ -61,6 +61,7 @@ final class SqlWorkshopController
             'permissionLabel' => SqlWorkshop::PERMISSIONS[$grant['permission']] ?? $grant['permission'],
             'tables' => SqlWorkshop::tables($pdo),
             'er' => SqlWorkshop::erDiagram($pdo),
+            'diagramAuto' => SchoolClass::diagramAutoForUser($user),
             'missions' => SqlTemplate::missions($template->id),
             'solved' => SqlTemplate::solvedMissionIds($grant['grantId']),
             'result' => $result,

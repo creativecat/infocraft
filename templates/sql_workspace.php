@@ -57,6 +57,14 @@
             <summary class="muted">Mermaid-Quelltext anzeigen (zum Weiterverwenden, z. B. in Präsentationen)</summary>
             <pre class="code"><?= e($er) ?></pre>
         </details>
+        <?php if ($diagramAuto): ?>
+        <form method="post" action="<?= url('werkstatt/sql/' . $template->slug . '/diagramm') ?>" class="form-inline" style="margin-top:10px;">
+            <?= csrf_field() ?>
+            <button class="btn btn-ghost" type="submit">📐 Tabellen als Klassendiagramm übernehmen</button>
+        </form>
+        <?php else: ?>
+        <p class="muted" style="margin-top:10px;">Das automatische Erzeugen von Klassendiagrammen ist für deine Klasse deaktiviert.</p>
+        <?php endif; ?>
     </section>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>

@@ -10,12 +10,13 @@ final class SchoolClass
     public function __construct(
         public readonly int $id,
         public readonly string $name,
+        public readonly int $diagramAuto = 1,
     ) {
     }
 
     public static function fromRow(array $row): self
     {
-        return new self((int) $row['id'], (string) $row['name']);
+        return new self((int) $row['id'], (string) $row['name'], (int) ($row['diagram_auto'] ?? 1));
     }
 
     /** Jahrgangsstufe aus dem Klassennamen lesen (6R -> 6, 10G -> 10). */
@@ -88,5 +89,24 @@ final class SchoolClass
         $stmt = Database::pdo()->prepare('SELECT COUNT(*) FROM class_teachers WHERE class_id = ? AND teacher_id = ?');
         $stmt->execute([$classId, $teacherId]);
         return (int) $stmt->fetchColumn() > 0;
+    }
+
+    /** Automatisches Erzeugen von Klassendiagrammen für die Klasse ein- oder ausschalten. */
+    public static function setDiagramAuto(int $classId, bool $enabled): void
+    {
+        $stmt = Database::pdo()->prepare('UPDATE classes SET diagram_auto = ? WHERE id = ?');
+        $stmt->execute([$enabled ? 1 : 0, $classId]);
+    }
+
+    /** Darf diese Person Klassendiagramme automatisch aus Skripten erzeugen lassen? */
+    public static function diagramAutoForUser(User $user): bool
+    {
+        if ($user->role !== 'student' || $user->classId === null) {
+            return true;
+        }
+        $stmt = Database::pdo()->prepare('SELECT diagram_auto FROM classes WHERE id = ? LIMIT 1');
+        $stmt->execute([$user->classId]);
+        $value = $stmt->fetchColumn();
+        return $value === false || (int) $value === 1;
     }
 }

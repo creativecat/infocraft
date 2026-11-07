@@ -148,4 +148,29 @@ final class TeacherController
         flash('success', $teacher->fullName() . ' unterrichtet jetzt ' . $class->name . '.');
         redirect('/unterricht/klassen');
     }
+
+    /** Automatisches Erzeugen von Klassendiagrammen pro Klasse ein- oder ausschalten. */
+    public static function toggleDiagramAuto(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Dieser Bereich ist nur für Lehrkräfte zugänglich.');
+            redirect('/');
+        }
+        csrf_validate();
+        $isAdmin = $user->role === 'admin';
+        $classId = (int) ($_POST['class_id'] ?? 0);
+        $class = SchoolClass::find($classId);
+        if ($class === null || (!$isAdmin && !SchoolClass::hasTeacher($classId, $user->id))) {
+            flash('error', 'Diese Klasse unterrichtest du nicht.');
+            redirect('/unterricht/klassen');
+        }
+        $enabled = (string) ($_POST['enabled'] ?? '') === '1';
+        SchoolClass::setDiagramAuto($classId, $enabled);
+        flash('success', 'Klasse ' . $class->name . ': Automatisches Erzeugen von Klassendiagrammen ist jetzt ' . ($enabled ? 'erlaubt.' : 'deaktiviert.'));
+        redirect('/unterricht/klassen');
+    }
 }

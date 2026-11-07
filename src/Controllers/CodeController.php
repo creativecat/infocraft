@@ -193,6 +193,7 @@ final class CodeController
             'active' => 'module-code',
             'project' => $project,
             'user' => $user,
+            'diagramAuto' => SchoolClass::diagramAutoForUser($user),
         ]);
     }
 

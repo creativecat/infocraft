@@ -13,6 +13,26 @@
     </form>
 </section>
 
+<?php if ($project->type === 'code' && ($project->language === 'java' || $project->language === 'python')): ?>
+<section class="panel">
+    <div class="panel-head">
+        <h3>📐 Klassendiagramm</h3>
+    </div>
+    <?php if ($diagramAuto): ?>
+    <p class="muted">Aus diesem <?= e($project->language ?? 'Code') ?>-Skript wird automatisch ein Klassendiagramm erzeugt (Klassen, Attribute, Methoden, Vererbung). Danach kannst du es weiterbearbeiten und als PNG exportieren.</p>
+    <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/diagramm') ?>" class="form-inline">
+        <?= csrf_field() ?>
+        <button class="btn btn-primary" type="submit">Klassendiagramm erzeugen</button>
+    </form>
+    <?php else: ?>
+    <div class="notice">
+        <strong>Deaktiviert</strong>
+        <p>Deine Lehrkraft hat das automatische Erzeugen von Klassendiagrammen für deine Klasse deaktiviert. Eigene Diagramme kannst du weiterhin in der Diagramm-Werkstatt anlegen.</p>
+    </div>
+    <?php endif; ?>
+</section>
+<?php endif; ?>
+
 <?php if ($project->type === 'code' && $project->language === 'python'): ?>
 <section class="panel">
     <div class="panel-head">

@@ -23,6 +23,9 @@ final class Migrator
             $pdo->exec($statement);
         }
 
+        // Bestehende Installationen: Spalte classes.diagram_auto idempotent nachziehen.
+        self::ensureDiagramAutoColumn($pdo, $driver);
+
         $classes = 0;
         $users = 0;
         if ($withDemoData) {
@@ -36,6 +39,7 @@ final class Migrator
             self::seedDemoTasks($pdo);
             self::seedDemoQuizzes($pdo);
             self::seedDemoExams($pdo);
+            self::seedDemoDiagrams($pdo);
         }
 
         return ['statements' => count($statements), 'classes' => $classes, 'users' => $users];
@@ -371,6 +375,38 @@ final class Migrator
         $insertGrading = $pdo->prepare('INSERT INTO exam_gradings (task_id, user_id, be_erreicht, comment, source, checked) VALUES (?, ?, ?, ?, ?, ?)');
         $insertGrading->execute([$taskB1, $emmaId, 5.0, 'Sauber: Spalten, Tabelle und Sortierung stimmen.', 'lk', 1]);
         $insertGrading->execute([$taskB2, $emmaId, 4.0, 'WHERE stimmt, aber bitte gezielt name und preis auswählen statt SELECT *.', 'api', 1]);
+    }
+
+    /** Bestehende Installationen: Spalte classes.diagram_auto fehlt evtl. noch. */
+    private static function ensureDiagramAutoColumn(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $exists = $pdo->query("SHOW COLUMNS FROM classes LIKE 'diagram_auto'")->fetchColumn();
+            if ($exists === false || $exists === null) {
+                $pdo->exec('ALTER TABLE classes ADD COLUMN diagram_auto TINYINT(1) NOT NULL DEFAULT 1');
+            }
+            return;
+        }
+        foreach ($pdo->query('PRAGMA table_info(classes)')->fetchAll() as $column) {
+            if ((string) ($column['name'] ?? '') === 'diagram_auto') {
+                return;
+            }
+        }
+        $pdo->exec('ALTER TABLE classes ADD COLUMN diagram_auto INTEGER NOT NULL DEFAULT 1');
+    }
+
+    private static function seedDemoDiagrams(PDO $pdo): void
+    {
+        if ((int) $pdo->query('SELECT COUNT(*) FROM class_diagrams')->fetchColumn() > 0) {
+            return;
+        }
+        $lenaId = $pdo->query("SELECT id FROM users WHERE login_name = 'lena.müller' LIMIT 1")->fetchColumn();
+        if ($lenaId === false || $lenaId === null) {
+            return;
+        }
+        $mermaid = "classDiagram\nclass Tier {\n  <<abstract>>\n  +String name\n}\nclass Hund {\n  +gib_laut()\n}\nclass Katze {\n  +gib_laut()\n}\nTier <|-- Hund\nTier <|-- Katze\n";
+        $stmt = $pdo->prepare('INSERT INTO class_diagrams (owner_id, title, kind, mermaid) VALUES (?, ?, ?, ?)');
+        $stmt->execute([(int) $lenaId, 'Beispiel: Tiere', 'manuell', $mermaid]);
     }
 }
 

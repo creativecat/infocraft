@@ -278,3 +278,76 @@
     });
   });
 })();
+
+/* ===== Klassendiagramme: Live-Vorschau und PNG-Export ===== */
+(function () {
+  'use strict';
+  var page = document.querySelector('[data-diagram-page]');
+  if (!page || !window.mermaid) { return; }
+  var source = document.getElementById('diagram-source');
+  var preview = document.getElementById('diagram-preview');
+  var refreshBtn = document.getElementById('diagram-refresh');
+  var pngBtn = document.getElementById('diagram-png');
+  var timer = null;
+  var seq = 0;
+
+  function escapeText(text) {
+    return String(text).replace(/[&<>]/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch] || ch;
+    });
+  }
+
+  function render() {
+    if (!preview || !source) { return; }
+    seq += 1;
+    window.mermaid.render('dg-svg-' + seq, source.value).then(function (out) {
+      preview.innerHTML = out.svg;
+    }).catch(function (err) {
+      preview.innerHTML = '<div class="notice"><strong>Diagramm kann nicht gezeichnet werden</strong><p>' + escapeText(err && err.message ? err.message : 'Unbekannter Fehler im Mermaid-Quelltext.') + '</p></div>';
+    });
+  }
+
+  function exportPng() {
+    if (!preview) { return; }
+    var svg = preview.querySelector('svg');
+    if (!svg) { return; }
+    var viewBox = (svg.getAttribute('viewBox') || '0 0 800 600').split(/\s+/).map(Number);
+    var width = Math.max(200, Math.round(viewBox[2] || 800));
+    var height = Math.max(200, Math.round(viewBox[3] || 600));
+    var clone = svg.cloneNode(true);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    clone.setAttribute('width', width);
+    clone.setAttribute('height', height);
+    var data = new XMLSerializer().serializeToString(clone);
+    var img = new Image();
+    img.onload = function () {
+      var canvas = document.createElement('canvas');
+      canvas.width = width * 2;
+      canvas.height = height * 2;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      var link = document.createElement('a');
+      var name = pngBtn && pngBtn.getAttribute('data-png-name') ? pngBtn.getAttribute('data-png-name') : 'klassendiagramm';
+      link.download = name + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+    img.onerror = function () {
+      window.alert('PNG-Export fehlgeschlagen. Der Mermaid-Quelltext bleibt kopierbar.');
+    };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(data);
+  }
+
+  window.mermaid.initialize({ startOnLoad: false });
+  render();
+  if (refreshBtn) { refreshBtn.addEventListener('click', render); }
+  if (pngBtn) { pngBtn.addEventListener('click', exportPng); }
+  if (source) {
+    source.addEventListener('input', function () {
+      if (timer) { clearTimeout(timer); }
+      timer = setTimeout(render, 500);
+    });
+  }
+})();

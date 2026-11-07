@@ -14,6 +14,7 @@ require __DIR__ . '/../src/bootstrap.php';
 use Infocraft\Controllers\AdminController;
 use Infocraft\Controllers\AuthController;
 use Infocraft\Controllers\CodeController;
+use Infocraft\Controllers\DiagramController;
 use Infocraft\Controllers\ExamController;
 use Infocraft\Controllers\HomeController;
 use Infocraft\Controllers\HtmlController;
@@ -68,6 +69,17 @@ $router->get('/werkstatt/html', [HtmlController::class, 'index']);
 $router->post('/werkstatt/html/projekt', [HtmlController::class, 'create']);
 $router->get('/werkstatt/html/{id}', [HtmlController::class, 'open']);
 $router->post('/werkstatt/html/{id}', [HtmlController::class, 'save']);
+
+// Klassendiagramme: eigener Editor, automatische Erzeugung aus Skripten und SQL,
+// Lehrkraefte koennen die automatische Erzeugung pro Klasse deaktivieren.
+$router->get('/diagramme', [DiagramController::class, 'index']);
+$router->post('/diagramme/anlegen', [DiagramController::class, 'create']);
+$router->get('/diagramme/{id}', [DiagramController::class, 'detail']);
+$router->post('/diagramme/{id}', [DiagramController::class, 'save']);
+$router->post('/diagramme/{id}/loeschen', [DiagramController::class, 'delete']);
+$router->post('/werkstatt/code/{id}/diagramm', [DiagramController::class, 'fromProject']);
+$router->post('/werkstatt/sql/{slug}/diagramm', [DiagramController::class, 'fromSql']);
+$router->post('/unterricht/klassen/diagramm', [TeacherController::class, 'toggleDiagramAuto']);
 
 // Quiz-Arena (Lehrkraefte verwalten, Schuelerinnen und Schueler spielen)
 $router->get('/quiz', [QuizController::class, 'index']);

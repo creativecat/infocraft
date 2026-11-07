@@ -4,6 +4,7 @@
 CREATE TABLE IF NOT EXISTS classes (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     name VARCHAR(20) NOT NULL,
+    diagram_auto TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_classes_name (name)
@@ -291,4 +292,17 @@ CREATE TABLE IF NOT EXISTS exam_gradings (
     PRIMARY KEY (task_id, user_id),
     CONSTRAINT fk_gradings_task FOREIGN KEY (task_id) REFERENCES exam_tasks (id) ON DELETE CASCADE,
     CONSTRAINT fk_gradings_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS class_diagrams (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    owner_id INT UNSIGNED NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    kind VARCHAR(20) NOT NULL DEFAULT 'manuell',
+    source_id INT UNSIGNED NULL,
+    mermaid MEDIUMTEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_diagrams_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

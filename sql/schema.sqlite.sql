@@ -4,6 +4,7 @@
 CREATE TABLE IF NOT EXISTS classes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
+    diagram_auto INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -218,4 +219,16 @@ CREATE TABLE IF NOT EXISTS exam_gradings (
     checked INTEGER NOT NULL DEFAULT 0,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (task_id, user_id)
+);
+
+-- Klassendiagramme: selbst gezeichnet oder automatisch aus Skripten/SQL erzeugt
+CREATE TABLE IF NOT EXISTS class_diagrams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'manuell',
+    source_id INTEGER NULL,
+    mermaid TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

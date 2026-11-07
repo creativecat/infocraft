@@ -290,3 +290,8 @@ body.sidebar-hidden .sidebar { display: none; }
 .muster { background: #f0fdf4; border-color: #86efac; }
 .work-code { background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 14px; overflow: auto; max-height: 420px; font-size: 0.8rem; }
 .score-big { font-size: 1.6rem; font-weight: 800; margin: 6px 0 2px; }
+
+/* ===== Klassendiagramme ===== */
+.diagram-preview { background: #ffffff; border: 1px solid var(--border); border-radius: 10px; padding: 14px; overflow: auto; min-height: 220px; }
+.diagram-preview svg { max-width: 100%; height: auto; }
+.diagram-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; }

@@ -21,6 +21,16 @@
             <button class="btn btn-primary" type="submit">🔑 OTP für die ganze Klasse</button>
         </form>
     </div>
+    <div class="diagram-toggle-row">
+        <span>📐 Klassendiagramme automatisch erzeugen: <strong><?= $entry['class']->diagramAuto === 1 ? 'erlaubt' : 'deaktiviert' ?></strong></span>
+        <form method="post" action="<?= url('unterricht/klassen/diagramm') ?>" class="form-inline">
+            <?= csrf_field() ?>
+            <input type="hidden" name="class_id" value="<?= (int) $entry['class']->id ?>">
+            <input type="hidden" name="enabled" value="<?= $entry['class']->diagramAuto === 1 ? '0' : '1' ?>">
+            <button class="btn btn-ghost" type="submit"><?= $entry['class']->diagramAuto === 1 ? 'Für diese Klasse deaktivieren' : 'Wieder erlauben' ?></button>
+        </form>
+    </div>
+    <p class="muted">Schülerinnen und Schüler zeichnen Klassendiagramme immer selbst. Hier stellst du nur ein, ob Diagramme automatisch aus Java-, Python- und SQL-Skripten erzeugt werden dürfen.</p>
     <?php if ($entry['students'] === []): ?>
         <p class="muted">In dieser Klasse gibt es noch keine Schülerinnen und Schüler.</p>
     <?php else: ?>
