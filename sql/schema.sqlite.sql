@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     topic_id INTEGER NOT NULL DEFAULT 0,
     description_format TEXT NOT NULL DEFAULT 'text',
     variant_of INTEGER NOT NULL DEFAULT 0,
+    solution_visible INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -130,6 +131,7 @@ CREATE TABLE IF NOT EXISTS task_submissions (
     student_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     content TEXT NOT NULL DEFAULT '',
     submitted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    self_rating INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (task_id, student_id)
 );
 

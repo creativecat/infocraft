@@ -74,6 +74,7 @@ $typeHints = [
                 </label>
                 <div class="field"><span>Frist-Sperre</span>
                     <label style="display:flex;gap:6px;align-items:center;font-weight:normal;"><input type="checkbox" name="late_lock" value="1"<?= $task->lateLock === 1 ? ' checked' : '' ?>> Nach dem Abgabetermin keine neuen Abgaben mehr annehmen</label>
+                    <label style="display:flex;gap:6px;align-items:center;font-weight:normal;margin-top:6px;"><input type="checkbox" name="solution_visible" value="1"<?= $task->solutionVisible === 1 ? ' checked' : '' ?>> Musterlösung freigeben: Schülerinnen und Schüler sehen sie nach der Korrektur oder nach dem Abgabetermin</label>
                 </div>
             </div>
             <p class="muted"><?= e($typeHints[$task->type] ?? $typeHints['allgemein']) ?></p>

@@ -100,7 +100,7 @@ final class ModuleController
                 'status' => 'in-arbeit',
                 'level' => 6,
                 'route' => 'quiz',
-                'description' => 'Wissen im Wettbewerb festigen, im Stil von Kahoot.',
+                'description' => 'Wissen im Wettbewerb festigen: schnelle Runden, Punkte und Bestenliste. Anlegen, Austeilen und Auswertung nur für Lehrkräfte.',
                 'features' => [
                     'Quiz anlegen: Fragen mit vier Antworten, richtige Antwort markieren',
                     'An Klassen oder Einzelne austellen, Spielen mit sofortigem Feedback und Punkten',

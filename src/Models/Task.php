@@ -34,6 +34,7 @@ final class Task
         public readonly int $topicId = 0,
         public readonly string $descriptionFormat = 'text',
         public readonly int $variantOf = 0,
+        public readonly int $solutionVisible = 0,
     ) {
     }
 
@@ -73,6 +74,7 @@ final class Task
             (int) ($row['topic_id'] ?? 0),
             ($row['description_format'] ?? 'text') === 'html' ? 'html' : 'text',
             (int) ($row['variant_of'] ?? 0),
+            (int) ($row['solution_visible'] ?? 0),
         );
     }
 
@@ -117,6 +119,8 @@ final class Task
                           AND ' . $visible . ' LIMIT 1) AS class_name,
                     (SELECT s.content FROM task_submissions s
                         WHERE s.task_id = t.id AND s.student_id = ?) AS sub_content,
+                    (SELECT s.self_rating FROM task_submissions s
+                        WHERE s.task_id = t.id AND s.student_id = ?) AS self_rating,
                     (SELECT s.submitted_at FROM task_submissions s
                         WHERE s.task_id = t.id AND s.student_id = ?) AS submitted_at,
                     (SELECT g.grade FROM task_gradings g
@@ -139,8 +143,8 @@ final class Task
         $stmt = Database::pdo()->prepare($sql);
         $stmt->execute([
             $userId, $classId ?? 0, $now,
-            $classId ?? 0, $now,
-            $userId, $userId, $userId, $userId, $userId, $userId,
+                        $classId ?? 0, $now,
+            $userId, $userId, $userId, $userId, $userId, $userId, $userId,
             $level, $userId, $classId ?? 0, $now,
         ]);
         $list = [];
@@ -151,6 +155,7 @@ final class Task
                 $submission = [
                     'content' => (string) $row['sub_content'],
                     'submittedAt' => (string) $row['submitted_at'],
+                    'selfRating' => (int) ($row['self_rating'] ?? 0),
                 ];
             }
             $grading = null;
@@ -179,10 +184,10 @@ final class Task
         return self::createFull($teacherId, $title, $description, $type, $level, 0, '');
     }
 
-    public static function createFull(int $teacherId, string $title, string $description, string $type, int $level, int $shared, string $sampleSolution, int $lateLock = 0, int $maxPoints = 0, string $rubric = '', int $topicId = 0, string $descriptionFormat = 'text', int $variantOf = 0): self
+    public static function createFull(int $teacherId, string $title, string $description, string $type, int $level, int $shared, string $sampleSolution, int $lateLock = 0, int $maxPoints = 0, string $rubric = '', int $topicId = 0, string $descriptionFormat = 'text', int $variantOf = 0, int $solutionVisible = 0): self
     {
         $pdo = Database::pdo();
-        $stmt = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level, shared, sample_solution, late_lock, max_points, rubric, topic_id, description_format, variant_of) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level, shared, sample_solution, late_lock, max_points, rubric, topic_id, description_format, variant_of, solution_visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $stmt->execute([
             $teacherId,
             substr(trim($title), 0, 200),
@@ -197,6 +202,7 @@ final class Task
             max(0, $topicId),
             $descriptionFormat === 'html' ? 'html' : 'text',
             max(0, $variantOf),
+            $solutionVisible === 1 ? 1 : 0,
         ]);
         $stmt2 = $pdo->prepare('SELECT * FROM tasks WHERE id = ?');
         $stmt2->execute([(int) $pdo->lastInsertId()]);
@@ -205,9 +211,9 @@ final class Task
     }
 
     /** Eigene Aufgabe nachträglich bearbeiten. */
-    public static function update(int $id, string $title, string $description, string $type, int $level, string $sampleSolution, int $lateLock = 0, int $maxPoints = 0, string $rubric = '', int $topicId = 0, string $descriptionFormat = 'text'): void
+    public static function update(int $id, string $title, string $description, string $type, int $level, string $sampleSolution, int $lateLock = 0, int $maxPoints = 0, string $rubric = '', int $topicId = 0, string $descriptionFormat = 'text', int $solutionVisible = 0): void
     {
-        $stmt = Database::pdo()->prepare('UPDATE tasks SET title = ?, description = ?, type = ?, level = ?, sample_solution = ?, late_lock = ?, max_points = ?, rubric = ?, topic_id = ?, description_format = ? WHERE id = ?');
+        $stmt = Database::pdo()->prepare('UPDATE tasks SET title = ?, description = ?, type = ?, level = ?, sample_solution = ?, late_lock = ?, max_points = ?, rubric = ?, topic_id = ?, description_format = ?, solution_visible = ? WHERE id = ?');
         $stmt->execute([
             substr(trim($title), 0, 200),
             $description,
@@ -219,6 +225,7 @@ final class Task
             $rubric,
             max(0, $topicId),
             $descriptionFormat === 'html' ? 'html' : 'text',
+            $solutionVisible === 1 ? 1 : 0,
             $id,
         ]);
     }
@@ -269,6 +276,7 @@ final class Task
             $source->rubric,
             $source->topicId,
             $source->descriptionFormat,
+            $source->solutionVisible,
         );
     }
 

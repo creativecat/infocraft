@@ -896,3 +896,7 @@ body.sidebar-hidden .sidebar { display: none; }
 @media (max-width: 720px) {
   .filter-grid { grid-template-columns: 1fr; }
 }
+
+/* Sprechernotizen im Moderatorenbildschirm (nur Lehrkraefte) */
+.mod-note-box { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); padding: 12px 14px; }
+.mod-note { margin: 6px 0 0; font-size: 0.95rem; line-height: 1.5; white-space: normal; min-height: 2.6em; }

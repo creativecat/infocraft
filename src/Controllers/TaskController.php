@@ -67,6 +67,20 @@ final class TaskController
             foreach ($tasks as $task) {
                 $targets[$task->id] = Task::targets($task->id);
             }
+            // Nächste Abgabetermine für die Termin-Übersicht (vor den Filtern,
+            // damit die Übersicht immer das ganze Pool zeigt).
+            $now = date('Y-m-d H:i');
+            $upcoming = [];
+            foreach ($tasks as $task) {
+                foreach ($targets[$task->id] as $target) {
+                    if ($target['dueAt'] !== null && $target['dueAt'] !== '' && $target['dueAt'] >= $now) {
+                        $upcoming[] = ['id' => $task->id, 'title' => $task->title, 'dueAt' => (string) $target['dueAt']];
+                    }
+                }
+            }
+            usort($upcoming, static fn (array $a, array $b): int => $a['dueAt'] <=> $b['dueAt']);
+            $upcoming = array_slice($upcoming, 0, 6);
+
             if ($filterTopicId > 0) {
                 $tasks = array_values(array_filter($tasks, static fn (Task $task): bool => $task->topicId === $filterTopicId));
             }
@@ -93,9 +107,19 @@ final class TaskController
 
             // Abgabe-Fortschritt je Zuweisung (x von y abgegeben) vorbereiten.
             $progressByTask = [];
+            $openGradings = [];
             $classSizeCache = [];
             foreach ($tasks as $task) {
                 $submissions = TaskSubmission::forTask($task->id);
+                $gradings = TaskGrading::forTask($task->id);
+                $open = 0;
+                foreach ($submissions as $studentId => $submission) {
+                    $grading = $gradings[$studentId] ?? null;
+                    if ($grading === null || ($grading['source'] === 'api' && !$grading['checked'])) {
+                        $open++;
+                    }
+                }
+                $openGradings[$task->id] = $open;
                 $progressByTask[$task->id] = [];
                 foreach ($targets[$task->id] as $target) {
                     $total = 0;
@@ -156,6 +180,8 @@ final class TaskController
                 'filterLevel' => $filterLevel,
                 'filterType' => $filterType,
                 'progress' => $progressByTask,
+                'openGradings' => $openGradings,
+                'upcoming' => $upcoming,
                 'todoCounts' => TaskTodo::templatesForTasks($taskIds),
                 'materialCounts' => TaskMaterial::forTasks($taskIds),
                 'ownedTitles' => $allTitles,
@@ -266,7 +292,8 @@ final class TaskController
         $lateLock = ($_POST['late_lock'] ?? '') === '1' ? 1 : 0;
         $maxPoints = max(0, min(1000, (int) ($_POST['max_points'] ?? 0)));
         [$topicId, $description, $descriptionFormat] = self::readTaskForm();
-        Task::createFull($user->id, $title, $description, $type, $level, 0, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''), $topicId, $descriptionFormat);
+        $solutionVisible = ($_POST['solution_visible'] ?? '') === '1' ? 1 : 0;
+        Task::createFull($user->id, $title, $description, $type, $level, 0, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''), $topicId, $descriptionFormat, 0, $solutionVisible);
         flash('success', 'Aufgabe angelegt.');
         redirect('/aufgaben');
     }
@@ -343,7 +370,8 @@ final class TaskController
         $lateLock = ($_POST['late_lock'] ?? '') === '1' ? 1 : 0;
         $maxPoints = max(0, min(1000, (int) ($_POST['max_points'] ?? 0)));
         [$topicId, $description, $descriptionFormat] = self::readTaskForm();
-        Task::update($task->id, $title, $description, $type, $level, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''), $topicId, $descriptionFormat);
+        $solutionVisible = ($_POST['solution_visible'] ?? '') === '1' ? 1 : 0;
+        Task::update($task->id, $title, $description, $type, $level, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''), $topicId, $descriptionFormat, $solutionVisible);
         flash('success', 'Aufgabe gespeichert.');
         redirect('/aufgaben');
     }
@@ -945,6 +973,7 @@ final class TaskController
             flash('error', 'Bitte schreibe deine Lösung in das Feld.');
             redirect('/aufgaben');
         }
+        $selfRating = max(0, min(3, (int) ($_POST['self_rating'] ?? 0)));
         $entries = Task::forStudent($user->id, $user->classId, Auth::levelOf($user) ?? 0);
         $dueAt = null;
         foreach ($entries as $entry) {
@@ -957,13 +986,137 @@ final class TaskController
             flash('error', 'Der Abgabetermin dieser Aufgabe ist abgelaufen, neue Abgaben sind nicht mehr möglich.');
             redirect('/aufgaben');
         }
-        TaskSubmission::upsert($task->id, $user->id, $content);
+        TaskSubmission::upsert($task->id, $user->id, $content, $selfRating);
         if ($dueAt !== null && date('Y-m-d H:i') > $dueAt) {
             flash('success', 'Abgabe gespeichert, aber verspätet (Abgabetermin war ' . $dueAt . ' Uhr).');
         } else {
             flash('success', 'Abgabe gespeichert. Du kannst sie bis zum Abgabetermin überschreiben.');
         }
         redirect('/aufgaben');
+    }
+
+    /**
+     * Aufgabe als JSON exportieren (inklusive Musterlösung, Rubric, Punkten,
+     * Thema, Materialien und ToDo-Vorlagen) - für Backups und Austausch mit
+     * anderen Lehrkräften unabhängig vom gemeinsamen Pool.
+     */
+    public static function export(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Nur Lehrkräfte können Aufgaben exportieren.');
+            redirect('/aufgaben');
+        }
+        $task = Task::find((int) ($params['id'] ?? 0));
+        if ($task === null || !Task::ownedBy($task, $user)) {
+            flash('error', 'Aufgabe nicht gefunden.');
+            redirect('/aufgaben');
+        }
+        $topic = $task->topic();
+        $materials = [];
+        foreach (TaskMaterial::forTask($task->id) as $material) {
+            $materials[] = ['filename' => $material->filename, 'content' => base64_encode($material->raw())];
+        }
+        $todos = [];
+        foreach (TaskTodo::templatesForTask($task->id) as $todo) {
+            $todos[] = ['title' => $todo->title];
+        }
+        $payload = [
+            'infocraft_task' => 1,
+            'title' => $task->title,
+            'description' => $task->description,
+            'description_format' => $task->descriptionFormat,
+            'type' => $task->type,
+            'level' => $task->level,
+            'topic' => $topic !== null ? $topic->name : '',
+            'max_points' => $task->maxPoints,
+            'rubric' => $task->rubric,
+            'sample_solution' => $task->sampleSolution,
+            'late_lock' => $task->lateLock,
+            'solution_visible' => $task->solutionVisible,
+            'todos' => $todos,
+            'materials' => $materials,
+        ];
+        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . rawurlencode('aufgabe-' . $task->id . '.json') . '"');
+        echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    /**
+     * Aufgabe aus einer JSON-Datei (aus dem Export) als eigene Kopie anlegen.
+     * Titel und Beschreibung werden übernommen, die Ids nicht.
+     */
+    public static function importJson(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Nur Lehrkräfte können Aufgaben importieren.');
+            redirect('/aufgaben');
+        }
+        csrf_validate();
+        $json = trim((string) ($_POST['import_json'] ?? ''));
+        if ($json === '' && isset($_FILES['import_file']) && is_array($_FILES['import_file']) && (int) ($_FILES['import_file']['error'] ?? 1) === UPLOAD_ERR_OK) {
+            $json = trim((string) file_get_contents((string) $_FILES['import_file']['tmp_name']));
+        }
+        if ($json === '') {
+            flash('error', 'Bitte eine Aufgabendatei (JSON) auswählen oder einfügen.');
+            redirect('/aufgaben');
+        }
+        $data = json_decode($json, true);
+        if (!is_array($data) || (int) ($data['infocraft_task'] ?? 0) !== 1 || trim((string) ($data['title'] ?? '')) === '') {
+            flash('error', 'Das sieht nicht nach einer InfoCraft-Aufgabendatei aus (Feld "infocraft_task" fehlt).');
+            redirect('/aufgaben');
+        }
+        $title = trim((string) $data['title']);
+        $type = (string) ($data['type'] ?? 'allgemein');
+        if (!in_array($type, ['allgemein', 'sql', 'html', 'code', 'quiz'], true)) {
+            $type = 'allgemein';
+        }
+        $level = max(1, min(13, (int) ($data['level'] ?? 6)));
+        $topicId = 0;
+        $topicName = trim((string) ($data['topic'] ?? ''));
+        if ($topicName !== '') {
+            $topicId = TaskTopic::findOrCreate($topicName, $level)->id;
+        }
+        $task = Task::createFull(
+            $user->id,
+            $title,
+            (string) ($data['description'] ?? ''),
+            $type,
+            $level,
+            0,
+            (string) ($data['sample_solution'] ?? ''),
+            ((int) ($data['late_lock'] ?? 0)) === 1 ? 1 : 0,
+            max(0, min(1000, (int) ($data['max_points'] ?? 0))),
+            (string) ($data['rubric'] ?? ''),
+            $topicId,
+            ($data['description_format'] ?? 'text') === 'html' ? 'html' : 'text',
+            0,
+            ((int) ($data['solution_visible'] ?? 0)) === 1 ? 1 : 0,
+        );
+        foreach ((array) ($data['todos'] ?? []) as $todo) {
+            if (is_array($todo) && trim((string) ($todo['title'] ?? '')) !== '') {
+                TaskTodo::addTemplate($task->id, trim((string) $todo['title']));
+            }
+        }
+        foreach ((array) ($data['materials'] ?? []) as $material) {
+            if (is_array($material) && trim((string) ($material['filename'] ?? '')) !== '' && (string) ($material['content'] ?? '') !== '') {
+                $rawContent = base64_decode((string) $material['content'], true);
+                if ($rawContent === false) {
+                    $rawContent = (string) $material['content'];
+                }
+                TaskMaterial::add($task->id, (string) $material['filename'], $rawContent);
+            }
+        }
+        flash('success', 'Aufgabe "' . $title . '" importiert. Materialien und ToDo-Vorlagen sind mitgekommen.');
+        redirect('/aufgaben/' . $task->id . '/bearbeiten');
     }
 
     /** Korrekturübersicht einer Aufgabe für die Lehrkraft. */
@@ -1009,11 +1162,40 @@ final class TaskController
                 'late' => $late,
             ];
         }
+        // Kennzahlen für die Lehrkraft: Abgabequote, verspätete Abgaben,
+        // Korrekturstand und Notenschnitt (aus endgültigen Korrekturen).
+        $submittedCount = 0;
+        $lateCount = 0;
+        $gradedCount = 0;
+        $gradeSum = 0.0;
+        foreach ($rows as $row) {
+            if ($row['submission'] !== null) {
+                $submittedCount++;
+                if ($row['late']) {
+                    $lateCount++;
+                }
+            }
+            if ($row['grading'] !== null && ($row['grading']['source'] === 'lk' || $row['grading']['checked'])) {
+                $gradedCount++;
+                if (preg_match('/([1-6])/', $row['grading']['grade'], $match) === 1) {
+                    $gradeSum += (float) $match[1];
+                }
+            }
+        }
+        $stats = [
+            'total' => count($rows),
+            'submitted' => $submittedCount,
+            'late' => $lateCount,
+            'graded' => $gradedCount,
+            'open' => $submittedCount - $gradedCount,
+            'avgGrade' => $gradedCount > 0 ? round($gradeSum / $gradedCount, 2) : null,
+        ];
         render('tasks_correction', [
             'title' => 'Korrektur: ' . $task->title,
             'active' => 'tasks',
             'task' => $task,
             'rows' => $rows,
+            'stats' => $stats,
             'sampleSolution' => $task->sampleSolution,
             'aiConfigured' => AiSettings::resolve($user->id) !== null,
             'user' => $user,
@@ -1275,64 +1457,3 @@ final class TaskController
             return false;
         }
         $stmt = \Infocraft\Database::pdo()->prepare(
-            'SELECT COUNT(*) FROM task_targets WHERE task_id = ? AND (user_id = ? OR (class_id IS NOT NULL AND class_id = ?))'
-            . " AND (visible_from IS NULL OR visible_from = '' OR visible_from <= ?)"
-        );
-        $stmt->execute([$task->id, $student->id, $student->classId ?? 0, date('Y-m-d H:i')]);
-        return (int) $stmt->fetchColumn() > 0;
-    }
-
-    /**
-     * Alle Empfängerinnen und Empfänger einer Aufgabe: Schülerinnen und
-     * Schüler aus den zugewiesenen Klassen plus einzeln zugewiesene Personen.
-     * @return list<User>
-     */
-    private static function recipients(Task $task): array
-    {
-        $byId = [];
-        foreach (Task::targets($task->id) as $target) {
-            if ($target['classId'] !== null) {
-                foreach (User::byClass($target['classId']) as $student) {
-                    $byId[$student->id] = $student;
-                }
-            } elseif ($target['userId'] !== null) {
-                $student = User::find($target['userId']);
-                if ($student !== null && $student->role === 'student') {
-                    $byId[$student->id] = $student;
-                }
-            }
-        }
-        return array_values($byId);
-    }
-
-    /** @return array<int, list<User>> */
-    private static function studentsByClass(User $user): array
-    {
-        $map = [];
-        foreach (SchoolClass::forTeacher($user->id, $user->role === 'admin') as $class) {
-            $map[$class->id] = User::byClass($class->id);
-        }
-        return $map;
-    }
-
-    /** POST an einen JSON-Endpunkt (Bearer-Autorisierung, falls Schlüssel hinterlegt). */
-    private static function httpPost(string $url, string $body, string $apiKey): string
-    {
-        $headers = ['Content-Type: application/json'];
-        if ($apiKey !== '') {
-            $headers[] = 'Authorization: Bearer ' . $apiKey;
-        }
-        $context = stream_context_create(['http' => [
-            'method' => 'POST',
-            'header' => implode("\r\n", $headers),
-            'content' => $body,
-            'timeout' => 60,
-            'ignore_errors' => true,
-        ]]);
-        $response = @file_get_contents($url, false, $context);
-        if ($response === false) {
-            throw new RuntimeException('Der Endpunkt ist nicht erreichbar.');
-        }
-        return $response;
-    }
-}

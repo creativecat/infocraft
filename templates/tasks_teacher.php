@@ -120,6 +120,7 @@ foreach ($allTopics as $topic) {
                 </label>
                 <div class="field"><span>Frist-Sperre</span>
                     <label style="display:flex;gap:6px;align-items:center;font-weight:normal;"><input type="checkbox" name="late_lock" value="1"> Nach dem Abgabetermin keine neuen Abgaben mehr annehmen</label>
+                    <label style="display:flex;gap:6px;align-items:center;font-weight:normal;margin-top:6px;"><input type="checkbox" name="solution_visible" value="1"> Musterlösung freigeben: Schülerinnen und Schüler sehen sie nach der Korrektur oder nach dem Abgabetermin</label>
                 </div>
             </div>
             <div class="btn-row"><button class="btn btn-primary" type="submit">Anlegen</button></div>
@@ -131,6 +132,16 @@ foreach ($allTopics as $topic) {
     </section>
     <section class="panel">
         <h3>📚 Meine Aufgaben<?= count($tasks) > 0 ? ' (' . count($tasks) . ')' : '' ?></h3>
+        <?php if (($upcoming ?? []) !== []): ?>
+        <div class="notice">
+            <strong>⏰ Nächste Abgabetermine</strong>
+            <ul class="phase-list">
+                <?php foreach ($upcoming as $item): ?>
+                <li>📅 <?= e($item['dueAt']) ?> Uhr · <a href="<?= url('aufgaben/' . (int) $item['id'] . '/korrektur') ?>"><?= e($item['title']) ?></a></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php endif; ?>
         <?php if ($tasks === []): ?>
         <p class="muted"><?= $filterClassId > 0 || $filterTopicId > 0 || $filterLevel > 0 || $filterType !== '' ? 'Keine Aufgaben für diesen Filter.' : 'Noch keine Aufgaben angelegt. Nimm links eine eigene auf oder unten aus dem Katalog.' ?></p>
         <?php endif; ?>
@@ -138,7 +149,7 @@ foreach ($allTopics as $topic) {
         <div class="mission">
             <div class="mission-head">
                 <strong><?= e($task->title) ?></strong>
-                <span class="pill"><?= e($typeLabels[$task->type] ?? $task->type) ?> · Jgst. <?= (int) $task->level ?><?= $task->topicId > 0 && isset($topicNames[$task->topicId]) ? ' · 📁 ' . e($topicNames[$task->topicId]) : '' ?><?= $task->shared === 1 ? ' · 🤝 im gemeinsamen Pool' : '' ?><?= $task->maxPoints > 0 ? ' · max. ' . (int) $task->maxPoints . ' Punkte' : '' ?><?= $task->lateLock === 1 ? ' · 🔒 Frist-Sperre' : '' ?></span>
+                <span class="pill"><?= e($typeLabels[$task->type] ?? $task->type) ?> · Jgst. <?= (int) $task->level ?><?= $task->topicId > 0 && isset($topicNames[$task->topicId]) ? ' · 📁 ' . e($topicNames[$task->topicId]) : '' ?><?= $task->shared === 1 ? ' · 🤝 im gemeinsamen Pool' : '' ?><?= $task->maxPoints > 0 ? ' · max. ' . (int) $task->maxPoints . ' Punkte' : '' ?><?= $task->lateLock === 1 ? ' · 🔒 Frist-Sperre' : '' ?><?= $task->solutionVisible === 1 ? ' · 💡 Musterlösung freigegeben' : '' ?><?= ($openGradings[$task->id] ?? 0) > 0 ? ' · ✅ ' . (int) $openGradings[$task->id] . ' zu korrigieren' : '' ?></span>
             </div>
             <?php if ($task->description !== ''): ?>
             <div class="task-desc"><?= $task->descriptionHtml() ?></div>
@@ -219,6 +230,7 @@ foreach ($allTopics as $topic) {
             </details>
             <div class="btn-row">
                 <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $task->id . '/bearbeiten') ?>">✏️ Bearbeiten (Thema, Vorlagen, ToDos)</a>
+                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $task->id . '/export') ?>" title="Aufgabe als Datei sichern oder an Kolleginnen und Kollegen weitergeben">⬇️ Export</a>
                 <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/teilen') ?>" class="form-inline">
                     <?= csrf_field() ?>
                     <input type="hidden" name="shared" value="<?= $task->shared === 1 ? '0' : '1' ?>">
@@ -310,6 +322,19 @@ foreach ($allTopics as $topic) {
         <?php endif; ?>
     </div>
     <?php endforeach; ?>
+</section>
+
+<section class="panel">
+    <h3>⬇️⬆️ Aufgabe exportieren / importieren</h3>
+    <p class="muted">Über den <strong>Export</strong>-Knopf bei einer Aufgabe lädst du sie als Datei (inklusive Musterlösung, Erwartungshorizont, Thema, ToDos und Materialien). Hier importierst du eine solche Datei als neue Kopie - ideal zum Archivieren und zum Austausch mit Kolleginnen und Kollegen.</p>
+    <form method="post" action="<?= url('aufgaben/import') ?>" enctype="multipart/form-data" class="form">
+        <?= csrf_field() ?>
+        <div class="two-col">
+            <label class="field"><span>Datei auswählen (.json)</span><input type="file" name="import_file" accept=".json,application/json"></label>
+            <label class="field"><span>...oder JSON direkt einfügen</span><textarea name="import_json" rows="3" placeholder='{"infocraft_task": 1, "title": "...", ...}'></textarea></label>
+        </div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit">⬆️ Importieren</button></div>
+    </form>
 </section>
 
 <script src="<?= url('assets/js/tasks.js') ?>" defer></script>

@@ -221,6 +221,7 @@ final class PresentationController
             redirect('/praesentationen/' . $presentation->id);
         }
         $type = $slides[$pos]['type'] === 'code' ? 'code' : 'text';
+        $slides[$pos]['notes'] = (string) ($_POST['notes'] ?? ($slides[$pos]['notes'] ?? ''));
         if ($type === 'code') {
             $slides[$pos]['title'] = (string) ($_POST['title'] ?? $slides[$pos]['title']);
             $slides[$pos]['lang'] = Presentation::cleanLang((string) ($_POST['lang'] ?? $slides[$pos]['lang']));

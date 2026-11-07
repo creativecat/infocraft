@@ -37,6 +37,10 @@
                     <button class="btn btn-ghost" type="button" id="mod-timer-reset">Reset</button>
                 </div>
             </div>
+            <div class="mod-note-box">
+                <h4 class="mod-box-title">🎙 Sprechernotiz <span class="pill">nur für dich</span></h4>
+                <p class="mod-note" id="mod-note"></p>
+            </div>
             <div class="mod-list-box">
                 <h4 class="mod-box-title">Folien</h4>
                 <ol class="mod-list" id="mod-list"></ol>
@@ -46,7 +50,7 @@
 
     <div id="mod-pool" hidden>
         <?php foreach ($slides as $pos => $slide): ?>
-        <section class="slide mod-slide" data-pos="<?= (int) $pos ?>">
+        <section class="slide mod-slide" data-pos="<?= (int) $pos ?>" data-notes="<?= e($slide['notes'] ?? '') ?>">
             <?php if ($slide['type'] === 'code'): ?>
             <h2 class="slide-title"><?= e($slide['title']) ?> <span class="pill"><?= e($slide['lang']) ?></span></h2>
             <pre class="code slide-code"><code class="language-<?= e($slide['lang']) ?>"><?= e($slide['code']) ?></code></pre>
@@ -77,6 +81,7 @@
   var list = document.getElementById('mod-list');
   var counter = document.getElementById('mod-counter');
   var nowNum = document.getElementById('mod-now-num');
+  var noteEl = document.getElementById('mod-note');
   var prev = document.getElementById('mod-prev');
   var next = document.getElementById('mod-next');
   var openBtn = document.getElementById('mod-open');
@@ -123,6 +128,19 @@
     }
     if (counter) { counter.textContent = (current + 1) + ' / ' + nodes.length; }
     if (nowNum) { nowNum.textContent = 'Nr. ' + (current + 1); }
+    if (noteEl) {
+      var noteText = nodes[current].getAttribute('data-notes') || '';
+      while (noteEl.firstChild) { noteEl.removeChild(noteEl.firstChild); }
+      if (noteText !== '') {
+        var lines = noteText.split('\n');
+        for (var ln = 0; ln < lines.length; ln++) {
+          if (ln > 0) { noteEl.appendChild(document.createElement('br')); }
+          noteEl.appendChild(document.createTextNode(lines[ln]));
+        }
+      } else {
+        noteEl.appendChild(document.createTextNode('(Keine Sprechernotiz für diese Folie)'));
+      }
+    }
     if (list) {
       var items = list.querySelectorAll('li');
       for (var k = 0; k < items.length; k++) {

@@ -20,19 +20,19 @@
 </div>
 
 <div class="two-col">
+    <?php if ($user !== null && $user->role !== 'student'): ?>
     <section class="panel">
-        <h3>🚀 Roadmap</h3>
+        <h3>🎓 Jahrgangsstufe 10: komplett vorbereitet</h3>
+        <p>Das Startpaket für Informatik 10 (NTG) ist fertig: Datenmodellierung, relationale Datenbanken, objektorientierte Programmierung und Projekt - alles nach LehrplanPLUS.</p>
         <ul class="phase-list">
-            <li><span class="status status-fertig">fertig</span> <strong>Phase 1:</strong> Grundgerüst, Anmeldung (SSO/CSV/Demo), Rollen</li>
-            <li><span class="status status-fertig">fertig</span> <strong>Phase 2:</strong> SQL-Werkstatt (Shop-Modell, Instagram, Adventure, Rechte)</li>
-            <li><span class="status status-geplant">geplant</span> <strong>Phase 3:</strong> HTML-WYSIWYG-Editor</li>
-            <li><span class="status status-in-arbeit">in Arbeit</span> <strong>Phase 4:</strong> Code-Werkstatt (Projekte/Ordner fertig, IDE folgt)</li>
-            <li><span class="status status-geplant">geplant</span> <strong>Phase 5:</strong> Quiz-Arena &amp; Prüfungsmodus</li>
-            <li><span class="status status-in-arbeit">in Arbeit</span> <strong>Phase 6:</strong> Wiki &amp; Präsentationen (fertig), Lernvideos folgen</li>
-            <li><span class="status status-in-arbeit">in Arbeit</span> <strong>Phase 7:</strong> Aufgabenpool &amp; Austeilen (Basis fertig)</li>
+            <li>🎬 <strong>Präsentationen</strong> mit Sprechernotizen und Übungsfolien: <a href="<?= url('praesentationen') ?>">Themenübersicht öffnen</a></li>
+            <li>🏆 <strong>Quiz-Arena</strong> (nur für dich): pro Kapitel ein fertiges Quiz, austeilbereit: <a href="<?= url('quiz') ?>">Quiz-Arena öffnen</a></li>
+            <li>📋 <strong>Aufgaben</strong> fürs ganze Schuljahr: <a href="<?= url('aufgaben?level=10') ?>">Katalog Jahrgangsstufe 10</a></li>
+            <li>📝 <strong>Kurzarbeiten</strong> für den Prüfungsmodus: <a href="<?= url('pruefungen') ?>">Prüfungen &amp; Arbeiten</a></li>
         </ul>
-        <p class="muted">Details: docs/ROADMAP.md im Repository.</p>
+        <p class="muted">Details und Stundenplan-Empfehlung: docs/JGST10.md im Repository.</p>
     </section>
+    <?php endif; ?>
     <section class="panel">
         <h3>📊 Systemstatus</h3>
         <table class="kv">

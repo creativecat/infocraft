@@ -112,6 +112,27 @@ Zustand: ✅ umgesetzt, 🔜 geplant.
    Status-Pille (offen, abgegeben, korrigiert, überfällig), Hinweis auf die
    nächste Abgabe, Materialliste und ToDos direkt in der Aufgabe. ([#27](https://github.com/creativecat/infocraft/issues/27))
 
+## Phase 3b: Aufgabenbereich 2.1 + Jahrgangsstufe 10 (umgesetzt)
+
+1. ✅ **Musterlösung freigeben:** Pro Aufgabe entscheidet die Lehrkraft, ob die
+   Musterlösung für Schülerinnen und Schüler sichtbar wird: nach der Korrektur
+   oder (bei aktiver Frist-Sperre) nach dem Abgabetermin. ([#12](https://github.com/creativecat/infocraft/issues/12))
+2. ✅ **Selbsteinschätzung bei der Abgabe:** Schülerinnen und Schüler geben zu
+   jeder Abgabe an, wie sicher sie sich fühlen (1 = noch unsicher bis
+   3 = ziemlich sicher). Die Lehrkraft sieht die Einschätzung in der Korrektur. ([#17](https://github.com/creativecat/infocraft/issues/17))
+3. ✅ **Statistiken in der Korrektur:** Abgabequote, verspätete Abgaben, offene
+   Korrekturen und Notenschnitt auf einen Blick pro Aufgabe. ([#13](https://github.com/creativecat/infocraft/issues/13))
+4. ✅ **Termin-Übersicht:** Die nächsten Abgabetermine aller Aufgaben stehen als
+   Panel oben im Aufgabenbereich der Lehrkraft, offene Korrekturen als Pille je
+   Aufgabe. ([#14](https://github.com/creativecat/infocraft/issues/14))
+5. ✅ **Export und Import:** Aufgaben lassen sich als JSON-Datei exportieren und
+   auf anderen Instanzen wieder importieren (inklusive Materialien und
+   ToDo-Vorlagen), z. B. zum Teilen im Fachkollegium. ([#15](https://github.com/creativecat/infocraft/issues/15))
+6. ✅ **Jahrgangsstufe 10 komplett:** 10 Präsentations-Decks mit
+   Sprechernotizen, 7 Kapitel-Quiz, 12 Katalog-Aufgaben und 2 Kurzarbeiten
+   à 20 BE, abgestimmt auf LehrplanPLUS Informatik 10 (NTG). Details:
+   [JGST10.md](JGST10.md).
+
 ## Phase 4: Ideen (🔜 geplant)
 
 - 🔜 **Abgabe als Projektverweis:** Statt oder zusätzlich zum Text eine

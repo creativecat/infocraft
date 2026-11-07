@@ -38,8 +38,10 @@ final class Presentation
     }
 
     /**
-     * Folien der Präsentation als Liste von Feldern.
-     * @return list<array{type: string, title: string, body?: string, lang?: string, code?: string}>
+     * Folien der Präsentation als Liste von Feldern. 'notes' enthält die
+     * Sprechernotiz: Sie ist NUR im Moderatorenbildschirm für Lehrkräfte
+     * sichtbar, in der Schüler-Ansicht wird sie nie ausgegeben.
+     * @return list<array{type: string, title: string, body?: string, lang?: string, code?: string, notes?: string}>
      */
     public function slides(): array
     {
@@ -63,6 +65,10 @@ final class Presentation
             } else {
                 $entry['body'] = (string) ($slide['body'] ?? '');
             }
+            $notes = trim((string) ($slide['notes'] ?? ''));
+            if ($notes !== '') {
+                $entry['notes'] = $notes;
+            }
             $slides[] = $entry;
         }
         return $slides;
@@ -74,7 +80,7 @@ final class Presentation
         return in_array($lang, ['java', 'python', 'sql', 'html'], true) ? $lang : 'java';
     }
 
-    /** @param list<array{type: string, title: string, body?: string, lang?: string, code?: string}> $slides */
+    /** @param list<array{type: string, title: string, body?: string, lang?: string, code?: string, notes?: string}> $slides */
     public function setSlides(array $slides): void
     {
         $clean = [];
@@ -89,6 +95,10 @@ final class Presentation
                 $entry['code'] = (string) ($slide['code'] ?? '');
             } else {
                 $entry['body'] = (string) ($slide['body'] ?? '');
+            }
+            $notes = trim((string) ($slide['notes'] ?? ''));
+            if ($notes !== '') {
+                $entry['notes'] = $notes;
             }
             $clean[] = $entry;
         }

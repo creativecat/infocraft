@@ -1,6 +1,7 @@
 <?php
 /** @var \Infocraft\Models\Task $task */
-/** @var list<array{student: \Infocraft\Models\User, submission: array{content: string, submittedAt: string, firstName: string, lastName: string}|null, grading: array{grade: string, comment: string, source: string, checked: bool}|null, dueAt: string|null, late: bool}> $rows */
+/** @var array{total: int, submitted: int, late: int, graded: int, open: int, avgGrade: float|null} $stats */
+/** @var list<array{student: \Infocraft\Models\User, submission: array{content: string, submittedAt: string, selfRating: int, firstName: string, lastName: string}|null, grading: array{grade: string, comment: string, source: string, checked: bool}|null, dueAt: string|null, late: bool}> $rows */
 $topic = $task->topicId > 0 ? \Infocraft\Models\TaskTopic::find($task->topicId) : null;
 ?>
 <section class="hero">
@@ -27,6 +28,15 @@ $topic = $task->topicId > 0 ? \Infocraft\Models\TaskTopic::find($task->topicId) 
     </div>
     <?php if ($rows === []): ?>
     <p class="muted">Diese Aufgabe ist noch an niemanden ausgeteilt.</p>
+    <?php else: ?>
+    <p>
+        <span class="pill">👥 <?= (int) $stats['total'] ?> Schülerinnen und Schüler</span>
+        <span class="pill">✍️ <?= (int) $stats['submitted'] ?> abgegeben (<?= $stats['total'] > 0 ? (int) round($stats['submitted'] * 100 / $stats['total']) : 0 ?> %)</span>
+        <span class="pill">⏰ <?= (int) $stats['late'] ?> verspätet</span>
+        <span class="pill">✅ <?= (int) $stats['graded'] ?> korrigiert<?= $stats['open'] > 0 ? ' · 🔁 ' . (int) $stats['open'] . ' noch offen' : '' ?></span>
+        <?php if ($stats['avgGrade'] !== null): ?><span class="pill">📊 Notenschnitt: <?= e(number_format($stats['avgGrade'], 2, ',', '')) ?></span><?php endif; ?>
+        <?php if ($task->solutionVisible === 1): ?><span class="pill">💡 Musterlösung für Schülerinnen und Schüler freigegeben</span><?php endif; ?>
+    </p>
     <?php endif; ?>
 </section>
 
@@ -64,7 +74,7 @@ $topic = $task->topicId > 0 ? \Infocraft\Models\TaskTopic::find($task->topicId) 
             <?php endif; ?>
         </div>
         <?php if ($row['submission'] !== null): ?>
-        <p class="muted">Abgegeben: <?= e($row['submission']['submittedAt']) ?><?= $row['dueAt'] !== null ? ' · Abgabetermin: ' . e($row['dueAt']) . ' Uhr' : '' ?></p>
+        <p class="muted">Abgegeben: <?= e($row['submission']['submittedAt']) ?><?= $row['dueAt'] !== null ? ' · Abgabetermin: ' . e($row['dueAt']) . ' Uhr' : '' ?><?= ($row['submission']['selfRating'] ?? 0) > 0 ? ' · Selbsteinschätzung: ' . e(\Infocraft\Models\TaskSubmission::SELF_RATING_LABELS[(int) $row['submission']['selfRating']] ?? '') : '' ?></p>
         <div class="own"><?= e($row['submission']['content']) ?></div>
         <?php else: ?>
         <p class="muted">Noch keine Abgabe.<?= $row['dueAt'] !== null ? ' Abgabetermin: ' . e($row['dueAt']) . ' Uhr' : '' ?></p>

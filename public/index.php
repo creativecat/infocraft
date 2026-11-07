@@ -145,6 +145,8 @@ $router->post('/aufgaben/{id}/todos/schueler', [TaskController::class, 'todoStud
 $router->post('/aufgaben/{id}/material', [TaskController::class, 'materialSave']);
 $router->get('/aufgaben/{id}/material/{mid}', [TaskController::class, 'materialDownload']);
 $router->post('/aufgaben/{id}/variante', [TaskController::class, 'variant']);
+$router->get('/aufgaben/{id}/export', [TaskController::class, 'export']);
+$router->post('/aufgaben/import', [TaskController::class, 'importJson']);
 
 // Wiki: Nachschlage-Seiten mit Stufen-Filter (Lehrkräfte verwalten)
 $router->get('/wiki', [WikiController::class, 'index']);

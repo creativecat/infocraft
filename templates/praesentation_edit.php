@@ -60,6 +60,9 @@
             <textarea name="body" rows="8" class="mono" spellcheck="true"><?= e($slide['body']) ?></textarea>
         </label>
         <?php endif; ?>
+        <label class="field"><span>🎙 Sprechernotiz (nur im Moderatorenbildschirm für Lehrkräfte sichtbar, Schülerinnen und Schüler sehen sie nie)</span>
+            <textarea name="notes" rows="3" class="mono" spellcheck="true" placeholder="Kernbotschaft, Impulsfrage, Zeitangabe - z. B.: &quot;Frage zuerst: Wer hat schon mal ...? (3 Min)&quot;"><?= e($slide['notes'] ?? '') ?></textarea>
+        </label>
         <div class="btn-row"><button class="btn btn-primary" type="submit">💾 Folie speichern</button></div>
     </form>
 </section>

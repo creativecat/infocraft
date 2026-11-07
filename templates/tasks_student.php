@@ -80,6 +80,7 @@ foreach ($myTodos as $myTodo) {
 }
 $ownTodos = array_values(array_filter($myTodos, static fn ($t) => $t->templateId === null));
 $taskMaterials = $materials[$task->id] ?? [];
+$currentRating = $entry['submission'] !== null ? (int) ($entry['submission']['selfRating'] ?? 0) : 0;
 ?>
 <section class="panel">
     <div class="panel-head">
@@ -146,6 +147,15 @@ $taskMaterials = $materials[$task->id] ?? [];
         <strong>Korrigiert: Note <?= e($entry['grading']['grade'] !== '' ? $entry['grading']['grade'] : '-') ?><?= $task->maxPoints > 0 ? ' (max. ' . (int) $task->maxPoints . ' Punkte)' : '' ?></strong>
         <?php if ($entry['grading']['comment'] !== ''): ?><p><?= e($entry['grading']['comment']) ?></p><?php endif; ?>
     </div>
+    <?php endif; ?>
+    <?php if ($task->solutionVisible === 1 && $task->sampleSolution !== '' && ($gradingVisible || ($late && !$submitted))): ?>
+    <div class="notice">
+        <strong>💡 Musterlösung (von deiner Lehrkraft freigegeben)</strong>
+        <div class="own"><?= e($task->sampleSolution) ?></div>
+        <?php if (!$gradingVisible): ?><p class="muted">Der Abgabetermin ist vorbei, daher darfst du die Musterlösung jetzt sehen. Vergleiche sie mit deiner Lösung!</p><?php endif; ?>
+    </div>
+    <?php endif; ?>
+    <?php if ($gradingVisible && $entry['grading'] !== null): ?>
     <p class="muted">Deine abgegebene Lösung (nach der Korrektur nicht mehr änderbar):</p>
     <div class="own"><?= e($entry['submission'] !== null ? $entry['submission']['content'] : '(keine Abgabe)') ?></div>
     <?php else: ?>
@@ -164,6 +174,14 @@ $taskMaterials = $materials[$task->id] ?? [];
         <?= csrf_field() ?>
         <label class="field"><span>Deine Lösung (Text)</span>
             <textarea name="content" rows="5" placeholder="Schreibe hier deine Lösung hinein ..."><?= $entry['submission'] !== null ? e($entry['submission']['content']) : '' ?></textarea>
+        </label>
+        <label class="field"><span>Wie sicher fühlst du dich bei dieser Aufgabe? (freiwillig, deine Lehrkraft sieht es bei der Korrektur)</span>
+            <select name="self_rating">
+                <option value="0"<?= $currentRating === 0 ? ' selected' : '' ?>>nicht angeben</option>
+                <option value="1"<?= $currentRating === 1 ? ' selected' : '' ?>>😐 noch unsicher</option>
+                <option value="2"<?= $currentRating === 2 ? ' selected' : '' ?>>🙂 teils/teils</option>
+                <option value="3"<?= $currentRating === 3 ? ' selected' : '' ?>>😎 ziemlich sicher</option>
+            </select>
         </label>
         <div class="btn-row"><button class="btn btn-primary" type="submit"><?= $submitted ? 'Neue Version abgeben' : 'Abgeben' ?></button></div>
     </form>
