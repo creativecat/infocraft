@@ -24,6 +24,8 @@ jobs:
         run: php tools/migrate.php --driver sqlite
       - name: Migration erneut ausfuehren (Idempotenz)
         run: php tools/migrate.php --driver sqlite
+      - name: Java-Interpreter-Tests (Node)
+        run: node tools/java-vm-tests.js
       - name: Smoke-Tests (Werkstatt, Rechte, Stufen)
         run: |
           php -S 127.0.0.1:8080 -t public public/index.php &> server.log &
