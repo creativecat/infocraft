@@ -13,7 +13,7 @@ jobs:
       matrix:
         php: ["8.3", "8.5"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
@@ -28,9 +28,9 @@ jobs:
         run: |
           php -S 127.0.0.1:8080 -t public public/index.php &
           sleep 2
-          curl -fsS http://127.0.0.1:8080/login -o login.html
+          curl -fsS -c cookies.txt http://127.0.0.1:8080/login -o login.html
           grep -q "InfoCraft" login.html
           CSRF=$(grep -o 'value="[a-f0-9]*"' login.html | head -n1 | cut -d'"' -f2)
-          curl -fsS -L -c cookies.txt -b cookies.txt -d "csrf=$CSRF" -d "user_id=1" http://127.0.0.1:8080/login/demo -o home.html
+          curl -fsS -L -b cookies.txt -c cookies.txt -d "csrf=$CSRF" -d "user_id=1" http://127.0.0.1:8080/login/demo -o home.html
           grep -q "Willkommen" home.html
-          curl -fsS -o /dev/null http://127.0.0.1:8080/modul/sql
+          curl -fsS -b cookies.txt -o /dev/null http://127.0.0.1:8080/modul/sql
