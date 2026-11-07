@@ -267,6 +267,114 @@ rb.setSelected(true);</pre></td><td>Auswahlknopf, <code>rb.isSelected()</code> f
                         <p class="muted">Hinweis: In der OnlineIDE heißen die Klassen anders (Label, TextField, RadioButton); hier heißen sie Button, Textfield, Checkbox, Radiobutton.</p>
                     </details>
 
+                    <details>
+                        <summary>⌨️ Eingabe mit Input – wie in der Online-IDE</summary>
+                        <p>Die Klasse <code>Input</code> öffnet ein Dialogfenster und fragt deine Nutzerin oder deinen Nutzer ab. Der zweite Wert ist die Antwort, falls jemand nichts eintippt:</p>
+                        <table>
+                            <tr><td><pre class="code">String name = Input.readString("Wie heißt du?", "Alex");</pre></td><td>Text eingeben.</td></tr>
+                            <tr><td><pre class="code">int alter = Input.readInt("Wie alt bist du?", 12);</pre></td><td>Ganze Zahl eingeben (falsche Eingaben werden nachgefragt).</td></tr>
+                            <tr><td><pre class="code">double groesse = Input.readDouble("Wie groß bist du?", 1.5);</pre></td><td>Kommazahl (Punkt oder Komma geht).</td></tr>
+                            <tr><td><pre class="code">boolean weiter = Input.readBoolean("Noch eine Runde?", true);</pre></td><td>ja/nein, true/false, 1/0.</td></tr>
+                            <tr><td><pre class="code">char buchstabe = Input.readChar("Dein Lieblingsbuchstabe?", "a");</pre></td><td>Genau ein Zeichen.</td></tr>
+                            <tr><td><pre class="code">if (Input.isKeyDown(Key.ArrowRight)) { ... }</pre></td><td>Ist eine Taste gerade gedrückt? Tastennamen: <code>Key.ArrowUp</code>, <code>Key.ArrowDown</code>, <code>Key.ArrowLeft</code>, <code>Key.ArrowRight</code>, <code>Key.Enter</code>, <code>Key.Space</code>, <code>Key.Escape</code> u.&nbsp;a.</td></tr>
+                        </table>
+                        <p class="muted">Scanner gibt es hier nicht – nimm immer Input. Gleiche Klasse, gleiche Methoden wie in der Online-IDE.</p>
+                    </details>
+
+                    <details>
+                        <summary>🎲 Zufall mit Random</summary>
+                        <table>
+                            <tr><td><pre class="code">int wurf = Random.randint(1, 6);</pre></td><td>Würfel: eine Zahl von 1 bis 6 (beide Grenzen können kommen).</td></tr>
+                            <tr><td><pre class="code">double zufall = Random.randdouble(0, 1);</pre></td><td>Kommazahl zwischen 0 und 1.</td></tr>
+                            <tr><td><pre class="code">Random wuerfel = new Random();
+int augen = wuerfel.nextInt(6);      // 0 bis 5
+double muecke = wuerfel.nextDouble(); // 0.0 bis 1.0</pre></td><td>Eigenes Zufalls-Objekt wie in Java.</td></tr>
+                        </table>
+                    </details>
+
+                    <details>
+                        <summary>✅ Prüfen mit Assertions: automatische Tests</summary>
+                        <p>Mit <code>Assertions</code> prüft dein Programm sich selbst – wie die Unit-Tests der Profis. Bestandene Prüfungen drucken ein ✓, schlägt eine fehl, stoppt das Programm mit einer klaren Meldung:</p>
+                        <pre class="code">Assertions.assertEquals(4, 2 * 2, "Malnehmen stimmt");
+Assertions.assertTrue(name.length() > 0, "Name darf nicht leer sein");
+Assertions.assertFalse(7 < 5, "Sieben ist nicht kleiner als fünf");
+Assertions.assertCodeReached("Das Ende wurde erreicht");</pre>
+                        <p class="muted">Schlägt eine Prüfung fehl, steht da: „Erwartet 4, erhalten 5 – Rechnung prüfen“ mit Datei und Zeile.</p>
+                    </details>
+
+                    <details>
+                        <summary>📐 Rechnen mit Vector2 und MathTools</summary>
+                        <p><code>Vector2</code> ist ein Pfeil in der Ebene – perfekt für Bewegungen und Geometrie (gleiche Klasse wie in der Online-IDE):</p>
+                        <table>
+                            <tr><td><pre class="code">Vector2 v = new Vector2(3, 4);
+System.out.println(v.getLength());   // 5.0
+System.out.println(v.getAngleDeg()); // 53.13...</pre></td><td>Länge und Winkel (in Grad). Die Koordinaten sind Attribute: <code>v.x</code> und <code>v.y</code>.</td></tr>
+                            <tr><td><pre class="code">Vector2 summe = a.plus(b);   // neuer Vektor
+a.add(b);                   // verändert a selbst</pre></td><td>plus/minus/scaledBy/rotatedBy geben NEUE Vektoren; add/sub/scale/rotate verändern den Vektor.</td></tr>
+                            <tr><td><pre class="code">v.scalarProduct(w); v.distanceTo(w);
+Vector2.distance(x1, y1, x2, y2);
+Vector2.fromPolarCoordinates(5, 90);</pre></td><td>Punktprodukt, Abstände, Polarkoordinaten.</td></tr>
+                        </table>
+                        <p><code>MathTools</code> rechnet mit Figuren-Punkten:</p>
+                        <table>
+                            <tr><td><pre class="code">MathTools.distancePointToLine(p, a, b);</pre></td><td>Abstand Punkt p zur Geraden durch a und b.</td></tr>
+                            <tr><td><pre class="code">MathTools.distancePointToLineSegment(p, a, b);</pre></td><td>Abstand zur Strecke [ab] (nicht zur unendlichen Geraden).</td></tr>
+                            <tr><td><pre class="code">Vector2 s = MathTools.intersectLineSegments(p0, p1, p2, p3);</pre></td><td>Schnittpunkt zweier Strecken oder <code>null</code>.</td></tr>
+                            <tr><td><pre class="code">MathTools.polygonContainsPoint(ecken, punkt);
+MathTools.intersectCircleWithPolygon(mx, my, r, ecken);</pre></td><td>Liegt der Punkt im Vieleck? Wo schneidet der Kreis die Kanten?</td></tr>
+                        </table>
+                    </details>
+
+                    <details>
+                        <summary>🧭 Richtung und Position: Direction, Position, CollisionPair</summary>
+                        <table>
+                            <tr><td><pre class="code">Direction.top · Direction.right
+Direction.bottom · Direction.left</pre></td><td>Richtungen wie in der Online-IDE. <code>Direction.getDx(richtung)</code> und <code>Direction.getDy(richtung)</code> geben die Änderung pro Schritt (rechts: +1|0, unten: 0|+1 ...).</td></tr>
+                            <tr><td><pre class="code">Position p = new Position(3, 7);
+System.out.println(p);    // (3|7)
+p.x = 10;</pre></td><td>Ein Gitterpunkt mit ganzen Koordinaten (x und y sind Attribute).</td></tr>
+                            <tr><td><pre class="code">CollisionPair paar = new CollisionPair(auto, ball);
+paar.shapeA.getX(); paar.shapeB.getY();</pre></td><td>Merkt sich zwei Figuren, die zusammengestoßen sind (z. B. aus <code>getCollisionPairs</code>).</td></tr>
+                        </table>
+                    </details>
+
+                    <details>
+                        <summary>🔊 Sound und 🎮 Gamepad</summary>
+                        <table>
+                            <tr><td><pre class="code">Sound.playSound("coin");
+Sound.playSound("beep");</pre></td><td>Kurze Töne: beep, click, coin, boom, laser, jump, win, lose, alarm.</td></tr>
+                            <tr><td><pre class="code">if (Gamepad.isConnected(0)) { ... }
+Gamepad.isButtonDown(0, 0);
+Gamepad.getAxisValue(0, 1);</pre></td><td>Controller abfragen: Nummer des Pads, Knopfnummer (A = 0) oder Achse (0 = links/rechts, 1 = hoch/runter).</td></tr>
+                        </table>
+                    </details>
+
+                    <details>
+                        <summary>🥧 Kreisbogen und Kreissektor: Arc und Sector</summary>
+                        <table>
+                            <tr><td><pre class="code">Arc a = new Arc(200, 150, 20, 80, 0, 90);</pre></td><td>Kreisbogen-Ring: Mittelpunkt (200|150), Innenradius 20, Außenradius 80, von 0° bis 90° (0° = rechts, im Uhrzeigersinn).</td></tr>
+                            <tr><td><pre class="code">a.setInnerRadius(30); a.setOuterRadius(90);
+a.setStartAngle(45); a.setEndAngle(180);
+a.containsPoint(250, 150);</pre></td><td>Radien und Winkel ändern (Getter: <code>getInnerRadius()</code> u.&nbsp;a.) und Punkte testen.</td></tr>
+                            <tr><td><pre class="code">Sector s = new Sector(200, 150, 80, 0, 45);
+s.drawRadii(true);</pre></td><td>Tortenstück („Kuchenstück“) mit Radius 80 von 0° bis 45°. <code>drawRadii(true)</code> zeichnet die Radien mit.</td></tr>
+                        </table>
+                        <p class="muted">Perfekt für Tortendiagramme, Pac-Man-Mund und Uhrzeiger.</p>
+                    </details>
+
+                    <details>
+                        <summary>🖥 SystemTools: Ausgabe und Tempo</summary>
+                        <table>
+                            <tr><td><pre class="code">SystemTools.clearScreen();</pre></td><td>Löscht die bisherige Ausgabe.</td></tr>
+                            <tr><td><pre class="code">SystemTools.setSpeed(60);
+System.out.println(SystemTools.getSpeed());</pre></td><td>Wie oft pro Sekunde <code>act()</code> aufgerufen wird (Standard 30, für flüssige Spiele 60).</td></tr>
+                            <tr><td><pre class="code">SystemTools.startLoggingPrintOutput();
+System.out.println("wichtig");
+System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitschreiben und später auslesen.</td></tr>
+                            <tr><td><pre class="code">SystemTools.getNumberOfProcessorCores();</pre></td><td>Wie viele Rechenkerne der Computer hat.</td></tr>
+                        </table>
+                    </details>
+
                     <p class="muted">Vorbild für die Grafik-API ist die <a href="https://www.onlineide.net" rel="noopener" target="_blank">OnlineIDE/learnj</a> ("Java lernen durch Ausprobieren"). Fast alle deren Klassen und Methoden funktionieren hier genauso – kleine Unterschiede stehen direkt bei den Klassen.</p>
                 </div>
             </div>

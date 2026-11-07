@@ -890,6 +890,219 @@ t('MeldungenMitUmlauten',
     if (r.errors[0].message.indexOf('gehoert') !== -1) { throw new Error('Ersatz-Schreibung gefunden: ' + r.errors[0].message); }
   });
 
+/* --- Klassen nach dem Vorbild der Online-IDE: Vector2 --- */
+t('Vector2Basics', { 'Main.java': mainOf(
+  '        Vector2 v = new Vector2(3, 4);' + NL +
+  '        System.out.println(v.getLength());' + NL +
+  '        System.out.println(v.x + " " + v.y);' + NL +
+  '        v.x = 5;' + NL +
+  '        System.out.println(v.x);' + NL +
+  '        System.out.println(v.toString());') }, r => {
+  eq(r.ok, true, 'ok: ' + JSON.stringify(r.errors));
+  eq(r.output, '5.0' + NL + '3.0 4.0' + NL + '5.0' + NL + '(5.0, 4.0)' + NL, 'Laenge, Felder, toString');
+});
+t('Vector2Rechnen', { 'Main.java': mainOf(
+  '        Vector2 a = new Vector2(1, 2);' + NL +
+  '        Vector2 b = new Vector2(3, 1);' + NL +
+  '        System.out.println(a.plus(b));' + NL +
+  '        System.out.println(a.minus(b));' + NL +
+  '        System.out.println(a.scalarProduct(b));' + NL +
+  '        System.out.println(a.distanceTo(b));' + NL +
+  '        a.add(b);' + NL +
+  '        System.out.println(a);' + NL +
+  '        System.out.println(b.scaledBy(2));' + NL +
+  '        System.out.println(a.equals(new Vector2(4, 3)));') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '(4.0, 3.0)' + NL + '(-2.0, 1.0)' + NL + '5.0' + NL + '2.23606797749979' + NL + '(4.0, 3.0)' + NL + '(6.0, 2.0)' + NL + 'true' + NL, 'Vektor-Rechnungen');
+});
+t('Vector2DrehenNormieren', { 'Main.java': mainOf(
+  '        Vector2 v = new Vector2(1, 0);' + NL +
+  '        Vector2 r90 = v.rotatedBy(90);' + NL +
+  '        System.out.println(r90.getY());' + NL +
+  '        System.out.println(r90.getX() < 0.000001 && r90.getX() > -0.000001);' + NL +
+  '        System.out.println(v.rotatedBy(90).getAngleDeg());' + NL +
+  '        Vector2 u = new Vector2(3, 4);' + NL +
+  '        System.out.println(u.getUnitVector());' + NL +
+  '        System.out.println(u.setLength(10).getLength());' + NL +
+  '        System.out.println(Vector2.distance(0, 0, 3, 4));' + NL +
+  '        Vector2 polar = Vector2.fromPolarCoordinates(5, 90);' + NL +
+  '        System.out.println(polar.getY());' + NL +
+  '        System.out.println(polar.getX() < 0.000001 && polar.getX() > -0.000001);') }, r => {
+  eq(r.ok, true, 'ok: ' + JSON.stringify(r.errors));
+  eq(r.output, '1.0' + NL + 'true' + NL + '90.0' + NL + '(0.6, 0.8)' + NL + '10.0' + NL + '5.0' + NL + '5.0' + NL + 'true' + NL, 'Drehen, Normieren, statische Methoden');
+});
+t('Vector2NullvektorFehler', { 'Main.java': mainOf(
+  '        Vector2 v = new Vector2(0, 0);' + NL +
+  '        v.getUnitVector();') }, r => {
+  err1(r, 'runtime');
+  if (r.errors[0].message.indexOf('Nullvektor') === -1) { throw new Error('Nullvektor-Meldung erwartet: ' + r.errors[0].message); }
+});
+
+/* --- MathTools --- */
+t('MathToolsAbstaende', { 'Main.java': mainOf(
+  '        Vector2 p = new Vector2(0, 3);' + NL +
+  '        Vector2 a = new Vector2(0, 0);' + NL +
+  '        Vector2 b = new Vector2(4, 0);' + NL +
+  '        System.out.println(MathTools.distancePointToLine(p, a, b));' + NL +
+  '        Vector2 p2 = new Vector2(5, 0);' + NL +
+  '        System.out.println(MathTools.distancePointToLineSegment(p2, a, b));') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '3.0' + NL + '1.0' + NL, 'Abstand Punkt-Gerade und Punkt-Strecke');
+});
+t('MathToolsSchnitte', { 'Main.java': mainOf(
+  '        Vector2 s = MathTools.intersectLineSegments(new Vector2(0, 0), new Vector2(4, 4), new Vector2(0, 4), new Vector2(4, 0));' + NL +
+  '        System.out.println(s);' + NL +
+  '        Vector2 parallel = MathTools.intersectLineSegments(new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1), new Vector2(1, 1));' + NL +
+  '        System.out.println(parallel);') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '(2.0, 2.0)' + NL + 'null' + NL, 'Streckenschnitte');
+});
+t('MathToolsPolygon', { 'Main.java': mainOf(
+  '        Vector2[] dreieck = new Vector2[]{ new Vector2(0, 0), new Vector2(10, 0), new Vector2(5, 8) };' + NL +
+  '        System.out.println(MathTools.polygonContainsPoint(dreieck, new Vector2(5, 2)));' + NL +
+  '        System.out.println(MathTools.polygonContainsPoint(dreieck, new Vector2(20, 5)));' + NL +
+  '        Vector2[] hits = MathTools.intersectCircleWithPolygon(0, 0, 2.5, new Vector2[]{ new Vector2(-2, -2), new Vector2(2, -2), new Vector2(2, 2), new Vector2(-2, 2) });' + NL +
+  '        System.out.println(hits.length);') }, r => {
+  eq(r.ok, true, 'ok: ' + JSON.stringify(r.errors));
+  eq(r.output, 'true' + NL + 'false' + NL + '8' + NL, 'Polygon-Test und Kreis-Schnitte');
+});
+
+/* --- Random --- */
+t('RandomKlassen', { 'Main.java': mainOf(
+  '        System.out.println(Random.randint(3, 3));' + NL +
+  '        System.out.println(Random.randdouble(2, 2));' + NL +
+  '        Random wuerfel = new Random();' + NL +
+  '        System.out.println(wuerfel.nextInt(1));' + NL +
+  '        double z = wuerfel.nextDouble();' + NL +
+  '        System.out.println(z >= 0.0 && z < 1.0);') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '3' + NL + '2.0' + NL + '0' + NL + 'true' + NL, 'Zufallszahlen mit festen Grenzen');
+});
+t('RandomBereichFehler', { 'Main.java': mainOf('        Random.randint(5, 3);') }, r => {
+  err1(r, 'runtime');
+  if (r.errors[0].message.indexOf('obere Grenze') === -1) { throw new Error('Grenzen-Meldung erwartet: ' + r.errors[0].message); }
+});
+
+/* --- Assertions --- */
+t('AssertionsErfolg', { 'Main.java': mainOf(
+  '        Assertions.assertTrue(1 + 1 == 2, "Addition stimmt");' + NL +
+  '        Assertions.assertEquals(4, 2 * 2, "Malnehmen stimmt");' + NL +
+  '        Assertions.assertEquals("Anna", "Anna", "Namen gleich");' + NL +
+  '        Assertions.assertCodeReached("Ende erreicht");') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '✓ Addition stimmt' + NL + '✓ Malnehmen stimmt' + NL + '✓ Namen gleich' + NL + '✓ Ende erreicht' + NL, 'Erfolgs-Ausgaben');
+});
+t('AssertionsFehler', { 'Main.java': mainOf('        Assertions.assertEquals(1, 2, "Rechnung pruefen");') }, r => {
+  err1(r, 'runtime');
+  if (r.errors[0].message.indexOf('Erwartet 1, erhalten 2') === -1) { throw new Error('Soll-Ist-Meldung erwartet: ' + r.errors[0].message); }
+});
+t('AssertionsFalse', { 'Main.java': mainOf('        Assertions.assertFalse(true, "muss falsch sein");') }, r => {
+  err1(r, 'runtime');
+});
+
+/* --- Key, Direction, Position, CollisionPair --- */
+t('KeyKonstanten', { 'Main.java': mainOf(
+  '        System.out.println(Key.ArrowUp);' + NL +
+  '        System.out.println(Key.Space);' + NL +
+  '        System.out.println(Key.Strg);' + NL +
+  '        System.out.println(Input.isKeyDown(Key.ArrowLeft));') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'ArrowUp' + NL + 'Space' + NL + 'Control' + NL + 'false' + NL, 'Tasten-Konstanten');
+});
+t('DirectionRichtungen', { 'Main.java': mainOf(
+  '        System.out.println(Direction.top);' + NL +
+  '        System.out.println(Direction.getDx(Direction.right));' + NL +
+  '        System.out.println(Direction.getDy(Direction.top));' + NL +
+  '        System.out.println(Direction.getDx(Direction.left));' + NL +
+  '        System.out.println(Direction.getDy("unten"));') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'top' + NL + '1' + NL + '-1' + NL + '-1' + NL + '1' + NL, 'Richtungs-Konstanten und Deltas');
+});
+t('PositionUndCollisionPair', { 'Main.java': mainOf(
+  '        Position p = new Position(3, 7);' + NL +
+  '        System.out.println(p.toString());' + NL +
+  '        p.x = 10;' + NL +
+  '        System.out.println(p.x + " " + p.y);' + NL +
+  '        Circle c1 = new Circle(0, 0, 5);' + NL +
+  '        Circle c2 = new Circle(2, 0, 5);' + NL +
+  '        CollisionPair paar = new CollisionPair(c1, c2);' + NL +
+  '        System.out.println(paar.shapeA.getX());' + NL +
+  '        System.out.println(paar.shapeB.getX());') }, r => {
+  eq(r.ok, true, 'ok: ' + JSON.stringify(r.errors));
+  eq(r.output, '(3|7)' + NL + '10 7' + NL + '0.0' + NL + '2.0' + NL, 'Position-Felder und CollisionPair');
+});
+
+/* --- Input (ohne Fenster: Vorgabewert) --- */
+t('InputVorgabewerte', { 'Main.java': mainOf(
+  '        String name = Input.readString("Wie heißt du?", "Alex");' + NL +
+  '        System.out.println(name);' + NL +
+  '        System.out.println(Input.readInt("Zahl?", 42));' + NL +
+  '        System.out.println(Input.readDouble("Kommazahl?", 1.5));' + NL +
+  '        System.out.println(Input.readBoolean("Ja?", true));') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'Alex' + NL + '42' + NL + '1.5' + NL + 'true' + NL, 'Vorgabewerte ohne Dialogfenster');
+});
+
+/* --- SystemTools, Sound, Gamepad --- */
+t('SystemTools', { 'Main.java': mainOf(
+  '        SystemTools.setSpeed(60);' + NL +
+  '        System.out.println(SystemTools.getSpeed());' + NL +
+  '        System.out.println("Kurz");' + NL +
+  '        SystemTools.clearScreen();' + NL +
+  '        System.out.println("Danach");' + NL +
+  '        SystemTools.startLoggingPrintOutput();' + NL +
+  '        System.out.println("Mit Log");' + NL +
+  '        System.out.println(SystemTools.getPrintLog());' + NL +
+  '        System.out.println(SystemTools.getNumberOfProcessorCores() >= 1);') }, r => {
+  eq(r.ok, true, 'ok: ' + JSON.stringify(r.errors));
+  eq(r.output, 'Danach' + NL + 'Mit Log' + NL + 'Mit Log' + NL + '' + NL + 'true' + NL, 'Speed, clearScreen, Print-Log, Kerne');
+});
+t('SoundUndGamepad', { 'Main.java': mainOf(
+  '        Sound.playSound("beep");' + NL +
+  '        Sound.playSound("win");' + NL +
+  '        System.out.println(Gamepad.isConnected(0));' + NL +
+  '        System.out.println(Gamepad.getAxisValue(0, 0));') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'false' + NL + '0.0' + NL, 'Sound ohne Fehler, Gamepad ohne angeschlossenem Pad');
+});
+t('SoundUnbekanntFehler', { 'Main.java': mainOf('        Sound.playSound("trommel");') }, r => {
+  err1(r, 'runtime');
+  if (r.errors[0].message.indexOf('trommel') === -1) { throw new Error('Unbekannter Sound gemeldet: ' + r.errors[0].message); }
+});
+
+/* --- Arc und Sector (Grafik aus der Online-IDE) --- */
+t('ArcSectorFiguren', { 'Main.java': mainOf(
+  '        World w = new World(400, 300);' + NL +
+  '        Arc a = new Arc(200, 150, 20, 80, 0, 90);' + NL +
+  '        System.out.println(a.getInnerRadius());' + NL +
+  '        System.out.println(a.getOuterRadius());' + NL +
+  '        System.out.println(a.containsPoint(250, 150));' + NL +
+  '        System.out.println(a.containsPoint(150, 150));' + NL +
+  '        a.setStartAngle(180);' + NL +
+  '        System.out.println(a.getStartAngle());' + NL +
+  '        Sector s = new Sector(200, 150, 60, 0, 45);' + NL +
+  '        System.out.println(s.getRadius());' + NL +
+  '        System.out.println(s.containsPoint(230, 160));' + NL +
+  '        System.out.println(s.containsPoint(200, 150));' + NL +
+  '        s.drawRadii(true);' + NL +
+  '        System.out.println(s.getEndAngle());') }, r => {
+  eq(r.ok, true, 'ok: ' + JSON.stringify(r.errors));
+  eq(r.output, '20.0' + NL + '80.0' + NL + 'true' + NL + 'false' + NL + '180.0' + NL + '60.0' + NL + 'true' + NL + 'true' + NL + '45.0' + NL, 'Arc- und Sector-Methoden');
+});
+t('ArcVererbung', {
+  'Smile.java': [
+    'class Smile extends Arc {',
+    '    Smile() { super(200, 150, 20, 80, 20, 160); }',
+    '}',
+    'Smile m = new Smile();',
+    'm.move(10, 0);',
+    'System.out.println(m.getX());'
+  ].join(NL)
+}, r => {
+  eq(r.ok, true, 'ok: ' + JSON.stringify(r.errors));
+  eq(r.output, '210.0' + NL, 'Vererbung von Arc mit move');
+});
+
 console.log('');
 console.log(failed === 0 ? ('Alle ' + count + ' Tests bestanden.') : (failed + ' von ' + count + ' Tests fehlgeschlagen.'));
 process.exit(failed === 0 ? 0 : 1);

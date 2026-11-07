@@ -1087,7 +1087,7 @@
 
   var STRING_METHODS = ['length()', 'charAt(', 'substring(', 'indexOf(', 'equals(', 'equalsIgnoreCase(', 'contains(', 'startsWith(', 'toUpperCase()', 'toLowerCase()', 'trim()', 'replace(', 'isEmpty()'];
   var REPL_KEYWORDS = ['new', 'int', 'double', 'boolean', 'char', 'if', 'while', 'for', 'return', 'true', 'false', 'null'];
-  var BUILTIN_CLASSES = ['System', 'Math', 'Integer', 'Double', 'String', 'Datenbank'];
+  var BUILTIN_CLASSES = ['System', 'Math', 'Integer', 'Double', 'String', 'Datenbank', 'Input', 'Key', 'Random', 'Assertions', 'MathTools', 'Vector2', 'Position', 'Direction', 'CollisionPair', 'SystemTools', 'Sound', 'Gamepad'];
 
   /* Empfänger vor einem abschließenden Punkt ermitteln (auch System.out.). */
   function dotReceiver(t, dotIdx) {
@@ -1307,6 +1307,66 @@
         for (i = 0; i < dbs.length; i++) { out.push({ label: dbs[i], insert: dbs[i], hint: 'Datenbank (SQL direkt in Java)' }); }
         return out;
       }
+      if (recv === 'Input') {
+        var ins = ['readString(', 'readInt(', 'readDouble(', 'readBoolean(', 'readChar(', 'isKeyDown('];
+        for (i = 0; i < ins.length; i++) { out.push({ label: ins[i], insert: ins[i], hint: 'Eingabe (wie Online-IDE)' }); }
+        return out;
+      }
+      if (recv === 'Key') {
+        var ks = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Space', 'Escape'];
+        for (i = 0; i < ks.length; i++) { out.push({ label: ks[i], insert: ks[i], hint: 'Tastenname' }); }
+        return out;
+      }
+      if (recv === 'Random') {
+        var rs = ['randint(', 'randdouble(', 'nextInt(', 'nextDouble()'];
+        for (i = 0; i < rs.length; i++) { out.push({ label: rs[i], insert: rs[i], hint: 'Zufallszahlen' }); }
+        return out;
+      }
+      if (recv === 'Assertions') {
+        var as = ['assertTrue(', 'assertFalse(', 'assertEquals(', 'assertCodeReached(', 'fail('];
+        for (i = 0; i < as.length; i++) { out.push({ label: as[i], insert: as[i], hint: 'Automatische Prüfung' }); }
+        return out;
+      }
+      if (recv === 'MathTools') {
+        var mts = ['distancePointToLine(', 'distancePointToLineSegment(', 'intersectLineSegments(', 'polygonContainsPoint(', 'intersectCircleWithPolygon('];
+        for (i = 0; i < mts.length; i++) { out.push({ label: mts[i], insert: mts[i], hint: 'Mathe-Helfer' }); }
+        return out;
+      }
+      if (recv === 'Vector2') {
+        var v2s = ['distance(', 'fromPolarCoordinates(', 'getX()', 'getY()', 'plus(', 'minus(', 'scaledBy(', 'getLength()', 'getAngleDeg()', 'scalarProduct(', 'distanceTo(', 'clone()'];
+        for (i = 0; i < v2s.length; i++) { out.push({ label: v2s[i], insert: v2s[i], hint: '2D-Vektor' }); }
+        return out;
+      }
+      if (recv === 'Position') {
+        var ps = ['getX()', 'getY()', 'toString()'];
+        for (i = 0; i < ps.length; i++) { out.push({ label: ps[i], insert: ps[i], hint: 'Gitter-Position' }); }
+        return out;
+      }
+      if (recv === 'Direction') {
+        var ds2 = ['top', 'right', 'bottom', 'left', 'getDx(', 'getDy('];
+        for (i = 0; i < ds2.length; i++) { out.push({ label: ds2[i], insert: ds2[i], hint: 'Richtung' }); }
+        return out;
+      }
+      if (recv === 'CollisionPair') {
+        var cps = ['shapeA', 'shapeB'];
+        for (i = 0; i < cps.length; i++) { out.push({ label: cps[i], insert: cps[i], hint: 'Figuren des Paares' }); }
+        return out;
+      }
+      if (recv === 'SystemTools') {
+        var sts = ['clearScreen()', 'setSpeed(', 'getSpeed()', 'getNumberOfProcessorCores()', 'startLoggingPrintOutput()', 'stopLoggingPrintOutput()', 'getPrintLog()'];
+        for (i = 0; i < sts.length; i++) { out.push({ label: sts[i], insert: sts[i], hint: 'System-Funktionen' }); }
+        return out;
+      }
+      if (recv === 'Sound') {
+        var sds = ['playSound('];
+        for (i = 0; i < sds.length; i++) { out.push({ label: sds[i], insert: sds[i], hint: 'Töne ausgeben (beep, boom, ...)' }); }
+        return out;
+      }
+      if (recv === 'Gamepad') {
+        var gps = ['isConnected(', 'isButtonDown(', 'getAxisValue('];
+        for (i = 0; i < gps.length; i++) { out.push({ label: gps[i], insert: gps[i], hint: 'Controller abfragen' }); }
+        return out;
+      }
       return out;
     }
 
@@ -1316,7 +1376,7 @@
   /* Vorab-Prüfung nicht unterstützter Sprachelemente mit klarer Meldung. */
   function precheck(files) {
     var checks = [
-      [/Scanner/, 'Scanner (Tastatur-Eingaben) wird noch nicht unterstützt.', 'Die Simulation unterstützt noch keine Eingaben. Arbeite mit festen Werten im Programm.'],
+      [/Scanner/, 'Scanner (Tastatur-Eingaben) wird nicht unterstützt.', 'Nutze die Klasse Input wie in der Online-IDE: String name = Input.readString("Wie heißt du?"); oder int alter = Input.readInt("Wie alt bist du?", 12);'],
       [/\bArrayList\b|\bList\b/, 'ArrayList und List werden noch nicht unterstützt.', 'Nutze Arrays, z. B. int[] zahlen = new int[5];'],
       [/\bHashMap\b|\bMap\b|\bHashSet\b|\bSet\b/, 'HashMap, Map, HashSet und Set werden noch nicht unterstützt.', 'Nutze Arrays, um mehrere Werte zu speichern.'],
       [/\bswitch\b/, 'switch wird noch nicht unterstützt.', 'Nutze if / else if / else statt switch.'],
@@ -1351,7 +1411,7 @@
         re.lastIndex = 0;
         var m = re.exec(lines[li]);
         while (m) {
-          if (!classMap[m[1]] && !GFX_CLASSES[m[1]]) {
+          if (!classMap[m[1]] && !GFX_CLASSES[m[1]] && !NAT_CLASSES[m[1]]) {
             errors.push(JError('compile', names[ni], li + 1, 'Zeile ' + (li + 1) + ': Unbekannte Klasse ' + m[1] + ' bei new.', 'Lege eine Datei ' + m[1] + '.java mit der Klasse ' + m[1] + ' an (oder prüfe die Schreibweise).'));
             return false;
           }
@@ -1469,7 +1529,7 @@
   /* Typprüfung bei Zuweisung (deutsche Hilfestellung statt Compiler-Kauderwelsch). */
   /* Ist val.cls eine Unterklasse von target? (Vererbung: Hund ist ein Tier) */
   function classIsA(clsName, targetName) {
-    var cc = RUN_CLASS_MAP[clsName] || (GFX_CLASSES[clsName] ? { name: clsName, parent: null } : null);
+    var cc = RUN_CLASS_MAP[clsName] || (GFX_CLASSES[clsName] ? { name: clsName, parent: null } : null) || (NAT_CLASSES[clsName] ? { name: clsName, parent: null } : null);
     var hop = 0;
     while (cc && hop < 32) {
       if (cc.name === targetName) { return true; }
@@ -1671,6 +1731,7 @@
 
   function output(ctx, text) {
     ctx.vm.out.push(text);
+    if (SYS_PRINT_LOG) { SYS_PRINT_LOG.push(text); }
     var len = 0;
     var i;
     for (i = 0; i < ctx.vm.out.length; i++) { len += ctx.vm.out[i].length; }
@@ -1774,6 +1835,13 @@
       return '[' + parts.join(', ') + ']';
     }
     if (v.t === 'ref') {
+      if (v.obj && v.obj.nat) {
+        try {
+          var nres = natCall(v, 'toString', [], ctx, line);
+          if (nres.t === 'String') { return nres.v; }
+        } catch (eNat) { }
+        return v.cls + '@InfoCraft';
+      }
       var cls = RUN_CLASS_MAP[v.cls];
       if (cls) {
         var tm = findMethod(cls, 'toString', 0);
@@ -1841,6 +1909,12 @@
             for (gi2 = 0; gi2 < e.args.length; gi2++) { ga.push(evalExpr(e.args[gi2], env, ctx)); }
             return gfxNew(e.cls, ga, ctx, e.line);
           }
+          if (NAT_CLASSES[e.cls]) {
+            var na = [];
+            var ni2;
+            for (ni2 = 0; ni2 < e.args.length; ni2++) { na.push(evalExpr(e.args[ni2], env, ctx)); }
+            return natNew(e.cls, na, ctx, e.line);
+          }
           throw rt(ctx, e.line, 'Unbekannte Klasse ' + e.cls + '.', 'Es gibt keine Klasse ' + e.cls + '. Prüfe die Schreibweise oder lege die Klasse an.');
         }
         var aargs = [];
@@ -1869,8 +1943,8 @@
       }
       case 'index': return resolveLValue(e, env, ctx).get();
       case 'field': {
-        /* Statische Konstanten der Grafik-API: Color.red, Alignment.center */
-        if (e.target && e.target.type === 'name' && (e.target.v === 'Color' || e.target.v === 'Alignment') && !envFind(env, e.target.v)) {
+        /* Statische Konstanten der Grafik-API: Color.red, Alignment.center, Key.ArrowUp, Direction.top */
+        if (e.target && e.target.type === 'name' && (e.target.v === 'Color' || e.target.v === 'Alignment' || e.target.v === 'Key' || e.target.v === 'Direction') && !envFind(env, e.target.v)) {
           return gfxStaticGet(e.target.v, e.name, ctx, e.line);
         }
         return resolveField(e, evalExpr(e.target, env, ctx), ctx);
@@ -1944,6 +2018,26 @@
       if (target.t === 'null') { throw rt(ctx, e.line, 'NullPointerException: Das Objekt für ' + '.' + e.name + ' ist null.', 'Das Objekt wurde vermutlich noch nicht mit new erzeugt oder eine Methode hat null zurückgegeben.'); }
       if (target.t !== 'ref') { throw rt(ctx, e.line, 'Vor .' + e.name + ' steht kein Objekt.', 'Attribute erreicht man über ein Objekt, z. B. auto.farbe'); }
       var o2 = target.obj;
+      /* Online-IDE-Klassen: Zuweisungen an x/y typgerecht umwandeln */
+      if (o2.nat && o2.nat.kind === 'vector2' && (e.name === 'x' || e.name === 'y')) {
+        return {
+          get: function () { return mkDbl(o2.f[e.name].v); },
+          set: function (nv) {
+            if (nv.t === 'int' || nv.t === 'double') { o2.f[e.name] = mkDbl(nv.v); }
+            else { throw rt(ctx, e.line, 'Das Attribut ' + e.name + ' von Vector2 braucht eine Zahl.', 'z. B. v.x = 5;'); }
+          }
+        };
+      }
+      if (o2.nat && o2.nat.kind === 'position' && (e.name === 'x' || e.name === 'y')) {
+        return {
+          get: function () { return mkInt(o2.f[e.name].v); },
+          set: function (nv) {
+            if (nv.t === 'int') { o2.f[e.name] = mkInt(nv.v); }
+            else if (nv.t === 'double') { throw rt(ctx, e.line, 'Position.' + e.name + ' ist int, der Wert hat Nachkommastellen (double).', 'Gitter-Koordinaten sind ganze Zahlen: schreibe p.' + e.name + ' = (int) wert; wenn nötig.'); }
+            else { throw rt(ctx, e.line, 'Das Attribut ' + e.name + ' von Position braucht eine ganze Zahl.', ''); }
+          }
+        };
+      }
       if (!Object.prototype.hasOwnProperty.call(o2.f, e.name)) {
         throw rt(ctx, e.line, 'Das Attribut ' + e.name + ' gehört nicht zur Klasse ' + target.cls + '.', 'Prüfe Schreibweise und Groß-/Kleinschreibung und ob die Klasse ein Attribut ' + e.name + ' hat.');
       }
@@ -1979,6 +2073,13 @@
     if (e.name === 'length' && target.t === 'array') { return mkInt(target.arr.length); }
     if (target.t === 'null') { throw rt(ctx, e.line, 'NullPointerException: Das Objekt für .' + e.name + ' ist null.', 'Erzeuge das Objekt mit new, bevor du darauf zugreifst.'); }
     if (target.t !== 'ref') { throw rt(ctx, e.line, 'Vor .' + e.name + ' steht kein Objekt.', ''); }
+    /* Online-IDE-Klassen: x/y sind bei Vector2 double, bei Position int */
+    if (target.obj && target.obj.nat && target.obj.nat.kind === 'vector2' && (e.name === 'x' || e.name === 'y')) {
+      return mkDbl(target.obj.f[e.name].v);
+    }
+    if (target.obj && target.obj.nat && target.obj.nat.kind === 'position' && (e.name === 'x' || e.name === 'y')) {
+      return mkInt(target.obj.f[e.name].v);
+    }
     if (!Object.prototype.hasOwnProperty.call(target.obj.f, e.name)) {
       throw rt(ctx, e.line, 'Das Attribut ' + e.name + ' gehört nicht zur Klasse ' + target.cls + '.', 'Prüfe Schreibweise und Groß-/Kleinschreibung und ob die Klasse ein Attribut ' + e.name + ' hat.');
     }
@@ -2173,6 +2274,30 @@
     if (target.type === 'name' && target.v === 'Double') { return doubleCall(name, args, ctx, e.line); }
     if (target.type === 'name' && target.v === 'String') { return stringStaticCall(name, args, ctx, e.line); }
     if (target.type === 'name' && target.v === 'Datenbank') { return dbCall(name, args, ctx, e.line); }
+    /* Klassen nach dem Vorbild der Online-IDE */
+    if (target.type === 'name' && target.v === 'Input') { return inputCall(name, args, ctx, e.line); }
+    if (target.type === 'name' && target.v === 'Assertions') { return assertCall(name, args, ctx, e.line); }
+    if (target.type === 'name' && target.v === 'MathTools') { return mathToolsCall(name, args, ctx, e.line); }
+    if (target.type === 'name' && target.v === 'SystemTools') { return systemToolsCall(name, args, ctx, e.line); }
+    if (target.type === 'name' && target.v === 'Sound') { return soundCall(name, args, ctx, e.line); }
+    if (target.type === 'name' && target.v === 'Gamepad') { return gamepadCall(name, args, ctx, e.line); }
+    if (target.type === 'name' && target.v === 'Vector2') { return vector2StaticCall(name, args, ctx, e.line); }
+    if (target.type === 'name' && target.v === 'Direction') { return directionCall(name, args, ctx, e.line); }
+    if (target.type === 'name' && target.v === 'Random') {
+      if (name === 'randint' && args.length === 2) {
+        var rfrom = Math.floor(gfxNum(args, 0, 'Random.randint', ctx, e.line));
+        var rto = Math.floor(gfxNum(args, 1, 'Random.randint', ctx, e.line));
+        if (rto < rfrom) { throw rt(ctx, e.line, 'Random.randint: Die obere Grenze darf nicht kleiner als die untere sein.', 'z. B. Random.randint(1, 6) liefert 1 bis 6.'); }
+        return mkInt(rfrom + Math.floor(Math.random() * (rto - rfrom + 1)));
+      }
+      if (name === 'randdouble' && args.length === 2) {
+        var dfrom = gfxNum(args, 0, 'Random.randdouble', ctx, e.line);
+        var dto = gfxNum(args, 1, 'Random.randdouble', ctx, e.line);
+        if (dto < dfrom) { throw rt(ctx, e.line, 'Random.randdouble: Die obere Grenze darf nicht kleiner als die untere sein.', 'z. B. Random.randdouble(0, 1) liefert 0.0 bis 1.0.'); }
+        return mkDbl(dfrom + Math.random() * (dto - dfrom));
+      }
+      throw rt(ctx, e.line, 'Random.' + name + ' (mit ' + args.length + ' Parametern) wird nicht unterstützt.', 'Verfügbar: Random.randint(von, bis), Random.randdouble(von, bis). Für ein eigenes Würfel-Objekt: new Random() und dann wuerfel.nextInt(6).');
+    }
     /* Statische Standardwerte der Grafik-API */
     if (target.type === 'name' && (target.v === 'Shape' || target.v === 'FilledShape')) { return gfxStaticCall(target.v, name, args, ctx, e.line); }
 
@@ -2194,6 +2319,8 @@
     }
     if (recv.t === 'null') { throw rt(ctx, e.line, 'NullPointerException: Der Aufruf ' + name + '(...) läuft auf null.', 'Das Objekt wurde vermutlich noch nicht mit new erzeugt. Prüfe auch Rückgaben anderer Methoden.'); }
     if (recv.t !== 'ref') { throw rt(ctx, e.line, 'Vor .' + name + '(...) steht kein Objekt.', ''); }
+    /* Wert-Klassen nach dem Vorbild der Online-IDE: Vector2, Position, CollisionPair, Random */
+    if (recv.obj && recv.obj.nat) { return natCall(recv, name, args, ctx, e.line); }
     /* Grafik-Objekte (auch eigene Unterklassen): eigene Überschreibungen
      * gewinnen, danach kommt die eingebaute Grafik-API. */
     if (recv.obj && recv.obj.g) {
@@ -2937,6 +3064,469 @@
     throw rt(ctx, line, 'Die String-Methode ' + name + ' (mit ' + args.length + ' Parametern) wird nicht unterstützt.', 'Verfügbar: length, charAt, substring, indexOf, equals, equalsIgnoreCase, contains, startsWith, endsWith, toUpperCase, toLowerCase, trim, replace, isEmpty, compareTo.');
   }
 
+  /* ================= Klassen nach dem Vorbild der Online-IDE =================
+   * Die Online-IDE (www.online-ide.de / learnj.de) stellt Schülerinnen und
+   * Schülern eine Klassenbibliothek bereit. InfoCraft übernimmt davon die im
+   * Unterricht gebrauchten Klassen in derselben Art und Weise: gleiche Namen,
+   * gleiche Methoden, kindgerechte deutsche Meldungen.
+   * Wert-Klassen (mit new): Vector2, Position, CollisionPair, Random.
+   * Klassen mit statischen Methoden: Input, Key, Assertions, MathTools,
+   * Direction, SystemTools, Sound, Gamepad (Vector2 hat zusätzlich die
+   * statischen Methoden distance und fromPolarCoordinates).
+   * Die Grafik-Figuren Arc und Sector stehen unten im Grafik-Abschnitt.
+   * Bewusst (noch) nicht enthalten: Timer (bräuchte Schnittstellen/Lambdas),
+   * Sprite-Bildbibliotheken, 3D-Klassen, Netzwerk (MQTT/WebSocket), Robot,
+   * Kara, Hamster, Processing und die Abiturklassen.
+   */
+  var NAT_CLASSES = Object.create(null);
+  var NATCL = ['Vector2', 'Position', 'CollisionPair', 'Random'];
+  var natci;
+  for (natci = 0; natci < NATCL.length; natci++) { NAT_CLASSES[NATCL[natci]] = 1; }
+
+  var KEY_TABLE = Object.create(null);
+  KEY_TABLE.ArrowUp = 'ArrowUp'; KEY_TABLE.ArrowDown = 'ArrowDown';
+  KEY_TABLE.ArrowLeft = 'ArrowLeft'; KEY_TABLE.ArrowRight = 'ArrowRight';
+  KEY_TABLE.Enter = 'Enter'; KEY_TABLE.Space = 'Space'; KEY_TABLE.Shift = 'Shift';
+  KEY_TABLE.Alt = 'Alt'; KEY_TABLE.Strg = 'Control'; KEY_TABLE.PageUp = 'PageUp';
+  KEY_TABLE.PageDown = 'PageDown'; KEY_TABLE.Backspace = 'Backspace';
+  KEY_TABLE.Escape = 'Escape'; KEY_TABLE.Entf = 'Delete'; KEY_TABLE.Einf = 'Insert';
+  KEY_TABLE.Ende = 'End';
+
+  var SYS_PRINT_LOG = null;
+  var SOUND_CTX = null;
+  var SOUND_TABLE = Object.create(null);
+  SOUND_TABLE.beep = { type: 'sine', freq: 440, dur: 0.15 };
+  SOUND_TABLE.click = { type: 'square', freq: 900, dur: 0.04 };
+  SOUND_TABLE.coin = { type: 'square', freq: 988, dur: 0.09, freq2: 1319 };
+  SOUND_TABLE.boom = { type: 'triangle', freq: 90, dur: 0.35, sweep: 0.4 };
+  SOUND_TABLE.laser = { type: 'sawtooth', freq: 1400, dur: 0.18, sweep: 0.02 };
+  SOUND_TABLE.jump = { type: 'sine', freq: 330, dur: 0.14, freq2: 660 };
+  SOUND_TABLE.win = { type: 'sine', freq: 523, dur: 0.5, steps: [523, 659, 784, 1047] };
+  SOUND_TABLE.lose = { type: 'sawtooth', freq: 392, dur: 0.5, steps: [392, 370, 349, 330] };
+  SOUND_TABLE.alarm = { type: 'square', freq: 700, dur: 0.6, steps: [700, 500, 700, 500] };
+
+  function natNew(clsName, args, ctx, line) {
+    if (clsName === 'Vector2') {
+      var vx = args.length > 0 ? gfxNum(args, 0, 'new Vector2', ctx, line) : 0;
+      var vy = args.length > 1 ? gfxNum(args, 1, 'new Vector2', ctx, line) : 0;
+      return mkVec(vx, vy);
+    }
+    if (clsName === 'Position') {
+      var px = Math.floor(gfxNum(args, 0, 'new Position', ctx, line));
+      var py = args.length > 1 ? Math.floor(gfxNum(args, 1, 'new Position', ctx, line)) : 0;
+      return { t: 'ref', cls: 'Position', obj: { cls: 'Position', f: { x: mkInt(px), y: mkInt(py) }, nat: { kind: 'position' } } };
+    }
+    if (clsName === 'CollisionPair') {
+      if (args.length !== 2 || args[0].t !== 'ref' || args[1].t !== 'ref') {
+        throw rt(ctx, line, 'new CollisionPair braucht genau 2 Figuren.', 'z. B. new CollisionPair(auto, ball)');
+      }
+      return { t: 'ref', cls: 'CollisionPair', obj: { cls: 'CollisionPair', f: { shapeA: args[0], shapeB: args[1] }, nat: { kind: 'collisionpair' } } };
+    }
+    if (clsName === 'Random') {
+      return { t: 'ref', cls: 'Random', obj: { cls: 'Random', f: {}, nat: { kind: 'random' } } };
+    }
+    throw rt(ctx, line, 'Die Klasse ' + clsName + ' kann nicht mit new angelegt werden.', '');
+  }
+
+  function mkVec(x, y) {
+    return { t: 'ref', cls: 'Vector2', obj: { cls: 'Vector2', f: { x: mkDbl(x), y: mkDbl(y) }, nat: { kind: 'vector2' } } };
+  }
+  function vecOf(arg, what, ctx, line) {
+    if (arg && arg.t === 'ref' && arg.obj && arg.obj.nat && arg.obj.nat.kind === 'vector2') {
+      return { x: arg.obj.f.x.v, y: arg.obj.f.y.v };
+    }
+    throw rt(ctx, line, what + ' braucht ein Vector2-Objekt.', 'z. B. new Vector2(3, 4)');
+  }
+  function vecSetX(v, x) { v.obj.f.x = mkDbl(x); }
+  function vecSetY(v, y) { v.obj.f.y = mkDbl(y); }
+
+  function natCall(recv, name, args, ctx, line) {
+    var kind = recv.obj.nat.kind;
+    if (kind === 'vector2') { return vecCall(recv, name, args, ctx, line); }
+    if (kind === 'position') {
+      if (name === 'toString' && args.length === 0) { return mkStr('(' + recv.obj.f.x.v + '|' + recv.obj.f.y.v + ')'); }
+      if (name === 'getX' && args.length === 0) { return mkInt(recv.obj.f.x.v); }
+      if (name === 'getY' && args.length === 0) { return mkInt(recv.obj.f.y.v); }
+      throw rt(ctx, line, 'Die Klasse Position hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Verfügbar: getX(), getY(), toString(). Die Koordinaten sind Attribute: p.x und p.y.');
+    }
+    if (kind === 'collisionpair') {
+      if (name === 'toString' && args.length === 0) { return mkStr('CollisionPair(' + recv.obj.f.shapeA.cls + ', ' + recv.obj.f.shapeB.cls + ')'); }
+      throw rt(ctx, line, 'Die Klasse CollisionPair hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Die beiden Figuren sind Attribute: paer.shapeA und paer.shapeB.');
+    }
+    if (kind === 'random') {
+      if (name === 'nextInt' && args.length === 1) {
+        var to = Math.floor(gfxNum(args, 0, 'nextInt', ctx, line));
+        if (to <= 0) { throw rt(ctx, line, 'Random.nextInt braucht eine positive Zahl als Grenze.', 'z. B. wuerfel.nextInt(6) liefert eine Zahl von 0 bis 5.'); }
+        return mkInt(Math.floor(Math.random() * to));
+      }
+      if (name === 'nextInt' && args.length === 0) { return mkInt(Math.floor(Math.random() * 2147483647)); }
+      if (name === 'nextDouble' && args.length === 0) { return mkDbl(Math.random()); }
+      throw rt(ctx, line, 'Die Klasse Random hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Verfügbar: nextInt(obereGrenze), nextInt(), nextDouble().');
+    }
+    throw rt(ctx, line, 'Interne Verarbeitung für ' + recv.cls + ' fehlt.', '');
+  }
+
+  function vecCall(v, name, args, ctx, line) {
+    var p = vecOf(v, 'Vector2', ctx, line);
+    if (name === 'getX' && args.length === 0) { return mkDbl(p.x); }
+    if (name === 'getY' && args.length === 0) { return mkDbl(p.y); }
+    if (name === 'clone' && args.length === 0) { return mkVec(p.x, p.y); }
+    if (name === 'getLength' && args.length === 0) { return mkDbl(Math.sqrt(p.x * p.x + p.y * p.y)); }
+    if (name === 'getAngleDeg' && args.length === 0) { return mkDbl(Math.atan2(p.y, p.x) * 180 / Math.PI); }
+    if (name === 'getAngleRad' && args.length === 0) { return mkDbl(Math.atan2(p.y, p.x)); }
+    if (name === 'toString' && args.length === 0) { return mkStr('(' + fmtDouble(p.x) + ', ' + fmtDouble(p.y) + ')'); }
+    if (name === 'equals' && args.length === 1) { var o0 = vecOf(args[0], 'equals', ctx, line); return mkBool(o0.x === p.x && o0.y === p.y); }
+    if (name === 'scalarProduct' && args.length === 1) { var o1 = vecOf(args[0], 'scalarProduct', ctx, line); return mkDbl(p.x * o1.x + p.y * o1.y); }
+    if (name === 'distanceTo' && args.length === 1) {
+      var o2 = vecOf(args[0], 'distanceTo', ctx, line);
+      return mkDbl(Math.sqrt((p.x - o2.x) * (p.x - o2.x) + (p.y - o2.y) * (p.y - o2.y)));
+    }
+    if (name === 'plus' && args.length === 1) { var o3 = vecOf(args[0], 'plus', ctx, line); return mkVec(p.x + o3.x, p.y + o3.y); }
+    if (name === 'minus' && args.length === 1) { var o4 = vecOf(args[0], 'minus', ctx, line); return mkVec(p.x - o4.x, p.y - o4.y); }
+    if (name === 'add' && args.length === 1) { var o5 = vecOf(args[0], 'add', ctx, line); vecSetX(v, p.x + o5.x); vecSetY(v, p.y + o5.y); return v; }
+    if (name === 'sub' && args.length === 1) { var o6 = vecOf(args[0], 'sub', ctx, line); vecSetX(v, p.x - o6.x); vecSetY(v, p.y - o6.y); return v; }
+    if (name === 'scaledBy' && args.length === 1) { var f0 = gfxNum(args, 0, 'scaledBy', ctx, line); return mkVec(p.x * f0, p.y * f0); }
+    if (name === 'scale' && args.length === 1) { var f1 = gfxNum(args, 0, 'scale', ctx, line); vecSetX(v, p.x * f1); vecSetY(v, p.y * f1); return v; }
+    if (name === 'setLength' && args.length === 1) { return vecWithLength(v, p, gfxNum(args, 0, 'setLength', ctx, line), ctx, line); }
+    if (name === 'getUnitVector' && args.length === 0) { return vecUnit(v, p, ctx, line); }
+    if (name === 'normalized' && args.length === 0) { return vecUnit(v, p, ctx, line); }
+    if (name === 'normalize' && args.length === 0) { var u0 = vecUnit(v, p, ctx, line); vecSetX(v, u0.obj.f.x.v); vecSetY(v, u0.obj.f.y.v); return v; }
+    if (name === 'rotatedBy' && args.length === 1) { return vecRotated(v, p, gfxNum(args, 0, 'rotatedBy', ctx, line)); }
+    if (name === 'rotate' && args.length === 1) { var r0 = vecRotated(v, p, gfxNum(args, 0, 'rotate', ctx, line)); vecSetX(v, r0.obj.f.x.v); vecSetY(v, r0.obj.f.y.v); return v; }
+    throw rt(ctx, line, 'Die Klasse Vector2 hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Verfügbar: getX(), getY(), plus(), minus(), add(), sub(), scaledBy(), scale(), getLength(), setLength(), getAngleDeg(), getAngleRad(), getUnitVector(), normalized(), normalize(), rotatedBy(), rotate(), scalarProduct(), distanceTo(), clone(), equals(). Die Koordinaten sind Attribute: v.x und v.y.');
+  }
+  function vecUnit(v, p, ctx, line) {
+    var len = Math.sqrt(p.x * p.x + p.y * p.y);
+    if (len === 0) { throw rt(ctx, line, 'Der Nullvektor hat keine Richtung und kann nicht normiert werden.', 'Ein Einheitsvektor braucht mindestens eine Koordinate ungleich 0.'); }
+    return mkVec(p.x / len, p.y / len);
+  }
+  function vecWithLength(v, p, nl, ctx, line) {
+    if (nl < 0) { throw rt(ctx, line, 'Die Länge eines Vektors darf nicht negativ sein.', 'z. B. v.setLength(2)'); }
+    var u = vecUnit(v, p, ctx, line);
+    return mkVec(u.obj.f.x.v * nl, u.obj.f.y.v * nl);
+  }
+  function vecRotated(v, p, deg) {
+    var rad = deg * Math.PI / 180;
+    var c = Math.cos(rad), s = Math.sin(rad);
+    return mkVec(p.x * c - p.y * s, p.x * s + p.y * c);
+  }
+
+  function vector2StaticCall(name, args, ctx, line) {
+    if (name === 'distance' && args.length === 4) {
+      var x1 = gfxNum(args, 0, 'Vector2.distance', ctx, line);
+      var y1 = gfxNum(args, 1, 'Vector2.distance', ctx, line);
+      var x2 = gfxNum(args, 2, 'Vector2.distance', ctx, line);
+      var y2 = gfxNum(args, 3, 'Vector2.distance', ctx, line);
+      return mkDbl(Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)));
+    }
+    if (name === 'fromPolarCoordinates' && args.length === 2) {
+      var r = gfxNum(args, 0, 'Vector2.fromPolarCoordinates', ctx, line);
+      var deg = gfxNum(args, 1, 'Vector2.fromPolarCoordinates', ctx, line);
+      var rad = deg * Math.PI / 180;
+      return mkVec(r * Math.cos(rad), r * Math.sin(rad));
+    }
+    throw rt(ctx, line, 'Die Klasse Vector2 hat keine statische Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Verfügbar: Vector2.distance(x1, y1, x2, y2), Vector2.fromPolarCoordinates(r, winkelGrad).');
+  }
+
+  function directionDelta(d) {
+    var k = String(d).toLowerCase();
+    if (k === 'top' || k === 'up' || k === 'oben' || k === 'norden' || k === 'n') { return { dx: 0, dy: -1 }; }
+    if (k === 'right' || k === 'rechts' || k === 'osten' || k === 'o') { return { dx: 1, dy: 0 }; }
+    if (k === 'bottom' || k === 'down' || k === 'unten' || k === 'sueden' || k === 'sued' || k === 's') { return { dx: 0, dy: 1 }; }
+    if (k === 'left' || k === 'links' || k === 'westen' || k === 'w') { return { dx: -1, dy: 0 }; }
+    return null;
+  }
+  function directionCall(name, args, ctx, line) {
+    if (name === 'getDx' && args.length === 1) {
+      var d1 = directionDelta(gfxStr(args, 0, 'Direction.getDx', ctx, line));
+      if (!d1) { throw rt(ctx, line, 'Direction.getDx kennt diese Richtung nicht.', 'Verfügbar: Direction.top, Direction.right, Direction.bottom, Direction.left.'); }
+      return mkInt(d1.dx);
+    }
+    if (name === 'getDy' && args.length === 1) {
+      var d2 = directionDelta(gfxStr(args, 0, 'Direction.getDy', ctx, line));
+      if (!d2) { throw rt(ctx, line, 'Direction.getDy kennt diese Richtung nicht.', 'Verfügbar: Direction.top, Direction.right, Direction.bottom, Direction.left.'); }
+      return mkInt(d2.dy);
+    }
+    throw rt(ctx, line, 'Die Klasse Direction hat keine statische Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Verfügbar: Direction.getDx(richtung), Direction.getDy(richtung). Die Richtungen sind Konstanten: Direction.top, Direction.right, Direction.bottom, Direction.left.');
+  }
+
+  /* ---------- Input: Eingaben per Dialogfenster (wie die Online-IDE) ---------- */
+  function inputDialog(message, def, check, convert) {
+    if (typeof window === 'undefined' || !window.prompt) { return def; }
+    var val = window.prompt(message, def);
+    var tries = 0;
+    while (val !== null && !check(val) && tries < 5) {
+      val = window.prompt('Das war leider kein gültiger Wert. ' + message, val);
+      tries++;
+    }
+    if (val === null || !check(val)) { return def; }
+    return convert(val);
+  }
+  function inputCall(name, args, ctx, line) {
+    if (name === 'isKeyDown' && args.length === 1) { return mkBool(GFX_KEYS[gfxKeyName(gfxStr(args, 0, 'Input.isKeyDown', ctx, line))] === true); }
+    if (name === 'isKeyUp' && args.length === 1) { return mkBool(GFX_KEYS[gfxKeyName(gfxStr(args, 0, 'Input.isKeyUp', ctx, line))] !== true); }
+    var readNames = { readString: 'String', readInt: 'ganze Zahl', readDouble: 'Kommazahl', readBoolean: 'Ja/Nein-Antwort', readChar: 'einzelnes Zeichen' };
+    if (Object.prototype.hasOwnProperty.call(readNames, name)) {
+      if (args.length < 1 || args.length > 2) { throw rt(ctx, line, 'Input.' + name + ' braucht eine Frage (und optional einen Vorgabewert).', 'z. B. String name = Input.readString("Wie heißt du?", "Alex");'); }
+      var frage = javaStr(args[0], ctx, line);
+      var defVal = args.length > 1 ? args[1] : null;
+      if (name === 'readString') {
+        var ds = defVal ? javaStr(defVal, ctx, line) : '';
+        return mkStr(inputDialog(frage, ds, function (x) { return true; }, function (x) { return x; }));
+      }
+      if (name === 'readInt') {
+        var di = defVal ? Math.floor(gfxNum(args, 1, 'Input.readInt', ctx, line)) : 0;
+        return mkInt(inputDialog(frage, String(di), function (x) { return /^-?[0-9]+$/.test(x.trim()); }, function (x) { return Math.floor(parseInt(x.trim(), 10)); }));
+      }
+      if (name === 'readDouble') {
+        var dd = defVal ? gfxNum(args, 1, 'Input.readDouble', ctx, line) : 0;
+        return mkDbl(inputDialog(frage, String(dd), function (x) { return x.trim() !== '' && !isNaN(Number(x.replace(',', '.'))); }, function (x) { return Number(x.replace(',', '.')); }));
+      }
+      if (name === 'readBoolean') {
+        var db = defVal ? gfxBool(args, 1, 'Input.readBoolean', ctx, line) : false;
+        return mkBool(inputDialog(frage, db ? 'ja' : 'nein', function (x) { var k = x.trim().toLowerCase(); return k === 'ja' || k === 'nein' || k === 'true' || k === 'false' || k === '1' || k === '0'; }, function (x) { var k = x.trim().toLowerCase(); return k === 'ja' || k === 'true' || k === '1'; }));
+      }
+      if (name === 'readChar') {
+        var dc = defVal ? String.fromCharCode(gfxNum(args, 1, 'Input.readChar', ctx, line)) : 'a';
+        return mkChar(String(inputDialog(frage, dc, function (x) { return x.length === 1; }, function (x) { return x; })).charCodeAt(0) || 97);
+      }
+    }
+    throw rt(ctx, line, 'Input.' + name + ' (mit ' + args.length + ' Parametern) wird nicht unterstützt.', 'Verfügbar: Input.readString, Input.readInt, Input.readDouble, Input.readBoolean, Input.readChar (jeweils mit Frage und optionalem Vorgabewert) sowie Input.isKeyDown(taste).');
+  }
+
+  /* ---------- Assertions: automatische Prüfungen wie in der Online-IDE ---------- */
+  function assertFail(ctx, line, msg, expected, actual) {
+    var text = 'Die Prüfung ist fehlgeschlagen: ' + msg;
+    if (expected !== undefined) { text = 'Erwartet ' + expected + ', erhalten ' + actual + ' – ' + msg; }
+    throw rt(ctx, line, text, 'Mit Assertions.assertEquals(...) prüfst du, ob dein Programm das Richtige rechnet. Korrigiere den Code oder den erwarteten Wert.');
+  }
+  function assertValueStr(v, ctx, line) {
+    if (v.t === 'ref' && v.obj && v.obj.nat && v.obj.nat.kind === 'vector2') { return '(' + v.obj.f.x.v + ', ' + v.obj.f.y.v + ')'; }
+    return javaStr(v, ctx, line);
+  }
+  function assertCall(name, args, ctx, line) {
+    var ok = false, expected = '', actual = '';
+    if (name === 'assertTrue' && args.length === 2) { ok = gfxBool(args, 0, 'assertTrue', ctx, line); }
+    else if (name === 'assertFalse' && args.length === 2) { ok = !gfxBool(args, 0, 'assertFalse', ctx, line); }
+    else if (name === 'assertCodeReached' && args.length === 1) {
+      output(ctx, '✓ ' + javaStr(args[0], ctx, line) + NL);
+      return VOIDV;
+    }
+    else if (name === 'fail' && args.length === 1) {
+      assertFail(ctx, line, javaStr(args[0], ctx, line));
+    }
+    else if (name === 'assertEquals' && args.length === 3) {
+      var a = args[0], b = args[1];
+      if ((a.t === 'int' || a.t === 'double') && (b.t === 'int' || b.t === 'double')) {
+        ok = Math.abs(a.v - b.v) < 1e-9;
+        expected = a.v; actual = b.v;
+      } else if (a.t === 'boolean' && b.t === 'boolean') {
+        ok = a.v === b.v; expected = a.v; actual = b.v;
+      } else if (a.t === 'char' && b.t === 'char') {
+        ok = a.v === b.v; expected = String.fromCharCode(a.v); actual = String.fromCharCode(b.v);
+      } else if (a.t === 'String' && b.t === 'String') {
+        ok = a.v === b.v; expected = a.v; actual = b.v;
+      } else if (a.t === 'null' && b.t === 'null') {
+        ok = true; expected = 'null'; actual = 'null';
+      } else {
+        ok = a.t === 'ref' && b.t === 'ref' && a.obj === b.obj;
+        expected = assertValueStr(a, ctx, line); actual = assertValueStr(b, ctx, line);
+      }
+    } else {
+      throw rt(ctx, line, 'Assertions.' + name + ' (mit ' + args.length + ' Parametern) wird nicht unterstützt.', 'Verfügbar: assertTrue(wert, text), assertFalse(wert, text), assertEquals(erwartet, erhalten, text), assertCodeReached(text), fail(text).');
+    }
+    var msgI = args.length - 1;
+    var msg = javaStr(args[msgI], ctx, line);
+    if (ok) { output(ctx, '✓ ' + msg + NL); return VOIDV; }
+    assertFail(ctx, line, msg, expected, actual);
+  }
+
+  /* ---------- MathTools: mathematische Hilfsfunktionen ---------- */
+  function segIntersect(p0, p1, p2, p3) {
+    var d1x = p1.x - p0.x, d1y = p1.y - p0.y;
+    var d2x = p3.x - p2.x, d2y = p3.y - p2.y;
+    var den = d1x * d2y - d1y * d2x;
+    if (Math.abs(den) < 1e-12) { return null; }
+    var t = ((p2.x - p0.x) * d2y - (p2.y - p0.y) * d2x) / den;
+    var u = ((p2.x - p0.x) * d1y - (p2.y - p0.y) * d1x) / den;
+    if (t < 0 || t > 1 || u < 0 || u > 1) { return null; }
+    return { x: p0.x + t * d1x, y: p0.y + t * d1y };
+  }
+  function pointInPoly(px, py, pts) {
+    var inside = false;
+    var i, j;
+    for (i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      if (((pts[i].y > py) !== (pts[j].y > py)) &&
+          (px < (pts[j].x - pts[i].x) * (py - pts[i].y) / (pts[j].y - pts[i].y) + pts[i].x)) { inside = !inside; }
+    }
+    return inside;
+  }
+  function vecArrayOf(arg, what, ctx, line) {
+    if (!arg || arg.t !== 'array') { throw rt(ctx, line, what + ' braucht ein Array mit Vector2-Punkten.', 'z. B. new Vector2[]{ new Vector2(0, 0), new Vector2(10, 0), new Vector2(5, 8) }'); }
+    var pts = [];
+    var i;
+    for (i = 0; i < arg.arr.length; i++) { pts.push(vecOf(arg.arr[i], what, ctx, line)); }
+    return pts;
+  }
+  function mathToolsCall(name, args, ctx, line) {
+    if (name === 'distancePointToLine' && args.length === 3) {
+      var p0 = vecOf(args[0], 'MathTools.distancePointToLine', ctx, line);
+      var a0 = vecOf(args[1], 'MathTools.distancePointToLine', ctx, line);
+      var b0 = vecOf(args[2], 'MathTools.distancePointToLine', ctx, line);
+      var nx0 = b0.x - a0.x, ny0 = b0.y - a0.y;
+      var l0 = Math.sqrt(nx0 * nx0 + ny0 * ny0);
+      if (l0 === 0) { throw rt(ctx, line, 'Die Gerade braucht zwei verschiedene Punkte.', ''); }
+      return mkDbl(Math.abs(ny0 * p0.x - nx0 * p0.y + b0.x * a0.y - b0.y * a0.x) / l0);
+    }
+    if (name === 'distancePointToLineSegment' && args.length === 3) {
+      var p1 = vecOf(args[0], 'MathTools.distancePointToLineSegment', ctx, line);
+      var a1 = vecOf(args[1], 'MathTools.distancePointToLineSegment', ctx, line);
+      var b1 = vecOf(args[2], 'MathTools.distancePointToLineSegment', ctx, line);
+      var vx = b1.x - a1.x, vy = b1.y - a1.y;
+      var len2 = vx * vx + vy * vy;
+      if (len2 === 0) {
+        var dx0 = p1.x - a1.x, dy0 = p1.y - a1.y;
+        return mkDbl(Math.sqrt(dx0 * dx0 + dy0 * dy0));
+      }
+      var t = ((p1.x - a1.x) * vx + (p1.y - a1.y) * vy) / len2;
+      if (t < 0) { t = 0; } else if (t > 1) { t = 1; }
+      var cx = a1.x + t * vx - p1.x, cy = a1.y + t * vy - p1.y;
+      return mkDbl(Math.sqrt(cx * cx + cy * cy));
+    }
+    if (name === 'intersectLineSegments' && args.length === 4) {
+      var q0 = vecOf(args[0], 'MathTools.intersectLineSegments', ctx, line);
+      var q1 = vecOf(args[1], 'MathTools.intersectLineSegments', ctx, line);
+      var q2 = vecOf(args[2], 'MathTools.intersectLineSegments', ctx, line);
+      var q3 = vecOf(args[3], 'MathTools.intersectLineSegments', ctx, line);
+      var hit = segIntersect(q0, q1, q2, q3);
+      if (!hit) { return NULLV; }
+      return mkVec(hit.x, hit.y);
+    }
+    if (name === 'polygonContainsPoint' && args.length === 2) {
+      var poly = vecArrayOf(args[0], 'MathTools.polygonContainsPoint', ctx, line);
+      var pt = vecOf(args[1], 'MathTools.polygonContainsPoint', ctx, line);
+      if (poly.length < 3) { throw rt(ctx, line, 'Für polygonContainsPoint braucht das Polygon mindestens 3 Punkte.', ''); }
+      return mkBool(pointInPoly(pt.x, pt.y, poly));
+    }
+    if (name === 'intersectCircleWithPolygon' && args.length === 4) {
+      var mx = gfxNum(args, 0, 'MathTools.intersectCircleWithPolygon', ctx, line);
+      var my = gfxNum(args, 1, 'MathTools.intersectCircleWithPolygon', ctx, line);
+      var r = gfxNum(args, 2, 'MathTools.intersectCircleWithPolygon', ctx, line);
+      var poly2 = vecArrayOf(args[3], 'MathTools.intersectCircleWithPolygon', ctx, line);
+      if (poly2.length < 2) { throw rt(ctx, line, 'Für intersectCircleWithPolygon braucht das Polygon mindestens 3 Punkte.', ''); }
+      var hits = [];
+      var i;
+      for (i = 0; i < poly2.length; i++) {
+        var aa = poly2[i], bb = poly2[(i + 1) % poly2.length];
+        var ex = bb.x - aa.x, ey = bb.y - aa.y;
+        var fx = aa.x - mx, fy = aa.y - my;
+        var qa = ex * ex + ey * ey;
+        if (qa === 0) { continue; }
+        var qb = 2 * (fx * ex + fy * ey);
+        var qc = fx * fx + fy * fy - r * r;
+        var disc = qb * qb - 4 * qa * qc;
+        if (disc < 0) { continue; }
+        var sq = Math.sqrt(disc);
+        var t1 = (-qb - sq) / (2 * qa), t2 = (-qb + sq) / (2 * qa);
+        if (t1 >= 0 && t1 <= 1) { hits.push({ x: aa.x + t1 * ex, y: aa.y + t1 * ey }); }
+        if (t2 >= 0 && t2 <= 1 && sq > 1e-12) { hits.push({ x: aa.x + t2 * ex, y: aa.y + t2 * ey }); }
+      }
+      var refs = [];
+      for (i = 0; i < hits.length; i++) { refs.push(mkVec(hits[i].x, hits[i].y)); }
+      return { t: 'array', elem: 'Vector2', arr: refs };
+    }
+    throw rt(ctx, line, 'MathTools.' + name + ' (mit ' + args.length + ' Parametern) wird nicht unterstützt.', 'Verfügbar: intersectLineSegments(p0, p1, p2, p3), polygonContainsPoint(polygon, punkt), distancePointToLine(p, a, b), distancePointToLineSegment(p, a, b), intersectCircleWithPolygon(mx, my, r, polygon).');
+  }
+
+  /* ---------- SystemTools ---------- */
+  function systemToolsCall(name, args, ctx, line) {
+    if (name === 'clearScreen' && args.length === 0) {
+      ctx.vm.out.length = 0;
+      return VOIDV;
+    }
+    if (name === 'setSpeed' && args.length === 1) {
+      var sp = Math.floor(gfxNum(args, 0, 'SystemTools.setSpeed', ctx, line));
+      if (sp < 1 || sp > 120) { throw rt(ctx, line, 'SystemTools.setSpeed erlaubt Werte von 1 bis 120 (Aufrufe pro Sekunde).', 'z. B. SystemTools.setSpeed(60) für flüssige Animationen.'); }
+      GFX_SPEED = sp;
+      if (GFX_TIMER && typeof clearInterval === 'function') { clearInterval(GFX_TIMER); GFX_TIMER = null; gfxStartLoop(); }
+      return VOIDV;
+    }
+    if (name === 'getSpeed' && args.length === 0) { return mkInt(GFX_SPEED); }
+    if (name === 'getNumberOfProcessorCores' && args.length === 0) {
+      try {
+        if (typeof navigator !== 'undefined' && navigator && navigator.hardwareConcurrency) { return mkInt(navigator.hardwareConcurrency); }
+      } catch (eSt) { }
+      return mkInt(1);
+    }
+    if (name === 'startLoggingPrintOutput' && args.length === 0) { SYS_PRINT_LOG = []; return VOIDV; }
+    if (name === 'stopLoggingPrintOutput' && args.length === 0) { return VOIDV; }
+    if (name === 'getPrintLog' && args.length === 0) { return mkStr(SYS_PRINT_LOG ? SYS_PRINT_LOG.join('') : ''); }
+    throw rt(ctx, line, 'SystemTools.' + name + ' (mit ' + args.length + ' Parametern) wird nicht unterstützt.', 'Verfügbar: clearScreen(), setSpeed(aufrufeProSekunde), getSpeed(), getNumberOfProcessorCores(), startLoggingPrintOutput(), stopLoggingPrintOutput(), getPrintLog().');
+  }
+
+  /* ---------- Sound: kurze Töne über die Web-Audio-Schnittstelle ---------- */
+  function soundCall(name, args, ctx, line) {
+    if (name === 'playSound' && args.length === 1) {
+      var sname = gfxStr(args, 0, 'Sound.playSound', ctx, line).toLowerCase();
+      var snd = SOUND_TABLE[sname];
+      if (!snd) { throw rt(ctx, line, 'Den Sound ' + sname + ' gibt es nicht.', 'Verfügbar: beep, click, coin, boom, laser, jump, win, lose, alarm.'); }
+      try {
+        if (typeof window === 'undefined') { return VOIDV; }
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) { return VOIDV; }
+        if (!SOUND_CTX) { SOUND_CTX = new AC(); }
+        if (SOUND_CTX.state === 'suspended' && SOUND_CTX.resume) { SOUND_CTX.resume(); }
+        var steps = snd.steps || [snd.freq];
+        var si;
+        for (si = 0; si < steps.length; si++) {
+          soundTone(SOUND_CTX, snd.type, steps[si], snd.dur / steps.length, snd, si * (snd.dur / steps.length));
+        }
+      } catch (eSnd) { }
+      return VOIDV;
+    }
+    throw rt(ctx, line, 'Sound.' + name + ' (mit ' + args.length + ' Parametern) wird nicht unterstützt.', 'Verfügbar: Sound.playSound(name) mit beep, click, coin, boom, laser, jump, win, lose, alarm.');
+  }
+  function soundTone(ac, type, freq, dur, snd, offset) {
+    var osc = ac.createOscillator();
+    var gain = ac.createGain();
+    var t0 = ac.currentTime + offset;
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    if (snd.freq2) { osc.frequency.linearRampToValueAtTime(snd.freq2, t0 + dur); }
+    else if (snd.sweep) { osc.frequency.exponentialRampToValueAtTime(Math.max(20, freq * snd.sweep), t0 + dur); }
+    gain.gain.setValueAtTime(0.18, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+
+  /* ---------- Gamepad: Steuerungspads abfragen ---------- */
+  function gamepadsList() {
+    try {
+      if (typeof navigator !== 'undefined' && navigator && navigator.getGamepads) { return navigator.getGamepads() || []; }
+    } catch (eGp) { }
+    return [];
+  }
+  function gamepadCall(name, args, ctx, line) {
+    var idx = args.length > 0 ? Math.floor(gfxNum(args, 0, 'Gamepad.' + name, ctx, line)) : 0;
+    var pads = gamepadsList();
+    var pad = pads && pads[idx];
+    if (name === 'isConnected' && args.length === 1) { return mkBool(!!pad); }
+    if (name === 'isButtonDown' && args.length === 2) {
+      var btn = Math.floor(gfxNum(args, 1, 'Gamepad.isButtonDown', ctx, line));
+      return mkBool(!!(pad && pad.buttons && pad.buttons[btn] && pad.buttons[btn].pressed));
+    }
+    if (name === 'getAxisValue' && args.length === 2) {
+      var ax = Math.floor(gfxNum(args, 1, 'Gamepad.getAxisValue', ctx, line));
+      var val = pad && pad.axes && pad.axes[ax] ? pad.axes[ax] : 0;
+      if (Math.abs(val) < 0.2) { val = 0; }
+      return mkDbl(val);
+    }
+    throw rt(ctx, line, 'Gamepad.' + name + ' (mit ' + args.length + ' Parametern) wird nicht unterstützt.', 'Verfügbar: Gamepad.isConnected(nummer), Gamepad.isButtonDown(nummer, knopf), Gamepad.getAxisValue(nummer, achse).');
+  }
+
   /* ================= Grafik-Fenster (API angelehnt an learnj / OnlineIDE) =================
    * Ein eigenes Fenster mit XY-Feld, in dem Schülerinnen und Schüler Figuren
    * platzieren, bewegen, drehen, animieren und auf Maus und Tastatur reagieren
@@ -2944,9 +3534,10 @@
    * Klassen: World, Color, Alignment, Circle, Ellipse, Rectangle, RoundedRectangle,
    * Text, Triangle, Line, Polygon, Bitmap, Turtle, Group, Actor sowie die
    * GUI-Elemente Button, Textfield, Checkbox, Radiobutton.
+   * Dazu aus der Online-IDE übernommen: Arc (Kreisbogen) und Sector (Kreissektor).
    */
   var GFX_CLASSES = Object.create(null);
-  var GFCL = ['World', 'Color', 'Alignment', 'Circle', 'Ellipse', 'Rectangle', 'RoundedRectangle', 'Text', 'Triangle', 'Line', 'Polygon', 'Bitmap', 'Turtle', 'Group', 'Actor', 'Shape', 'FilledShape', 'Button', 'Textfield', 'Checkbox', 'Radiobutton'];
+  var GFCL = ['World', 'Color', 'Alignment', 'Circle', 'Ellipse', 'Rectangle', 'RoundedRectangle', 'Text', 'Triangle', 'Line', 'Polygon', 'Bitmap', 'Turtle', 'Group', 'Actor', 'Shape', 'FilledShape', 'Button', 'Textfield', 'Checkbox', 'Radiobutton', 'Arc', 'Sector'];
   var gfci;
   for (gfci = 0; gfci < GFCL.length; gfci++) { GFX_CLASSES[GFCL[gfci]] = 1; }
 
@@ -2969,11 +3560,13 @@
   GFX_KIND_OF.Textfield = 'textfield';
   GFX_KIND_OF.Checkbox = 'checkbox';
   GFX_KIND_OF.Radiobutton = 'radiobutton';
+  GFX_KIND_OF.Arc = 'arc';
+  GFX_KIND_OF.Sector = 'sector';
 
   var GFX_SHAPE_KINDS = Object.create(null);
   var GFX_FILLED_KINDS = Object.create(null);
-  var GS = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'line', 'polygon', 'bitmap', 'turtle', 'button', 'textfield', 'checkbox', 'radiobutton'];
-  var GFILLED = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'polygon', 'bitmap'];
+  var GS = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'line', 'polygon', 'bitmap', 'turtle', 'button', 'textfield', 'checkbox', 'radiobutton', 'arc', 'sector'];
+  var GFILLED = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'polygon', 'bitmap', 'arc', 'sector'];
   var gsi;
   for (gsi = 0; gsi < GS.length; gsi++) { GFX_SHAPE_KINDS[GS[gsi]] = 1; }
   for (gsi = 0; gsi < GFILLED.length; gsi++) { GFX_FILLED_KINDS[GFILLED[gsi]] = 1; }
@@ -2984,6 +3577,7 @@
   var GFX_ONERROR = null;
   var GFX_TIMER = null;
   var GFX_TEST_MODE = false;
+  var GFX_SPEED = 30;
   try {
     if (typeof global !== 'undefined' && global && global.__INFOCRAFT_TEST__) { GFX_TEST_MODE = true; }
   } catch (igfx) { }
@@ -3076,6 +3670,14 @@
     if (clsName === 'Alignment') {
       if (name === 'left' || name === 'center' || name === 'right') { return mkStr(name); }
       throw rt(ctx, line, 'Alignment.' + name + ' gibt es nicht.', 'Verfügbare Werte: Alignment.left, Alignment.center, Alignment.right.');
+    }
+    if (clsName === 'Key') {
+      if (KEY_TABLE[name]) { return mkStr(KEY_TABLE[name]); }
+      throw rt(ctx, line, 'Key.' + name + ' gibt es nicht.', 'Verfügbar: Key.ArrowUp, Key.ArrowDown, Key.ArrowLeft, Key.ArrowRight, Key.Enter, Key.Space, Key.Shift, Key.Alt, Key.Strg, Key.PageUp, Key.PageDown, Key.Backspace, Key.Escape, Key.Entf, Key.Einf, Key.Ende.');
+    }
+    if (clsName === 'Direction') {
+      if (directionDelta(name)) { return mkStr(String(name)); }
+      throw rt(ctx, line, 'Direction.' + name + ' gibt es nicht.', 'Verfügbare Werte: Direction.top (oben), Direction.right (rechts), Direction.bottom (unten), Direction.left (links).');
     }
     return null;
   }
@@ -3271,6 +3873,22 @@
       g.h = args.length > 3 ? gfxNum(args, 3, kind === 'checkbox' ? 'Checkbox' : 'Radiobutton', ctx, line) : 24;
       g.text = args.length > 4 ? javaStr(args[4], ctx, line) : '';
       g.checked = args.length > 5 ? gfxBool(args, 5, kind === 'checkbox' ? 'Checkbox' : 'Radiobutton', ctx, line) : false;
+    } else if (kind === 'arc') {
+      g.x = args.length > 0 ? gfxNum(args, 0, 'Arc', ctx, line) : 0;
+      g.y = args.length > 1 ? gfxNum(args, 1, 'Arc', ctx, line) : 0;
+      g.ri = args.length > 2 ? gfxNum(args, 2, 'Arc', ctx, line) : 20;
+      g.ra = args.length > 3 ? gfxNum(args, 3, 'Arc', ctx, line) : 50;
+      g.a0 = args.length > 4 ? gfxNum(args, 4, 'Arc', ctx, line) : 0;
+      g.a1 = args.length > 5 ? gfxNum(args, 5, 'Arc', ctx, line) : 90;
+      if (g.ri < 0 || g.ra < 0) { throw rt(ctx, line, 'Die Radien von Arc dürfen nicht negativ sein.', 'z. B. new Arc(400, 300, 20, 80, 0, 90)'); }
+    } else if (kind === 'sector') {
+      g.x = args.length > 0 ? gfxNum(args, 0, 'Sector', ctx, line) : 0;
+      g.y = args.length > 1 ? gfxNum(args, 1, 'Sector', ctx, line) : 0;
+      g.r = args.length > 2 ? gfxNum(args, 2, 'Sector', ctx, line) : 50;
+      g.a0 = args.length > 3 ? gfxNum(args, 3, 'Sector', ctx, line) : 0;
+      g.a1 = args.length > 4 ? gfxNum(args, 4, 'Sector', ctx, line) : 90;
+      g.radii = false;
+      if (g.r < 0) { throw rt(ctx, line, 'Der Radius von Sector darf nicht negativ sein.', 'z. B. new Sector(400, 300, 80, 0, 90)'); }
     } else if (kind === 'world') {
       g.w = args.length > 0 ? gfxNum(args, 0, 'World', ctx, line) : 800;
       g.h = args.length > 1 ? gfxNum(args, 1, 'World', ctx, line) : 600;
@@ -3327,7 +3945,7 @@
   function gfxAttach(obj, baseName, args, vm, ctx, line) {
     var kind = GFX_KIND_OF[baseName];
     if (!kind || kind === 'world' || kind === 'color') {
-      throw rt(ctx, line, 'Von ' + baseName + ' kann nicht geerbt werden.', 'Erlaubte Basisklassen: Actor, Circle, Ellipse, Rectangle, RoundedRectangle, Text, Triangle, Line, Polygon, Bitmap, Turtle, Group.');
+      throw rt(ctx, line, 'Von ' + baseName + ' kann nicht geerbt werden.', 'Erlaubte Basisklassen: Actor, Circle, Ellipse, Rectangle, RoundedRectangle, Text, Triangle, Line, Polygon, Bitmap, Turtle, Group, Arc, Sector.');
     }
     if (kind === 'group') {
       obj.g = { kind: 'group', members: [], dead: false, ref: obj };
@@ -3412,6 +4030,29 @@
     var f = g.scaleF || 1;
     var bb;
     if (g.kind === 'circle') { bb = { x: g.x - g.r, y: g.y - g.r, w: 2 * g.r, h: 2 * g.r }; }
+    else if (g.kind === 'arc' || g.kind === 'sector') {
+      var arR = g.kind === 'arc' ? Math.max(g.ri || 0, g.ra || 0) : (g.r || 0);
+      var arIn = g.kind === 'arc' ? Math.min(g.ri || 0, g.ra || 0) : 0;
+      var a0r = ((g.a0 || 0) % 360 + 360) % 360 * Math.PI / 180;
+      var a1r = ((g.a1 || 0) % 360 + 360) % 360 * Math.PI / 180;
+      if (a1r < a0r) { a1r += Math.PI * 2; }
+      var minAx = Math.min(g.x + Math.cos(a0r) * arR, g.x + Math.cos(a1r) * arR);
+      var maxAx = Math.max(g.x + Math.cos(a0r) * arR, g.x + Math.cos(a1r) * arR);
+      var minAy = Math.min(g.y + Math.sin(a0r) * arR, g.y + Math.sin(a1r) * arR);
+      var maxAy = Math.max(g.y + Math.sin(a0r) * arR, g.y + Math.sin(a1r) * arR);
+      var quad;
+      for (quad = 0; quad < 4; quad++) {
+        var qa = quad * Math.PI / 2;
+        if (a0r <= qa && qa <= a1r) {
+          minAx = Math.min(minAx, g.x + Math.cos(qa) * arR);
+          maxAx = Math.max(maxAx, g.x + Math.cos(qa) * arR);
+          minAy = Math.min(minAy, g.y + Math.sin(qa) * arR);
+          maxAy = Math.max(maxAy, g.y + Math.sin(qa) * arR);
+        }
+      }
+      if (g.kind === 'sector' || arIn === 0) { minAx = Math.min(minAx, g.x); maxAx = Math.max(maxAx, g.x); minAy = Math.min(minAy, g.y); maxAy = Math.max(maxAy, g.y); }
+      bb = { x: minAx, y: minAy, w: maxAx - minAx, h: maxAy - minAy };
+    }
     else if (g.kind === 'ellipse') { bb = { x: g.x - g.rx, y: g.y - g.ry, w: 2 * g.rx, h: 2 * g.ry }; }
     else if (g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') { bb = { x: g.x, y: g.y, w: g.w || 10, h: g.h || 10 }; }
     else if (g.kind === 'text') { bb = { x: g.x, y: g.y, w: (g.size || 20) * 0.6 * (g.text ? g.text.length : 0), h: g.size || 20 }; }
@@ -3486,7 +4127,7 @@
     var mx = g.mirrorX ? -1 : 1;
     var my = g.mirrorY ? -1 : 1;
     var cx, cy;
-    if (g.kind === 'circle' || g.kind === 'ellipse') { cx = g.x; cy = g.y; }
+    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'arc' || g.kind === 'sector') { cx = g.x; cy = g.y; }
     else if (g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') { cx = g.x + g.w / 2; cy = g.y + g.h / 2; }
     else if (g.kind === 'text') { cx = g.x; cy = g.y; }
     else if (g.kind === 'triangle') { cx = (g.p1x + g.p2x + g.p3x) / 3; cy = (g.p1y + g.p2y + g.p3y) / 3; }
@@ -3518,6 +4159,28 @@
       ctx2d.quadraticCurveTo(-rw, rh, -rw, rh - rr);
       ctx2d.lineTo(-rw, -rh + rr);
       ctx2d.quadraticCurveTo(-rw, -rh, -rw + rr, -rh);
+    } else if (g.kind === 'arc' || g.kind === 'sector') {
+      /* Kreisbogen und Kreissektor: Winkel in Grad, 0 = rechts, im Uhrzeigersinn
+       * (y zeigt nach unten). Innenradius 0 macht aus dem Bogen ein Tortenstück. */
+      var ri2 = g.kind === 'arc' ? Math.min(g.ri || 0, g.ra || 0) : 0;
+      var ra2 = g.kind === 'arc' ? Math.max(g.ri || 0, g.ra || 0) : (g.r || 0);
+      var rad0 = (g.a0 || 0) * Math.PI / 180;
+      var rad1 = (g.a1 || 0) * Math.PI / 180;
+      if (rad1 < rad0) { var swapA = rad0; rad0 = rad1; rad1 = swapA; }
+      if (rad1 - rad0 >= Math.PI * 2 - 1e-9) { rad1 = rad0 + Math.PI * 2 - 1e-9; }
+      if (ri2 > 0) {
+        ctx2d.arc(0, 0, ra2, rad0, rad1, false);
+        var ix = Math.cos(rad1) * ri2, iy = Math.sin(rad1) * ri2;
+        ctx2d.lineTo(ix, iy);
+        ctx2d.arc(0, 0, ri2, rad1, rad0, true);
+        ctx2d.closePath();
+      } else if (g.kind === 'sector' && !g.radii) {
+        ctx2d.arc(0, 0, ra2, rad0, rad1, false);
+      } else {
+        ctx2d.moveTo(0, 0);
+        ctx2d.arc(0, 0, ra2, rad0, rad1, false);
+        ctx2d.closePath();
+      }
     } else if (g.kind === 'text') {
       ctx2d.font = (g.size) + 'px ' + g.font;
       ctx2d.textAlign = g.align || 'left';
@@ -3618,7 +4281,7 @@
   function gfxStartLoop() {
     if (GFX_TIMER || GFX_TEST_MODE) { return; }
     if (typeof setInterval !== 'function') { return; }
-    GFX_TIMER = setInterval(gfxTick, 33);
+    GFX_TIMER = setInterval(gfxTick, Math.max(8, Math.round(1000 / GFX_SPEED)));
   }
   function gfxStopLoop() {
     if (GFX_TIMER && typeof clearInterval === 'function') { clearInterval(GFX_TIMER); }
@@ -3629,6 +4292,7 @@
   GFX_KEY_ALIAS.oben = 'ArrowUp'; GFX_KEY_ALIAS.unten = 'ArrowDown';
   GFX_KEY_ALIAS.left = 'ArrowLeft'; GFX_KEY_ALIAS.right = 'ArrowRight';
   GFX_KEY_ALIAS.up = 'ArrowUp'; GFX_KEY_ALIAS.down = 'ArrowDown';
+  GFX_KEY_ALIAS[' '] = 'Space';
   function gfxKeyName(key) {
     var k = String(key);
     if (GFX_KEY_ALIAS[k]) { return GFX_KEY_ALIAS[k]; }
@@ -3903,6 +4567,31 @@
           return VOIDV;
         }
       }
+      if (g.kind === 'arc') {
+        if (name === 'setInnerRadius' && args.length === 1) { var nri = gfxNum(args, 0, 'setInnerRadius', ctx, line); if (nri < 0) { throw rt(ctx, line, 'Der Innenradius darf nicht negativ sein.', ''); } g.ri = nri; gfxRedraw(vm); return VOIDV; }
+        if (name === 'setOuterRadius' && args.length === 1) { var nra = gfxNum(args, 0, 'setOuterRadius', ctx, line); if (nra < 0) { throw rt(ctx, line, 'Der Außenradius darf nicht negativ sein.', ''); } g.ra = nra; gfxRedraw(vm); return VOIDV; }
+        if (name === 'setStartAngle' && args.length === 1) { g.a0 = gfxNum(args, 0, 'setStartAngle', ctx, line); gfxRedraw(vm); return VOIDV; }
+        if (name === 'setEndAngle' && args.length === 1) { g.a1 = gfxNum(args, 0, 'setEndAngle', ctx, line); gfxRedraw(vm); return VOIDV; }
+        if (name === 'getInnerRadius' && args.length === 0) { return mkDbl(g.ri); }
+        if (name === 'getOuterRadius' && args.length === 0) { return mkDbl(g.ra); }
+        if (name === 'getStartAngle' && args.length === 0) { return mkDbl(g.a0); }
+        if (name === 'getEndAngle' && args.length === 0) { return mkDbl(g.a1); }
+        if (name === 'containsPoint' && args.length === 2) {
+          return mkBool(gfxArcContains(g, gfxNum(args, 0, 'containsPoint', ctx, line), gfxNum(args, 1, 'containsPoint', ctx, line), Math.min(g.ri, g.ra), Math.max(g.ri, g.ra)));
+        }
+      }
+      if (g.kind === 'sector') {
+        if (name === 'setRadius' && args.length === 1) { var nsr = gfxNum(args, 0, 'setRadius', ctx, line); if (nsr < 0) { throw rt(ctx, line, 'Der Radius darf nicht negativ sein.', ''); } g.r = nsr; gfxRedraw(vm); return VOIDV; }
+        if (name === 'setStartAngle' && args.length === 1) { g.a0 = gfxNum(args, 0, 'setStartAngle', ctx, line); gfxRedraw(vm); return VOIDV; }
+        if (name === 'setEndAngle' && args.length === 1) { g.a1 = gfxNum(args, 0, 'setEndAngle', ctx, line); gfxRedraw(vm); return VOIDV; }
+        if (name === 'drawRadii' && args.length === 1) { g.radii = gfxBool(args, 0, 'drawRadii', ctx, line); gfxRedraw(vm); return VOIDV; }
+        if (name === 'getRadius' && args.length === 0) { return mkDbl(g.r); }
+        if (name === 'getStartAngle' && args.length === 0) { return mkDbl(g.a0); }
+        if (name === 'getEndAngle' && args.length === 0) { return mkDbl(g.a1); }
+        if (name === 'containsPoint' && args.length === 2) {
+          return mkBool(gfxArcContains(g, gfxNum(args, 0, 'containsPoint', ctx, line), gfxNum(args, 1, 'containsPoint', ctx, line), 0, g.r));
+        }
+      }
       /* GUI-Elemente: Knopf, Eingabefeld, Ankreuzfeld, Auswahlknopf */
       if (g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') {
         if (name === 'setText' && args.length === 1) {
@@ -3987,6 +4676,21 @@
     var bb = shapeBBox(g);
     return { x: bb.x + bb.w / 2, y: bb.y + bb.h / 2 };
   }
+  /* Liegt der Punkt im Kreisbogen/Kreissektor? (Winkel in Grad, im Uhrzeigersinn) */
+  function gfxArcContains(g, x, y, ri, ra) {
+    var dx = x - g.x, dy = y - g.y;
+    var d = Math.sqrt(dx * dx + dy * dy);
+    if (d < ri || d > ra) { return false; }
+    var a0 = g.a0 || 0, a1 = g.a1 || 0;
+    var sweep = a1 - a0;
+    if (sweep < 0) { sweep = -sweep; var sw = a0; a0 = a1; a1 = sw; }
+    if (sweep >= 360) { return true; }
+    if (sweep === 0) { return false; }
+    var ang = Math.atan2(dy, dx) * 180 / Math.PI;
+    var rel = (ang - a0) % 360;
+    if (rel < 0) { rel += 360; }
+    return rel <= sweep;
+  }
   function gfxGroupCenter(g) {
     var i;
     var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
@@ -4001,7 +4705,7 @@
     return { x: (minx + maxx) / 2, y: (miny + maxy) / 2 };
   }
   function gfxMoveShape(g, dx, dy) {
-    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'text' || g.kind === 'turtle' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') {
+    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'text' || g.kind === 'turtle' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton' || g.kind === 'arc' || g.kind === 'sector') {
       g.x = (g.x || 0) + dx;
       g.y = (g.y || 0) + dy;
       if (g.kind === 'turtle' && g.pen) { g.path.push([g.x, g.y]); }
