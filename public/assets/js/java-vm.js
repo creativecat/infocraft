@@ -78,10 +78,18 @@
         toks.push(KEYWORDS[id] ? { k: 'kw', v: id, line: line } : { k: 'id', v: id, line: line });
         continue;
       }
-      /* Zahlen: 42 oder 3.14 (keine Exponenten noetig) */
+      /* Zahlen: 42 oder 3.14 (keine Exponenten noetig), Hex 0xff8000 */
       if (/[0-9]/.test(c)) {
         var num = '';
         var isDbl = false;
+        if (c === '0' && (src.charAt(i + 1) === 'x' || src.charAt(i + 1) === 'X')) {
+          i += 2;
+          var hx = '';
+          while (i < n && /[0-9a-fA-F]/.test(src.charAt(i))) { hx += src.charAt(i); i++; }
+          if (hx === '') { fail('Nach 0x kommen Hex-Ziffern.', 'z. B. 0xff8000'); return null; }
+          toks.push({ k: 'int', v: parseInt(hx, 16), line: line });
+          continue;
+        }
         while (i < n && /[0-9]/.test(src.charAt(i))) { num += src.charAt(i); i++; }
         if (src.charAt(i) === '.' && /[0-9]/.test(src.charAt(i + 1) || '')) {
           isDbl = true;
@@ -832,7 +840,7 @@
     return { ok: true, classes: classes, classMap: classMap, errors: errors, fileNames: fileNames, toplevel: toplevel };
   }
 
-  function run(files) {
+  function run(files, opts) {
     files0 = files;
     var errors = [];
     var out = [];
@@ -849,9 +857,17 @@
       statics: Object.create(null),
       steps: 0,
       depth: 0,
-      objects: []
+      objects: [],
+      gfx: gfxNewState(),
+      stepLimit: (opts && typeof opts.stepLimit === 'number') ? opts.stepLimit : null,
+      leafSteps: 0,
+      paused: false,
+      pauseFile: '',
+      pauseLine: 0
     };
     RUN_VM = vm;
+    gfxResetRun();
+    GFX_ONERROR = null;
 
     var sessionEnv = newEnv(null);
     var session = makeSession(comp, vm, sessionEnv);
@@ -863,18 +879,21 @@
       /* Anweisungen direkt in der Datei laufen zuerst (Objekte erzeugen u. a.),
        * danach – falls vorhanden – die main-Methode. Beides sieht die Objektkonsole. */
       runToplevel(comp, vm, sessionEnv, errors);
-      for (ci = 0; ci < comp.classes.length; ci++) {
-        var mm = findMethod(comp.classes[ci], 'main', 1);
-        if (mm && mm.m.isStatic) { mainFound = mm; break; }
-      }
-      if (mainFound) {
-        invokeMethod(mainFound.cls, mainFound.m, null, [{ t: 'array', elem: 'String', arr: [] }], vm);
+      if (!vm.paused) {
+        for (ci = 0; ci < comp.classes.length; ci++) {
+          var mm = findMethod(comp.classes[ci], 'main', 1);
+          if (mm && mm.m.isStatic) { mainFound = mm; break; }
+        }
+        if (mainFound) {
+          invokeMethod(mainFound.cls, mainFound.m, null, [{ t: 'array', elem: 'String', arr: [] }], vm);
+        }
       }
       /* Ohne main-Methode kein Fehler mehr: Das Projekt laesst sich dann
        * interaktiv ueber die Objektkonsole bedienen (Objekte erzeugen,
        * Methoden aufrufen, Objektdiagramm). */
     } catch (e) {
-      if (e && e.jerr) { errors.push(e.jerr); }
+      if (e && e.pause) { vm.paused = true; vm.pauseFile = e.file || ''; vm.pauseLine = e.line || 0; }
+      else if (e && e.jerr) { errors.push(e.jerr); }
       else if (e && e.ctrl) { }
       else { throw e; }
     }
@@ -888,7 +907,20 @@
       for (ei = 0; ei < errCards.length; ei++) { all.push(errCards[ei]); }
       var ok = true;
       for (ei = 0; ei < all.length; ei++) { if (all[ei].kind !== 'stderr') { ok = false; } }
-      return { output: out.join(''), errors: all, ok: ok, session: session, ranMain: !!ranMain };
+      var paused = !!(vm && vm.paused);
+      var objs = [];
+      if (paused || (vm && vm.gfx && vm.gfx.shapes.length > 0)) {
+        try { objs = objectsSnapshotOf(comp, vm, sessionEnv); } catch (e2) { objs = []; }
+      }
+      return {
+        output: out.join(''), errors: all, ok: ok, session: session, ranMain: !!ranMain,
+        paused: paused,
+        pauseFile: paused ? vm.pauseFile : '',
+        pauseLine: paused ? vm.pauseLine : 0,
+        leafSteps: vm ? vm.leafSteps : 0,
+        objects: objs,
+        hasGfx: !!(vm && vm.gfx && (vm.gfx.shapes.length > 0 || vm.gfx.world))
+      };
     }
   }
 
@@ -925,8 +957,10 @@
     var errCards = [];
     RUN_CLASS_MAP = comp.classMap;
     RUN_DB = Object.create(null);
-    var vm = { out: out, errCards: errCards, statics: Object.create(null), steps: 0, depth: 0, objects: [] };
+    var vm = { out: out, errCards: errCards, statics: Object.create(null), steps: 0, depth: 0, objects: [], gfx: gfxNewState(), stepLimit: null, leafSteps: 0 };
     RUN_VM = vm;
+    gfxResetRun();
+    GFX_ONERROR = null;
     var env = newEnv(null);
     try {
       for (var ci = 0; ci < comp.classes.length; ci++) { initStatics(comp.classes[ci], vm); }
@@ -1310,7 +1344,7 @@
         re.lastIndex = 0;
         var m = re.exec(lines[li]);
         while (m) {
-          if (!classMap[m[1]]) {
+          if (!classMap[m[1]] && !GFX_CLASSES[m[1]]) {
             errors.push(JError('compile', names[ni], li + 1, 'Zeile ' + (li + 1) + ': Unbekannte Klasse ' + m[1] + ' bei new.', 'Lege eine Datei ' + m[1] + '.java mit der Klasse ' + m[1] + ' an (oder pruefe die Schreibweise).'));
             return false;
           }
@@ -1339,14 +1373,14 @@
           return false;
         }
       }
-      if (cls.parent && !classMap[cls.parent]) {
+      if (cls.parent && !classMap[cls.parent] && !GFX_CLASSES[cls.parent]) {
         errors.push(JError('compile', cls.srcFile, cls.line, 'Die Oberklasse ' + cls.parent + ' von ' + cls.name + ' fehlt.', 'Lege eine Datei ' + cls.parent + '.java an (oder korrigiere den Namen hinter extends).'));
         return false;
       }
       for (var mm = 0; mm < cls.methods.length; mm++) {
         var meth = cls.methods[mm];
         for (var p = 0; p < meth.params.length; p++) {
-          if (!meth.params[p].type.arr && !isPrimType(meth.params[p].type.name) && meth.params[p].type.name !== 'String' && !classMap[meth.params[p].type.name]) {
+          if (!meth.params[p].type.arr && !isPrimType(meth.params[p].type.name) && meth.params[p].type.name !== 'String' && !classMap[meth.params[p].type.name] && !GFX_CLASSES[meth.params[p].type.name]) {
             errors.push(JError('compile', cls.srcFile, meth.line, 'Unbekannter Typ ' + meth.params[p].type.name + ' in ' + cls.name + '.' + meth.name + '.', 'Der Typ ' + meth.params[p].type.name + ' ist weder eine deiner Klassen noch ein Standard-Typ (int, double, boolean, char, String).'));
             return false;
           }
@@ -1477,6 +1511,12 @@
     }
     if (ctor) { execCtor(cls, ctor, obj, args, newEnv(null)); }
     else { initFieldsOf(cls, obj, newEnv(null), ctx); }
+    /* Grafik-Basisklasse (z. B. extends Rectangle) ohne super(...)-Aufruf:
+     * Figur mit Standardwerten anlegen. */
+    if (!obj.g) {
+      var gbase = gfxBaseOf(cls);
+      if (gbase) { gfxAttach(obj, gbase, [], vm, ctx, cls.line); }
+    }
     return { t: 'ref', cls: cls.name, obj: obj };
   }
 
@@ -1529,6 +1569,19 @@
   }
 
   /* ===== Anweisungen ===== */
+  /* Einzelschritt: Zaehlt ausgefuehrte "Blatt"-Anweisungen (Deklarationen und
+   * Ausdrucks-Anweisungen). Ist ein stepLimit gesetzt, stoppt das Programm
+   * davor und meldet die Zeile, die als Naechstes dran waere. */
+  function stepGate(ctx, st) {
+    var vm = ctx && ctx.vm ? ctx.vm : null;
+    if (!vm || vm.stepLimit === null || vm.stepLimit === undefined) { return; }
+    if (st.type !== 'decl' && st.type !== 'exprstat') { return; }
+    if (vm.leafSteps >= vm.stepLimit) {
+      throw { pause: true, file: ctx.file, line: st.line };
+    }
+    vm.leafSteps++;
+  }
+
   function step(ctx) {
     ctx.vm.steps++;
     if (ctx.vm.steps > MAX_STEPS) {
@@ -1558,6 +1611,7 @@
     step(ctx);
     if (!st || st.type === 'empty') { return; }
     ctx.line = st.line;
+    stepGate(ctx, st);
     if (st.type === 'block') {
       execBlock(st.body, newEnv(env), ctx);
       return;
@@ -1700,7 +1754,15 @@
       }
       case 'new': {
         var cls = RUN_CLASS_MAP[e.cls];
-        if (!cls) { throw rt(ctx, e.line, 'Unbekannte Klasse ' + e.cls + '.', 'Es gibt keine Klasse ' + e.cls + '. Pruefe die Schreibweise oder lege die Klasse an.'); }
+        if (!cls) {
+          if (GFX_CLASSES[e.cls]) {
+            var ga = [];
+            var gi2;
+            for (gi2 = 0; gi2 < e.args.length; gi2++) { ga.push(evalExpr(e.args[gi2], env, ctx)); }
+            return gfxNew(e.cls, ga, ctx, e.line);
+          }
+          throw rt(ctx, e.line, 'Unbekannte Klasse ' + e.cls + '.', 'Es gibt keine Klasse ' + e.cls + '. Pruefe die Schreibweise oder lege die Klasse an.');
+        }
         var aargs = [];
         var ai;
         for (ai = 0; ai < e.args.length; ai++) { aargs.push(evalExpr(e.args[ai], env, ctx)); }
@@ -1726,7 +1788,13 @@
         return { t: 'array', elem: e.elem, arr: items };
       }
       case 'index': return resolveLValue(e, env, ctx).get();
-      case 'field': return resolveField(e, evalExpr(e.target, env, ctx), ctx);
+      case 'field': {
+        /* Statische Konstanten der Grafik-API: Color.red, Alignment.center */
+        if (e.target && e.target.type === 'name' && (e.target.v === 'Color' || e.target.v === 'Alignment') && !envFind(env, e.target.v)) {
+          return gfxStaticGet(e.target.v, e.name, ctx, e.line);
+        }
+        return resolveField(e, evalExpr(e.target, env, ctx), ctx);
+      }
       case 'cast': return evalCast(e, env, ctx);
       case 'call': return evalCall(e, env, ctx);
       case 'super': throw rt(ctx, e.line, 'super ist nur fuer super(...) oder super.methode(...) gedacht.', 'z. B. super.getFarbe() oder im Konstruktor: super(name).');
@@ -1947,6 +2015,11 @@
 
     /* super(...) im Konstruktor */
     if (e.target && e.target.type === 'super' && name === null) {
+      if (ctx.cls && ctx.cls.parent && GFX_CLASSES[ctx.cls.parent] && !RUN_CLASS_MAP[ctx.cls.parent]) {
+        if (!ctx.thisVal || ctx.thisVal.t !== 'ref') { throw rt(ctx, e.line, 'super(...) braucht ein Objekt.', ''); }
+        gfxAttach(ctx.thisVal.obj, ctx.cls.parent, args, ctx.vm, ctx, e.line);
+        return VOIDV;
+      }
       if (!ctx.cls || !ctx.cls.parent || !RUN_CLASS_MAP[ctx.cls.parent]) { throw rt(ctx, e.line, 'super(...) geht nur, wenn die Klasse extends hat.', 'Schreibe hinter den Klassennamen: extends Oberklasse.'); }
       var pcls = RUN_CLASS_MAP[ctx.cls.parent];
       var pc = null;
@@ -1972,6 +2045,10 @@
         if (fm.m.isStatic) { return invokeMethod(fm.cls, fm.m, null, args, ctx.vm); }
         if (!ctx.thisVal || ctx.thisVal.t !== 'ref') { throw rt(ctx, e.line, 'Die Methode ' + name + ' braucht ein Objekt.', 'Die Methode ist nicht static; rufe sie ueber ein Objekt auf oder schreibe static davor.'); }
         return invokeMethod(fm.cls, fm.m, ctx.thisVal, args, ctx.vm);
+      }
+      /* Eigene Klasse erbt von einer Grafik-Klasse: move, act, isKeyDown u. a. */
+      if (ctx.thisVal && ctx.thisVal.t === 'ref' && ctx.thisVal.obj && ctx.thisVal.obj.g) {
+        return gfxMethodCall(ctx.thisVal, name, args, ctx, e.line);
       }
       throw rt(ctx, e.line, 'Die Methode ' + name + ' mit ' + args.length + ' Parameter(n) ist nicht bekannt.', 'Pruefe Schreibweise und Gross-/Kleinschreibung, die Parameterzahl und ob die Methode ueberhaupt existiert.');
     }
@@ -2000,6 +2077,8 @@
     if (target.type === 'name' && target.v === 'Double') { return doubleCall(name, args, ctx, e.line); }
     if (target.type === 'name' && target.v === 'String') { return stringStaticCall(name, args, ctx, e.line); }
     if (target.type === 'name' && target.v === 'Datenbank') { return dbCall(name, args, ctx, e.line); }
+    /* Statische Standardwerte der Grafik-API */
+    if (target.type === 'name' && (target.v === 'Shape' || target.v === 'FilledShape')) { return gfxStaticCall(target.v, name, args, ctx, e.line); }
 
     /* super.methode(): Suche ab der Oberklasse */
     if (target.type === 'super') {
@@ -2019,6 +2098,14 @@
     }
     if (recv.t === 'null') { throw rt(ctx, e.line, 'NullPointerException: Der Aufruf ' + name + '(...) laeuft auf null.', 'Das Objekt wurde vermutlich noch nicht mit new erzeugt. Pruefe auch Rueckgaben anderer Methoden.'); }
     if (recv.t !== 'ref') { throw rt(ctx, e.line, 'Vor .' + name + '(...) steht kein Objekt.', ''); }
+    /* Grafik-Objekte (auch eigene Unterklassen): eigene Ueberschreibungen
+     * gewinnen, danach kommt die eingebaute Grafik-API. */
+    if (recv.obj && recv.obj.g) {
+      var gUser = RUN_CLASS_MAP[recv.cls];
+      var gum = gUser ? findMethod(gUser, name, args.length) : null;
+      if (gum && !gum.m.isStatic) { return invokeMethod(gum.cls, gum.m, recv, args, ctx.vm); }
+      return gfxMethodCall(recv, name, args, ctx, e.line);
+    }
     var objCls = RUN_CLASS_MAP[recv.cls];
     var vm0 = findMethod(objCls, name, args.length);
     if (!vm0) {
@@ -2754,6 +2841,1215 @@
     throw rt(ctx, line, 'Die String-Methode ' + name + ' (mit ' + args.length + ' Parametern) wird nicht unterstuetzt.', 'Verfuegbar: length, charAt, substring, indexOf, equals, equalsIgnoreCase, contains, startsWith, endsWith, toUpperCase, toLowerCase, trim, replace, isEmpty, compareTo.');
   }
 
+  /* ================= Grafik-Fenster (API angelehnt an learnj / OnlineIDE) =================
+   * Ein eigenes Fenster mit XY-Feld, in dem Schuelerinnen und Schueler Figuren
+   * platzieren, bewegen, drehen, animieren und auf Maus und Tastatur reagieren
+   * lassen koennen. Alles laeuft im Browser auf einem Canvas - kein Server.
+   * Klassen: World, Color, Alignment, Circle, Ellipse, Rectangle, RoundedRectangle,
+   * Text, Triangle, Line, Polygon, Bitmap, Turtle, Group, Actor sowie die
+   * GUI-Elemente Button, Textfield, Checkbox, Radiobutton.
+   */
+  var GFX_CLASSES = Object.create(null);
+  var GFCL = ['World', 'Color', 'Alignment', 'Circle', 'Ellipse', 'Rectangle', 'RoundedRectangle', 'Text', 'Triangle', 'Line', 'Polygon', 'Bitmap', 'Turtle', 'Group', 'Actor', 'Shape', 'FilledShape', 'Button', 'Textfield', 'Checkbox', 'Radiobutton'];
+  var gfci;
+  for (gfci = 0; gfci < GFCL.length; gfci++) { GFX_CLASSES[GFCL[gfci]] = 1; }
+
+  var GFX_KIND_OF = Object.create(null);
+  GFX_KIND_OF.World = 'world';
+  GFX_KIND_OF.Color = 'color';
+  GFX_KIND_OF.Circle = 'circle';
+  GFX_KIND_OF.Ellipse = 'ellipse';
+  GFX_KIND_OF.Rectangle = 'rectangle';
+  GFX_KIND_OF.RoundedRectangle = 'rounded';
+  GFX_KIND_OF.Text = 'text';
+  GFX_KIND_OF.Triangle = 'triangle';
+  GFX_KIND_OF.Line = 'line';
+  GFX_KIND_OF.Polygon = 'polygon';
+  GFX_KIND_OF.Bitmap = 'bitmap';
+  GFX_KIND_OF.Turtle = 'turtle';
+  GFX_KIND_OF.Group = 'group';
+  GFX_KIND_OF.Actor = 'actor';
+  GFX_KIND_OF.Button = 'button';
+  GFX_KIND_OF.Textfield = 'textfield';
+  GFX_KIND_OF.Checkbox = 'checkbox';
+  GFX_KIND_OF.Radiobutton = 'radiobutton';
+
+  var GFX_SHAPE_KINDS = Object.create(null);
+  var GFX_FILLED_KINDS = Object.create(null);
+  var GS = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'line', 'polygon', 'bitmap', 'turtle', 'button', 'textfield', 'checkbox', 'radiobutton'];
+  var GFILLED = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'polygon', 'bitmap'];
+  var gsi;
+  for (gsi = 0; gsi < GS.length; gsi++) { GFX_SHAPE_KINDS[GS[gsi]] = 1; }
+  for (gsi = 0; gsi < GFILLED.length; gsi++) { GFX_FILLED_KINDS[GFILLED[gsi]] = 1; }
+
+  /* Voreinstellungen (per Shape.setDefaultVisibility / FilledShape.setDefault... aenderbar) */
+  var GFX_DEFAULTS = { visible: true, fill: '#0000ff', border: null, borderWidth: 1 };
+  var GFX_KEYS = Object.create(null);
+  var GFX_ONERROR = null;
+  var GFX_TIMER = null;
+  var GFX_TEST_MODE = false;
+  try {
+    if (typeof global !== 'undefined' && global && global.__INFOCRAFT_TEST__) { GFX_TEST_MODE = true; }
+  } catch (igfx) { }
+
+  function gfxNewState() { return { shapes: [], world: null, worldRef: null, windowState: null }; }
+
+  function gfxNum(args, i, what, ctx, line) {
+    var v = args[i];
+    if (!v || (v.t !== 'int' && v.t !== 'double' && v.t !== 'char')) {
+      throw rt(ctx, line, what + ' braucht eine Zahl an Position ' + (i + 1) + '.', 'z. B. ' + what + '(400, 300, ...)');
+    }
+    return v.v;
+  }
+  function gfxStr(args, i, what, ctx, line) {
+    var v = args[i];
+    if (!v || v.t !== 'String') {
+      throw rt(ctx, line, what + ' braucht einen String an Position ' + (i + 1) + '.', 'Setze den Text in Anfuehrungszeichen, z. B. ' + what + '("Hallo").');
+    }
+    return v.v;
+  }
+  function gfxBool(args, i, what, ctx, line) {
+    var v = args[i];
+    if (!v || v.t !== 'boolean') {
+      throw rt(ctx, line, what + ' braucht true oder false an Position ' + (i + 1) + '.', '');
+    }
+    return v.v;
+  }
+
+  var COLOR_TABLE = Object.create(null);
+  COLOR_TABLE.red = '#ff0000'; COLOR_TABLE.green = '#008000'; COLOR_TABLE.blue = '#0000ff';
+  COLOR_TABLE.yellow = '#ffff00'; COLOR_TABLE.orange = '#ffa500'; COLOR_TABLE.pink = '#ffc0cb';
+  COLOR_TABLE.magenta = '#ff00ff'; COLOR_TABLE.cyan = '#00ffff'; COLOR_TABLE.white = '#ffffff';
+  COLOR_TABLE.black = '#000000'; COLOR_TABLE.gray = '#808080'; COLOR_TABLE.grey = '#808080';
+  COLOR_TABLE.lightGray = '#d3d3d3'; COLOR_TABLE.darkGray = '#404040';
+  COLOR_TABLE.brown = '#a52a2a'; COLOR_TABLE.purple = '#800080';
+  /* Kleingeschriebene Alias-Keys: Lookups laufen ueber den klein geschriebenen Namen */
+  COLOR_TABLE.lightgray = '#d3d3d3'; COLOR_TABLE.darkgray = '#404040';
+
+  function colorToRgb(v, ctx, line) {
+    /* Liefert [r, g, b, a] oder null (bei null-Uebergabe: nichts fuellen). */
+    if (!v || v.t === 'null') { return null; }
+    if (v.t === 'String') {
+      var s = v.v;
+      if (s.charAt(0) === '#') {
+        var hx = s.slice(1);
+        if (hx.length === 3) {
+          return [parseInt(hx.charAt(0) + hx.charAt(0), 16), parseInt(hx.charAt(1) + hx.charAt(1), 16), parseInt(hx.charAt(2) + hx.charAt(2), 16), 1];
+        }
+        if (hx.length === 6) {
+          return [parseInt(hx.slice(0, 2), 16), parseInt(hx.slice(2, 4), 16), parseInt(hx.slice(4, 6), 16), 1];
+        }
+        throw rt(ctx, line, 'Die Farbe ' + s + ' ist keine gueltige Hex-Zahl.', 'Schreibe sie als #rrggbb, z. B. "#ff8000".');
+      }
+      var low = s.toLowerCase();
+      if (low.slice(0, 4) === 'rgb(' && s.slice(-1) === ')') {
+        var parts = s.slice(4, s.length - 1).split(',');
+        return [parseInt(parts[0], 10), parseInt(parts[1], 10), parseInt(parts[2], 10), 1];
+      }
+      if (low.slice(0, 5) === 'rgba(' && s.slice(-1) === ')') {
+        var parts2 = s.slice(5, s.length - 1).split(',');
+        return [parseInt(parts2[0], 10), parseInt(parts2[1], 10), parseInt(parts2[2], 10), parseFloat(parts2[3])];
+      }
+      if (COLOR_TABLE[low]) { return colorToRgb(mkStr(COLOR_TABLE[low]), ctx, line); }
+      throw rt(ctx, line, 'Die Farbe ' + s + ' ist nicht bekannt.', 'Nutze eine bekannte Farbe ("red"), eine Hex-Zahl ("#ff8000") oder rgb(255, 128, 0).');
+    }
+    if (v.t === 'int') {
+      return [(v.v >> 16) & 255, (v.v >> 8) & 255, v.v & 255, 1];
+    }
+    if (v.t === 'ref' && v.obj && v.obj.g && v.obj.g.kind === 'color') {
+      return [v.obj.g.r, v.obj.g.g2, v.obj.g.b, v.obj.g.a];
+    }
+    throw rt(ctx, line, 'Diese Farbe wird nicht unterstuetzt.', 'Erlaubt sind Color-Konstanten (Color.red), "#ff8000", rgb(255,128,0), rgba(...,0.3) oder new Color(255, 128, 0).');
+  }
+  function rgbCss(rgbv) {
+    if (!rgbv) { return null; }
+    if (rgbv[3] !== undefined && rgbv[3] !== 1) { return 'rgba(' + rgbv[0] + ', ' + rgbv[1] + ', ' + rgbv[2] + ', ' + rgbv[3] + ')'; }
+    return 'rgb(' + rgbv[0] + ', ' + rgbv[1] + ', ' + rgbv[2] + ')';
+  }
+  function mkColorRef(rgbv) {
+    var obj = { cls: 'Color', f: {}, g: { kind: 'color', r: rgbv[0], g2: rgbv[1], b: rgbv[2], a: rgbv[3] === undefined ? 1 : rgbv[3], css: rgbCss(rgbv) } };
+    return { t: 'ref', cls: 'Color', obj: obj };
+  }
+
+  function gfxStaticGet(clsName, name, ctx, line) {
+    if (clsName === 'Color') {
+      var low = String(name).toLowerCase();
+      if (COLOR_TABLE[low]) { return mkColorRef(colorToRgb(mkStr(COLOR_TABLE[low]), ctx, line)); }
+      throw rt(ctx, line, 'Color.' + name + ' gibt es nicht.', 'Verfuegbare Farben: red, green, blue, yellow, orange, pink, magenta, cyan, white, black, gray, lightGray, darkGray, brown, purple.');
+    }
+    if (clsName === 'Alignment') {
+      if (name === 'left' || name === 'center' || name === 'right') { return mkStr(name); }
+      throw rt(ctx, line, 'Alignment.' + name + ' gibt es nicht.', 'Verfuegbare Werte: Alignment.left, Alignment.center, Alignment.right.');
+    }
+    return null;
+  }
+
+  /* Statische Voreinstellungen: Shape.setDefaultVisibility, FilledShape.setDefault... */
+  function gfxStaticCall(clsName, name, args, ctx, line) {
+    if (clsName === 'Shape' && name === 'setDefaultVisibility' && args.length === 1) {
+      GFX_DEFAULTS.visible = gfxBool(args, 0, 'setDefaultVisibility', ctx, line);
+      return VOIDV;
+    }
+    if (clsName === 'FilledShape' && name === 'setDefaultFillColor' && args.length >= 1) {
+      var fc = colorToRgb(args[0], ctx, line);
+      GFX_DEFAULTS.fill = fc ? rgbCss(fc) : null;
+      return VOIDV;
+    }
+    if (clsName === 'FilledShape' && name === 'setDefaultBorderColor' && args.length >= 1) {
+      var bc = colorToRgb(args[0], ctx, line);
+      GFX_DEFAULTS.border = bc ? rgbCss(bc) : null;
+      return VOIDV;
+    }
+    if (clsName === 'FilledShape' && name === 'setDefaultBorderWidth' && args.length === 1) {
+      GFX_DEFAULTS.borderWidth = gfxNum(args, 0, 'setDefaultBorderWidth', ctx, line);
+      return VOIDV;
+    }
+    throw rt(ctx, line, clsName + '.' + name + ' gibt es nicht.', 'Verfuegbar: Shape.setDefaultVisibility(...), FilledShape.setDefaultFillColor(...), FilledShape.setDefaultBorderColor(...), FilledShape.setDefaultBorderWidth(...).');
+  }
+
+  /* ---------- Fenster (DOM), einmalig angelegt, wiederverwendet ---------- */
+  function gfxWindowFind() {
+    if (typeof document === 'undefined' || !document.getElementById) { return null; }
+    var el = document.getElementById('gfx-window');
+    if (el && el.__gfxState) { return el.__gfxState; }
+    return null;
+  }
+  function gfxEnsureWindow(vm) {
+    var st = gfxWindowFind();
+    if (st) { vm.gfx.windowState = st; return st; }
+    if (typeof document === 'undefined' || !document.createElement || !document.body) { return null; }
+    var el = document.createElement('div');
+    el.id = 'gfx-window';
+    el.className = 'gfx-window';
+    el.setAttribute('tabindex', '0');
+    var title = document.createElement('div');
+    title.className = 'gfx-title';
+    var label = document.createElement('span');
+    label.className = 'gfx-label';
+    label.textContent = 'Grafik-Fenster';
+    var close = document.createElement('button');
+    close.className = 'gfx-close';
+    close.type = 'button';
+    close.setAttribute('title', 'Grafik-Fenster schliessen');
+    close.textContent = String.fromCharCode(215);
+    title.appendChild(label);
+    title.appendChild(close);
+    var canvas = document.createElement('canvas');
+    canvas.className = 'gfx-canvas';
+    canvas.width = 480;
+    canvas.height = 360;
+    var guiLayer = document.createElement('div');
+    guiLayer.className = 'gfx-gui';
+    el.appendChild(title);
+    el.appendChild(canvas);
+    el.appendChild(guiLayer);
+    document.body.appendChild(el);
+    st = { el: el, canvas: canvas, guiLayer: guiLayer, label: label, hidden: false };
+    el.__gfxState = st;
+    /* Ereignisse: Tastatur und Maus gehen an die Objekte des laufenden Programms */
+    el.addEventListener('keydown', function (ev) { gfxDispatchKey(ev.key, true); if (ev.preventDefault && ev.key && ev.key.slice(0, 5) === 'Arrow') { ev.preventDefault(); } });
+    el.addEventListener('keyup', function (ev) { gfxDispatchKey(ev.key, false); });
+    canvas.addEventListener('mousedown', function (ev) { gfxMouse(ev, 'down'); });
+    canvas.addEventListener('mouseup', function (ev) { gfxMouse(ev, 'up'); });
+    canvas.addEventListener('mousemove', function (ev) { gfxMouse(ev, 'move'); });
+    close.addEventListener('click', function () { gfxHideWindow(); });
+    vm.gfx.windowState = st;
+    return st;
+  }
+  function gfxHideWindow() {
+    var st = gfxWindowFind();
+    if (st) { st.hidden = true; if (st.el.style) { st.el.style.display = 'none'; } }
+  }
+  function gfxShowWindow(vm) {
+    var st = vm.gfx.windowState || gfxEnsureWindow(vm);
+    if (st) { st.hidden = false; if (st.el.style) { st.el.style.display = ''; } }
+  }
+
+  function gfxEnsureWorld(vm) {
+    if (!vm.gfx.world) {
+      vm.gfx.world = { kind: 'world', w: 800, h: 600, bg: '#ffffff', cursor: 'default' };
+      vm.gfx.worldRef = { t: 'ref', cls: 'World', obj: { cls: 'World', f: {}, g: vm.gfx.world } };
+    }
+    gfxShowWindow(vm);
+    return vm.gfx.world;
+  }
+
+  /* ---------- Figuren anlegen ---------- */
+  function makeShape(kind, args, ctx, line) {
+    var g = {
+      kind: kind, x: 0, y: 0, visible: GFX_DEFAULTS.visible,
+      fill: GFX_FILLED_KINDS[kind] ? GFX_DEFAULTS.fill : null,
+      border: kind === 'line' || kind === 'turtle' ? '#000000' : GFX_DEFAULTS.border,
+      borderWidth: kind === 'turtle' ? 2 : GFX_DEFAULTS.borderWidth,
+      alpha: 1, rot: 0, scaleF: 1, mirrorX: false, mirrorY: false,
+      dead: false, dom: null, ref: null
+    };
+    var i;
+    if (kind === 'circle') {
+      g.x = args.length > 0 ? gfxNum(args, 0, 'Circle', ctx, line) : 0;
+      g.y = args.length > 1 ? gfxNum(args, 1, 'Circle', ctx, line) : 0;
+      g.r = args.length > 2 ? gfxNum(args, 2, 'Circle', ctx, line) : 10;
+      if (g.r < 0) { throw rt(ctx, line, 'Der Radius von Circle darf nicht negativ sein.', 'new Circle(400, 300, 100) zeichnet einen Kreis mit Mittelpunkt (400, 300) und Radius 100.'); }
+    } else if (kind === 'ellipse') {
+      g.x = args.length > 0 ? gfxNum(args, 0, 'Ellipse', ctx, line) : 0;
+      g.y = args.length > 1 ? gfxNum(args, 1, 'Ellipse', ctx, line) : 0;
+      g.rx = args.length > 2 ? gfxNum(args, 2, 'Ellipse', ctx, line) : 10;
+      g.ry = args.length > 3 ? gfxNum(args, 3, 'Ellipse', ctx, line) : 10;
+    } else if (kind === 'rectangle' || kind === 'rounded') {
+      var rn = kind === 'rounded' ? 'RoundedRectangle' : 'Rectangle';
+      g.x = args.length > 0 ? gfxNum(args, 0, rn, ctx, line) : 0;
+      g.y = args.length > 1 ? gfxNum(args, 1, rn, ctx, line) : 0;
+      g.w = args.length > 2 ? gfxNum(args, 2, rn, ctx, line) : 100;
+      g.h = args.length > 3 ? gfxNum(args, 3, rn, ctx, line) : 100;
+      if (kind === 'rounded') { g.rad = args.length > 4 ? gfxNum(args, 4, rn, ctx, line) : 10; }
+    } else if (kind === 'bitmap') {
+      g.cols = Math.max(1, Math.floor(args.length > 0 ? gfxNum(args, 0, 'Bitmap', ctx, line) : 10));
+      g.rows = Math.max(1, Math.floor(args.length > 1 ? gfxNum(args, 1, 'Bitmap', ctx, line) : 10));
+      g.x = args.length > 2 ? gfxNum(args, 2, 'Bitmap', ctx, line) : 0;
+      g.y = args.length > 3 ? gfxNum(args, 3, 'Bitmap', ctx, line) : 0;
+      g.w = args.length > 4 ? gfxNum(args, 4, 'Bitmap', ctx, line) : 200;
+      g.h = args.length > 5 ? gfxNum(args, 5, 'Bitmap', ctx, line) : 100;
+      g.cells = [];
+      for (i = 0; i < g.cols * g.rows; i++) { g.cells.push(null); }
+      g.fill = null;
+    } else if (kind === 'text') {
+      g.x = args.length > 0 ? gfxNum(args, 0, 'Text', ctx, line) : 0;
+      g.y = args.length > 1 ? gfxNum(args, 1, 'Text', ctx, line) : 0;
+      g.size = args.length > 2 ? gfxNum(args, 2, 'Text', ctx, line) : 20;
+      g.text = args.length > 3 ? javaStr(args[3], ctx, line) : '';
+      g.font = args.length > 4 ? gfxStr(args, 4, 'Text', ctx, line) : 'sans-serif';
+      g.align = 'left';
+    } else if (kind === 'triangle') {
+      g.p1x = args.length > 0 ? gfxNum(args, 0, 'Triangle', ctx, line) : 0;
+      g.p1y = args.length > 1 ? gfxNum(args, 1, 'Triangle', ctx, line) : 0;
+      g.p2x = args.length > 2 ? gfxNum(args, 2, 'Triangle', ctx, line) : 0;
+      g.p2y = args.length > 3 ? gfxNum(args, 3, 'Triangle', ctx, line) : 0;
+      g.p3x = args.length > 4 ? gfxNum(args, 4, 'Triangle', ctx, line) : 0;
+      g.p3y = args.length > 5 ? gfxNum(args, 5, 'Triangle', ctx, line) : 0;
+    } else if (kind === 'line') {
+      g.x1 = args.length > 0 ? gfxNum(args, 0, 'Line', ctx, line) : 0;
+      g.y1 = args.length > 1 ? gfxNum(args, 1, 'Line', ctx, line) : 0;
+      g.x2 = args.length > 2 ? gfxNum(args, 2, 'Line', ctx, line) : 100;
+      g.y2 = args.length > 3 ? gfxNum(args, 3, 'Line', ctx, line) : 100;
+      g.fill = null;
+    } else if (kind === 'polygon') {
+      g.closeAndFill = args.length > 0 ? gfxBool(args, 0, 'Polygon', ctx, line) : true;
+      g.points = [];
+      /* Punkte paarweise als x,y lesen; alternativ ein Array mit x/y-Werten */
+      if (args.length === 2 && args[1].t === 'array') {
+        var arr = args[1].arr;
+        for (i = 0; i + 1 < arr.length; i += 2) {
+          g.points.push([
+            (arr[i].t === 'int' || arr[i].t === 'double') ? arr[i].v : 0,
+            (arr[i + 1].t === 'int' || arr[i + 1].t === 'double') ? arr[i + 1].v : 0
+          ]);
+        }
+      } else {
+        for (i = 1; i + 1 < args.length; i += 2) {
+          g.points.push([gfxNum(args, i, 'Polygon', ctx, line), gfxNum(args, i + 1, 'Polygon', ctx, line)]);
+        }
+      }
+    } else if (kind === 'turtle') {
+      g.x = args.length > 0 ? gfxNum(args, 0, 'Turtle', ctx, line) : 400;
+      g.y = args.length > 1 ? gfxNum(args, 1, 'Turtle', ctx, line) : 300;
+      g.heading = 0;
+      g.pen = true;
+      g.path = [[g.x, g.y]];
+      g.fill = null;
+    } else if (kind === 'button') {
+      g.x = args.length > 0 ? gfxNum(args, 0, 'Button', ctx, line) : 0;
+      g.y = args.length > 1 ? gfxNum(args, 1, 'Button', ctx, line) : 0;
+      g.w = args.length > 2 ? gfxNum(args, 2, 'Button', ctx, line) : 120;
+      g.h = args.length > 3 ? gfxNum(args, 3, 'Button', ctx, line) : 32;
+      g.text = args.length > 4 ? javaStr(args[4], ctx, line) : 'Knopf';
+    } else if (kind === 'textfield') {
+      g.x = args.length > 0 ? gfxNum(args, 0, 'Textfield', ctx, line) : 0;
+      g.y = args.length > 1 ? gfxNum(args, 1, 'Textfield', ctx, line) : 0;
+      g.w = args.length > 2 ? gfxNum(args, 2, 'Textfield', ctx, line) : 140;
+      g.h = args.length > 3 ? gfxNum(args, 3, 'Textfield', ctx, line) : 28;
+      g.text = args.length > 4 ? javaStr(args[4], ctx, line) : '';
+    } else if (kind === 'checkbox' || kind === 'radiobutton') {
+      g.x = args.length > 0 ? gfxNum(args, 0, kind === 'checkbox' ? 'Checkbox' : 'Radiobutton', ctx, line) : 0;
+      g.y = args.length > 1 ? gfxNum(args, 1, kind === 'checkbox' ? 'Checkbox' : 'Radiobutton', ctx, line) : 0;
+      g.w = args.length > 2 ? gfxNum(args, 2, kind === 'checkbox' ? 'Checkbox' : 'Radiobutton', ctx, line) : 150;
+      g.h = args.length > 3 ? gfxNum(args, 3, kind === 'checkbox' ? 'Checkbox' : 'Radiobutton', ctx, line) : 24;
+      g.text = args.length > 4 ? javaStr(args[4], ctx, line) : '';
+      g.checked = args.length > 5 ? gfxBool(args, 5, kind === 'checkbox' ? 'Checkbox' : 'Radiobutton', ctx, line) : false;
+    } else if (kind === 'world') {
+      g.w = args.length > 0 ? gfxNum(args, 0, 'World', ctx, line) : 800;
+      g.h = args.length > 1 ? gfxNum(args, 1, 'World', ctx, line) : 600;
+      if (g.w <= 0 || g.h <= 0) { throw rt(ctx, line, 'Die Groesse des Grafik-Fensters muss positiv sein.', 'z. B. new World(800, 600)'); }
+      g.bg = '#ffffff';
+      g.cursor = 'default';
+    }
+    return g;
+  }
+
+  function gfxNew(clsName, args, ctx, line) {
+    var vm = ctx.vm;
+    var kind = GFX_KIND_OF[clsName];
+    if (clsName === 'World') {
+      var wst = makeShape('world', args, ctx, line);
+      vm.gfx.world = wst;
+      vm.gfx.worldRef = { t: 'ref', cls: 'World', obj: { cls: 'World', f: {}, g: wst } };
+      gfxShowWindow(vm);
+      gfxRedraw(vm);
+      return vm.gfx.worldRef;
+    }
+    if (clsName === 'Color') {
+      var r = args.length > 0 ? gfxNum(args, 0, 'new Color', ctx, line) : 0;
+      var g2 = args.length > 1 ? gfxNum(args, 1, 'new Color', ctx, line) : 0;
+      var b2 = args.length > 2 ? gfxNum(args, 2, 'new Color', ctx, line) : 0;
+      var a2 = args.length > 3 ? gfxNum(args, 3, 'new Color', ctx, line) : 1;
+      return mkColorRef([Math.max(0, Math.min(255, Math.floor(r))), Math.max(0, Math.min(255, Math.floor(g2))), Math.max(0, Math.min(255, Math.floor(b2))), Math.max(0, Math.min(1, a2))]);
+    }
+    if (clsName === 'Group') {
+      var gobj = { cls: 'Group', f: {}, g: { kind: 'group', members: [], dead: false, ref: null } };
+      vm.objects.push({ id: vm.objects.length + 1, cls: 'Group', obj: gobj });
+      var gref = { t: 'ref', cls: 'Group', obj: gobj };
+      gobj.g.ref = gobj;
+      for (var gi = 0; gi < args.length; gi++) { gfxGroupAdd(gobj.g, args[gi], ctx, line); }
+      return gref;
+    }
+    if (clsName === 'Actor') {
+      var aobj = { cls: 'Actor', f: {}, g: { kind: 'actor', dead: false, ref: null } };
+      vm.objects.push({ id: vm.objects.length + 1, cls: 'Actor', obj: aobj });
+      aobj.g.ref = aobj;
+      return { t: 'ref', cls: 'Actor', obj: aobj };
+    }
+    var obj = { cls: clsName, f: {}, g: makeShape(kind, args, ctx, line) };
+    vm.objects.push({ id: vm.objects.length + 1, cls: clsName, obj: obj });
+    obj.g.ref = obj;
+    gfxEnsureWorld(vm);
+    vm.gfx.shapes.push(obj.g);
+    if (GFX_SHAPE_KINDS[kind] && (kind === 'button' || kind === 'textfield' || kind === 'checkbox' || kind === 'radiobutton')) { gfxMakeDom(obj.g, vm); }
+    gfxRedraw(vm);
+    return { t: 'ref', cls: clsName, obj: obj };
+  }
+
+  /* Grafik-Unterklasse (z. B. class Auto extends Rectangle): Figur anlegen */
+  function gfxAttach(obj, baseName, args, vm, ctx, line) {
+    var kind = GFX_KIND_OF[baseName];
+    if (!kind || kind === 'world' || kind === 'color') {
+      throw rt(ctx, line, 'Von ' + baseName + ' kann nicht geerbt werden.', 'Erlaubte Basisklassen: Actor, Circle, Ellipse, Rectangle, RoundedRectangle, Text, Triangle, Line, Polygon, Bitmap, Turtle, Group.');
+    }
+    if (kind === 'group') {
+      obj.g = { kind: 'group', members: [], dead: false, ref: obj };
+      return;
+    }
+    if (kind === 'actor') {
+      obj.g = { kind: 'actor', dead: false, ref: obj };
+      return;
+    }
+    obj.g = makeShape(kind, args, ctx, line);
+    obj.g.ref = obj;
+    gfxEnsureWorld(vm);
+    vm.gfx.shapes.push(obj.g);
+    if (kind === 'button' || kind === 'textfield' || kind === 'checkbox' || kind === 'radiobutton') { gfxMakeDom(obj.g, vm); }
+    gfxRedraw(vm);
+  }
+  function gfxBaseOf(cls) {
+    var c = cls;
+    var guard = 0;
+    while (c && guard < 30) {
+      if (c.parent && GFX_CLASSES[c.parent] && RUN_CLASS_MAP[c.parent] === undefined) { return c.parent; }
+      c = c.parent ? RUN_CLASS_MAP[c.parent] : null;
+      guard++;
+    }
+    return null;
+  }
+
+  function gfxGroupAdd(g, val, ctx, line) {
+    if (!val || val.t !== 'ref' || !val.obj || !val.obj.g || !GFX_SHAPE_KINDS[val.obj.g.kind]) {
+      throw rt(ctx, line, 'add(...) braucht eine Figur (Circle, Rectangle usw.).', 'z. B. gruppe.add(rect);');
+    }
+    for (var i = 0; i < g.members.length; i++) { if (g.members[i] === val.obj.g) { return; } }
+    g.members.push(val.obj.g);
+  }
+
+  /* ---------- GUI-Elemente als echte Knopf-/Eingabe-Elemente ---------- */
+  function gfxMakeDom(g, vm) {
+    if (typeof document === 'undefined' || !document.createElement) { return; }
+    var st = vm.gfx.windowState || gfxEnsureWindow(vm);
+    if (!st) { return; }
+    var el = null;
+    var selfRef = function () { return { t: 'ref', cls: g.ref ? g.ref.cls : 'Button', obj: g.ref }; };
+    if (g.kind === 'button') {
+      el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'gfx-el gfx-btn-el';
+      el.textContent = g.text;
+      el.addEventListener('click', function () { gfxDispatch(g.ref, 'onChange', [mkStr(g.text)]); });
+    } else if (g.kind === 'textfield') {
+      el = document.createElement('input');
+      el.type = 'text';
+      el.className = 'gfx-el gfx-input-el';
+      el.value = g.text;
+      el.addEventListener('change', function () { g.text = el.value; gfxDispatch(g.ref, 'onChange', [mkStr(el.value)]); });
+    } else if (g.kind === 'checkbox' || g.kind === 'radiobutton') {
+      el = document.createElement('input');
+      el.type = g.kind === 'checkbox' ? 'checkbox' : 'radio';
+      el.className = 'gfx-el gfx-input-el';
+      if (g.checked) { el.checked = true; }
+      el.addEventListener('change', function () { g.checked = !!el.checked; gfxDispatch(g.ref, 'onChange', [mkStr(g.checked ? 'true' : 'false')]); });
+    }
+    if (!el) { return; }
+    g.dom = el;
+    st.guiLayer.appendChild(el);
+  }
+
+  /* ---------- Zeichnen ---------- */
+  function gfxTransformOf(vm) {
+    var w = vm.gfx.world;
+    var st = vm.gfx.windowState;
+    var cw = st && st.canvas ? st.canvas.width : 480;
+    var ch = st && st.canvas ? st.canvas.height : 360;
+    var sx = Math.min(cw / w.w, ch / w.h);
+    return { s: sx, ox: (cw - w.w * sx) / 2, oy: (ch - w.h * sx) / 2 };
+  }
+  function gfxScaleBBox(bb, f) {
+    var cx = bb.x + bb.w / 2;
+    var cy = bb.y + bb.h / 2;
+    return { x: cx - (bb.w / 2) * f, y: cy - (bb.h / 2) * f, w: bb.w * f, h: bb.h * f };
+  }
+  function shapeBBox(g) {
+    var f = g.scaleF || 1;
+    var bb;
+    if (g.kind === 'circle') { bb = { x: g.x - g.r, y: g.y - g.r, w: 2 * g.r, h: 2 * g.r }; }
+    else if (g.kind === 'ellipse') { bb = { x: g.x - g.rx, y: g.y - g.ry, w: 2 * g.rx, h: 2 * g.ry }; }
+    else if (g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') { bb = { x: g.x, y: g.y, w: g.w || 10, h: g.h || 10 }; }
+    else if (g.kind === 'text') { bb = { x: g.x, y: g.y, w: (g.size || 20) * 0.6 * (g.text ? g.text.length : 0), h: g.size || 20 }; }
+    else if (g.kind === 'triangle') {
+      bb = { x: Math.min(g.p1x, g.p2x, g.p3x), y: Math.min(g.p1y, g.p2y, g.p3y), w: Math.abs(Math.max(g.p1x, g.p2x, g.p3x) - Math.min(g.p1x, g.p2x, g.p3x)), h: Math.abs(Math.max(g.p1y, g.p2y, g.p3y) - Math.min(g.p1y, g.p2y, g.p3y)) };
+    }
+    else if (g.kind === 'line') { bb = { x: Math.min(g.x1, g.x2), y: Math.min(g.y1, g.y2), w: Math.abs(g.x2 - g.x1), h: Math.abs(g.y2 - g.y1) }; }
+    else if (g.kind === 'polygon' && g.points) {
+      var xs = [], ys = [], i;
+      for (i = 0; i < g.points.length; i++) { xs.push(g.points[i][0]); ys.push(g.points[i][1]); }
+      bb = { x: Math.min.apply(null, xs), y: Math.min.apply(null, ys), w: Math.max.apply(null, xs) - Math.min.apply(null, xs), h: Math.max.apply(null, ys) - Math.min.apply(null, ys) };
+    }
+    else if (g.kind === 'turtle' && g.path) {
+      var xs2 = [], ys2 = [], j;
+      for (j = 0; j < g.path.length; j++) { xs2.push(g.path[j][0]); ys2.push(g.path[j][1]); }
+      bb = { x: Math.min.apply(null, xs2) - 10, y: Math.min.apply(null, ys2) - 10, w: Math.max.apply(null, xs2) - Math.min.apply(null, xs2) + 20, h: Math.max.apply(null, ys2) - Math.min.apply(null, ys2) + 20 };
+    }
+    else { bb = { x: g.x, y: g.y, w: 0, h: 0 }; }
+    if (f !== 1 && bb.w + bb.h > 0) { return gfxScaleBBox(bb, f); }
+    return bb;
+  }
+  function gfxRedraw(vm) {
+    if (!vm || !vm.gfx || !vm.gfx.world) { return; }
+    var st = vm.gfx.windowState || gfxEnsureWindow(vm);
+    if (!st || !st.canvas || !st.canvas.getContext) { return; }
+    var ctx2d = st.canvas.getContext('2d');
+    if (!ctx2d || !ctx2d.fillRect) { return; }
+    var w = vm.gfx.world;
+    var tr = gfxTransformOf(vm);
+    ctx2d.clearRect(0, 0, st.canvas.width, st.canvas.height);
+    ctx2d.fillStyle = '#eef1f6';
+    ctx2d.fillRect(0, 0, st.canvas.width, st.canvas.height);
+    ctx2d.fillStyle = w.bg;
+    ctx2d.fillRect(tr.ox, tr.oy, w.w * tr.s, w.h * tr.s);
+    /* dezentes Raster, damit das XY-Feld sichtbar ist */
+    ctx2d.strokeStyle = '#e2e8f0';
+    ctx2d.lineWidth = 1;
+    var gx;
+    for (gx = 50; gx < w.w; gx += 50) {
+      ctx2d.beginPath();
+      ctx2d.moveTo(tr.ox + gx * tr.s, tr.oy);
+      ctx2d.lineTo(tr.ox + gx * tr.s, tr.oy + w.h * tr.s);
+      ctx2d.stroke();
+    }
+    var gy;
+    for (gy = 50; gy < w.h; gy += 50) {
+      ctx2d.beginPath();
+      ctx2d.moveTo(tr.ox, tr.oy + gy * tr.s);
+      ctx2d.lineTo(tr.ox + w.w * tr.s, tr.oy + gy * tr.s);
+      ctx2d.stroke();
+    }
+    var i;
+    for (i = 0; i < vm.gfx.shapes.length; i++) { gfxDrawShape(ctx2d, vm.gfx.shapes[i], tr); }
+    /* GUI-Elemente positionieren */
+    for (i = 0; i < vm.gfx.shapes.length; i++) {
+      var sh = vm.gfx.shapes[i];
+      if (sh.dom && sh.dom.style) {
+        sh.dom.style.left = (tr.ox + sh.x * tr.s) + 'px';
+        sh.dom.style.top = (tr.oy + sh.y * tr.s) + 'px';
+        sh.dom.style.width = (sh.w * tr.s) + 'px';
+        sh.dom.style.height = (sh.h * tr.s) + 'px';
+      }
+    }
+  }
+  function gfxDrawShape(ctx2d, g, tr) {
+    if (!g.visible || g.dead) { return; }
+    if (g.dom) { return; }
+    if (!GFX_SHAPE_KINDS[g.kind]) { return; }
+    var f = g.scaleF || 1;
+    ctx2d.save();
+    ctx2d.globalAlpha = g.alpha === undefined ? 1 : g.alpha;
+    var mx = g.mirrorX ? -1 : 1;
+    var my = g.mirrorY ? -1 : 1;
+    var cx, cy;
+    if (g.kind === 'circle' || g.kind === 'ellipse') { cx = g.x; cy = g.y; }
+    else if (g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') { cx = g.x + g.w / 2; cy = g.y + g.h / 2; }
+    else if (g.kind === 'text') { cx = g.x; cy = g.y; }
+    else if (g.kind === 'triangle') { cx = (g.p1x + g.p2x + g.p3x) / 3; cy = (g.p1y + g.p2y + g.p3y) / 3; }
+    else if (g.kind === 'line') { cx = (g.x1 + g.x2) / 2; cy = (g.y1 + g.y2) / 2; }
+    else { var bb = shapeBBox(g); cx = bb.x + bb.w / 2; cy = bb.y + bb.h / 2; }
+    var px = tr.ox + cx * tr.s;
+    var py = tr.oy + cy * tr.s;
+    ctx2d.translate(px, py);
+    if (g.rot) { ctx2d.rotate(g.rot * Math.PI / 180); }
+    ctx2d.scale(tr.s * f * mx, tr.s * f * my);
+    ctx2d.beginPath();
+    var doFill = g.fill !== null && g.fill !== undefined;
+    var doStroke = g.border !== null && g.border !== undefined;
+    if (g.kind === 'circle' || g.kind === 'ellipse') {
+      var rx = g.kind === 'circle' ? g.r : g.rx;
+      var ry = g.kind === 'circle' ? g.r : g.ry;
+      if (ctx2d.ellipse) { ctx2d.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); }
+      else { ctx2d.arc(0, 0, rx, 0, Math.PI * 2); }
+    } else if (g.kind === 'rectangle' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') {
+      ctx2d.rect(-g.w / 2, -g.h / 2, g.w, g.h);
+    } else if (g.kind === 'rounded') {
+      var rw = g.w / 2, rh = g.h / 2, rr = Math.min(g.rad || 0, rw, rh);
+      ctx2d.moveTo(-rw + rr, -rh);
+      ctx2d.lineTo(rw - rr, -rh);
+      ctx2d.quadraticCurveTo(rw, -rh, rw, -rh + rr);
+      ctx2d.lineTo(rw, rh - rr);
+      ctx2d.quadraticCurveTo(rw, rh, rw - rr, rh);
+      ctx2d.lineTo(-rw + rr, rh);
+      ctx2d.quadraticCurveTo(-rw, rh, -rw, rh - rr);
+      ctx2d.lineTo(-rw, -rh + rr);
+      ctx2d.quadraticCurveTo(-rw, -rh, -rw + rr, -rh);
+    } else if (g.kind === 'text') {
+      ctx2d.font = (g.size) + 'px ' + g.font;
+      ctx2d.textAlign = g.align || 'left';
+      ctx2d.textBaseline = 'top';
+      doFill = true;
+      ctx2d.fillStyle = g.fill || '#000000';
+      ctx2d.fillText(g.text, 0, 0);
+      ctx2d.restore();
+      return;
+    } else if (g.kind === 'triangle') {
+      ctx2d.moveTo((g.p1x - cx), (g.p1y - cy));
+      ctx2d.lineTo((g.p2x - cx), (g.p2y - cy));
+      ctx2d.lineTo((g.p3x - cx), (g.p3y - cy));
+      ctx2d.closePath();
+    } else if (g.kind === 'line') {
+      ctx2d.moveTo((g.x1 - cx), (g.y1 - cy));
+      ctx2d.lineTo((g.x2 - cx), (g.y2 - cy));
+      doFill = false;
+    } else if (g.kind === 'polygon' && g.points && g.points.length > 0) {
+      var pi;
+      ctx2d.moveTo((g.points[0][0] - cx), (g.points[0][1] - cy));
+      for (pi = 1; pi < g.points.length; pi++) { ctx2d.lineTo((g.points[pi][0] - cx), (g.points[pi][1] - cy)); }
+      if (g.closeAndFill) { ctx2d.closePath(); } else { doFill = false; }
+    } else if (g.kind === 'bitmap') {
+      var cw2 = g.w / g.cols, ch2 = g.h / g.rows;
+      var bi, bj;
+      for (bi = 0; bi < g.cols; bi++) {
+        for (bj = 0; bj < g.rows; bj++) {
+          var col = g.cells[bj * g.cols + bi];
+          if (col) { ctx2d.fillStyle = col; ctx2d.fillRect(-g.w / 2 + bi * cw2, -g.h / 2 + bj * ch2, cw2 + 0.5, ch2 + 0.5); }
+        }
+      }
+      ctx2d.restore();
+      return;
+    } else if (g.kind === 'turtle') {
+      if (g.path.length > 1) {
+        ctx2d.strokeStyle = g.border || '#000000';
+        ctx2d.lineWidth = g.borderWidth || 2;
+        ctx2d.beginPath();
+        ctx2d.moveTo((g.path[0][0] - cx), (g.path[0][1] - cy));
+        for (pi = 1; pi < g.path.length; pi++) { ctx2d.lineTo((g.path[pi][0] - cx), (g.path[pi][1] - cy)); }
+        ctx2d.stroke();
+      }
+      var hr = g.heading * Math.PI / 180;
+      ctx2d.translate((g.x - cx), (g.y - cy));
+      ctx2d.rotate(hr);
+      ctx2d.beginPath();
+      ctx2d.moveTo(10, 0);
+      ctx2d.lineTo(-6, 6);
+      ctx2d.lineTo(-6, -6);
+      ctx2d.closePath();
+      ctx2d.fillStyle = g.border || '#000000';
+      ctx2d.fill();
+      ctx2d.restore();
+      return;
+    }
+    if (doFill) { ctx2d.fillStyle = g.fill; ctx2d.fill(); }
+    if (doStroke) {
+      ctx2d.strokeStyle = g.border;
+      ctx2d.lineWidth = g.borderWidth || 1;
+      ctx2d.stroke();
+    }
+    ctx2d.restore();
+  }
+
+  /* ---------- Ereignisse an die Objekte des laufenden Programms ---------- */
+  function gfxDispatch(obj, name, args) {
+    if (!obj || obj.g === undefined || obj.g === null) { return; }
+    var cls = RUN_CLASS_MAP[obj.cls];
+    if (!cls) { return; }
+    var found = findMethod(cls, name, args.length);
+    if (!found || found.m.isStatic) { return; }
+    try {
+      invokeMethod(found.cls, found.m, { t: 'ref', cls: obj.cls, obj: obj }, args, RUN_VM);
+    } catch (e) {
+      if (e && e.jerr) {
+        if (GFX_ONERROR) { GFX_ONERROR(e.jerr); }
+        gfxStopLoop();
+      } else if (!(e && e.ctrl)) { throw e; }
+    }
+  }
+  function gfxActors() {
+    var out = [];
+    if (!RUN_VM || !RUN_VM.objects) { return out; }
+    var i;
+    for (i = 0; i < RUN_VM.objects.length; i++) {
+      var o = RUN_VM.objects[i];
+      if (o.obj && o.obj.g && !o.obj.g.dead && o.obj.g.kind !== 'world' && o.obj.g.kind !== 'color' && RUN_CLASS_MAP[o.cls]) { out.push(o.obj); }
+    }
+    return out;
+  }
+  function gfxTick() {
+    var actors = gfxActors();
+    var i;
+    for (i = 0; i < actors.length; i++) { gfxDispatch(actors[i], 'act', []); }
+    if (RUN_VM) { gfxRedraw(RUN_VM); }
+  }
+  function gfxStartLoop() {
+    if (GFX_TIMER || GFX_TEST_MODE) { return; }
+    if (typeof setInterval !== 'function') { return; }
+    GFX_TIMER = setInterval(gfxTick, 33);
+  }
+  function gfxStopLoop() {
+    if (GFX_TIMER && typeof clearInterval === 'function') { clearInterval(GFX_TIMER); }
+    GFX_TIMER = null;
+  }
+  var GFX_KEY_ALIAS = Object.create(null);
+  GFX_KEY_ALIAS.links = 'ArrowLeft'; GFX_KEY_ALIAS.rechts = 'ArrowRight';
+  GFX_KEY_ALIAS.oben = 'ArrowUp'; GFX_KEY_ALIAS.unten = 'ArrowDown';
+  GFX_KEY_ALIAS.left = 'ArrowLeft'; GFX_KEY_ALIAS.right = 'ArrowRight';
+  GFX_KEY_ALIAS.up = 'ArrowUp'; GFX_KEY_ALIAS.down = 'ArrowDown';
+  function gfxKeyName(key) {
+    var k = String(key);
+    if (GFX_KEY_ALIAS[k]) { return GFX_KEY_ALIAS[k]; }
+    return k;
+  }
+  function gfxDispatchKey(key, isDown) {
+    var k = gfxKeyName(key);
+    GFX_KEYS[k] = isDown === true;
+    var actors = gfxActors();
+    var i;
+    if (isDown) {
+      for (i = 0; i < actors.length; i++) { gfxDispatch(actors[i], 'onKeyDown', [mkStr(k)]); }
+    } else {
+      for (i = 0; i < actors.length; i++) { gfxDispatch(actors[i], 'onKeyUp', [mkStr(k)]); }
+      if (k.length === 1) {
+        for (i = 0; i < actors.length; i++) { gfxDispatch(actors[i], 'onKeyTyped', [mkStr(k)]); }
+      }
+    }
+    if (RUN_VM) { gfxRedraw(RUN_VM); }
+  }
+  function gfxMouse(ev, phase) {
+    if (!RUN_VM || !RUN_VM.gfx || !RUN_VM.gfx.world) { return; }
+    var st = RUN_VM.gfx.windowState;
+    if (!st || !st.canvas) { return; }
+    var rect = st.canvas.getBoundingClientRect ? st.canvas.getBoundingClientRect() : null;
+    if (!rect) { return; }
+    var tr = gfxTransformOf(RUN_VM);
+    var wx = ((ev.clientX - rect.left) - tr.ox) / tr.s;
+    var wy = ((ev.clientY - rect.top) - tr.oy) / tr.s;
+    var hit = null;
+    var i;
+    for (i = RUN_VM.gfx.shapes.length - 1; i >= 0; i--) {
+      var g = RUN_VM.gfx.shapes[i];
+      if (!g.visible || g.dead || !GFX_SHAPE_KINDS[g.kind]) { continue; }
+      if (g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') { continue; }
+      var bb = shapeBBox(g);
+      if (wx >= bb.x && wx <= bb.x + bb.w && wy >= bb.y && wy <= bb.y + bb.h) { hit = g; break; }
+    }
+    var button = ev.button === 2 ? 2 : 0;
+    if (phase === 'down') {
+      if (hit && hit.ref) { gfxDispatch(hit.ref, 'onMouseDown', [mkInt(button)]); }
+      if (!RUN_VM.gfx.hover && hit) { RUN_VM.gfx.hover = hit; }
+    } else if (phase === 'up') {
+      if (hit && hit.ref) { gfxDispatch(hit.ref, 'onMouseUp', [mkInt(button)]); }
+    } else if (phase === 'move') {
+      var prev = RUN_VM.gfx.hover || null;
+      if (hit !== prev) {
+        if (prev && prev.ref) { gfxDispatch(prev.ref, 'onMouseLeave', []); }
+        if (hit && hit.ref) { gfxDispatch(hit.ref, 'onMouseEnter', []); }
+        RUN_VM.gfx.hover = hit;
+      }
+    }
+  }
+  function gfxDestroy(g, vm) {
+    g.dead = true;
+    var i;
+    for (i = vm.gfx.shapes.length - 1; i >= 0; i--) {
+      if (vm.gfx.shapes[i] === g) { vm.gfx.shapes.splice(i, 1); }
+    }
+    for (i = 0; i < vm.gfx.shapes.length; i++) {
+      var sh = vm.gfx.shapes[i];
+      if (sh.kind === 'group' && sh.members) {
+        for (var j = sh.members.length - 1; j >= 0; j--) { if (sh.members[j] === g) { sh.members.splice(j, 1); } }
+      }
+    }
+    if (g.dom && g.dom.parentNode) { g.dom.parentNode.removeChild(g.dom); }
+  }
+  function gfxBoxesOverlap(a, b) {
+    return a.x <= b.x + b.w && b.x <= a.x + a.w && a.y <= b.y + b.h && b.y <= a.y + a.h;
+  }
+
+  /* ---------- Methoden der Grafikobjekte ---------- */
+  function gfxMethodCall(recv, name, args, ctx, line) {
+    var g = recv.obj.g;
+    var vm = ctx.vm;
+    if (!g) { throw rt(ctx, line, 'Die Klasse ' + recv.cls + ' hat keine Methode ' + name + '.', ''); }
+    if (g.dead) { throw rt(ctx, line, 'Dieses Objekt wurde schon mit destroy() zerstoert.', 'Lege ein neues Objekt an, z. B. mit new.'); }
+
+    if (g.kind === 'world') {
+      if (name === 'getWidth' && args.length === 0) { return mkDbl(g.w); }
+      if (name === 'getHeight' && args.length === 0) { return mkDbl(g.h); }
+      if (name === 'setBackgroundColor') {
+        var bg = colorToRgb(args[0], ctx, line);
+        g.bg = rgbCss(bg) || '#ffffff';
+        gfxRedraw(vm);
+        return VOIDV;
+      }
+      if (name === 'setCursor') {
+        g.cursor = gfxStr(args, 0, 'setCursor', ctx, line);
+        var st = vm.gfx.windowState;
+        if (st && st.canvas && st.canvas.style) { st.canvas.style.cursor = g.cursor; }
+        return VOIDV;
+      }
+      throw rt(ctx, line, 'World hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Verfuegbar: getWidth, getHeight, setBackgroundColor, setCursor.');
+    }
+    if (g.kind === 'group') {
+      if (name === 'add' && args.length === 1) { gfxGroupAdd(g, args[0], ctx, line); gfxRedraw(vm); return VOIDV; }
+      if (name === 'move' && args.length === 2) {
+        var dx = gfxNum(args, 0, 'move', ctx, line), dy = gfxNum(args, 1, 'move', ctx, line);
+        for (var mi = 0; mi < g.members.length; mi++) { gfxMoveShape(g.members[mi], dx, dy); }
+        gfxRedraw(vm);
+        return VOIDV;
+      }
+      if (name === 'rotate' && args.length >= 1) {
+        var ang = gfxNum(args, 0, 'rotate', ctx, line);
+        var pivot = g.members.length > 0 ? gfxGroupCenter(g) : { x: 0, y: 0 };
+        if (args.length >= 3) { pivot = { x: gfxNum(args, 1, 'rotate', ctx, line), y: gfxNum(args, 2, 'rotate', ctx, line) }; }
+        for (var ri = 0; ri < g.members.length; ri++) { gfxRotateShape(g.members[ri], ang, pivot); }
+        gfxRedraw(vm);
+        return VOIDV;
+      }
+      if (name === 'scale' && args.length >= 1) {
+        var fac = gfxNum(args, 0, 'scale', ctx, line);
+        var c2 = g.members.length > 0 ? gfxGroupCenter(g) : { x: 0, y: 0 };
+        if (args.length >= 3) { c2 = { x: gfxNum(args, 1, 'scale', ctx, line), y: gfxNum(args, 2, 'scale', ctx, line) }; }
+        for (var si = 0; si < g.members.length; si++) { gfxScaleShape(g.members[si], fac, c2); }
+        gfxRedraw(vm);
+        return VOIDV;
+      }
+      if (name === 'getCollidingShapes' && args.length === 1) {
+        var other = args[0];
+        if (!other || other.t !== 'ref' || !other.obj || !other.obj.g) { throw rt(ctx, line, 'getCollidingShapes braucht eine Figur.', 'z. B. gruppe.getCollidingShapes(ball);'); }
+        var ob = shapeBBox(other.obj.g);
+        var hits = [];
+        for (var hi = 0; hi < g.members.length; hi++) {
+          if (gfxBoxesOverlap(shapeBBox(g.members[hi]), ob) && g.members[hi].ref) {
+            hits.push({ t: 'ref', cls: g.members[hi].ref.cls, obj: g.members[hi].ref });
+          }
+        }
+        return { t: 'array', elem: 'Shape', arr: hits };
+      }
+      if (name === 'getCollisionPairs' && args.length >= 1) {
+        var og = args[0];
+        if (!og || og.t !== 'ref' || !og.obj || !og.obj.g || og.obj.g.kind !== 'group') { throw rt(ctx, line, 'getCollisionPairs braucht eine andere Gruppe.', 'z. B. schuesse.getCollisionPairs(asteroiden);'); }
+        var pairs = [];
+        var a, b;
+        for (a = 0; a < g.members.length; a++) {
+          for (b = 0; b < og.obj.g.members.length; b++) {
+            if (gfxBoxesOverlap(shapeBBox(g.members[a]), shapeBBox(og.obj.g.members[b]))) {
+              pairs.push({ t: 'array', elem: 'Shape', arr: [
+                { t: 'ref', cls: g.members[a].ref.cls, obj: g.members[a].ref },
+                { t: 'ref', cls: og.obj.g.members[b].ref.cls, obj: og.obj.g.members[b].ref }
+              ] });
+              if (args.length > 1 && gfxBool(args, 1, 'getCollisionPairs', ctx, line)) { a = g.members.length; break; }
+            }
+          }
+        }
+        return { t: 'array', elem: 'Shape[]', arr: pairs };
+      }
+      if (name === 'destroy' && args.length === 0) {
+        for (var di = 0; di < g.members.length; di++) { gfxDestroy(g.members[di], vm); }
+        g.members = [];
+        g.dead = true;
+        gfxRedraw(vm);
+        return VOIDV;
+      }
+      if (name === 'getWorld' && args.length === 0) { return vm.gfx.worldRef; }
+      if (name === 'setVisible' && args.length === 1) { g.visible = gfxBool(args, 0, 'setVisible', ctx, line); gfxRedraw(vm); return VOIDV; }
+      if (name === 'setAlpha' && args.length === 1) { g.alpha = gfxNum(args, 0, 'setAlpha', ctx, line); gfxRedraw(vm); return VOIDV; }
+      throw rt(ctx, line, 'Group hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Verfuegbar: add, move, rotate, scale, setVisible, setAlpha, getCollidingShapes, getCollisionPairs, destroy, getWorld.');
+    }
+
+    if (GFX_SHAPE_KINDS[g.kind]) {
+      if (name === 'move' && args.length === 2) {
+        gfxMoveShape(g, gfxNum(args, 0, 'move', ctx, line), gfxNum(args, 1, 'move', ctx, line));
+        gfxRedraw(vm);
+        return VOIDV;
+      }
+      if (name === 'rotate' && args.length >= 1) {
+        var ang2 = gfxNum(args, 0, 'rotate', ctx, line);
+        var pv = args.length >= 3 ? { x: gfxNum(args, 1, 'rotate', ctx, line), y: gfxNum(args, 2, 'rotate', ctx, line) } : null;
+        gfxRotateShape(g, ang2, pv);
+        gfxRedraw(vm);
+        return VOIDV;
+      }
+      if (name === 'scale' && args.length >= 1) {
+        var fac2 = gfxNum(args, 0, 'scale', ctx, line);
+        var c3 = args.length >= 3 ? { x: gfxNum(args, 1, 'scale', ctx, line), y: gfxNum(args, 2, 'scale', ctx, line) } : null;
+        gfxScaleShape(g, fac2, c3);
+        gfxRedraw(vm);
+        return VOIDV;
+      }
+      if (name === 'mirrorX' && args.length === 0) { g.mirrorX = !g.mirrorX; gfxRedraw(vm); return VOIDV; }
+      if (name === 'mirrorY' && args.length === 0) { g.mirrorY = !g.mirrorY; gfxRedraw(vm); return VOIDV; }
+      if (name === 'setVisible' && args.length === 1) {
+        g.visible = gfxBool(args, 0, 'setVisible', ctx, line);
+        if (g.dom && g.dom.style) { g.dom.style.visibility = g.visible ? 'visible' : 'hidden'; }
+        gfxRedraw(vm);
+        return VOIDV;
+      }
+      if (name === 'setAlpha' && args.length === 1) { g.alpha = gfxNum(args, 0, 'setAlpha', ctx, line); gfxRedraw(vm); return VOIDV; }
+      if (name === 'bringToFront' && args.length === 0) {
+        for (var bfi = 0; bfi < vm.gfx.shapes.length; bfi++) { if (vm.gfx.shapes[bfi] === g) { vm.gfx.shapes.splice(bfi, 1); break; } }
+        vm.gfx.shapes.push(g);
+        gfxRedraw(vm);
+        return VOIDV;
+      }
+      if (name === 'sendToBack' && args.length === 0) {
+        for (var sbi = 0; sbi < vm.gfx.shapes.length; sbi++) { if (vm.gfx.shapes[sbi] === g) { vm.gfx.shapes.splice(sbi, 1); break; } }
+        vm.gfx.shapes.unshift(g);
+        gfxRedraw(vm);
+        return VOIDV;
+      }
+      if (name === 'destroy' && args.length === 0) { gfxDestroy(g, vm); gfxRedraw(vm); return VOIDV; }
+      if (name === 'getWorld' && args.length === 0) { return vm.gfx.worldRef; }
+      if (GFX_FILLED_KINDS[g.kind] || g.kind === 'line' || g.kind === 'turtle' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') {
+        if (name === 'setFillColor') {
+          if (args.length === 0 || args.length > 2) { throw rt(ctx, line, 'setFillColor braucht eine Farbe (und optional einen Alpha-Wert).', 'z. B. c.setFillColor(Color.red); oder c.setFillColor("#ff8000", 0.5);'); }
+          var rgbv = colorToRgb(args[0], ctx, line);
+          if (rgbv && args.length === 2) { rgbv[3] = gfxNum(args, 1, 'setFillColor', ctx, line); }
+          g.fill = rgbCss(rgbv);
+          if (g.dom && g.dom.style) { g.dom.style.background = g.fill || 'transparent'; }
+          gfxRedraw(vm);
+          return VOIDV;
+        }
+        if (name === 'setBorderColor') {
+          var brgb = colorToRgb(args[0], ctx, line);
+          g.border = rgbCss(brgb);
+          if (g.dom && g.dom.style) { g.dom.style.borderColor = g.border || 'transparent'; g.dom.style.borderStyle = 'solid'; }
+          gfxRedraw(vm);
+          return VOIDV;
+        }
+        if (name === 'setBorderWidth' && args.length === 1) {
+          g.borderWidth = gfxNum(args, 0, 'setBorderWidth', ctx, line);
+          if (g.borderWidth < 0) { throw rt(ctx, line, 'Die Randbreite darf nicht negativ sein.', ''); }
+          if (g.dom && g.dom.style) { g.dom.style.borderWidth = g.borderWidth + 'px'; g.dom.style.borderStyle = 'solid'; }
+          gfxRedraw(vm);
+          return VOIDV;
+        }
+      }
+      /* Besonderheiten je Figur */
+      if (g.kind === 'text') {
+        if (name === 'setText' && args.length === 1) { g.text = javaStr(args[0], ctx, line); gfxRedraw(vm); return VOIDV; }
+        if (name === 'setAlignment' && args.length === 1) {
+          var al = args[0].t === 'String' ? args[0].v : '';
+          al = al.toLowerCase();
+          if (al !== 'left' && al !== 'center' && al !== 'right') { throw rt(ctx, line, 'setAlignment kennt nur left, center und right.', 'z. B. t.setAlignment(Alignment.center);'); }
+          g.align = al;
+          gfxRedraw(vm);
+          return VOIDV;
+        }
+      }
+      if (g.kind === 'line') {
+        if (name === 'setPoint' && args.length === 3) {
+          var idx = gfxNum(args, 2, 'setPoint', ctx, line);
+          if (idx !== 0 && idx !== 1) { throw rt(ctx, line, 'setPoint kennt nur Index 0 oder 1.', '0 ist der erste, 1 der zweite Endpunkt.'); }
+          if (idx === 0) { g.x1 = gfxNum(args, 0, 'setPoint', ctx, line); g.y1 = gfxNum(args, 1, 'setPoint', ctx, line); }
+          else { g.x2 = gfxNum(args, 0, 'setPoint', ctx, line); g.y2 = gfxNum(args, 1, 'setPoint', ctx, line); }
+          gfxRedraw(vm);
+          return VOIDV;
+        }
+        if (name === 'setPoints' && args.length === 4) {
+          g.x1 = gfxNum(args, 0, 'setPoints', ctx, line); g.y1 = gfxNum(args, 1, 'setPoints', ctx, line);
+          g.x2 = gfxNum(args, 2, 'setPoints', ctx, line); g.y2 = gfxNum(args, 3, 'setPoints', ctx, line);
+          gfxRedraw(vm);
+          return VOIDV;
+        }
+      }
+      if (g.kind === 'polygon') {
+        if (name === 'addPoint' && args.length === 2) {
+          g.points.push([gfxNum(args, 0, 'addPoint', ctx, line), gfxNum(args, 1, 'addPoint', ctx, line)]);
+          gfxRedraw(vm);
+          return VOIDV;
+        }
+        if (name === 'addPoints' && args.length === 1) {
+          if (!args[0] || args[0].t !== 'array') { throw rt(ctx, line, 'addPoints braucht ein Array mit x/y-Werten.', 'z. B. p.addPoints(new double[]{ ... });'); }
+          var pa = args[0].arr;
+          for (var pai = 0; pai + 1 < pa.length; pai += 2) {
+            g.points.push([(pa[pai].t === 'int' || pa[pai].t === 'double') ? pa[pai].v : 0, (pa[pai + 1].t === 'int' || pa[pai + 1].t === 'double') ? pa[pai + 1].v : 0]);
+          }
+          gfxRedraw(vm);
+          return VOIDV;
+        }
+      }
+      /* GUI-Elemente: Knopf, Eingabefeld, Ankreuzfeld, Auswahlknopf */
+      if (g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') {
+        if (name === 'setText' && args.length === 1) {
+          g.text = javaStr(args[0], ctx, line);
+          if (g.dom) {
+            if (g.kind === 'button') { g.dom.textContent = g.text; }
+            else { g.dom.value = g.text; }
+          }
+          return VOIDV;
+        }
+        if (name === 'getText' && args.length === 0) { return mkStr(g.text || ''); }
+        if (name === 'setFontSize' && args.length === 1) {
+          g.size = gfxNum(args, 0, 'setFontSize', ctx, line);
+          if (g.dom && g.dom.style) { g.dom.style.fontSize = g.size + 'px'; }
+          return VOIDV;
+        }
+        if (g.kind === 'checkbox' && name === 'setChecked' && args.length === 1) {
+          g.checked = gfxBool(args, 0, 'setChecked', ctx, line);
+          if (g.dom) { g.dom.checked = g.checked; }
+          return VOIDV;
+        }
+        if (g.kind === 'checkbox' && name === 'isChecked' && args.length === 0) { return mkBool(g.checked === true); }
+        if (g.kind === 'radiobutton' && name === 'setSelected' && args.length === 1) {
+          g.checked = gfxBool(args, 0, 'setSelected', ctx, line);
+          if (g.dom) { g.dom.checked = g.checked; }
+          return VOIDV;
+        }
+        if (g.kind === 'radiobutton' && name === 'isSelected' && args.length === 0) { return mkBool(g.checked === true); }
+      }
+      if (g.kind === 'bitmap') {
+        if (name === 'setColor' && args.length === 3) {
+          var bx = Math.floor(gfxNum(args, 0, 'setColor', ctx, line));
+          var by = Math.floor(gfxNum(args, 1, 'setColor', ctx, line));
+          if (bx < 0 || by < 0 || bx >= g.cols || by >= g.rows) { throw rt(ctx, line, 'setColor: Der Punkt (' + bx + ', ' + by + ') liegt ausserhalb der Bitmap (' + g.cols + ' x ' + g.rows + ').', 'Gueltig sind x: 0..' + (g.cols - 1) + ' und y: 0..' + (g.rows - 1) + '.'); }
+          g.cells[by * g.cols + bx] = rgbCss(colorToRgb(args[2], ctx, line));
+          gfxRedraw(vm);
+          return VOIDV;
+        }
+        if (name === 'getColorAsInt' && args.length === 2) {
+          var qx = Math.floor(gfxNum(args, 0, 'getColorAsInt', ctx, line));
+          var qy = Math.floor(gfxNum(args, 1, 'getColorAsInt', ctx, line));
+          if (qx < 0 || qy < 0 || qx >= g.cols || qy >= g.rows) { throw rt(ctx, line, 'getColorAsInt: Der Punkt liegt ausserhalb der Bitmap.', ''); }
+          var css = g.cells[qy * g.cols + qx];
+          if (!css) { return mkInt(0xffffff); }
+          var mm = /rgb\(([0-9]+), ([0-9]+), ([0-9]+)\)/.exec(css);
+          if (!mm) { return mkInt(0xffffff); }
+          return mkInt((parseInt(mm[1], 10) << 16) + (parseInt(mm[2], 10) << 8) + parseInt(mm[3], 10));
+        }
+      }
+      if (g.kind === 'turtle') {
+        if (name === 'forward' && args.length === 1) {
+          var len = gfxNum(args, 0, 'forward', ctx, line);
+          var rad = g.heading * Math.PI / 180;
+          g.x = g.x + Math.cos(rad) * len;
+          g.y = g.y + Math.sin(rad) * len;
+          if (g.pen) { g.path.push([g.x, g.y]); }
+          gfxRedraw(vm);
+          return VOIDV;
+        }
+        if (name === 'turn' && args.length === 1) { g.heading = g.heading + gfxNum(args, 0, 'turn', ctx, line); gfxRedraw(vm); return VOIDV; }
+        if (name === 'penUp' && args.length === 0) { g.pen = false; return VOIDV; }
+        if (name === 'penDown' && args.length === 0) {
+          if (!g.pen) { g.pen = true; g.path.push([g.x, g.y]); }
+          return VOIDV;
+        }
+        if (name === 'getX' && args.length === 0) { return mkDbl(g.x); }
+        if (name === 'getY' && args.length === 0) { return mkDbl(g.y); }
+      }
+      /* Positionen abfragen (praaktisch fuer Spiele) */
+      if (name === 'getX' && args.length === 0) { return mkDbl(g.x); }
+      if (name === 'getY' && args.length === 0) { return mkDbl(g.y); }
+    }
+
+    /* Actor-Grundausstattung: act und Ereignis-Platzhalter sind immer da */
+    if (name === 'act' || name === 'onMouseDown' || name === 'onMouseUp' || name === 'onMouseEnter' || name === 'onMouseLeave' || name === 'onKeyDown' || name === 'onKeyUp' || name === 'onKeyTyped') { return VOIDV; }
+    if (name === 'isKeyDown' && args.length === 1) { return mkBool(GFX_KEYS[gfxKeyName(gfxStr(args, 0, 'isKeyDown', ctx, line))] === true); }
+    if (name === 'isKeyUp' && args.length === 1) { return mkBool(GFX_KEYS[gfxKeyName(gfxStr(args, 0, 'isKeyUp', ctx, line))] !== true); }
+    throw rt(ctx, line, 'Die Klasse ' + recv.cls + ' hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Schau in die API-Hilfe (Tab neben der Ausgabe): Dort stehen alle Methoden der Grafik-Klassen.');
+  }
+
+  function gfxShapeCenter(g) {
+    var bb = shapeBBox(g);
+    return { x: bb.x + bb.w / 2, y: bb.y + bb.h / 2 };
+  }
+  function gfxGroupCenter(g) {
+    var i;
+    var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+    for (i = 0; i < g.members.length; i++) {
+      var bb = shapeBBox(g.members[i]);
+      if (bb.x < minx) { minx = bb.x; }
+      if (bb.y < miny) { miny = bb.y; }
+      if (bb.x + bb.w > maxx) { maxx = bb.x + bb.w; }
+      if (bb.y + bb.h > maxy) { maxy = bb.y + bb.h; }
+    }
+    if (minx === Infinity) { return { x: 0, y: 0 }; }
+    return { x: (minx + maxx) / 2, y: (miny + maxy) / 2 };
+  }
+  function gfxMoveShape(g, dx, dy) {
+    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'text' || g.kind === 'turtle' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') {
+      g.x = (g.x || 0) + dx;
+      g.y = (g.y || 0) + dy;
+      if (g.kind === 'turtle' && g.pen) { g.path.push([g.x, g.y]); }
+      return;
+    }
+    if (g.kind === 'triangle') {
+      g.p1x += dx; g.p1y += dy; g.p2x += dx; g.p2y += dy; g.p3x += dx; g.p3y += dy;
+      return;
+    }
+    if (g.kind === 'line') { g.x1 += dx; g.y1 += dy; g.x2 += dx; g.y2 += dy; return; }
+    if (g.kind === 'polygon' && g.points) {
+      for (var i = 0; i < g.points.length; i++) { g.points[i][0] += dx; g.points[i][1] += dy; }
+    }
+  }
+  function gfxRotateShape(g, ang, pivot) {
+    g.rot = (g.rot || 0) + ang;
+    if (pivot) {
+      var c = gfxShapeCenter(g);
+      var rad = ang * Math.PI / 180;
+      var nx = pivot.x + (c.x - pivot.x) * Math.cos(rad) - (c.y - pivot.y) * Math.sin(rad);
+      var ny = pivot.y + (c.x - pivot.x) * Math.sin(rad) + (c.y - pivot.y) * Math.cos(rad);
+      gfxMoveShape(g, nx - c.x, ny - c.y);
+    }
+  }
+  function gfxScaleShape(g, fac, pivot) {
+    if (fac <= 0) { throw rt(null, 0, 'Der Streckungsfaktor muss groesser als 0 sein.', ''); }
+    g.scaleF = (g.scaleF || 1) * fac;
+    if (pivot) {
+      var c = gfxShapeCenter(g);
+      var nx = pivot.x + (c.x - pivot.x) * fac;
+      var ny = pivot.y + (c.y - pivot.y) * fac;
+      gfxMoveShape(g, nx - c.x, ny - c.y);
+    }
+  }
+
+  /* Aufraeumen zwischen zwei Laeufen */
+  function gfxResetRun() {
+    gfxStopLoop();
+    if (RUN_VM && RUN_VM.gfx) {
+      var i;
+      for (i = 0; i < RUN_VM.gfx.shapes.length; i++) {
+        RUN_VM.gfx.shapes[i].dead = true;
+        if (RUN_VM.gfx.shapes[i].dom && RUN_VM.gfx.shapes[i].dom.parentNode) { RUN_VM.gfx.shapes[i].dom.parentNode.removeChild(RUN_VM.gfx.shapes[i].dom); }
+      }
+      RUN_VM.gfx.shapes = [];
+      if (RUN_VM.gfx.world || RUN_VM.gfx.windowState) { gfxHideWindow(); }
+      RUN_VM.gfx.world = null;
+      RUN_VM.gfx.worldRef = null;
+      RUN_VM.gfx.hover = null;
+    }
+  }
+  function gfxShapeSummary(g) {
+    var o = { kind: g.kind, dead: !!g.dead, visible: g.visible };
+    var k;
+    for (k in g) {
+      if (Object.prototype.hasOwnProperty.call(g, k)) {
+        var t = typeof g[k];
+        if (t === 'number' || t === 'boolean' || t === 'string') { o[k] = g[k]; }
+        else if (g[k] === null && (k === 'fill' || k === 'border')) { o[k] = null; }
+      }
+    }
+    if (g.points) { o.pointsCount = g.points.length; }
+    if (g.path) { o.pathCount = g.path.length; }
+    if (g.cells) { o.cellsCount = g.cells.length; }
+    return o;
+  }
+  /* Momentaufnahme aller Figuren (fuer Tests und Einzelschritt-Anzeige) */
+  function gfxSnapshot() {
+    var out = [];
+    if (!RUN_VM || !RUN_VM.gfx) { return out; }
+    var i;
+    for (i = 0; i < RUN_VM.gfx.shapes.length; i++) { out.push(gfxShapeSummary(RUN_VM.gfx.shapes[i])); }
+    return out;
+  }
+
+  function trimRightWs(s) {
+    var n = s.length;
+    while (n > 0 && (s.charAt(n - 1) === ' ' || s.charAt(n - 1) === String.fromCharCode(9))) { n--; }
+    return s.slice(0, n);
+  }
+  /* ---------- Automatisches Formatieren (Einruecken/Ausruecken) ----------
+   * Zustandsmaschine ueber Strings, Zeichen und Kommentare: Innerhalb
+   * von "..." und '...' sowie hinter // und in /* ... * / Klammern zaehlen nicht. */
+  function indentOf(n) {
+    var s = '';
+    var i2;
+    for (i2 = 0; i2 < n; i2++) { s = s + '    '; }
+    return s;
+  }
+  function formatJavaSource(src) {
+    var lines = String(src).split(NL);
+    var out = [];
+    var depth = 0;
+    var inBlock = false;
+    var i2;
+    for (i2 = 0; i2 < lines.length; i2++) {
+      var line = trimRightWs(lines[i2]);
+      if (line === '') { out.push(''); continue; }
+      if (inBlock) {
+        out.push(indentOf(depth) + line);
+        if (line.indexOf('*/') !== -1) { inBlock = false; }
+        continue;
+      }
+      var t = line.replace(/^[ \t]+/, '');
+      /* fuehrende schliessende Klammern gehoeren eine Ebene tiefer */
+      var leadClose = 0;
+      var k = 0;
+      while (k < t.length && (t.charAt(k) === '}' || t.charAt(k) === ')')) {
+        if (t.charAt(k) === '}') { leadClose++; }
+        k++;
+      }
+      out.push(indentOf(Math.max(0, depth - leadClose)) + t);
+      /* Netto-Klammern zaehlen, Strings/Zeichen/Kommentare auslassen */
+      var inStr = false, inChr = false, inLineC = false, inBlk = false;
+      var j2;
+      for (j2 = 0; j2 < t.length; j2++) {
+        var c = t.charAt(j2);
+        if (inLineC) { break; }
+        if (inBlk) {
+          if (c === '*' && t.charAt(j2 + 1) === '/') { inBlk = false; j2++; }
+          continue;
+        }
+        if (inStr) {
+          if (c === String.fromCharCode(92)) { j2++; }
+          else if (c === '"') { inStr = false; }
+          continue;
+        }
+        if (inChr) {
+          if (c === String.fromCharCode(92)) { j2++; }
+          else if (c === "'") { inChr = false; }
+          continue;
+        }
+        if (c === '"') { inStr = true; continue; }
+        if (c === "'") { inChr = true; continue; }
+        if (c === '/' && t.charAt(j2 + 1) === '/') { inLineC = true; break; }
+        if (c === '/' && t.charAt(j2 + 1) === '*') { inBlk = true; j2++; continue; }
+        if (c === '{') { depth++; }
+        if (c === '}') { depth--; if (depth < 0) { depth = 0; } }
+      }
+      if (inBlk) { inBlock = true; }
+    }
+    return out.join(NL);
+  }
+
   /* ================= UI-Anbindung (nur im Browser aktiv) ================= */
   function wireUi() {
     if (typeof document === 'undefined') { return; }
@@ -2853,10 +4149,313 @@
       for (var h = 0; h < list.length; h++) { renderErrCard(errBox, list[h]); }
     }
 
-    /* Objektdiagramm: alle erzeugten Objekte mit ihren Attributwerten */
-    function renderObjects() {
+    /* ---------- Zeilennummern neben dem Editor (Gutter) ----------
+     * Fuer jede Datei ein schmales Feld mit den Nummern der Zeilen. Fehlerzeilen
+     * werden rot markiert, die Zeile des Einzelschritts gelb. */
+    var stepInfo = document.getElementById('java-step-info');
+    var stepBtn = document.getElementById('java-step');
+    var restBtn = document.getElementById('java-run-rest');
+    var fmtBtn = document.getElementById('java-format');
+    var gutterMap = Object.create(null);
+    function setupGutters() {
+      var gi;
+      for (gi = 0; gi < panes.length; gi++) {
+        (function (pane) {
+          var ta = pane.querySelector('textarea');
+          if (!ta || !pane.getAttribute('data-file-pane') || !ta.parentNode || !ta.parentNode.getAttribute) { return; }
+          if (!ta.parentNode.getAttribute('data-hl')) { return; }
+          var box = document.createElement('div');
+          box.className = 'ln-gutter';
+          var inner = document.createElement('div');
+          inner.className = 'ln-inner';
+          box.appendChild(inner);
+          ta.parentNode.appendChild(box);
+          if (ta.parentNode.classList && ta.parentNode.classList.add) { ta.parentNode.classList.add('has-gutter'); }
+          var rec = { ta: ta, box: box, inner: inner, cells: [], count: 0, file: pane.getAttribute('data-file-name') };
+          gutterMap[pane.getAttribute('data-file-pane')] = rec;
+          updateGutter(rec);
+          ta.addEventListener('input', function () { updateGutter(rec); });
+          ta.addEventListener('scroll', function () { box.scrollTop = ta.scrollTop; });
+        })(panes[gi]);
+      }
+    }
+    function updateGutter(rec) {
+      var lines = rec.ta.value.split(NL).length;
+      if (lines < 1) { lines = 1; }
+      if (lines === rec.count) { return; }
+      rec.inner.innerHTML = '';
+      rec.cells = [];
+      var li;
+      for (li = 1; li <= lines; li++) {
+        var cell = document.createElement('div');
+        cell.className = 'ln-cell';
+        cell.textContent = String(li);
+        rec.inner.appendChild(cell);
+        rec.cells.push(cell);
+      }
+      rec.count = lines;
+    }
+    function gutterByFile(fname) {
+      var key;
+      for (key in gutterMap) {
+        if (Object.prototype.hasOwnProperty.call(gutterMap, key) && gutterMap[key].file === fname) { return gutterMap[key]; }
+      }
+      return null;
+    }
+    function clearLineMarks() {
+      var key;
+      for (key in gutterMap) {
+        if (!Object.prototype.hasOwnProperty.call(gutterMap, key)) { continue; }
+        var rec = gutterMap[key];
+        var i2;
+        for (i2 = 0; i2 < rec.cells.length; i2++) { rec.cells[i2].className = 'ln-cell'; }
+      }
+      if (stepInfo) { stepInfo.textContent = ''; }
+    }
+    function markErrLines(errs) {
+      var h2;
+      for (h2 = 0; h2 < errs.length; h2++) {
+        var er = errs[h2];
+        if (!er.file || !er.line) { continue; }
+        var rec = gutterByFile(er.file);
+        if (rec && rec.cells[er.line - 1]) { rec.cells[er.line - 1].className = 'ln-cell ln-err'; }
+      }
+    }
+    function markCurLine(file, line) {
+      var rec = gutterByFile(file);
+      if (rec && rec.cells[line - 1]) { rec.cells[line - 1].className = 'ln-cell ln-cur'; }
+    }
+
+    /* ---------- Editor-Hilfen: Tab, Einruecken, Auto-Einzug ---------- */
+    function fireInput(ta) {
+      var ev = null;
+      if (typeof document !== 'undefined' && document.createEvent) {
+        ev = document.createEvent('Event');
+        if (ev && ev.initEvent) { ev.initEvent('input', false, false); }
+      }
+      if (ev && ta.dispatchEvent) { ta.dispatchEvent(ev); return; }
+      if (ta.dispatch) { ta.dispatch('input'); }
+    }
+    function setRange(ta, text, from, to) {
+      ta.value = text;
+      fireInput(ta);
+    }
+    function insertAt(ta, ins, caretAt) {
+      var s = ta.selectionStart;
+      var epos = ta.selectionEnd;
+      var text = ta.value;
+      setRange(ta, text.slice(0, s) + ins + text.slice(epos), null, null);
+      var np = (typeof caretAt === 'number') ? caretAt : s + ins.length;
+      if (ta.setSelectionRange) { ta.setSelectionRange(np, np); }
+    }
+    function lineBounds(ta, from, to) {
+      var text = ta.value;
+      var ls = text.lastIndexOf(NL, from - 1) + 1;
+      var le = text.indexOf(NL, to);
+      if (le === -1) { le = text.length; }
+      return { ls: ls, le: le, text: text };
+    }
+    function insertTab(ta) {
+      var s = ta.selectionStart;
+      var epos = ta.selectionEnd;
+      if (s !== epos) { indentSelection(ta); return; }
+      insertAt(ta, '    ');
+    }
+    function indentSelection(ta) {
+      var b = lineBounds(ta, ta.selectionStart, ta.selectionEnd);
+      var seg = b.text.slice(b.ls, b.le);
+      if (seg === '') { return; }
+      var seg2 = '    ' + seg.split(NL).join('    ' + NL);
+      setRange(ta, b.text.slice(0, b.ls) + seg2 + b.text.slice(b.le), null, null);
+      if (ta.setSelectionRange) { ta.setSelectionRange(b.ls, b.ls + seg2.length); }
+    }
+    function stripIndent(line) {
+      var n = 0;
+      while (n < line.length && (line.charAt(n) === ' ' || line.charAt(n) === String.fromCharCode(9))) { n++; }
+      return line.slice(Math.min(n, 4));
+    }
+    function outdentSelection(ta) {
+      var b = lineBounds(ta, ta.selectionStart, ta.selectionEnd);
+      var seg = b.text.slice(b.ls, b.le);
+      var lines = seg.split(NL);
+      var o;
+      for (o = 0; o < lines.length; o++) { lines[o] = stripIndent(lines[o]); }
+      var seg2 = lines.join(NL);
+      setRange(ta, b.text.slice(0, b.ls) + seg2 + b.text.slice(b.le), null, null);
+      var shrink = seg.length - seg2.length;
+      var end = Math.max(b.ls, ta.selectionEnd - shrink);
+      if (ta.setSelectionRange) { ta.setSelectionRange(Math.max(b.ls, ta.selectionStart - shrink), end); }
+    }
+    function currentIndent(line) {
+      var n = 0;
+      while (n < line.length && (line.charAt(n) === ' ' || line.charAt(n) === String.fromCharCode(9))) { n++; }
+      return line.slice(0, n);
+    }
+    function enterNewline(ta) {
+      var s = ta.selectionStart;
+      var epos = ta.selectionEnd;
+      var b = lineBounds(ta, s, s);
+      var line = b.text.slice(b.ls, s);
+      var ind = currentIndent(line);
+      var trimmed = trimRightWs(line);
+      var add = ind;
+      if (trimmed.charAt(trimmed.length - 1) === '{') { add = add + '    '; }
+      insertAt(ta, NL + add, s + 1 + add.length);
+    }
+    function typeCloseBrace(ta) {
+      var s = ta.selectionStart;
+      var b = lineBounds(ta, s, ta.selectionEnd);
+      var before = b.text.slice(b.ls, s);
+      var onlyWs = true;
+      var q;
+      for (q = 0; q < before.length; q++) {
+        if (before.charAt(q) !== ' ' && before.charAt(q) !== String.fromCharCode(9)) { onlyWs = false; break; }
+      }
+      if (onlyWs && before.length >= 4) {
+        /* Automatisch gesetzten Einzug (4 Spaces) wieder zuruecknehmen */
+        var cut = 4;
+        setRange(ta, b.text.slice(0, s - cut) + '}' + b.text.slice(ta.selectionEnd), null, null);
+        if (ta.setSelectionRange) { ta.setSelectionRange(s - cut + 1, s - cut + 1); }
+        return;
+      }
+      insertAt(ta, '}');
+    }
+
+    function formatAllFiles() {
+      var changed = 0;
+      var fi;
+      for (fi = 0; fi < panes.length; fi++) {
+        var ta = panes[fi].querySelector('textarea');
+        if (!ta || !panes[fi].getAttribute('data-file-pane')) { continue; }
+        var neu = formatJavaSource(ta.value);
+        if (neu !== ta.value) {
+          ta.value = neu;
+          fireInput(ta);
+          changed++;
+        }
+      }
+      return changed;
+    }
+    if (fmtBtn) {
+      fmtBtn.addEventListener('click', function () {
+        var n = formatAllFiles();
+        if (stepInfo) { stepInfo.textContent = n > 0 ? 'Code formatiert (' + n + ' Datei(en) angepasst).' : 'Code war schon sauber eingerueckt.'; }
+      });
+    }
+
+    /* ---------- Einzelschritt: Anweisung fuer Anweisung ---------- */
+    var stepCount = 0;
+    var lastPaused = false;
+    function showResult(res) {
+      session = res.session && !res.paused ? res.session : null;
+      if (consoleEl) {
+        if (res.output !== '') { consoleEl.textContent = res.output; }
+        else if (res.paused) { consoleEl.textContent = '(bis zu diesem Schritt: noch keine Ausgabe)'; }
+        else if (res.ok && !res.ranMain) { consoleEl.textContent = 'Kein main noetig: Erzeuge dir Objekte in der Objektkonsole (Tab oben).'; }
+        else if (res.ok) { consoleEl.textContent = '(keine Ausgabe)'; }
+        else { consoleEl.textContent = ''; }
+      }
+      showErrors(res.errors);
+      var b = badge();
+      if (b) { b.textContent = res.errors.length === 0 ? '0' : String(res.errors.length); }
+      renderObjects(res.paused ? res.objects : null);
+      updateReplHint();
+      markErrLines(res.errors);
+      if (res.paused) { markCurLine(res.pauseFile, res.pauseLine); }
+    }
+    function startGfxLoop() {
+      GFX_ONERROR = function (jerr) {
+        gfxStopLoop();
+        if (errBox) {
+          errBox.innerHTML = '';
+          renderErrCard(errBox, jerr);
+        }
+        var b = badge();
+        if (b) { b.textContent = '1'; }
+        if (stepInfo) { stepInfo.textContent = 'Das Programm wurde angehalten: Fehler im laufenden Grafik-Fenster.'; }
+        showPane('errors');
+      };
+      gfxStartLoop();
+    }
+    function afterRun(res) {
+      renderClasses();
+      if (!res.ok) {
+        gfxStopLoop();
+        showPane('errors');
+        return;
+      }
+      if (res.paused) {
+        showPane('out');
+        return;
+      }
+      if (res.hasGfx) { startGfxLoop(); }
+      if (!res.ranMain && res.output === '') { showPane('repl'); }
+      else { showPane('out'); }
+    }
+    function internalError(e) {
+      if (consoleEl) { consoleEl.textContent = ''; }
+      if (errBox) { errBox.innerHTML = '<div class="err-card">Interner Fehler der Simulation: ' + escapeHtml(e && e.message ? e.message : String(e)) + '</div>'; }
+    }
+    function doRun() {
+      clearLineMarks();
+      stepCount = 0;
+      lastPaused = false;
+      var res;
+      try {
+        res = run(collectFiles());
+      } catch (e) { internalError(e); return; }
+      stepCount = res.leafSteps || 0;
+      showResult(res);
+      if (stepInfo && res.ok && !res.paused) { stepInfo.textContent = ''; }
+      afterRun(res);
+    }
+    function doStep() {
+      clearLineMarks();
+      /* Nach einem kompletten Lauf vorn anfangen, nach einer Pause weiterzaehlen */
+      if (!lastPaused) { stepCount = 0; }
+      var res;
+      try {
+        res = run(collectFiles(), { stepLimit: stepCount + 1 });
+      } catch (e) { internalError(e); return; }
+      stepCount = res.leafSteps || 0;
+      lastPaused = res.paused === true;
+      showResult(res);
+      if (!res.ok) {
+        gfxStopLoop();
+        showPane('errors');
+        if (stepInfo) { stepInfo.textContent = 'Schritt nicht moeglich: Der Code enthaelt Fehler.'; }
+        return;
+      }
+      if (res.paused) {
+        if (stepInfo) { stepInfo.textContent = 'Schritt ' + stepCount + ' ausgefuehrt - als Naechstes Zeile ' + res.pauseLine + (res.pauseFile ? ' (' + res.pauseFile + ')' : '') + '. Klick fuer den naechsten Schritt.'; }
+        showPane('out');
+        renderClasses();
+      } else {
+        if (stepInfo) { stepInfo.textContent = 'Schritt ' + stepCount + ' ausgefuehrt - das Programm ist damit komplett durchgelaufen.'; }
+        afterRun(res);
+      }
+    }
+    function doRest() {
+      clearLineMarks();
+      lastPaused = false;
+      var res;
+      try {
+        res = run(collectFiles());
+      } catch (e) { internalError(e); return; }
+      stepCount = res.leafSteps || 0;
+      showResult(res);
+      if (stepInfo) { stepInfo.textContent = res.ok ? 'Programm bis zum Ende ausgefuehrt (' + stepCount + ' Schritte).' : ''; }
+      afterRun(res);
+    }
+    if (stepBtn) { stepBtn.addEventListener('click', doStep); }
+    if (restBtn) { restBtn.addEventListener('click', doRest); }
+    setupGutters();
+
+    /* Objektdiagramm: alle erzeugten Objekte mit ihren Attributwerten.
+     * forceList: Stand aus einem Einzelschritt (ohne laufende Session). */
+    function renderObjects(forceList) {
       if (!objBox) { return; }
-      var list = session ? session.objects() : [];
+      var list = forceList || (session ? session.objects() : []);
       if (objCount) { objCount.textContent = String(list.length); }
       objBox.innerHTML = '';
       if (list.length === 0) {
@@ -2922,40 +4521,6 @@
       replHint.textContent = 'Klassen: ' + names.join(', ') + '. Beispiel: ' + names[0] + ' a = new ' + names[0] + '(...); danach a.methode();';
     }
 
-    function doRun() {
-      var files = {};
-      var panes2 = document.querySelectorAll('[data-file-pane]');
-      var k;
-      for (k = 0; k < panes2.length; k++) {
-        var nm = panes2[k].getAttribute('data-file-name');
-        var ta = panes2[k].querySelector('textarea');
-        if (nm && ta) { files[nm] = ta.value; }
-      }
-      var res;
-      try {
-        res = run(files);
-      } catch (e) {
-        if (consoleEl) { consoleEl.textContent = ''; }
-        if (errBox) { errBox.innerHTML = '<div class="err-card">Interner Fehler der Simulation: ' + escapeHtml(e && e.message ? e.message : String(e)) + '</div>'; }
-        return;
-      }
-      session = res.session || null;
-      if (consoleEl) {
-        if (res.output !== '') { consoleEl.textContent = res.output; }
-        else if (res.ok && !res.ranMain) { consoleEl.textContent = 'Kein main noetig: Erzeuge dir Objekte in der Objektkonsole (Tab oben).'; }
-        else if (res.ok) { consoleEl.textContent = '(keine Ausgabe)'; }
-        else { consoleEl.textContent = ''; }
-      }
-      showErrors(res.errors);
-      var b = badge();
-      if (b) { b.textContent = res.errors.length === 0 ? '0' : String(res.errors.length); }
-      renderObjects();
-      updateReplHint();
-      renderClasses();
-      if (!res.ok) { showPane('errors'); }
-      else if (!res.ranMain && res.output === '') { showPane('repl'); }
-      else { showPane('out'); }
-    }
     runBtn.addEventListener('click', doRun);
 
     /* Klassendiagramm direkt in der IDE (Idee von BlueJ): live aus dem Code gelesen,
@@ -3033,14 +4598,23 @@
     }
     renderClasses();
 
-    /* Strg + Enter fuehrt aus, egal welcher Editor fokussiert ist */
+    /* Strg + Enter fuehrt aus; Tab rueckt ein, Enter rueckt automatisch ein */
     var pe;
     for (pe = 0; pe < panes.length; pe++) {
       (function (pane) {
         var ta2 = pane.querySelector('textarea');
         if (!ta2) { return; }
         ta2.addEventListener('keydown', function (e) {
-          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); doRun(); }
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); doRun(); return; }
+          if (e.ctrlKey || e.metaKey || e.altKey) { return; }
+          if (e.key === 'Tab') {
+            e.preventDefault();
+            if (e.shiftKey) { outdentSelection(ta2); }
+            else { insertTab(ta2); }
+            return;
+          }
+          if (e.key === 'Enter') { e.preventDefault(); enterNewline(ta2); return; }
+          if (e.key === '}') { e.preventDefault(); typeCloseBrace(ta2); return; }
         });
       })(panes[pe]);
     }
@@ -3179,7 +4753,8 @@
   }
 
   global.InfoCraftJavaVM = {
-    lex: lex, JError: JError, Parser: Parser, run: run, openSession: openSession, NL: NL
+    lex: lex, JError: JError, Parser: Parser, run: run, openSession: openSession, NL: NL,
+    gfxTick: gfxTick, gfxStopLoop: gfxStopLoop, gfxDispatchKey: gfxDispatchKey, gfxSnapshot: gfxSnapshot, formatJavaSource: formatJavaSource
   };
   if (typeof module !== 'undefined' && module.exports) { module.exports = global.InfoCraftJavaVM; }
   if (typeof document !== 'undefined') { wireUi(); }

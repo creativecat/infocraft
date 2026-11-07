@@ -601,6 +601,233 @@ sesOk('SessionNachDateiAnweisungen', {
   }
 });
 
+/* --- Grafik-Fenster (OnlineIDE/learnj-API): Figuren, Bewegung, Farben --- */
+t('GfxKreis', {
+  'Kreis.java': [
+    'Circle c = new Circle(10, 20, 5);',
+    'c.move(3, 4);',
+    'System.out.println(c.getX());',
+    'System.out.println(c.getY());'
+  ].join(NL)
+}, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '13.0' + NL + '24.0' + NL, 'Position nach move');
+  eq(r.hasGfx, true, 'hasGfx');
+  var snap = V.gfxSnapshot();
+  if (snap.length !== 1 || snap[0].kind !== 'circle' || snap[0].r !== 5) { throw new Error('Kreis im Snapshot: ' + JSON.stringify(snap)); }
+});
+t('GfxRotateScaleFarbe', {
+  'Figur.java': [
+    'Rectangle r = new Rectangle(100, 100, 40, 20);',
+    'r.rotate(90);',
+    'r.scale(2, 200, 110);',
+    'r.setFillColor(0xff8000);',
+    'r.setBorderColor(Color.black);',
+    'r.setBorderWidth(3);',
+    'r.setFillColor(null);'
+  ].join(NL)
+}, r => {
+  eq(r.ok, true, 'ok');
+  var s = V.gfxSnapshot()[0];
+  if (s.rot !== 90) { throw new Error('rot erwartet 90: ' + JSON.stringify(s)); }
+  if (s.scaleF !== 2) { throw new Error('scaleF erwartet 2: ' + JSON.stringify(s)); }
+  if (s.fill !== null) { throw new Error('fill nach null erwartet null: ' + JSON.stringify(s.fill)); }
+  if (s.border !== 'rgb(0, 0, 0)' || s.borderWidth !== 3) { throw new Error('Rand: ' + JSON.stringify(s)); }
+});
+t('GfxWorldUndText', {
+  'Welt.java': [
+    'World w = new World(200, 100);',
+    'w.setBackgroundColor(Color.blue);',
+    'System.out.println(w.getWidth());',
+    'Text t = new Text(5, 5, 20, "Hallo");',
+    't.setText("Welt");',
+    't.setAlignment(Alignment.center);',
+    'System.out.println(t.getX());'
+  ].join(NL)
+}, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '200.0' + NL + '5.0' + NL, 'World-Groesse und Text-Position');
+  var snap = V.gfxSnapshot();
+  if (snap.length !== 1 || snap[0].kind !== 'text' || snap[0].text !== 'Welt' || snap[0].align !== 'center') {
+    throw new Error('Text im Snapshot: ' + JSON.stringify(snap));
+  }
+});
+t('GfxGroupKollision', {
+  'Sammel.java': [
+    'Circle a = new Circle(0, 0, 10);',
+    'Rectangle b = new Rectangle(5, 5, 10, 10);',
+    'Circle c = new Circle(100, 100, 5);',
+    'Group g = new Group(a, c);',
+    'g.move(10, 10);',
+    'System.out.println(g.getCollidingShapes(b).length);',
+    'System.out.println(a.getX());'
+  ].join(NL)
+}, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '1' + NL + '10.0' + NL, 'eine Kollision, Gruppe bewegt Mitglieder mit');
+});
+t('GfxTurtleBitmapPolygon', {
+  'Zeich.java': [
+    'Turtle t = new Turtle(10, 10);',
+    't.forward(50);',
+    't.turn(90);',
+    't.forward(20);',
+    'Bitmap bm = new Bitmap(4, 2, 0, 0, 10, 10);',
+    'bm.setColor(1, 0, Color.red);',
+    'System.out.println(bm.getColorAsInt(1, 0));',
+    'System.out.println(bm.getColorAsInt(3, 1));',
+    'Polygon p = new Polygon(false, 0, 0, 10, 0, 10, 10);',
+    'p.addPoint(5, 15);',
+    'System.out.println("fertig");'
+  ].join(NL)
+}, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '16711680' + NL + '16777215' + NL + 'fertig' + NL, 'Bitmap-Farben als int');
+  var snap = V.gfxSnapshot();
+  var turtle = null, poly = null;
+  snap.forEach(function (s) { if (s.kind === 'turtle') { turtle = s; } if (s.kind === 'polygon') { poly = s; } });
+  if (!turtle || Math.round(turtle.x) !== 60 || Math.round(turtle.y) !== 30) { throw new Error('Turtle-Endpunkt: ' + JSON.stringify(turtle)); }
+  if (!turtle.pathCount || turtle.pathCount !== 3) { throw new Error('Turtle-Pfad: ' + JSON.stringify(turtle)); }
+  if (!poly || poly.pointsCount !== 4) { throw new Error('Polygon-Punkte: ' + JSON.stringify(poly)); }
+});
+t('GfxDefaultsUndDestroy', {
+  'Std.java': [
+    'Shape.setDefaultVisibility(false);',
+    'FilledShape.setDefaultFillColor(Color.green);',
+    'Circle c = new Circle(1, 1, 5);',
+    'System.out.println(c.getX());',
+    'Rectangle r = new Rectangle(0, 0, 10, 10);',
+    'r.destroy();',
+    'r.move(1, 1);'
+  ].join(NL)
+}, r => {
+  if (r.ok) { throw new Error('Fehler nach destroy erwartet'); }
+  var snap = V.gfxSnapshot();
+  if (snap.length !== 1 || snap[0].visible !== false || snap[0].fill !== 'rgb(0, 128, 0)') {
+    throw new Error('Voreinstellungen: ' + JSON.stringify(snap));
+  }
+  if (r.errors.length === 0 || r.errors[0].message.indexOf('zerstoert') === -1) { throw new Error('destroy-Fehlermeldung: ' + JSON.stringify(r.errors)); }
+});
+t('GfxActUndTastatur', {
+  'Auto.java': [
+    'class Auto extends Rectangle {',
+    '    Auto() { super(10, 10, 20, 20); }',
+    '    void act() { move(2, 0); }',
+    '    void onKeyDown(String taste) { move(0, 5); }',
+    '}',
+    'Auto a = new Auto();'
+  ].join(NL)
+}, r => {
+  eq(r.ok, true, 'ok');
+  V.gfxTick();
+  V.gfxTick();
+  V.gfxDispatchKey('ArrowDown', true);
+  var s = V.gfxSnapshot()[0];
+  if (Math.round(s.x) !== 14 || Math.round(s.y) !== 15) { throw new Error('act + onKeyDown Bewegung: ' + JSON.stringify(s)); }
+  V.gfxStopLoop();
+});
+t('GfxGuiElemente', {
+  'Panel.java': [
+    'Textfield tf = new Textfield(10, 10, 100, 24, "Name");',
+    'System.out.println(tf.getText());',
+    'tf.setText("Anna");',
+    'System.out.println(tf.getText());',
+    'Checkbox cb = new Checkbox(10, 50, 100, 20, "Laut", true);',
+    'System.out.println(cb.isChecked());',
+    'cb.setChecked(false);',
+    'System.out.println(cb.isChecked());',
+    'Radiobutton rb = new Radiobutton(10, 80, 100, 20);',
+    'rb.setSelected(true);',
+    'System.out.println(rb.isSelected());'
+  ].join(NL)
+}, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'Name' + NL + 'Anna' + NL + 'true' + NL + 'false' + NL + 'true' + NL, 'GUI-Zustände');
+});
+t('GfxVererbungSuper', {
+  'Kopf.java': [
+    'class Kopf extends Circle {',
+    '    int gedreht = 0;',
+    '    Kopf() { super(50, 50, 12); setFillColor(Color.yellow); }',
+    '    void act() { gedreht = gedreht + 1; move(1, 0); }',
+    '}',
+    'Kopf k = new Kopf();',
+    'k.move(10, 0);',
+    'System.out.println(k.getX());'
+  ].join(NL)
+}, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '60.0' + NL, 'Position nach super-Konstruktor und move');
+  var s = V.gfxSnapshot()[0];
+  if (s.fill !== 'rgb(255, 255, 0)') { throw new Error('Fuellung im Konstruktor: ' + JSON.stringify(s)); }
+  V.gfxTick();
+  if (Math.round(V.gfxSnapshot()[0].x) !== 61) { throw new Error('act() nach Vererbung: ' + JSON.stringify(V.gfxSnapshot()[0])); }
+});
+
+/* --- Einzelschritt (stepLimit) --- */
+t('StepLimitPausiert', {
+  'Step.java': [
+    'class Step { }',
+    'System.out.println("eins");',
+    'System.out.println("zwei");',
+    'System.out.println("drei");'
+  ].join(NL)
+}, r => {
+  /* Dieser Lauf ist ohne Limit (komplett) - der naechste mit. */
+  eq(r.ok, true, 'ok');
+  eq(r.output, 'eins' + NL + 'zwei' + NL + 'drei' + NL, 'voller Lauf');
+
+});
+(function () {
+  var files = {
+    'Step.java': [
+      'class Step { }',
+      'System.out.println("eins");',
+      'System.out.println("zwei");',
+      'System.out.println("drei");'
+    ].join(NL)
+  };
+  count++;
+  var r1 = V.run(files, { stepLimit: 1 });
+  try {
+    if (!r1.paused) { throw new Error('Nach 1 Schritt pausiert erwartet'); }
+    if (r1.leafSteps !== 1) { throw new Error('leafSteps=1 erwartet: ' + r1.leafSteps); }
+    if (r1.pauseLine !== 3) { throw new Error('pauseLine=3 (zweiter println) erwartet: ' + r1.pauseLine); }
+    if (r1.output !== 'eins' + NL) { throw new Error('Ausgabe bis Pause: ' + JSON.stringify(r1.output)); }
+    var r2 = V.run(files, { stepLimit: 2 });
+    if (!r2.paused || r2.output !== 'eins' + NL + 'zwei' + NL || r2.pauseLine !== 4) { throw new Error('zweiter Schritt: ' + JSON.stringify(r2)); }
+    var r3 = V.run(files, { stepLimit: 3 });
+    if (r3.paused) { throw new Error('dritter Schritt beendet das Programm'); }
+    if (r3.output !== 'eins' + NL + 'zwei' + NL + 'drei' + NL) { throw new Error('Ausgabe komplett: ' + JSON.stringify(r3.output)); }
+    var r0 = V.run(files, { stepLimit: 0 });
+    if (!r0.paused || r0.output !== '') { throw new Error('stepLimit 0 pausiert sofort ohne Ausgabe'); }
+    console.log('ok   StepLimit');
+  } catch (e) {
+    failed++;
+    console.log('FAIL StepLimit -> ' + e.message);
+  }
+})();
+
+/* --- Automatisches Formatieren --- */
+(function () {
+  count++;
+  try {
+    var messy = 'class A {' + NL + 'int x;' + NL + 'void go(){' + NL + 'if (x>0){' + NL + 'x = x - 1;' + NL + '}' + NL + '}' + NL + '}' + NL + 'System.out.println("} nicht zaehlen");' + NL + '// { auch nicht' + NL + '/* { Block' + NL + 'weiter } */' + NL + 'int y;';
+    var fmt = V.formatJavaSource(messy);
+    var lines = fmt.split(NL);
+    if (lines[1] !== '    int x;') { throw new Error('Attribut eingerueckt: ' + JSON.stringify(lines[1])); }
+    if (lines[3] !== '        if (x>0){') { throw new Error('Verschachtelung: ' + JSON.stringify(lines[3])); }
+    if (lines[4] !== '            x = x - 1;') { throw new Error('zweite Ebene: ' + JSON.stringify(lines[4])); }
+    if (lines[8] !== 'System.out.println("} nicht zaehlen");') { throw new Error('String-Klammer ignoriert: ' + JSON.stringify(lines[8])); }
+    if (lines[10] !== '/* { Block') { throw new Error('Kommentar unverändert: ' + JSON.stringify(lines[10])); }
+    if (lines[12] !== 'int y;') { throw new Error('Tiefe nach Kommentar: ' + JSON.stringify(lines[12])); }
+    console.log('ok   FormatJavaSource');
+  } catch (e) {
+    failed++;
+    console.log('FAIL FormatJavaSource -> ' + e.message);
+  }
+})();
+
 console.log('');
 console.log(failed === 0 ? ('Alle ' + count + ' Tests bestanden.') : (failed + ' von ' + count + ' Tests fehlgeschlagen.'));
 process.exit(failed === 0 ? 0 : 1);

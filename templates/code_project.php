@@ -15,6 +15,7 @@
         <?= csrf_field() ?>
         <label class="field ide-title"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
         <button class="btn btn-primary" type="submit">💾 Speichern</button>
+        <button class="btn btn-ghost" type="button" id="java-format" title="Rückt deinen Java-Code automatisch ein: 4 Leerzeichen pro Ebene, sauber eingerückt und ausgerückt.">🧹 Formatieren</button>
     </form>
     <div class="ide">
         <aside class="ide-side">
@@ -67,12 +68,16 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
                 <button type="button" class="console-tab" data-ctab="repl">🧪 Objektkonsole</button>
                 <button type="button" class="console-tab" data-ctab="objects">🧩 Objekte <span class="err-badge" id="java-obj-badge">0</span></button>
                 <button type="button" class="console-tab" data-ctab="errors">🚨 Fehlerkonsole <span class="err-badge" id="java-error-badge">0</span></button>
+                <button type="button" class="console-tab" data-ctab="api">📖 API-Hilfe</button>
             </div>
             <div class="console-pane" data-cpane="out">
                 <div class="console-run">
                     <button class="btn btn-primary" id="run-java" type="button">▶ Ausführen</button>
+                    <button class="btn btn-ghost" id="java-step" type="button" title="Führt genau eine Anweisung aus und zeigt in den Zeilennummern, welche Zeile als Nächstes dran ist.">👣 Einzelschritt</button>
+                    <button class="btn btn-ghost" id="java-run-rest" type="button" title="Lässt dein Programm vom Pausenpunkt an bis zum Ende laufen.">⏩ Weiter</button>
                     <span class="muted">Strg + Enter funktioniert auch. Dein Programm läuft komplett in deinem Browser.</span>
                 </div>
+                <div id="java-step-info" class="step-info"></div>
                 <pre id="java-console" class="code ide-console-out">Noch nichts ausgeführt.</pre>
             </div>
             <div class="console-pane" data-cpane="classes" hidden>
@@ -95,6 +100,177 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
                     <input id="java-repl-in" class="mono" type="text" autocomplete="off" spellcheck="false" placeholder='Auto a = new Auto("BMW");'>
                 </div>
                 <div id="java-repl-ac" class="ac-box" hidden></div>
+            </div>
+            <div class="console-pane" data-cpane="api" hidden>
+                <div class="api-docs">
+                    <p class="muted">Hier stehen alle fertigen Klassen, die du in deinen Java-Programmen benutzen kannst. Zum Aufklappen auf die Überschrift klicken.</p>
+
+                    <details open>
+                        <summary>🖨️ Ausgeben und Rechnen (System.out, Math, String, Datenbank)</summary>
+                        <table>
+                            <tr><td><pre class="code">System.out.println(text);</pre></td><td>Schreibt eine Zeile in die Ausgabe (Zahlen, Text, Rechnungen).</td></tr>
+                            <tr><td><pre class="code">System.out.print(text);</pre></td><td>Wie println, aber ohne Zeilenumbruch am Ende.</td></tr>
+                            <tr><td><pre class="code">Math.random()</pre></td><td>Eine Zufallszahl zwischen 0.0 und 1.0 (z. B. <code>(int)(Math.random()*6)+1</code> für einen Würfel).</td></tr>
+                            <tr><td><pre class="code">Math.abs(x) · Math.max(a,b) · Math.min(a,b)</pre></td><td>Betrag, größter und kleinster Wert.</td></tr>
+                            <tr><td><pre class="code">Math.pow(a,b) · Math.sqrt(x) · Math.round(x)</pre></td><td>Hoch, Wurzel, Runden.</td></tr>
+                            <tr><td><pre class="code">text.length() · text.toUpperCase()</pre></td><td>String-Methoden: Länge, Großbuchstaben u.&nbsp;a. (charAt, substring, indexOf, equals, contains, replace, trim).</td></tr>
+                            <tr><td><pre class="code">Integer.parseInt(text)</pre></td><td>Macht aus "42" die Zahl 42.</td></tr>
+                        </table>
+                        <p class="muted">Die Mini-Datenbank <code>Datenbank</code> ist oben im Editor unter "Mini-Datenbank" erklärt.</p>
+                    </details>
+
+                    <details>
+                        <summary>👣 Einzelschritt: Anweisung für Anweisung</summary>
+                        <p>Mit <strong>👣 Einzelschritt</strong> führst du genau <em>eine</em> Anweisung aus (z.&nbsp;B. erst das Objekt erzeugen), dann siehst du in den Zeilennummern <strong>gelb markiert</strong>, welche Zeile als Nächstes drankommt. Immer weiterklicken – so siehst du, wie dein Programm Schritt für Schritt läuft. <strong>⏩ Weiter</strong> lässt den Rest bis zum Ende laufen. Fehlerzeilen werden in den Zeilennummern <strong>rot</strong> markiert.</p>
+                    </details>
+
+                    <details>
+                        <summary>🖼️ Grafik-Fenster: World und Koordinaten</summary>
+                        <p>Erzeugst du eine Figur oder eine World, öffnet sich das Grafik-Fenster mit einem XY-Feld. <strong>Wichtig:</strong> Der Ursprung (0|0) ist <strong>links oben</strong>, y zeigt nach <strong>unten</strong> – wie in der OnlineIDE/learnj.</p>
+                        <table>
+                            <tr><td><pre class="code">World w = new World(800, 600);</pre></td><td>Legt die Welt an (Breite, Höhe) und öffnet das Fenster. Ohne eigene World gilt automatisch 800 × 600.</td></tr>
+                            <tr><td><pre class="code">w.setBackgroundColor(Color.red);
+// oder "#ff8000" oder rgb(255,128,0)</pre></td><td>Hintergrundfarbe der Welt.</td></tr>
+                            <tr><td><pre class="code">w.getWidth() · w.getHeight()</pre></td><td>Breite und Höhe der Welt als Zahl.</td></tr>
+                            <tr><td><pre class="code">w.setCursor("hand")</pre></td><td>Mauszeiger im Grafik-Fenster (z. B. "hand", "crosshair", "move").</td></tr>
+                            <tr><td><pre class="code">new Color(255, 128, 0)</pre></td><td>Eigene Farbe aus Rot-, Grün-, Blau-Anteilen (je 0–255, optional 4. Wert: Durchsichtigkeit 0.0–1.0).</td></tr>
+                            <tr><td><pre class="code">Color.red · Color.green · Color.blue
+Color.yellow · Color.orange · Color.pink
+Color.magenta · Color.cyan · Color.white
+Color.black · Color.gray · Color.lightGray
+Color.darkGray · Color.brown · Color.purple</pre></td><td>Fertige Farben. Überall, wo eine Farbe erwartet wird, gehen auch <code>"#ff8000"</code>, <code>rgb(255,128,0)</code>, <code>rgba(255,128,0,0.5)</code>, Zahlen wie <code>0xff8000</code> und Color-Objekte.</td></tr>
+                        </table>
+                    </details>
+
+                    <details>
+                        <summary>⭐ Figuren anlegen: Circle, Rectangle, Text u. a.</summary>
+                        <table>
+                            <tr><td><pre class="code">Circle c = new Circle(100, 200, 30);</pre></td><td>Kreis an Position (100|200) mit Radius 30.</td></tr>
+                            <tr><td><pre class="code">Ellipse e = new Ellipse(100, 200, 40, 20);</pre></td><td>Ellipse mit Radius horizontal (40) und vertikal (20).</td></tr>
+                            <tr><td><pre class="code">Rectangle r = new Rectangle(50, 60, 80, 40);</pre></td><td>Rechteck an Position (50|60), Breite 80, Höhe 40.</td></tr>
+                            <tr><td><pre class="code">RoundedRectangle rr = new RoundedRectangle(50, 60, 80, 40, 15);</pre></td><td>Rechteck mit abgerundeten Ecken (Ecken-Radius 15).</td></tr>
+                            <tr><td><pre class="code">Text t = new Text(20, 50, 24, "Punkte: 0");</pre></td><td>Schriftgröße 24. Optional 5. Parameter: Schriftname, z. B. "Arial".</td></tr>
+                            <tr><td><pre class="code">t.setText("Punkte: 1");
+t.setAlignment(Alignment.center);</pre></td><td>Text ändern und links/mittig/rechts ausrichten.</td></tr>
+                            <tr><td><pre class="code">Triangle tr = new Triangle(0, 0, 40, 0, 20, 30);</pre></td><td>Dreieck aus drei Punkten (x1|y1, x2|y2, x3|y3).</td></tr>
+                            <tr><td><pre class="code">Line l = new Line(10, 20, 90, 120);</pre></td><td>Linie von (10|20) nach (90|120). Danach: <code>l.setPoint(x, y)</code> (Endpunkt) oder <code>l.setPoints(x1, y1, x2, y2)</code>.</td></tr>
+                            <tr><td><pre class="code">Polygon p = new Polygon(false, 10, 10, 60, 10, 60, 50);
+p.addPoint(35, 70);</pre></td><td>Vieleck. <code>true</code> schließt und füllt es, <code>false</code> zeichnet nur die Linien. <code>addPoints(x1, y1, ...)</code> hängt mehrere Punkte an.</td></tr>
+                            <tr><td><pre class="code">Bitmap b = new Bitmap(8, 4, 100, 100, 40, 20);
+b.setColor(0, 0, Color.red);</pre></td><td>Pixel-Bild: 8 Spalten, 4 Zeilen an Position (100|100), Zelle 40×20 Pixel. <code>b.setColor(x, y, farbe)</code> färbt eine Zelle, <code>b.getColorAsInt(x, y)</code> liest sie als Zahl.</td></tr>
+                        </table>
+                        <p class="muted">Figuren, die mit <code>new</code> erzeugt werden, erscheinen automatisch im Grafik-Fenster und in der Objekt-Übersicht.</p>
+                    </details>
+
+                    <details>
+                        <summary>🎨 Farben und Rahmen der Figuren</summary>
+                        <table>
+                            <tr><td><pre class="code">c.setFillColor(Color.red);</pre></td><td>Füllfarbe. Mit <code>setFillColor(null)</code> wird die Figur nur noch als Rand gezeichnet.</td></tr>
+                            <tr><td><pre class="code">c.setBorderColor(Color.black);
+c.setBorderWidth(3);</pre></td><td>Randfarbe und Randdicke (in Pixeln).</td></tr>
+                            <tr><td><pre class="code">Shape.setDefaultVisibility(false);
+FilledShape.setDefaultFillColor(Color.green);</pre></td><td>Voreinstellungen für ALLE Figuren, die danach erzeugt werden. Es gibt auch <code>FilledShape.setDefaultBorderColor(...)</code> und <code>FilledShape.setDefaultBorderWidth(...)</code>.</td></tr>
+                        </table>
+                    </details>
+
+                    <details>
+                        <summary>🔄 Bewegen, Drehen, Spiegeln: alle Figuren</summary>
+                        <table>
+                            <tr><td><pre class="code">r.move(10, 5);</pre></td><td>Um 10 nach rechts und 5 nach unten verschieben (auch Minus geht: hoch und links).</td></tr>
+                            <tr><td><pre class="code">r.rotate(45);</pre></td><td>Um 45 Grad drehen (um die Mitte). Optional mit Drehpunkt: <code>r.rotate(45, 100, 100)</code>.</td></tr>
+                            <tr><td><pre class="code">r.scale(1.5);</pre></td><td>1.5-fach strecken (unter 1: verkleinern). Optional um einen Punkt: <code>r.scale(1.5, 100, 100)</code>.</td></tr>
+                            <tr><td><pre class="code">r.mirrorX(); · r.mirrorY();</pre></td><td>Spiegeln (an der Senkrechten/wagerechten Achse der Figur).</td></tr>
+                            <tr><td><pre class="code">r.setVisible(false); · r.setAlpha(0.5);</pre></td><td>Verstecken und halbdurchsichtig machen (0.0 bis 1.0).</td></tr>
+                            <tr><td><pre class="code">r.bringToFront(); · r.sendToBack();</pre></td><td>In den Vordergrund bzw. Hintergrund legen.</td></tr>
+                            <tr><td><pre class="code">r.destroy();</pre></td><td>Figur endgültig entfernen.</td></tr>
+                            <tr><td><pre class="code">r.getWorld();
+r.getX(); · r.getY();</pre></td><td>Welt und Position der Figur abfragen (getX/getY gibt es für alle Figuren).</td></tr>
+                        </table>
+                    </details>
+
+                    <details>
+                        <summary>🐢 Turtle: Zeichnen wie ein Stift</summary>
+                        <table>
+                            <tr><td><pre class="code">Turtle t = new Turtle();
+Turtle t2 = new Turtle(100, 200);</pre></td><td>Turtle in der Mitte (oder an Position). Sie zeigt zunächst nach rechts.</td></tr>
+                            <tr><td><pre class="code">t.forward(50);</pre></td><td>50 Pixel geradeaus laufen (zeichichnet eine Linie).</td></tr>
+                            <tr><td><pre class="code">t.turn(90);</pre></td><td>Um 90 Grad drehen (plus = im Uhrzeigersinn).</td></tr>
+                            <tr><td><pre class="code">t.penUp(); · t.penDown();</pre></td><td>Stift anheben: ab jetzt bewegt sich die Turtle, ohne zu zeichnen.</td></tr>
+                            <tr><td><pre class="code">t.setBorderColor(Color.blue);
+t.setBorderWidth(3);</pre></td><td>Stiftfarbe und Strichdicke.</td></tr>
+                        </table>
+                    </details>
+
+                    <details>
+                        <summary>🎬 Animation mit act() – wie in der OnlineIDE</summary>
+                        <p>Wenn deine Klasse von einer Figur erbt, kannst du die Methode <code>act()</code> überschreiben. Sie wird automatisch ca. 30-mal pro Sekunde aufgerufen – perfekt für Bewegungen und Spiele:</p>
+                        <pre class="code">class Ball extends Circle {
+    Ball() { super(100, 100, 20); }
+    void act() {
+        move(3, 0);                  // fliegt nach rechts
+        if (getX() > 800) { move(-800, 0); }
+    }
+}</pre>
+                        <p class="muted">Das Programm läuft danach weiter, bis du neu startest oder ein Fehler auftritt.</p>
+                    </details>
+
+                    <details>
+                        <summary>⌨️ Tastatur und 🖱️ Maus: Ereignisse</summary>
+                        <p>Diese Methoden kannst du in deine Klasse schreiben (überschreiben). InfoCraft ruft sie automatisch auf:</p>
+                        <table>
+                            <tr><td><pre class="code">void onKeyDown(String taste) { ... }
+void onKeyUp(String taste) { ... }
+void onKeyTyped(String zeichen) { ... }</pre></td><td>Beim Drücken/Loslassen einer Taste. taste ist z. B. <code>"ArrowLeft"</code>, <code>"ArrowRight"</code>, <code>"ArrowUp"</code>, <code>"ArrowDown"</code>, <code>"Space"</code>, <code>"a"</code>.</td></tr>
+                            <tr><td><pre class="code">boolean akt = isKeyDown("ArrowRight");</pre></td><td>Fragt dauernd ab, ob eine Taste gerade gedrückt ist (auch "links", "rechts", "oben", "unten" auf Deutsch).</td></tr>
+                            <tr><td><pre class="code">void onMouseDown(int taste) { ... }
+void onMouseUp(int taste) { ... }</pre></td><td>Klick auf die Figur (taste: 0 = links, 2 = rechts).</td></tr>
+                            <tr><td><pre class="code">void onMouseEnter() { ... }
+void onMouseLeave() { ... }</pre></td><td>Maus fährt über die Figur / verlässt sie.</td></tr>
+                        </table>
+                        <p class="muted">Das Grafik-Fenster muss angeklickt sein, damit die Tastatur ankommt.</p>
+                    </details>
+
+                    <details>
+                        <summary>👥 Group: Figuren zusammen bewegen + Zusammenstöße</summary>
+                        <table>
+                            <tr><td><pre class="code">Group g = new Group(auto, ball);
+g.add(rad2);</pre></td><td>Gruppe anlegen (oder Figuren einzeln hinzufügen). Eine Figur gehört zu höchstens einer Gruppe.</td></tr>
+                            <tr><td><pre class="code">g.move(0, 5); g.rotate(45); g.scale(2);</pre></td><td>Alle Mitglieder gemeinsam bewegen, drehen, strecken.</td></tr>
+                            <tr><td><pre class="code">g.setVisible(false); · g.destroy();</pre></td><td>Ganze Gruppe verstecken oder entfernen.</td></tr>
+                            <tr><td><pre class="code">Shape[] treffer = g.getCollidingShapes(ball);</pre></td><td>Welche Figuren der Gruppe berühren die Figur? (Überprüfung über die Umrahmung, wie in der OnlineIDE)</td></tr>
+                            <tr><td><pre class="code">Shape[][] paare = g.getCollisionPairs(andereGruppe, true);</pre></td><td>Welche Paare berühren sich? <code>true</code> stoppt nach dem ersten Treffer.</td></tr>
+                        </table>
+                    </details>
+
+                    <details>
+                        <summary>🔘 Knöpfe und Eingabefelder im Grafik-Fenster</summary>
+                        <p>Mit diesen Elementen bauen Kinder echte kleine Programme mit Bedienung:</p>
+                        <table>
+                            <tr><td><pre class="code">Button b = new Button(20, 20, 120, 36);
+b.setText("Neu starten");
+b.setFillColor(Color.lightGray);
+b.setBorderColor(Color.black);
+b.setBorderWidth(1);
+b.setFontSize(16);</pre></td><td>Knopf an Position (20|20), 120×36 Pixel. Der Text passt sich automatisch an.</td></tr>
+                            <tr><td><pre class="code">Textfield tf = new Textfield(20, 70, 140, 30);
+tf.setText("Name...");</pre></td><td>Eingabefeld. <code>tf.getText()</code> liest den Text.</td></tr>
+                            <tr><td><pre class="code">Checkbox cb = new Checkbox(20, 110, 200, 24);
+cb.setChecked(true);</pre></td><td>Ankreuzfeld, <code>cb.isChecked()</code> fragt es ab.</td></tr>
+                            <tr><td><pre class="code">Radiobutton rb = new Radiobutton(20, 140, 200, 24);
+rb.setSelected(true);</pre></td><td>Auswahlknopf, <code>rb.isSelected()</code> fragt ihn ab.</td></tr>
+                        </table>
+                        <p><strong>Reagieren:</strong> Schreibe in deine eigene Unterklasse die Methode <code>onChange(String neuerWert)</code> – sie wird aufgerufen, wenn jemand klickt oder tippt:</p>
+                        <pre class="code">class MeinKnopf extends Button {
+    MeinKnopf() { super(20, 20, 120, 36); setText("Klick mich"); }
+    void onChange(String wert) {
+        setFillColor(Color.green);
+    }
+}</pre>
+                        <p class="muted">Hinweis: In der OnlineIDE heißen die Klassen anders (Label, TextField, RadioButton); hier heißen sie Button, Textfield, Checkbox, Radiobutton.</p>
+                    </details>
+
+                    <p class="muted">Vorbild für die Grafik-API ist die <a href="https://www.onlineide.net" rel="noopener" target="_blank">OnlineIDE/learnj</a> ("Java lernen durch Ausprobieren"). Fast alle deren Klassen und Methoden funktionieren hier genauso – kleine Unterschiede stehen direkt bei den Klassen.</p>
+                </div>
             </div>
             <div class="console-pane" data-cpane="objects" hidden>
                 <p class="muted">Jedes <code>new</code> landet hier: Alle Objekte deines Programms mit ihren Attributwerten – dein Objektdiagramm neben dem Klassendiagramm.</p>

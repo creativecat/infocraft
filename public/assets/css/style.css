@@ -667,3 +667,94 @@ body.sidebar-hidden .sidebar { display: none; }
     border-top: 1px dashed var(--border); margin-top: 4px;
 }
 .uml-empty { color: var(--muted); font-style: italic; }
+
+/* ===== Zeilennummern (Gutter) in der Java-IDE ===== */
+/* Der Editor mit Gutter bricht Zeilen nicht mehr um, damit Nummern und Zeilen exakt uebereinanderliegen. */
+.hlwrap.has-gutter > textarea,
+.hlwrap.has-gutter > pre {
+    white-space: pre;
+    overflow-wrap: normal;
+    padding-left: 60px;
+}
+.hlwrap.has-gutter > textarea { overflow-x: auto; }
+.ln-gutter {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 52px;
+    z-index: 3; overflow: hidden; pointer-events: none;
+    background: linear-gradient(180deg, #eef2ff, #e0e7ff);
+    border-right: 1px solid #c7d2fe;
+    box-sizing: border-box;
+}
+.ln-inner {
+    padding: 11px 8px 0 0;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 0.95rem; line-height: 1.5;
+    text-align: right; color: #6366f1;
+    box-sizing: border-box;
+}
+.ln-cell { height: 1.5em; line-height: 1.5; border-radius: 4px; padding-right: 2px; }
+.ln-err {
+    background: #fecaca; color: #b91c1c; font-weight: 700;
+    box-shadow: inset 3px 0 0 #dc2626;
+}
+.ln-cur {
+    background: #fde68a; color: #92400e; font-weight: 700;
+    box-shadow: inset 3px 0 0 #f59e0b;
+}
+
+/* ===== Einzelschritt-Infozeile ===== */
+.step-info {
+    margin: 10px 0 0; padding: 8px 12px; font-size: 0.88rem; font-weight: 600;
+    background: #fefce8; border: 1px solid #fde68a; border-left: 4px solid #f59e0b;
+    border-radius: 8px; color: #713f12;
+}
+.step-info:empty { display: none; }
+
+/* ===== Grafik-Fenster (Canvas mit XY-Feld, wie OnlineIDE/learnj) ===== */
+.gfx-window {
+    position: fixed; right: 18px; top: 72px; z-index: 60;
+    width: 500px; max-width: calc(100vw - 36px);
+    background: var(--surface); border: 2px solid #a5b4fc; border-radius: 12px;
+    box-shadow: var(--shadow); overflow: hidden;
+}
+.gfx-title {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 10px; background: #eef2ff; border-bottom: 1px solid #c7d2fe;
+    font-size: 0.85rem; font-weight: 700; color: var(--primary-2);
+    cursor: move; user-select: none;
+}
+.gfx-close {
+    border: 1px solid #c7d2fe; background: var(--surface); border-radius: 6px;
+    width: 24px; height: 24px; line-height: 1; cursor: pointer; font-size: 0.9rem;
+    color: var(--muted); padding: 0;
+}
+.gfx-close:hover { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+.gfx-canvas { display: block; width: 100%; background: #ffffff; }
+.gfx-gui { position: absolute; inset: 0; pointer-events: none; }
+.gfx-el { position: absolute; pointer-events: auto; box-sizing: border-box; font-family: inherit; }
+.gfx-btn-el {
+    border-radius: 8px; cursor: pointer; font-weight: 600;
+    border: 1px solid #94a3b8; background: #e2e8f0;
+}
+.gfx-btn-el:hover { filter: brightness(0.96); }
+.gfx-input-el { border-radius: 6px; border: 1px solid #94a3b8; background: #ffffff; padding: 2px 6px; }
+
+/* ===== API-Hilfe ===== */
+.api-docs { font-size: 0.9rem; }
+.api-docs details {
+    border: 1px solid var(--border); border-radius: 10px;
+    margin: 8px 0; background: var(--surface); overflow: hidden;
+}
+.api-docs summary {
+    cursor: pointer; padding: 9px 12px; font-weight: 700; color: var(--primary-2);
+    background: #eef2ff; border-bottom: 1px solid #e0e7ff;
+}
+.api-docs details[open] summary { border-bottom: 1px solid var(--border); }
+.api-docs summary:hover { background: #e0e7ff; }
+.api-docs table { width: 100%; border-collapse: collapse; }
+.api-docs td { vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.api-docs td:first-child { width: 46%; }
+.api-docs pre.code {
+    margin: 0; background: #f8fafc; border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 8px; font-size: 0.78rem; white-space: pre-wrap;
+}
+.api-docs p { margin: 8px 10px; }
