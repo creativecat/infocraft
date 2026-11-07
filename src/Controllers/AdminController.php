@@ -59,6 +59,10 @@ final class AdminController
         foreach ($result['errors'] as $error) {
             flash('error', $error);
         }
+        if ($result['otps'] !== []) {
+            $_SESSION['otp_results'] = $result['otps'];
+            redirect('/unterricht/passwort/ergebnis');
+        }
         redirect('/admin/import');
     }
 }

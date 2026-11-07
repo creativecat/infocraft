@@ -12,13 +12,14 @@ final class HomeController
 {
     public static function index(): void
     {
-        if (!Auth::check()) {
+        $user = Auth::user();
+        if ($user === null) {
             redirect('/login');
         }
         render('home', [
             'title' => 'Start',
             'active' => 'home',
-            'modules' => ModuleController::modules(),
+            'modules' => ModuleController::visible($user),
             'system' => [
                 'driver' => Database::driver(),
                 'demo' => (bool) Config::get('app.demo_mode'),

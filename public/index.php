@@ -13,8 +13,12 @@ require __DIR__ . '/../src/bootstrap.php';
 
 use Infocraft\Controllers\AdminController;
 use Infocraft\Controllers\AuthController;
+use Infocraft\Controllers\CodeController;
 use Infocraft\Controllers\HomeController;
 use Infocraft\Controllers\ModuleController;
+use Infocraft\Controllers\SqlWorkshopController;
+use Infocraft\Controllers\TaskController;
+use Infocraft\Controllers\TeacherController;
 use Infocraft\Router;
 
 // Basispfad, falls InfoCraft in einem Unterverzeichnis installiert ist.
@@ -30,9 +34,43 @@ $router->post('/login/demo', [AuthController::class, 'demoLogin']);
 $router->post('/logout', [AuthController::class, 'logout']);
 $router->get('/auth/sso/start', [AuthController::class, 'ssoStart']);
 $router->get('/auth/sso/callback', [AuthController::class, 'ssoCallback']);
+
+// Unterricht (Lehrkräfte): eigene Klassen, OTP-Passwörter
+$router->get('/unterricht/klassen', [TeacherController::class, 'classes']);
+$router->get('/unterricht/passwort/ergebnis', [TeacherController::class, 'otpResults']);
+$router->post('/unterricht/passwort', [TeacherController::class, 'resetPassword']);
+$router->post('/unterricht/klasse/zuordnen', [TeacherController::class, 'assignTeacher']);
+
+// SQL-Werkstatt (feste Routen vor den Platzhaltern registrieren)
+$router->get('/werkstatt/sql', [SqlWorkshopController::class, 'index']);
+$router->post('/werkstatt/sql/verteilen', [SqlWorkshopController::class, 'distribute']);
+$router->post('/werkstatt/sql/kopie', [SqlWorkshopController::class, 'selfCopy']);
+$router->post('/werkstatt/sql/entfernen', [SqlWorkshopController::class, 'revoke']);
+$router->get('/werkstatt/sql/{slug}', [SqlWorkshopController::class, 'workspace']);
+$router->post('/werkstatt/sql/{slug}', [SqlWorkshopController::class, 'query']);
+$router->post('/werkstatt/sql/{slug}/mission/{id}', [SqlWorkshopController::class, 'mission']);
+
+// Code-Werkstatt
+$router->get('/werkstatt/code', [CodeController::class, 'index']);
+$router->post('/werkstatt/code/projekt', [CodeController::class, 'createProject']);
+$router->post('/werkstatt/code/ordner', [CodeController::class, 'createFolder']);
+$router->post('/werkstatt/code/move', [CodeController::class, 'move']);
+$router->post('/werkstatt/code/verteilen', [CodeController::class, 'distribute']);
+$router->post('/werkstatt/code/loeschen', [CodeController::class, 'delete']);
+$router->get('/werkstatt/code/{id}', [CodeController::class, 'open']);
+$router->post('/werkstatt/code/{id}', [CodeController::class, 'save']);
+
+// Aufgabenpool (Lehrkräfte) bzw. Meine Aufgaben (Schülerinnen und Schüler)
+$router->get('/aufgaben', [TaskController::class, 'index']);
+$router->post('/aufgaben/anlegen', [TaskController::class, 'create']);
+$router->post('/aufgaben/austeilen', [TaskController::class, 'assign']);
+
+// Verwaltung
 $router->get('/admin/users', [AdminController::class, 'users']);
 $router->get('/admin/import', [AdminController::class, 'importForm']);
 $router->post('/admin/import', [AdminController::class, 'import']);
+
+// Module (Platzhalter und Weiterleitungen)
 $router->get('/modul/{slug}', [ModuleController::class, 'show']);
 
 $path = (string) (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/');

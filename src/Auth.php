@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Infocraft;
 
+use Infocraft\Models\SchoolClass;
 use Infocraft\Models\User;
 
 final class Auth
@@ -34,6 +35,22 @@ final class Auth
     {
         $user = self::user();
         return $user !== null && ($user->role === 'teacher' || $user->role === 'admin');
+    }
+
+    /**
+     * Jahrgangsstufe einer Schülerin/eines Schülers aus dem Klassennamen
+     * (6R -> 6). Lehrkräfte und Administration: null = unbegrenzt.
+     */
+    public static function levelOf(User $user): ?int
+    {
+        if ($user->role !== 'student') {
+            return null;
+        }
+        if ($user->classId === null) {
+            return 0;
+        }
+        $class = SchoolClass::find($user->classId);
+        return $class === null ? 0 : $class->level();
     }
 
     public static function login(User $user): void
