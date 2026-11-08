@@ -242,6 +242,7 @@ jobs:
           grep -q "Gespeichert" jfilesave.html && J_FILE_SAVE_OK=1 || J_FILE_SAVE_OK=0
           JSYNC=$(sqlite3 "$DB" "SELECT content FROM projects WHERE id = $JPROJ")
           grep -q "class Garage" <<<"$JSYNC" && J_SYNC_OK=1 || J_SYNC_OK=0
+          echo "::error::DEBUGSYNC | JGID=[$JGID] PROJID=[$JPROJ] | FILES: $(sqlite3 "$DB" "SELECT group_concat(id || '=' || name || ':' || length(content), ', ') FROM project_files WHERE project_id = $JPROJ") | PROJ: $(sqlite3 "$DB" "SELECT replace(substr(content, 1, 250), char(10), ' ') FROM projects WHERE id = $JPROJ")"
           CODE_JFDEL=$(curl -sS -L -o jfdel.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" http://127.0.0.1:8080/werkstatt/code/$JPROJ/datei/$JGID/loeschen)
           grep -q "gelöscht" jfdel.html && J_FDEL_OK=1 || J_FDEL_OK=0
           # Wiki: Seite anlegen, Schueleransicht, Stufen-Filter, Bearbeiten, Loeschen
