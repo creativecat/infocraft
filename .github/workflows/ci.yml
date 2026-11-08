@@ -810,12 +810,17 @@ jobs:
           grep -q "nur für Lehrkräfte" tapwdeny.html && TAP_WIN_DENY_OK=1 || TAP_WIN_DENY_OK=0
           CODE_TAPROG=$(curl -sS -o taprog.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/unterricht/klassen/$CLASS6/fortschritt)
           grep -q "Fortschritt: Klasse 6R" taprog.html && FORT_OK=1 || FORT_OK=0
-          CODE_TAPROJSUB=$(curl -sS -L -o taprojsub.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF10" -d "project_id=$JPROJ" http://127.0.0.1:8080/aufgaben/$TAID/abgeben)
+          curl -sS -o jonas2.html -b cookies6.txt http://127.0.0.1:8080/
+          JONCSRF=$(grep -o 'data-csrf="[a-f0-9]*"' jonas2.html | head -n1 | cut -d'"' -f2)
+          CODE_JONPROJ=$(curl -sS -L -o jonproj.html -w "%{http_code}" -b cookies6.txt -c cookies6.txt -d "csrf=$JONCSRF" -d "title=Jonas Eigenversuch" -d "type=code" -d "language=java" http://127.0.0.1:8080/werkstatt/code/projekt)
+          JONPROJ=$(sqlite3 "$DB" "SELECT id FROM projects WHERE title = 'Jonas Eigenversuch' AND owner_id = $JONAS")
+          [ -n "$JONPROJ" ] && JONPROJ_OK=1 || JONPROJ_OK=0
+          CODE_TAPROJSUB=$(curl -sS -L -o taprojsub.html -w "%{http_code}" -b cookies6.txt -c cookies6.txt -d "csrf=$JONCSRF" -d "project_id=$JONPROJ" http://127.0.0.1:8080/aufgaben/$TAID/abgeben)
           grep -q "Abgabe gespeichert" taprojsub.html && TAPROJ_SUB_OK=1 || TAPROJ_SUB_OK=0
-          TAPROJDB=$(sqlite3 "$DB" "SELECT project_id FROM task_submissions WHERE task_id = $TAID AND student_id = $LENA")
-          [ "$TAPROJDB" = "$JPROJ" ] && TAPROJ_DB_OK=1 || TAPROJ_DB_OK=0
+          TAPROJDB=$(sqlite3 "$DB" "SELECT project_id FROM task_submissions WHERE task_id = $TAID AND student_id = $JONAS")
+          [ "$TAPROJDB" = "$JONPROJ" ] && TAPROJ_DB_OK=1 || TAPROJ_DB_OK=0
           CODE_TACORRP=$(curl -sS -o tacorrp.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/aufgaben/$TAID/korrektur)
-          grep -q "Projekt: Diagramm Quelle Java" tacorrp.html && TAPROJ_CORR_OK=1 || TAPROJ_CORR_OK=0
+          grep -q "Projekt: Jonas Eigenversuch" tacorrp.html && TAPROJ_CORR_OK=1 || TAPROJ_CORR_OK=0
           CODE_TANEWW=$(curl -sS -L -o taneww.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Aufgabe Woche" --data-urlencode "description=Wiederkehrende Übung" -d "type=code" -d "level=6" --data-urlencode "sample_solution=Wochenaufgabe" http://127.0.0.1:8080/aufgaben/anlegen)
           TARID=$(sqlite3 "$DB" "SELECT id FROM tasks WHERE teacher_id = $STEFAN AND title = 'CI Aufgabe Woche'")
           [ -n "$TARID" ] && TANEWW_OK=1 || TANEWW_OK=0
