@@ -10,6 +10,7 @@ use Infocraft\Models\ProjectState;
 use Infocraft\Models\ProjectFile;
 use Infocraft\Models\ProjectImage;
 use Infocraft\Models\SchoolClass;
+use Infocraft\Models\SqlTemplate;
 use Infocraft\Models\SiteSetting;
 use Infocraft\Models\Task;
 use Infocraft\Models\TaskMaterial;
@@ -17,6 +18,7 @@ use Infocraft\Models\TaskSubmission;
 use Infocraft\Models\TaskTodo;
 use Infocraft\Models\TaskWorking;
 use Infocraft\Models\User;
+use Infocraft\SqlWorkshop;
 
 /**
  * Code-Werkstatt: Projekte in Ordnern, Drag & Drop, Austeilen durch
@@ -135,6 +137,63 @@ final class CodeController
         $project->moveTo($folderId > 0 ? $folderId : null);
         echo '{"ok":true}';
         exit;
+    }
+
+
+    /**
+     * Issue #45: Beispieldatenbank aus der SQL-Werkstatt in die Mini-Datenbank
+     * eines Java-Projekts laden (Lehrkraft: alle Vorlagen, Schülerinnen und
+     * Schüler: ihre Datenbanken mit Schreibrechten). Ersetzt den bisherigen
+     * Stand, damit das Projekt mit den Tabellen und Daten der Vorlage startet.
+     */
+    public static function loadDatabase(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $project = Project::find((int) ($params['id'] ?? 0));
+        if ($project === null || $project->type !== 'code' || $project->language !== 'java' || !self::canOpen($user, $project)) {
+            flash('error', 'Projekt nicht gefunden.');
+            redirect('/werkstatt/code');
+        }
+        $templates = self::loadableDatabaseTemplates($user);
+        $templateId = (int) ($_POST['template_id'] ?? 0);
+        $template = $templateId > 0 ? ($templates[$templateId] ?? null) : null;
+        if ($templateId > 0 && $template === null) {
+            flash('error', 'Diese Datenbank steht dir hier nicht zur Verfügung.');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        $seed = '';
+        if ($template !== null) {
+            $file = SqlWorkshop::templatePath($template->slug);
+            $seed = is_file($file) ? trim((string) file_get_contents($file)) : '';
+        }
+        $state = ProjectState::find($project->id);
+        ProjectState::save($project->id, $state['replText'] ?? '', $seed);
+        flash('success', $template !== null
+            ? $template->title . ' geladen: Bei jedem ▶ Ausführen startet die Mini-Datenbank mit diesen Tabellen.'
+            : 'Mini-Datenbank geleert.');
+        redirect('/werkstatt/code/' . $project->id);
+    }
+
+    /** @return array<int, SqlTemplate> */
+    private static function loadableDatabaseTemplates(User $user): array
+    {
+        $list = [];
+        if (Auth::isTeacher()) {
+            foreach (SqlTemplate::all() as $template) {
+                $list[$template->id] = $template;
+            }
+            return $list;
+        }
+        foreach (SqlTemplate::grantsFor($user->id) as $grant) {
+            if ($grant['permission'] === 'write' || $grant['permission'] === 'admin') {
+                $list[$grant['template']->id] = $grant['template'];
+            }
+        }
+        return $list;
     }
 
     /** Lehrkraft teilt ein eigenes Projekt als Kopie an Klasse oder Einzelperson aus. */
@@ -309,6 +368,7 @@ final class CodeController
             'isForeign' => $project->ownerId !== $user->id,
             'diagramAuto' => SchoolClass::diagramAutoForUser($user),
             'dbPanel' => SchoolClass::dbPanelForUser($user),
+            'dbTemplates' => $dbReadOnly ? [] : self::loadableDatabaseTemplates($user),
             'images' => $images,
             'imageUrls' => $imageUrls,
         ]);

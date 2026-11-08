@@ -770,6 +770,21 @@ String beste = Database.value("SELECT name FROM schueler ORDER BY punkte DESC");
 System.out.println(Database.tables());                     // alle Tabellen</pre>
     <p class="muted">Verfügbar: <code>execute</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>query</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>count</code> die Zeilenanzahl, <code>value</code> den ersten Wert, <code>tables</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank bleibt mit deinem Projekt gespeichert: Bei jedem ▶ Ausführen startet sie mit den Tabellen und Daten aus deinem letzten Stand (und der Beispieldatenbank deiner Aufgabe, falls die Lehrkraft eine .sql-Datei als Material angehängt hat).</p>
 
+    <?php if (!empty($dbTemplates)): ?>
+    <form method="post" action="<?= url('werkstatt/code/' . $project->id . '/datenbank') ?>" class="form-inline db-load-form">
+        <?= csrf_field() ?>
+        <label for="db-template-select"><strong>Beispieldatenbank laden:</strong></label>
+        <select name="template_id" id="db-template-select">
+            <option value="0">Datenbank leeren</option>
+            <?php foreach ($dbTemplates as $dbTemplate): ?>
+            <option value="<?= (int) $dbTemplate->id ?>"><?= e($dbTemplate->title) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <button class="btn btn-ghost" type="submit" title="Ersetzt die Mini-Datenbank durch die gewählte Beispieldatenbank mit ihren Tabellen und Daten.">📦 Laden</button>
+    </form>
+    <p class="muted">Ersetzt deine aktuelle Mini-Datenbank durch die Tabellen und Daten der gewählten Vorlage (z. B. Schule oder Schulbibliothek). Eigene Tabellen und Daten gehen dabei verloren.</p>
+    <?php endif; ?>
+
     <div class="db-two-col">
         <div class="db-block">
             <h4 class="diag-head">🗄 Vorhandene Tabellen</h4>
