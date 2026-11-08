@@ -1,6 +1,9 @@
 <section class="panel">
     <div class="panel-head">
         <h3>🌐 <?= e($project->title) ?></h3>
+        <?php if (($presentationTask ?? null) !== null): ?>
+        <span class="pill" title="Präsentationsmodus: Du arbeitest in einer temporären Kopie dieser Aufgabe. Die Aufgabenvorlage und die Materialien bleiben unangetastet, dein Code wird nur hier gespeichert. Mit „Präsentation beenden“ wird die Kopie gelöscht.">🎬 Präsentationsmodus ℹ️</span>
+        <?php endif; ?>
         <a class="btn btn-ghost" href="<?= url('werkstatt/html') ?>" title="Zurück">←</a>
     </div>
     <?php if ($isForeign): ?>
@@ -10,15 +13,46 @@
     </div>
     <?php endif; ?>
     <?php if (($presentationTask ?? null) !== null): ?>
-    <div class="notice">
-        <strong>🎬 Präsentationsmodus: <?= e($presentationTask->title) ?></strong>
-        <p>Du arbeitest in einer temporären Kopie. Die Aufgabenvorlage und die Materialien bleiben unangetastet.</p>
-        <div class="btn-row">
-            <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen">⬇️ als Musterlösung herunterladen</a>
-            <form method="post" action="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/ende') ?>" class="form-inline">
-                <?= csrf_field() ?>
-                <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese Kopie löschen">✕ Präsentation beenden und löschen</button>
-            </form>
+    <div class="two-col pres-task-info">
+        <div>
+            <h4 class="diag-head">📝 Aufgabenbeschreibung</h4>
+            <?php if ($presentationTask->description !== ''): ?>
+            <div class="task-desc"><?= $presentationTask->descriptionHtml() ?></div>
+            <?php else: ?>
+            <p class="muted">Für diese Aufgabe ist keine Beschreibung hinterlegt.</p>
+            <?php endif; ?>
+        </div>
+        <div>
+            <h4 class="diag-head">📋 ToDos (zum Abhaken)</h4>
+            <?php if (($presentationTodos ?? []) !== []): ?>
+            <ul class="todo-list" id="pres-todos" data-task="<?= (int) $presentationTask->id ?>">
+                <?php foreach ($presentationTodos as $ptodo): ?>
+                <li class="todo-item">
+                    <label style="display:flex;gap:8px;align-items:center;font-weight:normal;">
+                        <input type="checkbox" data-pres-todo="<?= (int) $ptodo->id ?>">
+                        <span><?= e($ptodo->title) ?></span>
+                    </label>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+            <?php else: ?>
+            <p class="muted">Für diese Aufgabe sind keine ToDos hinterlegt.</p>
+            <?php endif; ?>
+            <?php if (($presentationMaterials ?? []) !== []): ?>
+            <h4 class="diag-head">📎 Materialien der Aufgabe</h4>
+            <ul class="material-list">
+                <?php foreach ($presentationMaterials as $pmat): ?>
+                <li class="material-item"><a href="<?= url('aufgaben/' . (int) $presentationTask->id . '/material/' . (int) $pmat->id) ?>">📄 <?= e($pmat->filename) ?></a></li>
+                <?php endforeach; ?>
+            </ul>
+            <?php endif; ?>
+            <div class="btn-row">
+                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen">⬇️ als Musterlösung herunterladen</a>
+                <form method="post" action="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/ende') ?>" class="form-inline">
+                    <?= csrf_field() ?>
+                    <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese temporäre Kopie löschen">✕ beenden und löschen</button>
+                </form>
+            </div>
         </div>
     </div>
     <?php endif; ?>
@@ -239,3 +273,31 @@
     </form>
 </section>
 <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
+
+<?php if (($presentationTask ?? null) !== null): ?>
+<script>
+/* Präsentationsmodus: ToDos lokal abhakbar machen (bleibt im Browser erhalten,
+ * auch nach einem Reload, ohne die Aufgaben-ToDos der Schüler zu verändern). */
+(function () {
+  'use strict';
+  var box = document.getElementById('pres-todos');
+  if (!box) { return; }
+  var key = 'pres-todos-' + box.getAttribute('data-task');
+  function readState() {
+    try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (e) { return {}; }
+  }
+  var boxes = box.querySelectorAll('input[data-pres-todo]');
+  var i;
+  var state = readState();
+  for (i = 0; i < boxes.length; i++) {
+    var tid = boxes[i].getAttribute('data-pres-todo');
+    boxes[i].checked = !!state[tid];
+    boxes[i].addEventListener('change', function () {
+      var s = readState();
+      s[this.getAttribute('data-pres-todo')] = this.checked;
+      try { localStorage.setItem(key, JSON.stringify(s)); } catch (e) {}
+    });
+  }
+})();
+</script>
+<?php endif; ?>

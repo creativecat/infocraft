@@ -2,6 +2,9 @@
     <div class="panel-head">
         <a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück">←</a>
         <h3><?= $project->type === 'html' ? '🌐' : '💻' ?> <?= e($project->title) ?></h3>
+        <?php if (($presentationTask ?? null) !== null): ?>
+        <span class="pill" title="Präsentationsmodus: Du arbeitest in einer temporären Kopie dieser Aufgabe. Die Aufgabenvorlage und die Materialien bleiben unangetastet, dein Code wird nur hier gespeichert. Mit „Präsentation beenden“ wird die Kopie gelöscht.">🎬 Präsentationsmodus ℹ️</span>
+        <?php endif; ?>
         <span class="save-status" id="java-save-info" title="Dein Code wird bei jeder Änderung automatisch gespeichert – auch ohne Speichern-Klick."></span>
     </div>
     <?php if ($isForeign): ?>
@@ -11,15 +14,48 @@
     </div>
     <?php endif; ?>
     <?php if (($presentationTask ?? null) !== null): ?>
-    <div class="notice">
-        <strong>🎬 Präsentationsmodus: <?= e($presentationTask->title) ?></strong>
-        <p>Du arbeitest in einer temporären Kopie. Die Aufgabenvorlage und die Materialien bleiben unangetastet, dein Code wird nur hier gespeichert.</p>
-        <div class="btn-row">
-            <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen">⬇️ als Musterlösung herunterladen</a>
-            <form method="post" action="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/ende') ?>" class="form-inline">
-                <?= csrf_field() ?>
-                <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese Kopie löschen">✕ Präsentation beenden und löschen</button>
-            </form>
+    <div class="two-col pres-task-info">
+        <div>
+            <h4 class="diag-head">📝 Aufgabenbeschreibung</h4>
+            <?php if ($presentationTask->description !== ''): ?>
+            <div class="task-desc"><?= $presentationTask->descriptionHtml() ?></div>
+            <?php else: ?>
+            <p class="muted">Für diese Aufgabe ist keine Beschreibung hinterlegt.</p>
+            <?php endif; ?>
+        </div>
+        <div>
+            <h4 class="diag-head">📋 ToDos (zum Abhaken)</h4>
+            <?php if (($presentationTodos ?? []) !== []): ?>
+            <ul class="todo-list" id="pres-todos" data-task="<?= (int) $presentationTask->id ?>">
+                <?php foreach ($presentationTodos as $ptodo): ?>
+                <li class="todo-item">
+                    <label style="display:flex;gap:8px;align-items:center;font-weight:normal;">
+                        <input type="checkbox" data-pres-todo="<?= (int) $ptodo->id ?>">
+                        <span><?= e($ptodo->title) ?></span>
+                    </label>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+            <?php else: ?>
+            <p class="muted">Für diese Aufgabe sind keine ToDos hinterlegt.</p>
+            <?php endif; ?>
+            <?php if (($presentationMaterials ?? []) !== []): ?>
+            <h4 class="diag-head">📎 Materialien der Aufgabe</h4>
+            <ul class="material-list">
+                <?php foreach ($presentationMaterials as $pmat): ?>
+                <li class="material-item"><a href="<?= url('aufgaben/' . (int) $presentationTask->id . '/material/' . (int) $pmat->id) ?>">📄 <?= e($pmat->filename) ?></a></li>
+                <?php endforeach; ?>
+            </ul>
+            <?php endif; ?>
+            <?php if ($project->type === 'code' && $project->language === 'python'): ?>
+            <div class="btn-row">
+                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen">⬇️ als Musterlösung herunterladen</a>
+                <form method="post" action="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/ende') ?>" class="form-inline">
+                    <?= csrf_field() ?>
+                    <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese temporäre Kopie löschen">✕ beenden und löschen</button>
+                </form>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
     <?php endif; ?>
@@ -49,6 +85,15 @@
                 <input type="text" name="name" placeholder="Auto.java" pattern="[A-Za-z][A-Za-z0-9_]*\.java" required>
                 <button class="btn btn-primary" type="submit" title="Neue Datei">＋</button>
             </form>
+            <?php if (($presentationTask ?? null) !== null): ?>
+            <div class="pres-side-actions">
+                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen">⬇️ Musterlösung</a>
+                <form method="post" action="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/ende') ?>" class="form-inline">
+                    <?= csrf_field() ?>
+                    <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese temporäre Kopie löschen">✕ beenden</button>
+                </form>
+            </div>
+            <?php endif; ?>
         </aside>
         <div class="ide-work">
         <div class="ide-main">
@@ -478,6 +523,15 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
                 <input type="text" name="name" placeholder="programm.asm" pattern="[A-Za-z][A-Za-z0-9_]{0,50}\.asm" required>
                 <button class="btn btn-primary" type="submit" title="Neue Datei">＋</button>
             </form>
+            <?php if (($presentationTask ?? null) !== null): ?>
+            <div class="pres-side-actions">
+                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen">⬇️ Musterlösung</a>
+                <form method="post" action="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/ende') ?>" class="form-inline">
+                    <?= csrf_field() ?>
+                    <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese temporäre Kopie löschen">✕ beenden</button>
+                </form>
+            </div>
+            <?php endif; ?>
         </aside>
         <div class="ide-work">
         <div class="ide-main">
@@ -647,20 +701,50 @@ String beste = Database.value("SELECT name FROM schueler ORDER BY punkte DESC");
 System.out.println(Database.tables());                     // alle Tabellen</pre>
     <p class="muted">Verfügbar: <code>execute</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>query</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>count</code> die Zeilenanzahl, <code>value</code> den ersten Wert, <code>tables</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank startet bei jedem Ausführen neu und leer.</p>
 
-    <div class="db-block">
-        <h4 class="diag-head">🗄 Vorhandene Tabellen</h4>
-        <p class="muted">Alle Tabellen und Spalten deiner Datenbank, live nach jedem ▶ Ausführen: Hier siehst du, worauf dein Programm zugreifen kann (<code>Database.execute(...)</code> und <code>Database.query(...)</code>).</p>
-        <div id="java-dbschema" class="umldiag"></div>
-    </div>
-
-    <div class="db-block">
-        <h4 class="diag-head">🗄 DB-Konsole: Abfragen testen und Daten anlegen</h4>
-        <p class="muted">Schicke Abfragen direkt an die Datenbank, ohne dein Programm zu ändern: <code>SELECT</code> zeigt das Ergebnis an, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>CREATE TABLE</code> und <code>DROP TABLE</code> ändern die Datenbank testweise (bis zum nächsten ▶ Ausführen). Damit legst du hier auch neue Daten an und prüfst sofort, was dein Programm daraus liest.</p>
-        <textarea id="java-db-in" class="mono db-console-in" rows="3" autocomplete="off" spellcheck="false"></textarea>
-        <div class="repl-actions">
-            <button class="btn btn-primary" id="java-db-run" type="button" title="Abfrage ausführen (Strg + Enter): schickt den SQL-Befehl an die Datenbank und zeigt das Ergebnis.">▶ Abfrage ausführen</button>
+    <div class="db-two-col">
+        <div class="db-block">
+            <h4 class="diag-head">🗄 Vorhandene Tabellen</h4>
+            <p class="muted">Alle Tabellen und Spalten deiner Datenbank, live nach jedem ▶ Ausführen: Hier siehst du, worauf dein Programm zugreifen kann (<code>Database.execute(...)</code> und <code>Database.query(...)</code>).</p>
+            <div id="java-dbschema" class="umldiag"></div>
         </div>
-        <pre id="java-db-out" class="code ide-console-out db-console-out"></pre>
+
+        <div class="db-block">
+            <h4 class="diag-head">🗄 DB-Konsole: Abfragen testen und Daten anlegen</h4>
+            <p class="muted">Schicke Abfragen direkt an die Datenbank, ohne dein Programm zu ändern: <code>SELECT</code> zeigt das Ergebnis an, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>CREATE TABLE</code> und <code>DROP TABLE</code> ändern die Datenbank testweise (bis zum nächsten ▶ Ausführen). Damit legst du hier auch neue Daten an und prüfst sofort, was dein Programm daraus liest.</p>
+            <textarea id="java-db-in" class="mono db-console-in" rows="3" autocomplete="off" spellcheck="false"></textarea>
+            <div class="repl-actions">
+                <button class="btn btn-primary" id="java-db-run" type="button" title="Abfrage ausführen (Strg + Enter): schickt den SQL-Befehl an die Datenbank und zeigt das Ergebnis.">▶ Abfrage ausführen</button>
+            </div>
+            <pre id="java-db-out" class="code ide-console-out db-console-out"></pre>
+        </div>
     </div>
 </section>
+<?php endif; ?>
+
+<?php if (($presentationTask ?? null) !== null): ?>
+<script>
+/* Präsentationsmodus: ToDos lokal abhakbar machen (bleibt im Browser erhalten,
+ * auch nach einem Reload, ohne die Aufgaben-ToDos der Schüler zu verändern). */
+(function () {
+  'use strict';
+  var box = document.getElementById('pres-todos');
+  if (!box) { return; }
+  var key = 'pres-todos-' + box.getAttribute('data-task');
+  function readState() {
+    try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (e) { return {}; }
+  }
+  var boxes = box.querySelectorAll('input[data-pres-todo]');
+  var i;
+  var state = readState();
+  for (i = 0; i < boxes.length; i++) {
+    var tid = boxes[i].getAttribute('data-pres-todo');
+    boxes[i].checked = !!state[tid];
+    boxes[i].addEventListener('change', function () {
+      var s = readState();
+      s[this.getAttribute('data-pres-todo')] = this.checked;
+      try { localStorage.setItem(key, JSON.stringify(s)); } catch (e) {}
+    });
+  }
+})();
+</script>
 <?php endif; ?>

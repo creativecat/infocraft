@@ -65,6 +65,12 @@ final class HtmlController
         if ($presentationTask !== null && $presentationTask->teacherId !== $user->id) {
             $presentationTask = null;
         }
+        $presentationTodos = [];
+        $presentationMaterials = [];
+        if ($presentationTask !== null) {
+            $presentationTodos = TaskTodo::templatesForTask($presentationTask->id);
+            $presentationMaterials = TaskMaterial::forTask($presentationTask->id);
+        }
         render('html_editor', [
             'title' => $project->title,
             'active' => 'module-html',
@@ -73,6 +79,8 @@ final class HtmlController
             'ownerName' => $owner !== null ? $owner->fullName() : '',
             'isForeign' => $project->ownerId !== $user->id,
             'presentationTask' => $presentationTask,
+            'presentationTodos' => $presentationTodos,
+            'presentationMaterials' => $presentationMaterials,
         ]);
     }
 

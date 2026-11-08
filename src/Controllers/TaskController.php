@@ -996,27 +996,31 @@ final class TaskController
             }
         }
         // Startinhalt: erstes Code-Material (Java/Python/Assembler/HTML),
-        // sonst die Musterlösung, sonst ein Hinweis-Kommentar.
+        // sonst die Musterlösung. Weitere Code-Materialien werden als Dateien
+        // in die temporäre Kopie übernommen. Ohne Vorlage startet der Editor leer.
         $content = '';
         $language = null;
         $type = $task->type === 'html' ? 'html' : 'code';
+        $extraFiles = [];
         foreach (TaskMaterial::forTask($task->id) as $material) {
             $lower = mb_strtolower($material->filename);
             if (preg_match('/\.(java|py|asm|html)$/i', $lower, $match) === 1) {
-                $content = $material->raw();
-                $language = $type === 'html' ? null : ['java' => 'java', 'py' => 'python', 'asm' => 'asm', 'html' => null][$match[1]];
-                break;
+                if ($content === '') {
+                    $content = $material->raw();
+                    $language = $type === 'html' ? null : ['java' => 'java', 'py' => 'python', 'asm' => 'asm', 'html' => null][$match[1]];
+                } else {
+                    $extraFiles[] = ['name' => $material->filename, 'content' => $material->raw()];
+                }
             }
         }
         if ($content === '' && $task->sampleSolution !== '') {
             $content = $task->sampleSolution;
             $language = $language ?? ($type === 'code' ? 'java' : null);
         }
-        if ($content === '') {
-            $content = "// Präsentationsmodus: " . $task->title . "\n// Hier live programmieren, die Vorlage bleibt unangetastet.\n";
-            $language = $language ?? ($type === 'code' ? 'java' : null);
-        }
         $project = Project::create($user->id, null, '🎬 Präsentation: ' . $task->title, $type, $language, $content);
+        foreach ($extraFiles as $extra) {
+            ProjectFile::create($project->id, $extra['name'], $extra['content']);
+        }
         Task::setPresentationProject($task->id, $project->id);
         flash('success', 'Präsentationsmodus gestartet. Deine Änderungen bleiben in der temporären Kopie.');
         redirect('/werkstatt/' . ($type === 'html' ? 'html' : 'code') . '/' . $project->id);

@@ -226,6 +226,14 @@ final class CodeController
         if ($presentationTask !== null && $presentationTask->teacherId !== $user->id) {
             $presentationTask = null;
         }
+        // Präsentationsmodus: Beschreibung, ToDos und Materialien der Aufgabe
+        // direkt neben dem Editor anzeigen.
+        $presentationTodos = [];
+        $presentationMaterials = [];
+        if ($presentationTask !== null) {
+            $presentationTodos = TaskTodo::templatesForTask($presentationTask->id);
+            $presentationMaterials = TaskMaterial::forTask($presentationTask->id);
+        }
         render('code_project', [
             'title' => $project->title,
             'active' => 'module-code',
@@ -233,6 +241,8 @@ final class CodeController
             'files' => $files,
             'user' => $user,
             'presentationTask' => $presentationTask,
+            'presentationTodos' => $presentationTodos,
+            'presentationMaterials' => $presentationMaterials,
             'ownerName' => $owner !== null ? $owner->fullName() : '',
             'isForeign' => $project->ownerId !== $user->id,
             'diagramAuto' => SchoolClass::diagramAutoForUser($user),
