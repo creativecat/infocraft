@@ -51,3 +51,33 @@ INSERT INTO gegenstaende (id, name, wert, ort_id, besitzer_id) VALUES
     (8, 'Diamant', 200, 4, NULL);
 INSERT INTO wege (von_ort_id, nach_ort_id, tage) VALUES
     (1, 2, 1), (2, 3, 2), (3, 4, 1), (4, 5, 2), (1, 3, 3), (2, 5, 3);
+-- Kapitel 2: die alte Bibliothek im Süden der Insel (Issue #7)
+INSERT INTO orte (id, name, beschreibung) VALUES
+    (6, 'Bibliothek', 'Die alte Bibliothek der Insel mit verstaubten Regalen');
+INSERT INTO wege (von_ort_id, nach_ort_id, tage) VALUES
+    (5, 6, 1);
+CREATE TABLE buecher (
+    id INTEGER PRIMARY KEY,
+    titel TEXT NOT NULL,
+    autor TEXT NOT NULL,
+    jahr INTEGER NOT NULL DEFAULT 0,
+    ort_id INTEGER NOT NULL REFERENCES orte (id)
+);
+CREATE TABLE ausleihen (
+    buch_id INTEGER NOT NULL REFERENCES buecher (id),
+    bewohner_id INTEGER NOT NULL REFERENCES bewohner (id),
+    ausgeliehen_am TEXT NOT NULL
+);
+INSERT INTO buecher (id, titel, autor, jahr, ort_id) VALUES
+    (1, 'SQL für Seefahrer', 'Magierin Mira', 1801, 6),
+    (2, 'Die Kunst des Kompassbaus', 'Magierin Mira', 1815, 6),
+    (3, 'Inselkräuter von A bis Z', 'Kräuterfrau Ida', 1820, 6),
+    (4, 'Heilkunde aus dem Wald', 'Kräuterfrau Ida', 1823, 6),
+    (5, 'Sturmprotokolle der Insel', 'Häuptling Mika', 1790, 6),
+    (6, 'Briefe an die Lotse', 'Fischer Finn', 1828, 6),
+    (7, 'Vom Werden der Wellen', 'Magierin Mira', 1831, 6);
+INSERT INTO ausleihen (buch_id, bewohner_id, ausgeliehen_am) VALUES
+    (1, 2, '1828-03-12'),
+    (3, 7, '1828-04-02'),
+    (4, 6, '1828-04-19'),
+    (7, 8, '1828-05-01');

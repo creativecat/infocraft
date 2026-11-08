@@ -47,6 +47,9 @@ final class Migrator
         // Live-Abstimmung während der Präsentation (Issue #3): Tabellen
         // fehlen evtl. noch in Bestehensinstallationen, idempotent anlegen.
         self::ensurePollTables($pdo, $driver);
+        // Dateninsel Kapitel 2 (Issue #7): Missionen 9 bis 12 und die
+        // Bibliothek fehlen evtl. noch in Bestehensinstallationen.
+        self::ensureAdventureChapter2($pdo);
         self::seedSiteSettings($pdo);
         self::seedTaskTopics($pdo);
         self::removeLevel8Topics($pdo);
@@ -201,6 +204,11 @@ final class Migrator
             ['position' => 6, 'kind' => 'query', 'title' => 'Der Goldschatz', 'story' => 'Wie viel Gold ist auf der Insel verteilt? Summiere den Wert aller Gegenstände.', 'hint' => 'SELECT SUM(wert) FROM gegenstaende', 'solution_sql' => 'SELECT SUM(wert) AS gold FROM gegenstaende'],
             ['position' => 7, 'kind' => 'query', 'title' => 'Der beste Schatz', 'story' => 'Zeige den wertvollsten Gegenstand der Insel (Name und Wert).', 'hint' => 'ORDER BY wert DESC LIMIT 1 zeigt nur die erste Zeile.', 'solution_sql' => 'SELECT name, wert FROM gegenstaende ORDER BY wert DESC LIMIT 1'],
             ['position' => 8, 'kind' => 'action', 'title' => 'Das Silberne Schwert', 'story' => 'Übergib das Silberne Schwert dem Ritter Roland. Setze dazu die besitzer_id.', 'hint' => 'UPDATE gegenstaende SET besitzer_id = ... WHERE name = Silbernes Schwert. Die id von Ritter Roland findest du mit einem SELECT heraus.', 'solution_sql' => "UPDATE gegenstaende SET besitzer_id = (SELECT id FROM bewohner WHERE name = 'Ritter Roland') WHERE name = 'Silbernes Schwert'", 'check_sql' => "SELECT COUNT(*) FROM gegenstaende WHERE name = 'Silbernes Schwert' AND besitzer_id IS NOT NULL", 'check_expected' => '1'],
+            // Kapitel 2: die Bibliothek der Insel (Issue #7): GROUP BY, HAVING, Unterabfragen.
+            ['position' => 9, 'kind' => 'query', 'title' => 'Die Bibliothek öffnet', 'story' => 'Die Bibliothek im Süden der Insel ist nach dem Sturm wieder zugänglich. Die Magierin Mira bittet dich: Zeige alle Bücher mit Titel und Autor.', 'hint' => 'SELECT titel, autor FROM buecher ORDER BY titel - sortiert, damit nichts durcheinandergerät.', 'solution_sql' => 'SELECT titel, autor FROM buecher ORDER BY titel'],
+            ['position' => 10, 'kind' => 'query', 'title' => 'Die fleißigen Autorinnen', 'story' => 'Mira will wissen, wer sich um die Bibliothek verdient gemacht hat: Wie viele Bücher hat jede Autorin geschrieben? Zeige Name und Anzahl, sortiert nach Name.', 'hint' => 'GROUP BY autor fasst die Zeilen je Autorin zusammen, COUNT(*) zählt sie.', 'solution_sql' => 'SELECT autor, COUNT(*) FROM buecher GROUP BY autor ORDER BY autor'],
+            ['position' => 11, 'kind' => 'query', 'title' => 'Schatzreiche Orte', 'story' => 'Der Lotse flüstert: An manchen Orten liegt mehr Gold als an anderen. Zeige alle Orte mit mehr als einem Gegenstand samt Anzahl.', 'hint' => 'JOIN gegen orte, GROUP BY ort und HAVING COUNT(*) > 1 als Filter für ganze Gruppen.', 'solution_sql' => 'SELECT o.name, COUNT(*) FROM gegenstaende g JOIN orte o ON o.id = g.ort_id GROUP BY o.name HAVING COUNT(*) > 1 ORDER BY o.name'],
+            ['position' => 12, 'kind' => 'query', 'title' => 'Über dem Durchschnitt', 'story' => 'Zum Abschluss prüft der Häuptling deinen Blick für das Besondere: Finde alle Gegenstände, die mehr wert sind als der Durchschnittswert aller Gegenstände der Insel.', 'hint' => 'Eine Unterabfrage berechnet den Durchschnitt: wert > (SELECT AVG(wert) FROM gegenstaende).', 'solution_sql' => 'SELECT name, wert FROM gegenstaende WHERE wert > (SELECT AVG(wert) FROM gegenstaende) ORDER BY wert DESC'],
         ];
     }
 
@@ -671,6 +679,96 @@ final class Migrator
             voted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (poll_id, user_id)
         )');
+    }
+
+    /**
+     * Dateninsel Kapitel 2 (Issue #7): Die Missionen 9 bis 12 (Bibliothek,
+     * GROUP BY, HAVING, Unterabfragen) fehlen evtl. noch in bestehenden
+     * Installationen, ebenso die Bibliothek in bereits angelegten
+     * SQLite-Arbeitskopien. Alles idempotent.
+     */
+    private static function ensureAdventureChapter2(PDO $pdo): void
+    {
+        $stmt = $pdo->prepare("SELECT id FROM sql_templates WHERE slug = 'adventure'");
+        $stmt->execute();
+        $templateId = (int) $stmt->fetchColumn();
+        if ($templateId > 0) {
+            $exists = $pdo->prepare('SELECT COUNT(*) FROM sql_missions WHERE template_id = ? AND position = ?');
+            $insert = $pdo->prepare('INSERT INTO sql_missions (template_id, position, kind, title, story, hint, solution_sql, check_sql, check_expected) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            foreach (self::missionsFor('adventure') as $mission) {
+                if ((int) $mission['position'] < 9) {
+                    continue;
+                }
+                $exists->execute([$templateId, (int) $mission['position']]);
+                if ((int) $exists->fetchColumn() > 0) {
+                    continue;
+                }
+                $insert->execute([
+                    $templateId,
+                    (int) $mission['position'],
+                    $mission['kind'],
+                    $mission['title'],
+                    $mission['story'],
+                    $mission['hint'],
+                    $mission['solution_sql'],
+                    $mission['check_sql'] ?? '',
+                    $mission['check_expected'] ?? null,
+                ]);
+            }
+        }
+
+        // Bereits angelegte Arbeitskopien um Ort 6 (Bibliothek) und die
+        // Tabellen buecher/ausleihen ergaenzen; frische Kopien bekommen
+        // alles aus der aktualisierten Vorlage.
+        $dir = INFOCRAFT_ROOT . '/database/sql';
+        if (!is_dir($dir)) {
+            return;
+        }
+        $patch = static function (PDO $sqlite): void {
+            $sqlite->exec('CREATE TABLE IF NOT EXISTS buecher (
+                id INTEGER PRIMARY KEY,
+                titel TEXT NOT NULL,
+                autor TEXT NOT NULL,
+                jahr INTEGER NOT NULL DEFAULT 0,
+                ort_id INTEGER NOT NULL REFERENCES orte (id)
+            )');
+            $sqlite->exec('CREATE TABLE IF NOT EXISTS ausleihen (
+                buch_id INTEGER NOT NULL REFERENCES buecher (id),
+                bewohner_id INTEGER NOT NULL REFERENCES bewohner (id),
+                ausgeliehen_am TEXT NOT NULL
+            )');
+            $sqlite->exec("INSERT OR IGNORE INTO orte (id, name, beschreibung) VALUES (6, 'Bibliothek', 'Die alte Bibliothek der Insel mit verstaubten Regalen')");
+            $sqlite->exec('INSERT OR IGNORE INTO wege (von_ort_id, nach_ort_id, tage) VALUES (5, 6, 1)');
+            if ((int) $sqlite->query('SELECT COUNT(*) FROM buecher')->fetchColumn() === 0) {
+                $insertBook = $sqlite->prepare('INSERT INTO buecher (id, titel, autor, jahr, ort_id) VALUES (?, ?, ?, ?, ?)');
+                $books = [
+                    [1, 'SQL für Seefahrer', 'Magierin Mira', 1801, 6],
+                    [2, 'Die Kunst des Kompassbaus', 'Magierin Mira', 1815, 6],
+                    [3, 'Inselkräuter von A bis Z', 'Kräuterfrau Ida', 1820, 6],
+                    [4, 'Heilkunde aus dem Wald', 'Kräuterfrau Ida', 1823, 6],
+                    [5, 'Sturmprotokolle der Insel', 'Häuptling Mika', 1790, 6],
+                    [6, 'Briefe an die Lotse', 'Fischer Finn', 1828, 6],
+                    [7, 'Vom Werden der Wellen', 'Magierin Mira', 1831, 6],
+                ];
+                foreach ($books as $row) {
+                    $insertBook->execute($row);
+                }
+                $loan = $sqlite->prepare('INSERT INTO ausleihen (buch_id, bewohner_id, ausgeliehen_am) VALUES (?, ?, ?)');
+                $loan->execute([1, 2, '1828-03-12']);
+                $loan->execute([3, 7, '1828-04-02']);
+                $loan->execute([4, 6, '1828-04-19']);
+                $loan->execute([7, 8, '1828-05-01']);
+            }
+        };
+        foreach (glob($dir . '/adventure_u*.sqlite') ?: [] as $path) {
+            try {
+                $sqlite = new PDO('sqlite:' . $path, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+                $patch($sqlite);
+            } catch (PDOException) {
+                // Defekte Kopie einfach stehen lassen: die Migration darf
+                // niemals abbrechen, die Werkstatt regeneriert Kopien selbst.
+            }
+        }
     }
 
     private static function seedWikiPages(PDO $pdo): void
@@ -1307,6 +1405,44 @@ final class Migrator
                 ['type' => 'text', 'title' => 'Uebung: Die Schulbibliothek', 'body' => "**Uebung: Modellieren wie im echten Leben**\n\nEine Schulbibliothek soll ihre Ausleihen speichern: **buecher** (Titel, Autor), **schueler** (Name, Klasse) und die Ausleihen mit Datum.\n\n1. Bestimme die Kardinalitaet zwischen Buechern und Schuelern.\n2. Zeichne alle Tabellen mit Primaerschluesseln und Fremdschluesseln.\n3. Markiere die Hilfstabelle und begruende, warum sie noetig ist.\n\nAuf Papier arbeiten, 15 Minuten."],
                 ['type' => 'text', 'title' => 'Loesung: Bibliothek-Modell', 'body' => "**Musterloesung**\n\n1. Ein Buch wird von vielen Schuelern ausgeliehen (nacheinander), ein Schueler leiht viele Buecher: **n:m**.\n2. Tabellen: **buecher** (id PK, titel, autor), **schueler** (id PK, name, klasse), **ausleihen** (buch_id FK, schueler_id FK, datum; PK aus buch_id, schueler_id, datum).\n3. Die Hilfstabelle **ausleihen** ist noetig, weil keine Seite mit einer Spalte auskommt; jede Zeile ist genau eine Ausleihe.\n\n**Bewertung**: Kardinalitaet mit Begruendung (3 BE), korrekte PKs und FKs (4 BE), Hilfstabelle begruendet (3 BE)."]
             ]],
+            // Oberstufe (Jgst. 11/12 NTG, Issue #4): Algorithmen/Datenstrukturen,
+            // Kryptografie, Netze, KI, Datenbanken vertieft.
+            ['slug' => 'algorithmen-datenstrukturen', 'title' => 'Algorithmen und Datenstrukturen: Listen, Bäume, Suche und Sortieren', 'level' => 11, 'v' => 1, 'legacy' => [], 'notes' => ['Einstieg: Adressbuch als Analogie: Wie findet man einen Eintrag schnell? (5 Min)', 'Lineare vs. binäre Suche am Kartenstapel demonstrieren. (10 Min)', 'Listen und Bäume an der Folie skizzieren; SuS merken: Der Baum sortiert mit. (10 Min)', 'Sortierverfahren vergleichen; O-Notation einfuehren. (8 Min)', 'SuS: Bubblesort und binäre Suche implementieren. (15 Min)', 'Loesung vergleichen; Merksatz: Datenstruktur bestimmt Laufzeit. (5 Min)'], 'slides' => [
+                ['type' => 'text', 'title' => 'Warum Datenstrukturen?', 'body' => "# Algorithmen und Datenstrukturen\n\nEin **Algorithmus** ist ein eindeutiges, endliches Verfahren; eine **Datenstruktur** entscheidet, wie Daten im Speicher liegen - und damit, wie schnell der Algorithmus arbeiten kann.\n\n- **Liste/Array**: Elemente hintereinander, direkter Zugriff über Index.\n- **Baum**: Elemente hierarchisch, sortiert verzweigt - halbiert den Suchraum.\n\nFaustregel: Erst die Datenstruktur waehlen, dann den Algorithmus - beides gehoert zusammen."],
+                ['type' => 'text', 'title' => 'Suchen: linear oder binär', 'body' => "## Lineare Suche\n\nJedes Element wird der Reihe nach geprueft - funktioniert immer, braucht aber im Schnitt n/2 Vergleiche.\n\n## Binaere Suche (nur bei sortierten Daten)\n\n1. Pruefe das Element in der Mitte.\n2. Suchwert kleiner? -> **links** weiter, groesser? -> **rechts** weiter.\n3. Wiederholen, bis gefunden oder der Bereich leer ist.\n\nBei 1.000.000 Elementen braucht die binaere Suche hoechstens **20 Vergleiche** - die Anzahl der Reste halbiert sich: log2(n)."],
+                ['type' => 'text', 'title' => 'Sortieren: Bubblesort und friends', 'body' => "## Bubblesort\n\nNachbarn vergleichen und bei Bedarf tauschen; das groesste Element wandert pro Durchlauf nach hinten - wie eine Blase nach oben.\n\n```text\n[5, 2, 9, 1] -> [2, 5, 1, 9] -> [2, 1, 5, 9] -> [1, 2, 5, 9]\n```\n\nBesser: **Mergesort** teilt die Liste rekursiv in Haelften und fuegt sortierte Teile zusammen: n * log2(n) Vergleiche.\n\nBei n = 1.000: Bubblesort ca. 1.000.000 Operationen, Mergesort ca. 10.000."],
+                ['type' => 'text', 'title' => 'Übung: Bubblesort implementieren', 'body' => "**Uebung: Sortieren und messen**\n\nGegeben: `int[] werte = {5, 2, 9, 1, 7}`\n\n1. Implementiere **Bubblesort** (die Methode sortieren(int[] a) arbeitet direkt auf dem Array).\n2. Ergaenze eine Ausgabe nach jedem Durchlauf.\n3. Zaehle die Vergleiche mit.\n4. Begrunde: Warum ist das groesste Element nach dem ersten Durchlauf ganz hinten?\n\nIn der Code-Werkstatt arbeiten, 15 Minuten."],
+                ['type' => 'code', 'title' => 'Lösung: Bubblesort', 'lang' => 'java', 'code' => "void sortieren(int[] a) {\n    for (int i = 0; i < a.length - 1; i++) {\n        for (int j = 0; j < a.length - 1 - i; j++) {\n            if (a[j] > a[j + 1]) {\n                int tmp = a[j];\n                a[j] = a[j + 1];\n                a[j + 1] = tmp;\n            }\n        }\n        System.out.println(\"Durchlauf \" + (i + 1) + \": \" + java.util.Arrays.toString(a));\n    }\n}\n\nint[] werte = {5, 2, 9, 1, 7};\nsortieren(werte);\n\n// Nach dem ersten Durchlauf steht das Maximum (9) am Ende:\n// Jeder Tausch schiebt den groesseren Nachbarn eine Position weiter nach hinten,\n// das groesste Element wandert in einem Durchlauf bis zur letzten Position."],
+            ]],
+            ['slug' => 'kryptografie', 'title' => 'Kryptografie: Von Caesar zu RSA', 'level' => 11, 'v' => 1, 'legacy' => [], 'notes' => ['Einstieg: Geheimbotschaft aus der 7. Klasse abrufen: Caesar knicken wir heute. (5 Min)', 'Symmetrisch vs. asymmetrisch am Schluesselkasten-Modell erlaeutern. (10 Min)', 'RSA-Idee (ohne Mathe-Detail) an der Folie; E-Commerce als Anwendungsfall. (10 Min)', 'Hashes und Passwoerter: Warum speichert man Passwoerter nie im Klartext? (8 Min)', 'SuS: Caesar mit Schluessel brechen (Haeufigkeitsanalyse). (12 Min)', 'Loesung besprechen; Merksatz: Sicherheit liegt im Schluessel, nicht im Verfahren. (5 Min)'], 'slides' => [
+                ['type' => 'text', 'title' => 'Symmetrische Verfahren', 'body' => "# Kryptografie\n\n**Symmetrisch**: Alle Beteiligten nutzen denselben Schluessel zum Ver- und Entschluesseln.\n\n- Caesar (Verschiebung): trivial zu brechen, gut zum Verstaendnis.\n- AES: moderner Standard, wird heute ueberall eingesetzt.\n\nProblem: Der Schluessel muss verteilt werden - ueber einen **sicheren Kanal**. Doch wie tauscht man Schluessel mit jemandem aus, dem man noch nie begegnet ist?"],
+                ['type' => 'text', 'title' => 'Asymmetrisch: RSA-Idee', 'body' => "## Zwei Schluessel\n\n**Asymmetrische Verfahren** nutzen ein Schluesselpaar:\n\n- **Oeffentlicher Schluessel**: darf jeder haben (wie ein Briefkasten).\n- **Privater Schluessel**: bleibt beim Empfaenger (wie das Briefkastenschloss).\n\nWer an den oeffentlichen Schluessel verschluesselt, kann mit ihm selbst nicht mehr entschluesseln - nur der private Schluessel kann das.\n\nRSA nutzt die Schwierigkeit, grosse Zahlen in ihre Primfaktoren zu zerlegen. Daraus folgt: **Sicherheit durch Rechenaufwand**, nicht durch Geheimhaltung des Verfahrens (Kerckhoffs-Prinzip)."],
+                ['type' => 'text', 'title' => 'Hashes und Passwörter', 'body' => "## Einwegfunktion\n\nEin **Hash** wandelt Daten beliebiger Laenge in eine feste Pruefsumme um - zurueckrechnen geht praktisch nicht.\n\n- Integritaet: Hat sich die Datei veraendert?\n- Passwoerter: Gespeichert wird nur der **Hash**; beim Login wird gehasht und verglichen.\n\nDiskussionsfrage fuer den Unterricht: Warum reicht Hashing allein nicht (Regenbogentabellen), und was leisten **Salz** und moderne Verfahren wie bcrypt?"],
+                ['type' => 'text', 'title' => 'Übung: Caesar brechen', 'body' => "**Uebung: Haeufigkeitsanalyse**\n\nDer Geheimtext wurde mit Caesar verschluesselt:\n\n`GLHYHUVFKOXHVVHOXQJ`\n\n1. Zaehle die Buchstabenhaeufigkeiten (E und N sind im Deutschen besonders haeufig).\n2. Bestimme die Verschiebung und entschluessle den Text.\n3. Erklaere, warum dieses Verfahren heute nicht mehr sicher ist.\n\nArbeit zu zweit, 12 Minuten."],
+                ['type' => 'text', 'title' => 'Lösung: Caesar brechen', 'body' => "**Musterloesung**\n\nText: `GLHYHUVFKOXHVVHOXQJ`\n\nDer haeufigste Buchstabe ist **H** (4-mal) - im Deutschen ist das meist das verschobene **E**. H - E = 3, also Verschiebung um **3** zurueckrechnen:\n\nKlartext: **DIEVERSCHLUESSELUNG** (die Verschluesselung).\n\nWarum unsicher: Es gibt nur 26 moegliche Schluessel - ein Computer probiert alle in Millisekunden durch. Moderne Verfahren wie AES haben Schluessel mit 128 Bit oder mehr (ueber 10^38 Moeglichkeiten).\n\nBewertung: Haeufigkeitszaehlung (3 BE), korrekte Verschiebung (3 BE), Begruendung der Unsicherheit: 26 moegliche Schluessel sind mit einem PC in Millisekunden durchprobiert (4 BE)."],
+            ]],
+            ['slug' => 'netze-protokolle', 'title' => 'Netze und Protokolle: Vom Kabel bis zum HTTP-Request', 'level' => 11, 'v' => 1, 'legacy' => [], 'notes' => ['Einstieg: Was passiert in der 20 Millisekunden zwischen Klick und Bild? (5 Min)', 'Schichtenmodell an Handyrezept-Analogie erklaeren. (10 Min)', 'TCP vs UDP: Paketverschluesseltes Paketdienst-Modell. (8 Min)', 'DNS und HTTP live mit Browser-Devtools zeigen. (10 Min)', 'SuS: Ablaufdiagramm eines Seitenaufrufs zeichnen. (12 Min)', 'Loesung vergleichen; Merksatz: Protokoll ist ein Vertrag. (5 Min)'], 'slides' => [
+                ['type' => 'text', 'title' => 'Schichtenmodell', 'body' => "# Netze in Schichten\n\nEin Netz ist in **Schichten** organisiert, jede hat eine Aufgabe:\n\n- **Anwendung** (HTTP, DNS, SMTP): Sprache der Apps.\n- **Transport** (TCP, UDP): Zuverlaessigkeit/Verbindung.\n- **Vermittlung** (IP): Adressierung und Wegfindung.\n- **Sicherung/Netzzugang** (Ethernet, WLAN): Bits auf der Leitung.\n\nVorteil: Schichten sind austauschbar (WLAN statt Kabel), ohne dass HTTP sich aendert."],
+                ['type' => 'text', 'title' => 'TCP, UDP und IP', 'body' => "## Pakete statt Leitungen\n\nDas Internet ist ein **Paketvermittlungsnetz**: Daten werden in Pakete zerlegt, einzeln geroutet und beim Empfaenger zusammengesetzt.\n\n- **TCP**: Verbindung, Bestaetigung, erneutes Senden verlorener Pakete - zuverlaessig (Web, Mail).\n- **UDP**: ohne Verbindung, schnell, Pakete duerfen verloren gehen (Streaming, Games).\n- **IP-Adresse**: Nummer des Anschlusses; **DNS** uebersetzt Namen (infocraft.de) in IP-Adressen - das Telefonbuch des Netzes."],
+                ['type' => 'text', 'title' => 'HTTP: Request und Response', 'body' => "## Der Browser spricht HTTP\n\n```text\nGET /index.html HTTP/1.1\nHost: www.beispiel.de\n\n---\nHTTP/1.1 200 OK\nContent-Type: text/html\n```\n\nDer Browser fordert (Request), der Server antwortet (Response) - ein **Zustandsloses** Protokoll: Jeder Request steht fuer sich. HTTPS packt das Ganze in eine TLS-Verschluesselung.\n\n**Zustand** entsteht erst durch Cookies und Sessions (Stichwort Datenschutz)."],
+                ['type' => 'text', 'title' => 'Übung: Der Weg einer Anfrage', 'body' => "**Uebung: Ablaufdiagramm eines Seitenaufrufs**\n\nZeichne den kompletten Ablauf, wenn ihr `www.beispiel.de/index.html` aufruft:\n\n1. DNS-Anfrage: Name -> IP-Adresse.\n2. TCP-Verbindungsaufbau (Drei-Wege-Handschlag).\n3. HTTP-Request des Browsers.\n4. Antwort des Servers (Statuscode, HTML).\n5. Nachfolgende Requests: CSS, Bilder.\n6. TCP-Abbau.\n\nNummeriert die Schritte und beschriftet, welche Schicht jeweils aktiv ist. 12 Minuten."],
+                ['type' => 'text', 'title' => 'Lösung: Ablaufdiagramm', 'body' => "**Musterloesung**\n\n1. **DNS-Anfrage** (Anwendungsschicht): Beispiel.de -> 93.184.216.34.\n2. **TCP-Handschlag** (Transport): SYN, SYN-ACK, ACK - die Verbindung steht.\n3. **HTTP GET /** (Anwendung): Request an den Server.\n4. **HTTP 200 OK** mit HTML (Anwendung): Server liefert die Seite.\n5. **Weitere GETs** auf style.css und logo.png - der Browser parst HTML und fordert Referenzen nach.\n6. **FIN/ACK** (Transport): Verbindung wird geschlossen.\n\nBewertung: DNS (2 BE), TCP-Handschlag (3 BE), Request/Response-Paar (3 BE), Nachfolge-Requests (2 BE).\n\nHinweis fuer die Diskussion: Beim zweiten Aufruf kommt vieles aus dem **Cache** - messbar in den Devtools."],
+            ]],
+            ['slug' => 'kuenstliche-intelligenz', 'title' => 'Künstliche Intelligenz: Daten, Modelle, Grenzen', 'level' => 12, 'v' => 1, 'legacy' => [], 'notes' => ['Einstieg: Was kann KI heute (Sprachassistent, Uebersetzung, Bilderkennung) und was nicht? (5 Min)', 'Unterschied symbolische KI vs. Maschinelles Lernen herausarbeiten. (10 Min)', 'Training an der Katzen/Hunde-Folie: Merkmale, Trainingsdaten, Overfitting. (10 Min)', 'Bias und Erklaerbarkeit an einem Beispiel diskutieren. (10 Min)', 'SuS: Entwurf eines eigenen Mini-Datensatzes mit Merkmalen. (10 Min)', 'Zusammenfassung: KI ist Statistik aus Daten - Datenqualitaet entscheidet. (5 Min)'], 'slides' => [
+                ['type' => 'text', 'title' => 'Was KI heute ist', 'body' => "# Kuenstliche Intelligenz\n\nDer Begriff **KI** umspannt alles von Regelwerken (fruehere *symbolische KI*) bis zu **Maschinellem Lernen**: Systeme, die aus Beispieldaten Muster lernen, statt fest programmiert zu werden.\n\nAnwendungen heute: Sprachmodelle, Bilderkennung, Uebersetzung, Empfehlungen.\n\nKernfrage fuer Informatik: Woher kommen die Daten, was lernt das Modell daraus - und wo versagt es?"],
+                ['type' => 'text', 'title' => 'Training: Merkmale und Daten', 'body' => "## Wie ein Modell lernt\n\nEin **Klassifikator** soll Katzen von Hunden unterscheiden. Statt Regeln zu schreiben, zeigt man ihm **Trainingsdaten** mit Label:\n\n- Merkmale: Fellfarbe, Ohrenform, Schnauzenlaenge, Schwanzform ...\n- Der Algorithmus sucht eine **Trennregel** in den Merkmalen.\n\nGefahren:\n- **Overfitting**: Das Modell lernt die Trainingsbilder auswendig statt des Musters.\n- **Bias**: Sind in den Daten nur kurzhaarige Katzen, versagt das Modell bei langhaarigen."],
+                ['type' => 'text', 'title' => 'Grenzen: Bias und Schwarzkasten', 'body' => "## Vertrauen messbar machen\n\n- **Verzerrter Datensatz** -> verzerrtes Modell: Bekannte Faelle sind Erkennungsdienste, die Frauen schlechter erkennen, weil Trainingsdaten einseitig waren.\n- **Schwarzkasten**: Tiefe Netze entscheiden, aber erklaeren es nicht - deshalb fordern Gesetze (EU AI Act) Nachvollziehbarkeit.\n- **Halluzination**: Sprachmodelle erfinden fakten ueberzeugt klingende Antworten.\n\nMerksatz: **KI ist Statistik aus Daten** - Verantwortung liegt bei Menschen, die Daten und Einsatzbereich waehlen."],
+                ['type' => 'text', 'title' => 'Übung: Eigener Mini-Datensatz', 'body' => "**Uebung: Merkmale statt Magie**\n\nEntwirft einen Mini-Klassifikator fuer den Schulweg: **kommen zu spaet** oder **puenktlich**?\n\n1. Sammelt 10 Beispieldaten: Aufstehzeit, Verkehrsmittel, Wetter, Weglaenge.\n2. Waehlt **drei Merkmale**, die gut trennen, und begruendet die Wahl.\n3. Formuliert eine Trennregel (wenn ... dann zu spaet).\n4. Testet die Regel gegen zwei Beispiele, die ihr vorher weggelegt habt.\n5. Diskutiert: Welche Verzerrung koennte euer Datensatz haben?\n\nArbeit in Paaren, 12 Minuten."],
+                ['type' => 'text', 'title' => 'Lösung: Trennregel pünktlich', 'body' => "**Beispiel-Loesung**\n\nMerkmale: **Aufstehzeit vor 7:00 Uhr**, **Bahnnutzer** (ja/nein), **Regen** (ja/nein).\n\nTrennregel: Aufsteh vor 7:00 UND kein Regen -> puenktlich. Bahnnutzer im Regen -> Risiko zu spaet (+5 Minuten Puffer).\n\nTest gegen zurueckgehaltene Beispiele: Zwei von drei richtig - Regel verfeinern (Fahrrad bei Regen).\n\nVerzerrung: Der Datensatz enthaelt nur einen Schueler mit Fahrrad - **kleine Stichprobe**, Ergebnis nicht verallgemeinerbar.\n\nBewertung: Merkmalwahl mit Begruendung (3 BE), Trennregel (3 BE), Test und Verfeinerung (2 BE), Bias-Diskussion (2 BE)."],
+            ]],
+            ['slug' => 'db-vertieft', 'title' => 'Datenbanken vertieft: Normalisierung, JOINs, Transaktionen', 'level' => 12, 'v' => 1, 'legacy' => [], 'notes' => ['Einstieg: Fehlertabelle aus der 10. Klasse zeigen: Wo widerspricht sie sich? (5 Min)', 'Normalisierungsschritte an der Tabelle entwickeln lassen. (12 Min)', 'JOIN-Arten an zwei Tabellen demonstrieren. (10 Min)', 'Transaktion am Ueberweisungsbeispiel: ALL OR NOTHING. (8 Min)', 'SuS: Gegebene Tabelle in 3. NF ueberfuehren (SQL-Werkstatt). (12 Min)', 'Loesung vergleichen; Merksatz: Jede Information genau einmal. (5 Min)'], 'slides' => [
+                ['type' => 'text', 'title' => 'Normalisierung bis 3NF', 'body' => "# Datenbanken vertieft\n\n**1. Normalform (1NF)**: Nur atomare Werte - keine Listen in einer Spalte.\n**2. Normalform (2NF)**: 1NF und jedes Nichtschluesselattribut haengt vom **gesamten** Schluessel ab (relevant bei zusammengesetzten Schluesseln).\n**3. Normalform (3NF)**: 2NF und keine Abhaengigkeit von Nichtschluesselattributen: *Lehrername haengt von kurs_id ab, nicht von schueler_id*.\n\nJede Verletzung erzeugt die bekannten **Anomalien** (Update/Insert/Delete) aus der 10. Klasse - die Normalform verhindert sie konstruktiv."],
+                ['type' => 'text', 'title' => 'JOINs im Blick', 'body' => "## INNER, LEFT, RIGHT\n\n```sql\nSELECT s.name, k.thema\nFROM schueler s LEFT JOIN belegung b ON b.schueler_id = s.id\nLEFT JOIN kurs k ON k.id = b.kurs_id;\n```\n\n- **INNER JOIN**: nur Treffer auf beiden Seiten.\n- **LEFT JOIN**: alle links, auch ohne Treffer (NULL) - *welcher Schueler belegt noch keinen Kurs?*\n- **RIGHT JOIN**: spiegelbildlich; in den meisten Schemas durch Vertauschen als LEFT schreibbar.\n\nFaustregel: Die Frage \"Was fehlt?\" beantwortet der OUTER-Join."],
+                ['type' => 'text', 'title' => 'Transaktionen: ACID', 'body' => "## Alles oder nichts\n\nEine **Transaktion** bündelt mehrere Anweisungen: Entweder alle laufen, oder keine.\n\nUeberweisung: `UPDATE konto SET stand = stand - 50 WHERE id = 1;` und `UPDATE konto SET stand = stand + 50 WHERE id = 2;`\n\n- **A**tomicity: Buchung + Gutschrift zusammen.\n- **C**onsistency: Summe der Konten bleibt gleich.\n- **I**solation: Parallelitaet stoert nicht.\n- **D**urability: Nach COMMIT bleibt es, auch bei Stromausfall.\n\nIn SQL: `BEGIN`, dann `COMMIT` - oder `ROLLBACK` zum Zuruecknehmen."],
+                ['type' => 'text', 'title' => 'Übung: In die 3. NF überführen', 'body' => "**Uebung: Normalisierung anwenden**\n\nGegeben (1NF-Verstoss inklusive):\n\n| id | schueler | kurse | kursleiter |\n|----|----------|-------|-----------|\n| 1  | Lena     | Mathe, Info | Herr Maier, Frau Fischer |\n| 2  | Jonas    | Mathe | Herr Maier |\n\n1. Ueberfuehrt die Tabelle schrittweise in die **3. Normalform**.\n2. Legt die Tabellen in der SQL-Werkstatt an.\n3. Schreibt einen JOIN, der Schueler mit allen Kursen zeigt.\n4. Bonus: Ein LEFT JOIN zeigt, wer noch keinen Kurs belegt.\n\nArbeit in Paaren, 15 Minuten."],
+                ['type' => 'code', 'title' => 'Lösung: 3NF mit JOIN', 'lang' => 'sql', 'code' => "CREATE TABLE schueler (id INTEGER PRIMARY KEY, name TEXT);\nCREATE TABLE kurs (id INTEGER PRIMARY KEY, thema TEXT, lehrer TEXT);\nCREATE TABLE belegung (\n    schueler_id INTEGER REFERENCES schueler(id),\n    kurs_id INTEGER REFERENCES kurs(id),\n    PRIMARY KEY (schueler_id, kurs_id)\n);\n\nINSERT INTO schueler VALUES (1, 'Lena'), (2, 'Jonas'), (3, 'Emma');\nINSERT INTO kurs VALUES (1, 'Mathe', 'Herr Maier'), (2, 'Info', 'Frau Fischer');\nINSERT INTO belegung VALUES (1, 1), (1, 2), (2, 1);\n\n-- Schueler mit allen Kursen (INNER JOIN)\nSELECT s.name, k.thema, k.lehrer\nFROM belegung b\nJOIN schueler s ON s.id = b.schueler_id\nJOIN kurs k ON k.id = b.kurs_id;\n\n-- Wer belegt noch keinen Kurs? (LEFT JOIN)\nSELECT s.name\nFROM schueler s\nLEFT JOIN belegung b ON b.schueler_id = s.id\nWHERE b.schueler_id IS NULL;"],
+            ]],
+
 
         ];
     }
@@ -1410,7 +1546,7 @@ final class Migrator
     /** Text der Wiki-Anleitung für Lehrkräfte (Markdown-lite). */
     private static function wikiTeacherGuide(): string
     {
-        return "# Anleitung für Lehrkräfte\n\nWillkommen bei **InfoCraft**! Diese Seite fasst die wichtigsten Arbeitsschritte zusammen. Du kannst sie hier bearbeiten und um eigene Hinweise ergänzen.\n\n## Erste Schritte\n\n1. Anmelden über die Startseite.\n2. Unter **Nutzer** Konten für Schülerinnen und Schüler anlegen oder per **CSV-Import** ganze Klassen einspielen.\n3. Unter **Meine Klassen** deinem Konto Klassen zuordnen: Du siehst dann nur deine Klassen und deine Schülerinnen und Schüler.\n\n## Module passend zum Lehrplan freigeben\n\nUnter **Meine Klassen** legst du für jede Klasse fest, welche Arbeitsbereiche sichtbar sind:\n\n- **Standard**: Der LehrplanPLUS-Stufe des Moduls folgt (z. B. SQL erst ab Jgst. 9).\n- **Freigeben**: Die Klasse sieht das Modul früher.\n- **Sperren**: Die Klasse sieht das Modul nicht.\n\nDas gilt auch für die direkte URL: gesperrte Module sind nicht aufrufbar.\n\n## Arbeiten austeilen\n\n- **Code-Werkstatt**: Projekte anlegen und an Klassen oder Einzelne austeilen; über die Schüleransicht erreichst du die Projekte deiner Schülerinnen und Schüler.\n- **SQL-Werkstatt**: Vorlagen (Datenbanken) ausgeben mit Rechten für *nur lesen*, *lesen und schreiben* oder *Tabellen anlegen*.\n- **Aufgabenpool**: eigene Aufgaben anlegen oder fertige Aufgaben (Jgst. 6 bis 13) aus dem Katalog übernehmen und austeilen.\n\n## Präsentieren und Nachschlagen\n\n- **Wiki**: Diese Nachschlage-Seiten hier. Der Stufen-Filter blendet Seiten aus, die über der Klassenstufe liegen.\n- **Präsentationen**: Folien aus Text und Code, kompakt gruppiert nach Jahrgangsstufe (Jgst. 6 bis 10). Im Präsentationsmodus:\n    - **Vollbild** über den Knopf oder Taste **F**\n    - **Pfeiltasten** oder Leertaste blättern\n    - Code-Folien lassen sich über *Code verändern* direkt während der Präsentation bearbeiten und speichern\n- **Moderatorenbildschirm** (nur für Lehrkräfte): Der Knopf **Moderator** öffnet eine Steuerzentrale mit aktueller und nächster Folie, Folienliste, Timer und Uhr. Öffne sie am Laptop und die Präsentationsansicht im Vollbild auf dem Beamer - beide Fenster laufen im selben Browser synchron mit (Pfeiltasten steuern beide).\n\n## Prüfungen und Schularbeiten\n\nUnter **Prüfungen & Arbeiten** legst du Gruppen mit eigenen Vorlagen an und startest die Prüfung. Während der Prüfung sind für die betroffene Klasse alle anderen Bereiche gesperrt - andere Klassen arbeiten normal weiter. Korrektur mit Punkten und Noten, optional anonymisiert; Schularbeiten ohne Sperre sind ebenfalls möglich.";
+        return "# Anleitung für Lehrkräfte\n\nWillkommen bei **InfoCraft**! Diese Seite fasst die wichtigsten Arbeitsschritte zusammen. Du kannst sie hier bearbeiten und um eigene Hinweise ergänzen.\n\n## Erste Schritte\n\n1. Anmelden über die Startseite.\n2. Unter **Nutzer** Konten für Schülerinnen und Schüler anlegen oder per **CSV-Import** ganze Klassen einspielen.\n3. Unter **Meine Klassen** deinem Konto Klassen zuordnen: Du siehst dann nur deine Klassen und deine Schülerinnen und Schüler.\n\n## Module passend zum Lehrplan freigeben\n\nUnter **Meine Klassen** legst du für jede Klasse fest, welche Arbeitsbereiche sichtbar sind:\n\n- **Standard**: Der LehrplanPLUS-Stufe des Moduls folgt (z. B. SQL erst ab Jgst. 9).\n- **Freigeben**: Die Klasse sieht das Modul früher.\n- **Sperren**: Die Klasse sieht das Modul nicht.\n\nDas gilt auch für die direkte URL: gesperrte Module sind nicht aufrufbar.\n\n## Arbeiten austeilen\n\n- **Code-Werkstatt**: Projekte anlegen und an Klassen oder Einzelne austeilen; über die Schüleransicht erreichst du die Projekte deiner Schülerinnen und Schüler.\n- **SQL-Werkstatt**: Vorlagen (Datenbanken) ausgeben mit Rechten für *nur lesen*, *lesen und schreiben* oder *Tabellen anlegen*.\n- **Aufgabenpool**: eigene Aufgaben anlegen oder fertige Aufgaben (Jgst. 6 bis 13) aus dem Katalog übernehmen und austeilen.\n\n## Präsentieren und Nachschlagen\n\n- **Wiki**: Diese Nachschlage-Seiten hier. Der Stufen-Filter blendet Seiten aus, die über der Klassenstufe liegen.\n- **Präsentationen**: Folien aus Text und Code, kompakt gruppiert nach Jahrgangsstufe (Jgst. 6 bis 12). Im Präsentationsmodus:\n    - **Vollbild** über den Knopf oder Taste **F**\n    - **Pfeiltasten** oder Leertaste blättern\n    - Code-Folien lassen sich über *Code verändern* direkt während der Präsentation bearbeiten und speichern\n- **Moderatorenbildschirm** (nur für Lehrkräfte): Der Knopf **Moderator** öffnet eine Steuerzentrale mit aktueller und nächster Folie, Folienliste, Timer und Uhr. Öffne sie am Laptop und die Präsentationsansicht im Vollbild auf dem Beamer - beide Fenster laufen im selben Browser synchron mit (Pfeiltasten steuern beide).\n\n## Prüfungen und Schularbeiten\n\nUnter **Prüfungen & Arbeiten** legst du Gruppen mit eigenen Vorlagen an und startest die Prüfung. Während der Prüfung sind für die betroffene Klasse alle anderen Bereiche gesperrt - andere Klassen arbeiten normal weiter. Korrektur mit Punkten und Noten, optional anonymisiert; Schularbeiten ohne Sperre sind ebenfalls möglich.";
     }
 }
 
