@@ -8,6 +8,7 @@ use Infocraft\Models\AiSettings;
 use Infocraft\Models\HtmlSanitizer;
 use Infocraft\Models\Project;
 use Infocraft\Models\ProjectFile;
+use Infocraft\Models\ProjectState;
 use Infocraft\Models\SchoolClass;
 use Infocraft\Models\Task;
 use Infocraft\Models\TaskCatalog;
@@ -1006,10 +1007,13 @@ final class TaskController
         // sonst die Musterlösung. Weitere Code-Materialien werden als Dateien
         // in die temporäre Kopie übernommen. Ohne Vorlage startet der Editor leer.
         $type = $task->type === 'html' ? 'html' : 'code';
-        [$content, $language, $extraFiles] = self::workingContent($task);
+        [$content, $language, $extraFiles, $dbSeed] = self::workingContent($task);
         $project = Project::create($user->id, null, '🎬 Präsentation: ' . $task->title, $type, $language, $content);
         foreach ($extraFiles as $extra) {
             ProjectFile::create($project->id, $extra['name'], $extra['content']);
+        }
+        if ($type === 'code' && $dbSeed !== '') {
+            ProjectState::save($project->id, '', $dbSeed);
         }
         Task::setPresentationProject($task->id, $project->id);
         flash('success', 'Präsentationsmodus gestartet. Deine Änderungen bleiben in der temporären Kopie.');
@@ -1020,8 +1024,10 @@ final class TaskController
      * Startinhalt für eine Arbeitskopie (Präsentation oder Schüler): erstes
      * Code-Material als Inhalt, weitere Code-Materialien als Dateien, sonst
      * die Musterlösung. Code-Aufgaben bekommen immer eine Sprache, damit die
-     * volle IDE-Optik der Code-Werkstatt erscheint.
-     * @return array{0: string, 1: ?string, 2: list<array{name: string, content: string}>}
+     * volle IDE-Optik der Code-Werkstatt erscheint. .sql-Materialien werden
+     * zum Start-Seed der Mini-Datenbank (Issue #44): Damit gehört die
+     * Beispieldatenbank zur Aufgabe und wandert in jede Arbeitskopie.
+     * @return array{0: string, 1: ?string, 2: list<array{name: string, content: string}>, 3: string}
      */
     private static function workingContent(Task $task): array
     {
@@ -1029,8 +1035,13 @@ final class TaskController
         $content = '';
         $language = null;
         $extraFiles = [];
+        $dbSeed = '';
         foreach (TaskMaterial::forTask($task->id) as $material) {
             $lower = mb_strtolower($material->filename);
+            if (preg_match('/\.sql$/i', $lower) === 1) {
+                $dbSeed .= trim($material->raw()) . "\n";
+                continue;
+            }
             if (preg_match('/\.(java|py|asm|html)$/i', $lower, $match) === 1) {
                 if ($content === '') {
                     $content = $material->raw();
@@ -1047,7 +1058,7 @@ final class TaskController
         if ($type === 'code' && $language === null) {
             $language = SiteSetting::defaultLanguage();
         }
-        return [$content, $language, $extraFiles];
+        return [$content, $language, $extraFiles, $dbSeed];
     }
 
     /**
@@ -1087,10 +1098,13 @@ final class TaskController
             }
         }
         $type = $task->type === 'html' ? 'html' : 'code';
-        [$content, $language, $extraFiles] = self::workingContent($task);
+        [$content, $language, $extraFiles, $dbSeed] = self::workingContent($task);
         $project = Project::create($user->id, null, '📌 Aufgabe: ' . $task->title, $type, $language, $content);
         foreach ($extraFiles as $extra) {
             ProjectFile::create($project->id, $extra['name'], $extra['content']);
+        }
+        if ($type === 'code' && $dbSeed !== '') {
+            ProjectState::save($project->id, '', $dbSeed);
         }
         TaskWorking::create($task->id, $user->id, $project->id);
         flash('success', 'Aufgabe in der Werkstatt geöffnet. Dein Stand wird automatisch gespeichert, mit „Abgeben“ reicht du dieses Projekt als Lösung ein.');
@@ -1151,9 +1165,23 @@ final class TaskController
         $filename = 'Musterloesung-' . ($slug !== '' ? $slug : 'aufgabe-' . $task->id) . '.' . $ext;
         header('Content-Type: text/plain; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
-        echo $project->content;
-        foreach (ProjectFile::allForProject($project->id) as $file) {
-            echo "\n\n/* ===== Datei: " . $file->name . " ===== */\n" . $file->content;
+        // Nur die zuletzt gültige Lösung ausgeben (Issue #44): Bei
+        // Mehrdatei-Projekten liegt jede Datei genau einmal vor, der
+        // Projektinhalt ist nur die Zusammenfassung derselben Dateien und
+        // würde sie sonst doppelt ausgeben. Zwischenschritte gibt es nicht,
+        // da das Speichern vorhandene Dateien aktualisiert statt neue anzulegen.
+        $files = ProjectFile::allForProject($project->id);
+        if ($files === []) {
+            echo $project->content;
+            exit;
+        }
+        $first = true;
+        foreach ($files as $file) {
+            if (!$first) {
+                echo "\n\n";
+            }
+            $first = false;
+            echo "/* ===== Datei: " . $file->name . " ===== */\n" . $file->content;
         }
         exit;
     }

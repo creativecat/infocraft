@@ -6,6 +6,7 @@ namespace Infocraft\Controllers;
 use Infocraft\Auth;
 use Infocraft\Models\Folder;
 use Infocraft\Models\Project;
+use Infocraft\Models\ProjectState;
 use Infocraft\Models\ProjectFile;
 use Infocraft\Models\ProjectImage;
 use Infocraft\Models\SchoolClass;
@@ -238,6 +239,10 @@ final class CodeController
             $presentationTodos = TaskTodo::templatesForTask($presentationTask->id);
             $presentationMaterials = TaskMaterial::forTask($presentationTask->id);
         }
+        // Objektkonsole und Mini-Datenbank des Projekts laden (Issue #44):
+        // Der Editor füllt das Anweisungsfeld und startet die Datenbank mit
+        // dem gespeicherten SQL-Seed, statt bei jedem Ausführen leer zu sein.
+        $state = ProjectState::find($project->id);
         // Aufgabe „In der Werkstatt öffnen“ (Schüler-Sicht): Beschreibung,
         // ToDos, Materialien und Abgeben direkt in der Werkstatt anzeigen.
         $workingTask = null;
@@ -281,6 +286,8 @@ final class CodeController
             'workingOwnTodos' => $workingOwnTodos,
             'workingMaterials' => $workingMaterials,
             'workingSubmitted' => $workingSubmitted,
+            'replText' => $state['replText'] ?? '',
+            'dbSql' => $state['dbSql'] ?? '',
             'ownerName' => $owner !== null ? $owner->fullName() : '',
             'isForeign' => $project->ownerId !== $user->id,
             'diagramAuto' => SchoolClass::diagramAutoForUser($user),
@@ -320,8 +327,23 @@ final class CodeController
                 $fileId = (int) $fileId;
                 $content = (string) $fileContent;
                 if ($fileId === 0) {
-                    // Virtuelle Datei (Projekt hatte noch keine Dateien): erste echte Datei anlegen.
-                    ProjectFile::create($project->id, $isAsm ? self::asmFileName($content, $title) : self::javaFileName($content, $title), $content);
+                    // Virtuelle Datei (Projekt hatte noch keine Dateien): die erste
+                    // echte Datei anlegen - sonst die vorhandene aktualisieren.
+                    // Wichtig (Issue #44): niemals bei jedem Autospeichern erneut
+                    // anlegen, sonst entstehen doppelte Dateien.
+                    if ($files === []) {
+                        ProjectFile::create($project->id, $isAsm ? self::asmFileName($content, $title) : self::javaFileName($content, $title), $content);
+                    } else {
+                        $wanted = $isAsm ? self::asmFileName($content, $title) : self::javaFileName($content, $title);
+                        $target = $files[0];
+                        foreach ($files as $file) {
+                            if (strcasecmp($file->name, $wanted) === 0) {
+                                $target = $file;
+                                break;
+                            }
+                        }
+                        $target->save($content);
+                    }
                 } elseif (isset($map[$fileId])) {
                     $map[$fileId]->save($content);
                 }
@@ -331,6 +353,7 @@ final class CodeController
                 $combined .= $file->content . "\n";
             }
             $project->save($title, rtrim($combined, "\n"));
+            self::saveProjectState($project->id);
             flash('success', 'Gespeichert.');
             redirect('/werkstatt/code/' . $project->id);
         }
@@ -341,8 +364,28 @@ final class CodeController
         if ($files !== []) {
             $files[0]->save($content);
         }
+        self::saveProjectState($project->id);
         flash('success', 'Gespeichert.');
         redirect('/werkstatt/code/' . $project->id);
+    }
+
+    /**
+     * Objektkonsole (Anweisungsfeld) und Mini-Datenbank des Projekts
+     * mitspeichern (Issue #44): Beide kommen aus dem Autospeichern des
+     * Java-Editors. Fehlt der POST-Parameter, bleibt der bisherige Stand
+     * erhalten, damit alte Clients und Fremdprojekte nichts verlieren.
+     */
+    private static function saveProjectState(int $projectId): void
+    {
+        $hasRepl = array_key_exists('repl', $_POST);
+        $hasDb = array_key_exists('db', $_POST);
+        if (!$hasRepl && !$hasDb) {
+            return;
+        }
+        $state = ProjectState::find($projectId);
+        $repl = $hasRepl ? (string) $_POST['repl'] : ($state['replText'] ?? '');
+        $db = $hasDb ? (string) $_POST['db'] : ($state['dbSql'] ?? '');
+        ProjectState::save($projectId, $repl, $db);
     }
 
     public static function addFile(array $params): void

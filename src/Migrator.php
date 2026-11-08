@@ -43,6 +43,7 @@ final class Migrator
         self::ensureTaskOrganizationTables($pdo, $driver);
         self::ensureSiteSettingsTable($pdo, $driver);
         self::ensureUserPrefsTable($pdo, $driver);
+        self::ensureProjectStateTable($pdo, $driver);
 
         // Live-Abstimmung während der Präsentation (Issue #3): Tabellen
         // fehlen evtl. noch in Bestehensinstallationen, idempotent anlegen.
@@ -1108,6 +1109,32 @@ final class Migrator
      * Schulweite Einstellungen (Admin-Bereich), z. B. die Standard-
      * Programmiersprache. Tabelle idempotent anlegen.
      */
+    /**
+     * Persistenter Zustand je Werkstatt-Projekt (Issue #44): Inhalt der
+     * Objektkonsole (Anweisungsfeld) und Mini-Datenbank als SQL-Text, damit
+     * beides über das Neuladen und die Aufgabenzuordnung hinaus erhalten
+     * bleibt.
+     */
+    private static function ensureProjectStateTable(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS project_state (
+                project_id INT UNSIGNED NOT NULL,
+                repl_text MEDIUMTEXT NOT NULL,
+                db_sql MEDIUMTEXT NOT NULL,
+                PRIMARY KEY (project_id),
+                CONSTRAINT fk_state_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+        } else {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS project_state (
+                project_id INTEGER NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+                repl_text TEXT NOT NULL,
+                db_sql TEXT NOT NULL,
+                PRIMARY KEY (project_id)
+            )');
+        }
+    }
+
     private static function ensureSiteSettingsTable(PDO $pdo, string $driver): void
     {
         if ($driver === 'mysql') {
