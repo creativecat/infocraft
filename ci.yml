@@ -812,6 +812,13 @@ jobs:
           grep -q "Fortschritt: Klasse 6R" taprog.html && FORT_OK=1 || FORT_OK=0
           grep -q "<title>Fortschritt: Klasse 6R" taprog.html && TITLE_OK=1 || TITLE_OK=0
           grep -q "auth-shell" tapwin.html && WIN_BARE_OK=1 || WIN_BARE_OK=0
+          # Gesaerte HTML-Pruefung (Jonas ist Mitglied) beenden und herausgeben,
+          # damit Jonas nicht im Pruefungsmodus haengen bleibt (#11-Projekttest).
+          SEEDID=$(sqlite3 "$DB" "SELECT id FROM exams WHERE title = 'HTML-Prüfung: Meine erste Seite' AND phase = 'durchfuehrung'")
+          CODE_SEEDEND=$(curl -sS -L -o seedend.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$SEEDID/ende)
+          grep -q "Korrektur" seedend.html && SEEDEND_OK=1 || SEEDEND_OK=0
+          CODE_SEEDREL=$(curl -sS -L -o seedrel.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$SEEDID/herausgeben)
+          grep -q "Herausgegeben" seedrel.html && SEEDREL_OK=1 || SEEDREL_OK=0
           curl -sS -o login9.html -c cookies9.txt http://127.0.0.1:8080/login
           JONCSRF=$(grep -o 'value="[a-f0-9]*"' login9.html | head -n1 | cut -d'"' -f2)
           CODE_JONLOGIN=$(curl -sS -L -o jonas2.html -w "%{http_code}" -b cookies9.txt -c cookies9.txt -d "csrf=$JONCSRF" -d "user_id=$JONAS" http://127.0.0.1:8080/login/demo)
@@ -907,6 +914,8 @@ jobs:
           [ "$WIN_BARE_OK" = "1" ] || FAILED=1
           [ "$TAPROJ_SUB_OK" = "1" ] || FAILED=1
           [ "$JONLOGIN_OK" = "1" ] || FAILED=1
+          [ "$SEEDEND_OK" = "1" ] || FAILED=1
+          [ "$SEEDREL_OK" = "1" ] || FAILED=1
           [ "$JONPROJ_OK" = "1" ] || FAILED=1
           [ "$TAPROJ_DB_OK" = "1" ] || FAILED=1
           [ "$TAPROJ_CORR_OK" = "1" ] || FAILED=1
