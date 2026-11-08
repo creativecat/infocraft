@@ -1457,3 +1457,64 @@ final class TaskController
             return false;
         }
         $stmt = \Infocraft\Database::pdo()->prepare(
+            'SELECT COUNT(*) FROM task_targets WHERE task_id = ? AND (user_id = ? OR (class_id IS NOT NULL AND class_id = ?))'
+            . " AND (visible_from IS NULL OR visible_from = '' OR visible_from <= ?)"
+        );
+        $stmt->execute([$task->id, $student->id, $student->classId ?? 0, date('Y-m-d H:i')]);
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    /**
+     * Alle Empfängerinnen und Empfänger einer Aufgabe: Schülerinnen und
+     * Schüler aus den zugewiesenen Klassen plus einzeln zugewiesene Personen.
+     * @return list<User>
+     */
+    private static function recipients(Task $task): array
+    {
+        $byId = [];
+        foreach (Task::targets($task->id) as $target) {
+            if ($target['classId'] !== null) {
+                foreach (User::byClass($target['classId']) as $student) {
+                    $byId[$student->id] = $student;
+                }
+            } elseif ($target['userId'] !== null) {
+                $student = User::find($target['userId']);
+                if ($student !== null && $student->role === 'student') {
+                    $byId[$student->id] = $student;
+                }
+            }
+        }
+        return array_values($byId);
+    }
+
+    /** @return array<int, list<User>> */
+    private static function studentsByClass(User $user): array
+    {
+        $map = [];
+        foreach (SchoolClass::forTeacher($user->id, $user->role === 'admin') as $class) {
+            $map[$class->id] = User::byClass($class->id);
+        }
+        return $map;
+    }
+
+    /** POST an einen JSON-Endpunkt (Bearer-Autorisierung, falls Schlüssel hinterlegt). */
+    private static function httpPost(string $url, string $body, string $apiKey): string
+    {
+        $headers = ['Content-Type: application/json'];
+        if ($apiKey !== '') {
+            $headers[] = 'Authorization: Bearer ' . $apiKey;
+        }
+        $context = stream_context_create(['http' => [
+            'method' => 'POST',
+            'header' => implode("\r\n", $headers),
+            'content' => $body,
+            'timeout' => 60,
+            'ignore_errors' => true,
+        ]]);
+        $response = @file_get_contents($url, false, $context);
+        if ($response === false) {
+            throw new RuntimeException('Der Endpunkt ist nicht erreichbar.');
+        }
+        return $response;
+    }
+}
