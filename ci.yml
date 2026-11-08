@@ -658,7 +658,7 @@ jobs:
           CODE_DBDOWN=$(curl -sS -L -o dbtoggle_off.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "class_id=$CLASS6" -d "enabled=0" http://127.0.0.1:8080/unterricht/klassen/datenbank)
           grep -q "deaktiviert" dbtoggle_off.html && DB_TOGGLE_OFF_OK=1 || DB_TOGGLE_OFF_OK=0
           CODE_DBOFF=$(curl -sS -L -o dboff.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/werkstatt/code/$JPROJ)
-          grep -q "Mini-Datenbank" dboff.html && DB_OFF_OK=0 || DB_OFF_OK=1
+          grep -q 'id="db-panel"' dboff.html && DB_OFF_OK=0 || DB_OFF_OK=1
           grep -q "Fehlerkonsole" dboff.html && DB_ERR_OK=1 || DB_ERR_OK=0
           CODE_DBUP=$(curl -sS -L -o dbtoggle_on.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "class_id=$CLASS6" -d "enabled=1" http://127.0.0.1:8080/unterricht/klassen/datenbank)
           grep -q "sichtbar" dbtoggle_on.html && DB_TOGGLE_ON_OK=1 || DB_TOGGLE_ON_OK=0

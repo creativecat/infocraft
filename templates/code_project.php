@@ -111,7 +111,11 @@
                             <tr><td><pre class="code">text.length() · text.toUpperCase()</pre></td><td>String-Methoden: Länge, Großbuchstaben u.&nbsp;a. (charAt, substring, indexOf, equals, contains, replace, trim).</td></tr>
                             <tr><td><pre class="code">Integer.parseInt(text)</pre></td><td>Macht aus "42" die Zahl 42.</td></tr>
                         </table>
+                        <?php if ($dbPanel): ?>
                         <p class="muted">Die Mini-Datenbank <code>Database</code> ist ganz unten im Fenster Mini-Datenbank erklärt.</p>
+                        <?php else: ?>
+                        <p class="muted">Das Fenster Mini-Datenbank hat deine Lehrkraft für deine Klasse ausgeblendet. Die Klasse <code>Database</code> funktioniert im Programm trotzdem.</p>
+                        <?php endif; ?>
                     </details>
 
                     <details>
