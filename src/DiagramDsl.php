@@ -36,6 +36,17 @@ use function e;
  */
 final class DiagramDsl
 {
+    /**
+     * Führende Typzeile entfernen. Die Auswahl des Diagrammtyps läuft über die
+     * Buttons im Editor, niemand muss "struktogramm", "datenfluss" oder
+     * "classDiagram" mehr eintippen. Zeilen mit weiterem Inhalt bleiben
+     * unberührt, damit echte Diagrammzeilen erhalten bleiben.
+     */
+    public static function stripKindLine(string $source): string
+    {
+        return (string) preg_replace('/^\s*(?:struktogramm|datenfluss|classDiagram)\s*\R/i', '', $source, 1);
+    }
+
     /* ===================== Struktogramme ===================== */
 
     /**
@@ -300,7 +311,7 @@ final class DiagramDsl
             return ['error' => 'Das Datenflussdiagramm ist leer. Beginne zum Beispiel mit: quelle "Eingabe" --> (verarbeiten)', 'mermaid' => ''];
         }
 
-        $lines = array_merge(['flowchart LR'], $shapes, $edges);
+        $lines = array_merge(['flowchart TB'], $shapes, $edges);
         return ['error' => null, 'mermaid' => implode("\n", $lines)];
     }
 }

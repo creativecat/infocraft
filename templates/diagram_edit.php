@@ -6,19 +6,29 @@ $isKlassendiagramm = !$isStruktur && !$isDatenfluss;
 // selbst angelegten lassen sich ueber die Buttons oben umschalten.
 $switchable = in_array($diagram->kind, ['manuell', 'struktogramm', 'datenfluss'], true);
 $sourceLabels = [
-    'manuell' => 'Klassendiagramm-Quelltext (classDiagram) - die Vorschau aktualisiert sich beim Tippen',
-    'struktogramm' => 'Struktogramm-Quelltext (anweisung, wenn/dann/sonst, solange, wiederhole/bis) - die Struktur erscheint nach dem Speichern',
+    'manuell' => 'Klassendiagramm-Quelltext - die Vorschau aktualisiert sich beim Tippen',
+    'struktogramm' => 'Struktogramm-Quelltext (anweisung, wenn/dann/sonst, solange, wiederhole/bis) - die Struktur erscheint live beim Tippen',
     'datenfluss' => 'Datenfluss-Quelltext (quelle "Name", senke "Name", speicher "Name", (funktionsName), Pfeile --> und -->|Daten|) - die Vorschau aktualisiert sich beim Tippen',
 ];
 $hlLang = $isStruktur ? 'struktogramm' : ($isDatenfluss ? 'datenfluss' : 'mermaid');
 $currentLabel = $isStruktur ? 'struktogramm' : ($isDatenfluss ? 'datenfluss' : 'manuell');
+// Die Typzeile (classDiagram, struktogramm, datenfluss) tippt niemand mehr:
+// Beim Speichern entfernt der Server sie, fuer den Export setzt er sie wieder dazu.
+$exportSource = $diagram->mermaid;
+if ($isKlassendiagramm && stripos(ltrim($exportSource), 'classDiagram') !== 0) {
+    $exportSource = "classDiagram\n" . $exportSource;
+}
 ?>
 <section class="panel">
     <div class="panel-head">
-        <h3>📐 <?= e($diagram->title) ?> <span class="pill"><?= e($diagram->kindLabel()) ?></span></h3>
+        <h3>📐 <?= e($diagram->title) ?> <span class="pill" id="diagram-kind-pill"><?= e($diagram->kindLabel()) ?></span></h3>
         <a class="btn btn-ghost" href="<?= url('diagramme') ?>" title="Zurück">←</a>
     </div>
-    <form method="post" action="<?= url('diagramme/' . (int) $diagram->id) ?>" class="form">
+</section>
+
+<div class="diagram-workbench">
+<section class="panel">
+    <form method="post" action="<?= url('diagramme/' . (int) $diagram->id) ?>" class="form" id="diagram-form">
         <?= csrf_field() ?>
         <?php if ($switchable): ?>
         <div class="field"><span>Diagrammtyp</span>
@@ -27,10 +37,10 @@ $currentLabel = $isStruktur ? 'struktogramm' : ($isDatenfluss ? 'datenfluss' : '
                 <label class="kind-btn"><input type="radio" name="kind" value="manuell"<?= $isKlassendiagramm ? ' checked' : '' ?>><span>📐 Klassendiagramm</span></label>
                 <label class="kind-btn"><input type="radio" name="kind" value="datenfluss"<?= $isDatenfluss ? ' checked' : '' ?>><span>🌊 Datenflussdiagramm</span></label>
             </div>
-            <p class="muted">Der Typ wird beim Speichern übernommen, die Hilfe unten passt sich sofort an.</p>
+            <p class="muted">Der Typwechsel speichert sofort, die Vorschau rechts passt sich direkt an. Alles andere speichert sich automatisch beim Tippen.</p>
         </div>
         <?php endif; ?>
-        <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($diagram->title) ?>" required maxlength="200"></label>
+        <label class="field"><span>Titel</span><input type="text" name="title" id="diagram-title" value="<?= e($diagram->title) ?>" required maxlength="200"></label>
         <label class="field">
             <span<?php if ($switchable): ?> data-source-label="1"<?php endif; ?>>
                 <?php foreach ($sourceLabels as $labelKind => $labelText): ?>
@@ -38,11 +48,11 @@ $currentLabel = $isStruktur ? 'struktogramm' : ($isDatenfluss ? 'datenfluss' : '
                 <?php endforeach; ?>
             </span>
             <div class="hlwrap" data-hl="<?= e($hlLang) ?>">
-                <textarea name="mermaid" id="diagram-source" rows="14" class="mono" spellcheck="false"><?= e($diagram->mermaid) ?></textarea>
+                <textarea name="mermaid" id="diagram-source" rows="18" class="mono" spellcheck="false"><?= e($diagram->mermaid) ?></textarea>
             </div>
         </label>
         <div class="syntax-help" data-syntax-help="1">
-            <details class="syntax-help-block" data-help-kind="struktogramm"<?= $isStruktur ? ' open' : ' hidden' ?>>
+            <details class="syntax-help-block" data-help-kind="struktogramm"<?= $isStruktur ? '' : ' hidden' ?>>
                 <summary class="muted">So funktioniert die Struktogramm-Syntax</summary>
                 <table class="table syntax-table">
                     <thead><tr><th>Schlüsselwort</th><th>Bedeutung</th><th>Beispiel</th></tr></thead>
@@ -55,15 +65,14 @@ $currentLabel = $isStruktur ? 'struktogramm' : ($isDatenfluss ? 'datenfluss' : '
                     </tbody>
                 </table>
                 <p class="muted">Beispiel komplett:</p>
-                <pre class="code"><code>struktogramm
-anweisung "Start"
+                <pre class="code"><code>anweisung "Start"
 wenn "regnet?" dann
   anweisung "Regenschirm mitnehmen"
 sonst
   anweisung "Sonne genießen"
 ende</code></pre>
             </details>
-            <details class="syntax-help-block" data-help-kind="manuell"<?= $isStruktur || $isDatenfluss ? ' hidden' : ' open' ?>>
+            <details class="syntax-help-block" data-help-kind="manuell"<?= $isStruktur || $isDatenfluss ? ' hidden' : '' ?>>
                 <summary class="muted">So funktioniert die Klassendiagramm-Syntax</summary>
                 <table class="table syntax-table">
                     <thead><tr><th>Element</th><th>Bedeutung</th><th>Beispiel</th></tr></thead>
@@ -78,8 +87,7 @@ ende</code></pre>
                     </tbody>
                 </table>
                 <p class="muted">Beispiel komplett:</p>
-                <pre class="code"><code>classDiagram
-class Tier {
+                <pre class="code"><code>class Tier {
   +String name
   +gibLaut()
 }
@@ -88,7 +96,7 @@ class Hund {
 }
 Tier &lt;|-- Hund</code></pre>
             </details>
-            <details class="syntax-help-block" data-help-kind="datenfluss"<?= $isDatenfluss ? ' open' : ' hidden' ?>>
+            <details class="syntax-help-block" data-help-kind="datenfluss"<?= $isDatenfluss ? '' : ' hidden' ?>>
                 <summary class="muted">So funktioniert die Datenfluss-Syntax</summary>
                 <table class="table syntax-table">
                     <thead><tr><th>Schlüsselwort</th><th>Bedeutung</th><th>Beispiel</th></tr></thead>
@@ -97,14 +105,13 @@ Tier &lt;|-- Hund</code></pre>
                         <tr><td><strong>senke</strong> "Name"</td><td>Senke (Rechteck)</td><td>senke "Zeugnis"</td></tr>
                         <tr><td><strong>speicher</strong> "Name"</td><td>Datenspeicher (Zylinder)</td><td>speicher "Schuelerliste"</td></tr>
                         <tr><td><strong>(funktionsName)</strong></td><td>Funktion (Kreis)</td><td>(notenErfassen)</td></tr>
-                        <tr><td><strong>--&gt;</strong></td><td>Pfeil verbindet zwei Elemente</td><td>quelle "Eingabe" --&gt; (verarbeiten)</td></tr>
+                        <tr><td><strong>--&gt;</strong></td><td>Pfeil verbindet zwei Elemente (fließt von oben nach unten)</td><td>quelle "Eingabe" --&gt; (verarbeiten)</td></tr>
                         <tr><td><strong>--&gt;|Daten|</strong></td><td>Pfeil mit Datenbeschriftung</td><td>(verarbeiten) --&gt;|Ergebnis| senke "Ausgabe"</td></tr>
                         <tr><td>%% oder //</td><td>Kommentar</td><td>%% Notenverwaltung</td></tr>
                     </tbody>
                 </table>
                 <p class="muted">Beispiel komplett:</p>
-                <pre class="code"><code>datenfluss
-quelle "Lehrkraft" --> (notenErfassen)
+                <pre class="code"><code>quelle "Lehrkraft" --> (notenErfassen)
 (notenErfassen) --> speicher "Schuelerliste"
 speicher "Schuelerliste" -->|Noten| senke "Zeugnis"</code></pre>
             </details>
@@ -117,50 +124,45 @@ speicher "Schuelerliste" -->|Noten| senke "Zeugnis"</code></pre>
     </form>
 </section>
 
-<?php if ($isStruktur): ?>
-<section class="panel">
+<section class="panel" data-diagram-page="1" data-diagram-kind="<?= e($isStruktur ? 'struktogramm' : ($isDatenfluss ? 'datenfluss' : 'manuell')) ?>">
     <div class="panel-head">
-        <h3>👁️ Vorschau (Struktogramm)</h3>
-    </div>
-    <?php if ($struktogramm['error'] !== null): ?>
-    <div class="notice">
-        <strong>Struktogramm kann nicht gezeichnet werden</strong>
-        <p><?= e($struktogramm['error']) ?></p>
-    </div>
-    <?php else: ?>
-    <div class="nassi-wrap"><?= $struktogramm['html'] /* Text wird beim Bauen maskiert (src/DiagramDsl.php) */ ?></div>
-    <?php endif; ?>
-    <p class="muted">Die Vorschau aktualisiert sich nach dem Speichern. Zum Mitnehmen oder Austeilen: Seite oder Struktogramm drucken (Strg+P).</p>
-    <details>
-        <summary class="muted">Struktogramm-Quelltext anzeigen (zum Weiterverwenden)</summary>
-        <pre class="code"><code class="language-struktogramm"><?= e($diagram->mermaid) ?></code></pre>
-    </details>
-</section>
-<?php else: ?>
-<section class="panel" data-diagram-page="1"<?php if ($isDatenfluss): ?> data-diagram-kind="datenfluss"<?php endif; ?>>
-    <div class="panel-head">
-        <h3>👁️ Vorschau</h3>
+        <h3 id="diagram-preview-title">👁️ <?= $isStruktur ? 'Vorschau (Struktogramm)' : 'Vorschau' ?></h3>
         <div class="btn-row">
-            <button class="btn btn-ghost" id="diagram-refresh" type="button" title="Aktualisieren">↻</button>
-            <button class="btn btn-primary" id="diagram-png" type="button" data-png-name="<?= e(preg_replace('/[^\w.-]+/', '_', $diagram->title)) ?>">🖼️ PNG herunterladen</button>
+            <button class="btn btn-ghost" id="diagram-fit" type="button"<?= $isStruktur ? ' hidden' : '' ?> title="An Fenster anpassen (Umschalten zur Originalgröße)">⤢</button>
+            <button class="btn btn-ghost" id="diagram-fullscreen" type="button" title="Vollbild (Esc beendet)">⛶</button>
+            <button class="btn btn-ghost" id="diagram-refresh" type="button" title="Neu zeichnen">↻</button>
+            <button class="btn btn-primary" id="diagram-png" type="button"<?= $isStruktur ? ' hidden' : '' ?> data-png-name="<?= e(preg_replace('/[^\w.-]+/', '_', $diagram->title)) ?>">🖼️ PNG herunterladen</button>
         </div>
     </div>
-    <div class="diagram-preview" id="diagram-preview"<?php if ($isDatenfluss): ?> data-mermaid="<?= e($datenfluss['mermaid'] ?? '') ?>"<?php endif; ?>>
+    <?php if ($isStruktur): ?>
+        <?php if ($struktogramm['error'] !== null): ?>
+        <div class="notice" id="diagram-nassi-error">
+            <strong>Struktogramm kann nicht gezeichnet werden</strong>
+            <p><?= e($struktogramm['error']) ?></p>
+        </div>
+        <?php else: ?>
+        <div class="nassi-wrap" id="nassi-preview"><?= $struktogramm['html'] /* Text wird beim Bauen maskiert (src/DiagramDsl.php) */ ?></div>
+        <?php endif; ?>
+        <p class="muted">Zum Mitnehmen oder Austeilen: Seite oder Struktogramm drucken (Strg+P).</p>
+    <?php else: ?>
+    <div class="diagram-preview" id="diagram-preview">
         <p class="muted">Wird gezeichnet ...</p>
     </div>
-    <p class="muted" id="diagram-status" hidden></p>
     <?php if ($isDatenfluss && ($datenfluss['error'] ?? null) !== null): ?>
     <div class="notice">
         <strong>Datenflussdiagramm kann nicht gezeichnet werden</strong>
         <p><?= e($datenfluss['error']) ?></p>
     </div>
     <?php endif; ?>
+    <?php endif; ?>
+    <p class="muted" id="diagram-status" hidden></p>
+    <p class="muted diagram-savestatus" id="diagram-savestatus" hidden></p>
     <details>
-        <summary class="muted"><?= $isDatenfluss ? 'Datenfluss-Quelltext anzeigen' : 'Klassendiagramm-Quelltext anzeigen' ?> (zum Weiterverwenden, z. B. in Präsentationen)</summary>
-        <pre class="code"><code class="language-mermaid"><?= e($isDatenfluss ? ($datenfluss['mermaid'] !== '' ? $datenfluss['mermaid'] : $diagram->mermaid) : $diagram->mermaid) ?></code></pre>
+        <summary class="muted"><?= $isDatenfluss ? 'Datenfluss-Quelltext anzeigen' : ($isStruktur ? 'Struktogramm-Quelltext anzeigen' : 'Klassendiagramm-Quelltext anzeigen') ?> (zum Weiterverwenden, z. B. in Präsentationen)</summary>
+        <pre class="code"><code class="language-<?= e($isStruktur ? 'struktogramm' : 'mermaid') ?>"><?= e($isDatenfluss ? ($datenfluss['mermaid'] !== '' ? $datenfluss['mermaid'] : $diagram->mermaid) : ($isStruktur ? $diagram->mermaid : $exportSource)) ?></code></pre>
     </details>
 </section>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <script>if (window.mermaid) { mermaid.initialize({ startOnLoad: false }); }</script>
-<?php endif; ?>
 <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>

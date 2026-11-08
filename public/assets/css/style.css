@@ -969,3 +969,20 @@ body.sidebar-mini .nav-item { justify-content: center; padding: 10px 8px; }
 .syntax-table th, .syntax-table td { padding: 6px 10px; vertical-align: top; }
 .syntax-table code, .syntax-table td:nth-child(3) { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; white-space: nowrap; }
 .syntax-help .code { margin: 10px 0 0; overflow-x: auto; }
+
+/* ===== Diagramm-Werkbank: Eingabe links, Vorschau rechts ===== */
+.diagram-workbench { display: grid; grid-template-columns: minmax(320px, 5fr) 7fr; gap: 14px; align-items: start; }
+.diagram-workbench .panel { margin-bottom: 0; }
+@media (max-width: 1000px) {
+  .diagram-workbench { grid-template-columns: 1fr; }
+}
+.diagram-preview { overflow: auto; }
+.diagram-preview svg { max-width: 100%; height: auto; }
+.diagram-preview.natural { max-height: 70vh; }
+.diagram-preview.natural svg { max-width: none; height: auto; }
+[data-diagram-page]:fullscreen { overflow: auto; background: #fff; padding: 16px; }
+[data-diagram-page]:fullscreen .diagram-preview { max-height: none; }
+.is-fallback-fullscreen { position: fixed; inset: 0; z-index: 999; overflow: auto; background: #fff; padding: 16px; }
+.diagram-savestatus { font-size: 0.85rem; color: #64748b; margin: 0.25rem 0 0; }
+.syntax-table { margin: 0.5rem 0; }
+.syntax-help-block summary { cursor: pointer; }

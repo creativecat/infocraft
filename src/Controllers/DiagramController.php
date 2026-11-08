@@ -55,11 +55,11 @@ final class DiagramController
             $kind = 'manuell';
         }
         if ($kind === 'struktogramm') {
-            $starter = "struktogramm\nanweisung \"Erster Schritt\"\nwenn \"Bedingung\" dann\n  anweisung \"wahr-Zweig\"\nsonst\n  anweisung \"falsch-Zweig\"\nende\nsolange \"weitere Runde?\"\n  anweisung \"wiederholen\"\nende\n";
+            $starter = "anweisung \"Erster Schritt\"\nwenn \"Bedingung\" dann\n  anweisung \"wahr-Zweig\"\nsonst\n  anweisung \"falsch-Zweig\"\nende\nsolange \"weitere Runde?\"\n  anweisung \"wiederholen\"\nende\n";
         } elseif ($kind === 'datenfluss') {
-            $starter = "datenfluss\nquelle \"Eingabe\" --> (verarbeiten)\n(verarbeiten) -->|Ergebnis| senke \"Ausgabe\"\n";
+            $starter = "quelle \"Eingabe\" --> (verarbeiten)\n(verarbeiten) -->|Ergebnis| senke \"Ausgabe\"\n";
         } else {
-            $starter = "classDiagram\nclass Tier {\n  +String name\n}\nclass Hund {\n  +gib_laut()\n}\nTier <|-- Hund\n";
+            $starter = "class Tier {\n  +String name\n}\nclass Hund {\n  +gib_laut()\n}\nTier <|-- Hund\n";
         }
         $diagram = ClassDiagram::create($user->id, $title, $kind, null, $starter);
         flash('success', 'Diagramm angelegt. Zeichne los!');
@@ -100,7 +100,10 @@ final class DiagramController
         }
         // Typ-Buttons im Editor: Beim Speichern darf der Typ mit umschalten.
         $kind = (string) ($_POST['kind'] ?? '');
-        $diagram->save($title, (string) ($_POST['mermaid'] ?? ''), $kind !== '' ? $kind : null);
+        // Typzeile (struktogramm/datenfluss/classDiagram) kommt weg: Der Typ
+        // hängt am Diagramm, nicht am Quelltext.
+        $mermaid = DiagramDsl::stripKindLine((string) ($_POST['mermaid'] ?? ''));
+        $diagram->save($title, $mermaid, $kind !== '' ? $kind : null);
         $savedKind = ClassDiagram::find($diagram->id);
         $label = $savedKind === null ? 'Diagramm' : ($savedKind->kind === 'struktogramm' ? 'Struktogramm' : ($savedKind->kind === 'datenfluss' ? 'Datenflussdiagramm' : 'Klassendiagramm'));
         flash('success', $label . ' gespeichert.');

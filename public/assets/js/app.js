@@ -455,7 +455,7 @@
   });
 })();
 
-/* ===== Diagramm-Editor: Typ-Buttons umschalten, Klammern schliessen automatisch ===== */
+/* ===== Diagramm-Editor: Typ-Buttons umschalten (sofort gespeichert), Klammern schliessen automatisch ===== */
 (function () {
   'use strict';
   var picker = document.querySelector('[data-kind-switch]');
@@ -464,11 +464,18 @@
     var radios = picker.querySelectorAll('input[name="kind"]');
     var helps = form ? form.querySelectorAll('[data-help-kind]') : [];
     var labels = form ? form.querySelectorAll('[data-label-kind]') : [];
+    var wrap = form ? form.querySelector('[data-hl]') : null;
+    var HL_LANGS = { struktogramm: 'struktogramm', manuell: 'mermaid', datenfluss: 'datenfluss' };
     function applyKind() {
       var current = '';
       radios.forEach(function (r) { if (r.checked) { current = r.value; } });
       helps.forEach(function (b) { b.hidden = b.getAttribute('data-help-kind') !== current; });
       labels.forEach(function (l) { l.hidden = l.getAttribute('data-label-kind') !== current; });
+      if (wrap) {
+        wrap.dispatchEvent(new CustomEvent('diagramhllanguage', { detail: { lang: HL_LANGS[current] || 'mermaid' } }));
+      }
+      /* Der Rest der Seite (Vorschau, Buttons, Autosave) hoert auf dieses Event. */
+      picker.dispatchEvent(new CustomEvent('diagramkindchange', { bubbles: true, detail: { kind: current } }));
     }
     radios.forEach(function (r) { r.addEventListener('change', applyKind); });
     applyKind();
@@ -493,24 +500,32 @@
       area.selectionEnd = start + 1 + inner.length;
       fireInput();
     } else if (closers[ev.key] && area.value.charAt(end) === ev.key) {
-      /* schließende Klammer direkt daneben? Cursor springt drueber statt doppelt */
+      /* schliessende Klammer direkt daneben? Cursor springt drueber statt doppelt */
       ev.preventDefault();
       area.selectionStart = area.selectionEnd = end + 1;
     }
   });
 })();
-/* ===== Klassendiagramme: Live-Vorschau und PNG-Export ===== */
+
+/* ===== Diagramm-Werkbank: Live-Vorschau beim Tippen, Autosave, Typwechsel, Vollbild ===== */
 (function () {
   'use strict';
   var page = document.querySelector('[data-diagram-page]');
-  if (!page || !window.mermaid) { return; }
+  if (!page) { return; }
   var source = document.getElementById('diagram-source');
-  var preview = document.getElementById('diagram-preview');
+  var form = document.getElementById('diagram-form');
   var refreshBtn = document.getElementById('diagram-refresh');
   var pngBtn = document.getElementById('diagram-png');
-  var timer = null;
+  var fitBtn = document.getElementById('diagram-fit');
+  var fsBtn = document.getElementById('diagram-fullscreen');
+  var statusEl = document.getElementById('diagram-status');
+  var saveStatusEl = document.getElementById('diagram-savestatus');
+  var renderTimer = null;
+  var saveTimer = null;
   var seq = 0;
-  var kind = page.getAttribute('data-diagram-kind') || '';
+  var currentKind = page.getAttribute('data-diagram-kind') || 'manuell';
+  var lastGoodSvg = null;
+  var lastGoodNassi = null;
 
   function escapeText(text) {
     return String(text).replace(/[&<>]/g, function (ch) {
@@ -518,8 +533,152 @@
     });
   }
 
-  /* Datenfluss-DSL (wie src/DiagramDsl.php) fuer die Live-Vorschau nach Mermaid uebersetzen.
-     Vollstaendige Zeilentreffer statt Anker: kein Rueckwaerts-Suchen, prueft index und Laenge. */
+  function setStatus(msg) {
+    if (statusEl) { statusEl.textContent = msg; statusEl.hidden = false; }
+  }
+
+  function hideStatus() {
+    if (statusEl) { statusEl.hidden = true; }
+  }
+
+  /* ---------- Struktogramm (Port von src/DiagramDsl.php) ---------- */
+
+  function strukturText(text) {
+    var t = String(text).trim();
+    if (t.length >= 2 && t.charAt(0) === '"' && t.charAt(t.length - 1) === '"') {
+      t = t.slice(1, -1);
+    }
+    return t.trim();
+  }
+
+  function parseStruktogramm(src) {
+    var lines = [];
+    String(src).split(/\r\n|\r|\n/).forEach(function (raw, index) {
+      var t = raw.trim();
+      if (t === '' || t.indexOf('%%') === 0 || t.indexOf('//') === 0) { return; }
+      if (lines.length === 0 && t.toLowerCase().indexOf('struktogramm') === 0) { return; }
+      var parts = t.split(/\s+/);
+      lines.push({ ln: index + 1, kw: parts[0].toLowerCase(), rest: parts.slice(1).join(' ').trim() });
+    });
+    var pos = { i: 0 };
+    var result = parseStrukturSeq(lines, pos, []);
+    if (result.error) { return { error: result.error, root: null }; }
+    if (result.items.length === 0) {
+      return { error: 'Das Struktogramm ist leer. Beginne zum Beispiel mit: anweisung "Erster Schritt"', root: null };
+    }
+    return { error: '', root: { type: 'seq', items: result.items } };
+  }
+
+  function parseStrukturSeq(lines, pos, terminators) {
+    var items = [];
+    while (pos.i < lines.length) {
+      var line = lines[pos.i];
+      var kw = line.kw;
+      if (terminators.indexOf(kw) !== -1) {
+        return { items: items, term: kw, error: '' };
+      }
+      if (kw === 'anweisung') {
+        items.push({ type: 'stmt', text: strukturText(line.rest) });
+        pos.i += 1;
+        continue;
+      }
+      if (kw === 'wenn') {
+        var cond = line.rest;
+        if (cond === '' || !/\s*dann$/i.test(cond)) {
+          return { items: items, term: null, error: 'Zeile ' + line.ln + ': Bei wenn fehlt die Bedingung mit dann, z. B. wenn "punkte >= 90" dann' };
+        }
+        cond = cond.replace(/\s*dann$/i, '').trim();
+        pos.i += 1;
+        var truePart = parseStrukturSeq(lines, pos, ['sonst', 'ende']);
+        if (truePart.error) { return truePart; }
+        if (truePart.term === null) {
+          return { items: items, term: null, error: 'Zeile ' + line.ln + ': Der wenn-Block muss mit ende geschlossen werden.' };
+        }
+        var falseItems = [];
+        if (truePart.term === 'sonst') {
+          pos.i += 1;
+          var falsePart = parseStrukturSeq(lines, pos, ['ende']);
+          if (falsePart.error) { return falsePart; }
+          if (falsePart.term !== 'ende') {
+            return { items: items, term: null, error: 'Zeile ' + line.ln + ': Der sonst-Zweig muss mit ende geschlossen werden.' };
+          }
+          falseItems = falsePart.items;
+        }
+        pos.i += 1; /* ende verbrauchen */
+        items.push({ type: 'if', cond: strukturText(cond), true: truePart.items, false: falseItems });
+        continue;
+      }
+      if (kw === 'solange') {
+        var wCond = line.rest;
+        if (wCond === '') {
+          return { items: items, term: null, error: 'Zeile ' + line.ln + ': Bei solange fehlt die Bedingung, z. B. solange "summe < 10"' };
+        }
+        pos.i += 1;
+        var body = parseStrukturSeq(lines, pos, ['ende']);
+        if (body.error) { return body; }
+        if (body.term !== 'ende') {
+          return { items: items, term: null, error: 'Zeile ' + line.ln + ': Der solange-Block muss mit ende geschlossen werden.' };
+        }
+        pos.i += 1; /* ende verbrauchen */
+        items.push({ type: 'while', cond: strukturText(wCond), body: body.items });
+        continue;
+      }
+      if (kw === 'wiederhole') {
+        pos.i += 1;
+        var rBody = parseStrukturSeq(lines, pos, ['bis']);
+        if (rBody.error) { return rBody; }
+        if (rBody.term !== 'bis') {
+          return { items: items, term: null, error: 'Zeile ' + line.ln + ': Der wiederhole-Block muss mit bis "Bedingung" geschlossen werden.' };
+        }
+        var bCond = lines[pos.i].rest;
+        pos.i += 1; /* bis-Zeile verbrauchen */
+        if (bCond === '') {
+          return { items: items, term: null, error: 'Zeile ' + line.ln + ': Bei bis fehlt die Bedingung, z. B. bis "teig glatt"' };
+        }
+        items.push({ type: 'until', cond: strukturText(bCond), body: rBody.items });
+        continue;
+      }
+      if (kw === 'ende' || kw === 'sonst' || kw === 'bis') {
+        var want = terminators.length === 0
+          ? 'eine neue Anweisung (anweisung, wenn, solange, wiederhole)'
+          : '"' + terminators.join('" oder "') + '"';
+        return { items: items, term: null, error: 'Zeile ' + line.ln + ': "' + kw + '" passt hier nicht, hier gehört ' + want + ' hin.' };
+      }
+      return { items: items, term: null, error: 'Zeile ' + line.ln + ': Unbekannte Anweisung "' + line.kw + '". Erlaubt sind: anweisung, wenn/dann/sonst, solange, wiederhole/bis, ende.' };
+    }
+    return { items: items, term: null, error: '' };
+  }
+
+  function renderNassiSeq(items) {
+    if (!items.length) { return '<div class="nassi-empty"></div>'; }
+    var html = '<div class="nassi-seq">';
+    items.forEach(function (item) { html += renderNassiItem(item); });
+    return html + '</div>';
+  }
+
+  function renderNassiItem(item) {
+    if (item.type === 'stmt') {
+      return '<div class="nassi-stmt">' + (item.text !== '' ? escapeText(item.text) : '&nbsp;') + '</div>';
+    }
+    if (item.type === 'if') {
+      return '<div class="nassi-if"><div class="nassi-cond"><span class="nassi-tri"></span>' + escapeText(item.cond) + '</div><div class="nassi-branches">'
+        + '<div class="nassi-branch"><div class="nassi-branch-title">wahr</div>' + renderNassiSeq(item.true) + '</div>'
+        + '<div class="nassi-branch"><div class="nassi-branch-title">falsch</div>' + renderNassiSeq(item.false) + '</div></div></div>';
+    }
+    if (item.type === 'while') {
+      return '<div class="nassi-loop nassi-while"><div class="nassi-loop-head">solange ' + escapeText(item.cond) + '</div><div class="nassi-loop-body">' + renderNassiSeq(item.body) + '</div></div>';
+    }
+    return '<div class="nassi-loop nassi-until"><div class="nassi-loop-body">' + renderNassiSeq(item.body) + '</div><div class="nassi-loop-head">bis ' + escapeText(item.cond) + '</div></div>';
+  }
+
+  function renderNassi(root) {
+    var html = '<div class="nassi"><div class="nassi-seq">';
+    root.items.forEach(function (item) { html += renderNassiItem(item); });
+    return html + '</div></div>';
+  }
+
+  /* ---------- Datenfluss-DSL (wie src/DiagramDsl.php) fuer die Live-Vorschau ---------- */
+
   function dfFull(re, line) {
     var m = line.match(re);
     if (!m || m.index !== 0 || m[0].length !== line.length) { return null; }
@@ -564,7 +723,7 @@
     for (var i = 0; i < lines.length; i++) {
       var t = lines[i].trim();
       if (t === '' || t.indexOf('%%') === 0 || t.indexOf('//') === 0) { continue; }
-      if (t.slice(0, 10).toLowerCase() === 'datenfluss') { continue; }
+      if (t.toLowerCase().indexOf('datenfluss') === 0) { continue; }
       var m = dfFull(reEdgeLabel, t);
       if (m) {
         var from = register(m, 1);
@@ -587,8 +746,36 @@
     if (order === 0) {
       return { error: 'Das Datenflussdiagramm ist leer. Beginne zum Beispiel mit: quelle "Eingabe" --> (verarbeiten)', mermaid: '' };
     }
-    var out = ['flowchart LR'].concat(shapes, edges);
+    var out = ['flowchart TB'].concat(shapes, edges);
     return { error: '', mermaid: out.join(NL) };
+  }
+
+  /* ---------- Vorschau-Container je Typ ---------- */
+
+  function previewHost() {
+    return statusEl || page;
+  }
+
+  function nassiBox(create) {
+    var box = document.getElementById('nassi-preview');
+    if (!box && create !== false) {
+      box = document.createElement('div');
+      box.className = 'nassi-wrap';
+      box.id = 'nassi-preview';
+      previewHost().parentNode.insertBefore(box, previewHost());
+    }
+    return box;
+  }
+
+  function mermaidBox(create) {
+    var box = document.getElementById('diagram-preview');
+    if (!box && create !== false) {
+      box = document.createElement('div');
+      box.className = 'diagram-preview';
+      box.id = 'diagram-preview';
+      previewHost().parentNode.insertBefore(box, previewHost());
+    }
+    return box;
   }
 
   /* Fehler der Diagramm-Bibliothek saeubern: keine internen Namen und
@@ -600,46 +787,72 @@
     return text;
   }
 
-  var lastGoodSvg = null;
-  var statusEl = document.getElementById('diagram-status');
-
   function render(isAuto) {
-    if (!preview || !source) { return; }
+    if (!source) { return; }
     var text = source.value;
-    if (kind === 'datenfluss') {
+    if (currentKind === 'struktogramm') {
+      var box = nassiBox();
+      if (!box) { return; }
+      var parsed = parseStruktogramm(text);
+      if (parsed.error) {
+        if (isAuto && lastGoodNassi !== null) {
+          box.innerHTML = lastGoodNassi;
+          setStatus('Vorschau pausiert, bis der Quelltext wieder gezeichnet werden kann.');
+          return;
+        }
+        box.innerHTML = '<div class="notice"><strong>Struktogramm kann nicht gezeichnet werden</strong><p>' + escapeText(parsed.error) + '</p></div>';
+        lastGoodNassi = null;
+        return;
+      }
+      lastGoodNassi = renderNassi(parsed.root);
+      box.innerHTML = lastGoodNassi;
+      hideStatus();
+      return;
+    }
+    var target = mermaidBox();
+    if (!target) { return; }
+    if (!window.mermaid) {
+      target.innerHTML = '<p class="muted">Vorschau offline: Die Diagramm-Bibliothek konnte nicht geladen werden. Der Quelltext bleibt speicherbar.</p>';
+      return;
+    }
+    if (currentKind === 'datenfluss') {
       var t = transpileDatenfluss(text);
       if (t.error) {
         /* Waehrend des Tippens bleibt die letzte gueltige Zeichnung stehen,
            statt eine rote Fehlermeldung ueber halbfertige Eingaben zu zeigen. */
         if (isAuto && lastGoodSvg !== null) {
-          preview.innerHTML = lastGoodSvg;
-          if (statusEl) { statusEl.textContent = 'Vorschau pausiert, bis der Quelltext wieder gezeichnet werden kann.'; statusEl.hidden = false; }
+          target.innerHTML = lastGoodSvg;
+          setStatus('Vorschau pausiert, bis der Quelltext wieder gezeichnet werden kann.');
           return;
         }
-        preview.innerHTML = '<div class="notice"><strong>Datenflussdiagramm kann nicht gezeichnet werden</strong><p>' + escapeText(t.error) + '</p></div>';
+        target.innerHTML = '<div class="notice"><strong>Datenflussdiagramm kann nicht gezeichnet werden</strong><p>' + escapeText(t.error) + '</p></div>';
         return;
       }
       text = t.mermaid;
+    } else if (!/^\s*classDiagram/i.test(text)) {
+      /* Klassendiagramm: die classDiagram-Zeile zaehlt der Editor mit dazu, ohne dass jemand sie tippt. */
+      text = 'classDiagram' + String.fromCharCode(10) + text;
     }
     seq += 1;
     window.mermaid.render('dg-svg-' + seq, text).then(function (out) {
       lastGoodSvg = out.svg;
-      preview.innerHTML = out.svg;
-      if (statusEl) { statusEl.hidden = true; }
+      target.innerHTML = out.svg;
+      hideStatus();
     }).catch(function (err) {
       var msg = cleanError(err && err.message ? err.message : '');
       if (isAuto && lastGoodSvg !== null) {
-        preview.innerHTML = lastGoodSvg;
-        if (statusEl) { statusEl.textContent = 'Vorschau pausiert, bis der Quelltext wieder gezeichnet werden kann.'; statusEl.hidden = false; }
+        target.innerHTML = lastGoodSvg;
+        setStatus('Vorschau pausiert, bis der Quelltext wieder gezeichnet werden kann.');
         return;
       }
-      preview.innerHTML = '<div class="notice"><strong>Diagramm kann nicht gezeichnet werden</strong><p>' + escapeText(msg) + '</p></div>';
+      target.innerHTML = '<div class="notice"><strong>Diagramm kann nicht gezeichnet werden</strong><p>' + escapeText(msg) + '</p></div>';
     });
   }
 
   function exportPng() {
-    if (!preview) { return; }
-    var svg = preview.querySelector('svg');
+    var target = document.getElementById('diagram-preview');
+    if (!target) { return; }
+    var svg = target.querySelector('svg');
     if (!svg) { return; }
     var viewBox = (svg.getAttribute('viewBox') || '0 0 800 600').split(/\s+/).map(Number);
     var width = Math.max(200, Math.round(viewBox[2] || 800));
@@ -659,7 +872,7 @@
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       var link = document.createElement('a');
-      var name = pngBtn && pngBtn.getAttribute('data-png-name') ? pngBtn.getAttribute('data-png-name') : 'klassendiagramm';
+      var name = pngBtn && pngBtn.getAttribute('data-png-name') ? pngBtn.getAttribute('data-png-name') : 'diagramm';
       link.download = name + '.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
@@ -670,16 +883,117 @@
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(data);
   }
 
+  /* ---------- Automatisch speichern (beim Tippen und beim Typwechsel sofort) ---------- */
+
+  function saveNow(reason) {
+    if (!form) { return; }
+    var data = new FormData(form);
+    fetch(form.getAttribute('action') || window.location.href, {
+      method: 'POST',
+      body: data,
+      credentials: 'same-origin'
+    }).then(function (res) {
+      if (!res.ok) { throw new Error('HTTP ' + res.status); }
+      if (saveStatusEl) {
+        var now = new Date();
+        var hh = ('0' + now.getHours()).slice(-2);
+        var mm = ('0' + now.getMinutes()).slice(-2);
+        saveStatusEl.textContent = (reason === 'kind' ? 'Typ gespeichert, ' : 'Automatisch gespeichert ') + hh + ':' + mm;
+        saveStatusEl.hidden = false;
+      }
+    }).catch(function () {
+      if (saveStatusEl) {
+        saveStatusEl.textContent = 'Nicht gespeichert (offline?)';
+        saveStatusEl.hidden = false;
+      }
+    });
+  }
+
+  /* ---------- Typwechsel: Vorschau und Buttons sofort umschalten ---------- */
+
+  var KIND_LABELS = { struktogramm: 'Struktogramm', manuell: 'Klassendiagramm', datenfluss: 'Datenflussdiagramm' };
+
+  function applyKind(kind) {
+    currentKind = kind;
+    page.setAttribute('data-diagram-kind', kind);
+    var pill = document.getElementById('diagram-kind-pill');
+    if (pill) { pill.textContent = KIND_LABELS[kind] || 'Diagramm'; }
+    var title = document.getElementById('diagram-preview-title');
+    if (title) { title.textContent = 'Vorschau' + (kind === 'struktogramm' ? ' (Struktogramm)' : ''); }
+    var isStruktur = kind === 'struktogramm';
+    if (fitBtn) { fitBtn.hidden = isStruktur; }
+    if (pngBtn) { pngBtn.hidden = isStruktur; }
+    var mBox = mermaidBox(false);
+    var nBox = nassiBox(false);
+    if (isStruktur) {
+      if (mBox) { mBox.hidden = true; }
+      nassiBox().hidden = false;
+    } else {
+      if (nBox) { nBox.hidden = true; }
+      mermaidBox().hidden = false;
+    }
+    lastGoodSvg = null;
+    lastGoodNassi = null;
+  }
+
+  document.addEventListener('diagramkindchange', function (ev) {
+    var kind = ev.detail && ev.detail.kind;
+    if (!kind || !KIND_LABELS[kind]) { return; }
+    applyKind(kind);
+    render(false);
+    saveNow('kind');
+  });
+
+  /* ---------- Eingabe: Typzeile raus, Live-Vorschau, Autosave ---------- */
+
   /* Mehr Ruhe beim Tippen: erst nach dieser Pause wird neu gezeichnet und geprueft. */
   var DIAGRAM_RENDER_DELAY = 1200;
-  window.mermaid.initialize({ startOnLoad: false });
+  /* Nach dieser Tipp-Pause sichert der Editor automatisch. */
+  var DIAGRAM_AUTOSAVE_DELAY = 1500;
+  var KIND_LINE_RE = /^\s*(?:struktogramm|datenfluss|classDiagram)\s*\r?\n/i;
+
+  if (window.mermaid && window.mermaid.initialize) { window.mermaid.initialize({ startOnLoad: false }); }
   render(false);
   if (refreshBtn) { refreshBtn.addEventListener('click', function () { render(false); }); }
   if (pngBtn) { pngBtn.addEventListener('click', exportPng); }
+  if (fitBtn) {
+    fitBtn.addEventListener('click', function () {
+      var target = document.getElementById('diagram-preview');
+      if (target) { target.classList.toggle('natural'); }
+    });
+  }
+  if (fsBtn) {
+    fsBtn.addEventListener('click', function () {
+      if (document.fullscreenElement === page) {
+        document.exitFullscreen();
+        return;
+      }
+      if (page.requestFullscreen) {
+        page.requestFullscreen();
+        return;
+      }
+      page.classList.toggle('is-fallback-fullscreen');
+    });
+  }
+  document.addEventListener('fullscreenchange', function () {
+    if (document.fullscreenElement !== page) { page.classList.remove('is-fallback-fullscreen'); }
+  });
   if (source) {
     source.addEventListener('input', function () {
-      if (timer) { clearTimeout(timer); }
-      timer = setTimeout(function () { render(true); }, DIAGRAM_RENDER_DELAY);
+      /* Typzeile (struktogramm, datenfluss, classDiagram) tippt niemand mehr: sofort raus. */
+      var stripped = source.value.replace(KIND_LINE_RE, '');
+      if (stripped !== source.value) { source.value = stripped; }
+      if (renderTimer) { clearTimeout(renderTimer); }
+      renderTimer = setTimeout(function () { render(true); }, DIAGRAM_RENDER_DELAY);
+      if (saveTimer) { clearTimeout(saveTimer); }
+      saveTimer = setTimeout(function () { saveNow('auto'); }, DIAGRAM_AUTOSAVE_DELAY);
+    });
+  }
+  var titleInput = document.getElementById('diagram-title');
+  if (titleInput) {
+    titleInput.addEventListener('input', function () {
+      if (saveTimer) { clearTimeout(saveTimer); }
+      saveTimer = setTimeout(function () { saveNow('auto'); }, DIAGRAM_AUTOSAVE_DELAY);
     });
   }
 })();
@@ -762,6 +1076,15 @@
     };
     render();
     area.addEventListener('input', render);
+    /* Diagramm-Editor: Sprachwechsel, wenn oben der Typ umgeschaltet wird. */
+    wrap.addEventListener('diagramhllanguage', function (ev) {
+      var nextLang = ev.detail && ev.detail.lang;
+      if (!nextLang || nextLang === lang || !hljs.getLanguage(nextLang)) { return; }
+      lang = nextLang;
+      wrap.setAttribute('data-hl', lang);
+      code.className = 'language-' + lang;
+      render();
+    });
     area.addEventListener('scroll', sync);
   });
 })();
