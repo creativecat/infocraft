@@ -10,6 +10,8 @@ use Infocraft\Models\Project;
 use Infocraft\Models\ProjectFile;
 use Infocraft\Models\ProjectState;
 use Infocraft\Models\SchoolClass;
+use Infocraft\Models\SqlTemplate;
+use Infocraft\SqlWorkshop;
 use Infocraft\Models\Task;
 use Infocraft\Models\TaskCatalog;
 use Infocraft\Models\TaskGrading;
@@ -332,6 +334,21 @@ final class TaskController
         ]);
     }
 
+    /**
+     * Issue #45: Angehängte Beispieldatenbank (nur gültige Vorlagen, nur
+     * bei Code-Aufgaben) und Schreibrechte aus dem Formular lesen.
+     * @return array{0: int, 1: int}
+     */
+    private static function readDatabaseForm(): array
+    {
+        $dbTemplateId = (int) ($_POST['db_template_id'] ?? 0);
+        if ($dbTemplateId > 0 && SqlTemplate::findById($dbTemplateId) === null) {
+            $dbTemplateId = 0;
+        }
+        $dbWrite = ($_POST['db_write'] ?? '') === '1' ? 1 : 0;
+        return [$dbTemplateId, $dbWrite];
+    }
+
     public static function create(): void
     {
         $user = Auth::user();
@@ -357,7 +374,8 @@ final class TaskController
         $maxPoints = max(0, min(1000, (int) ($_POST['max_points'] ?? 0)));
         [$topicId, $description, $descriptionFormat] = self::readTaskForm();
         $solutionVisible = ($_POST['solution_visible'] ?? '') === '1' ? 1 : 0;
-        $task = Task::createFull($user->id, $title, $description, $type, $level, 0, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''), $topicId, $descriptionFormat, 0, $solutionVisible);
+        [$dbTemplateId, $dbWrite] = self::readDatabaseForm();
+        $task = Task::createFull($user->id, $title, $description, $type, $level, 0, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''), $topicId, $descriptionFormat, 0, $solutionVisible, $dbTemplateId, $dbWrite);
         flash('success', 'Aufgabe angelegt. Jetzt ToDos und Vorlagen ergänzen oder direkt verteilen.');
         redirect('/aufgaben/' . $task->id . '/bearbeiten');
     }
@@ -440,6 +458,7 @@ final class TaskController
             'classes' => $classes,
             'studentsByClass' => self::studentsByClass($user),
             'defaultLanguage' => SiteSetting::defaultLanguage(),
+            'sqlTemplates' => SqlTemplate::all(),
             'user' => $user,
         ]);
     }
@@ -475,7 +494,8 @@ final class TaskController
         $maxPoints = max(0, min(1000, (int) ($_POST['max_points'] ?? 0)));
         [$topicId, $description, $descriptionFormat] = self::readTaskForm();
         $solutionVisible = ($_POST['solution_visible'] ?? '') === '1' ? 1 : 0;
-        Task::update($task->id, $title, $description, $type, $level, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''), $topicId, $descriptionFormat, $solutionVisible);
+        [$dbTemplateId, $dbWrite] = self::readDatabaseForm();
+        Task::update($task->id, $title, $description, $type, $level, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''), $topicId, $descriptionFormat, $solutionVisible, $dbTemplateId, $dbWrite);
         flash('success', 'Aufgabe gespeichert.');
         redirect('/aufgaben/' . $task->id . '/bearbeiten');
     }
@@ -1054,6 +1074,17 @@ final class TaskController
         if ($content === '' && $task->sampleSolution !== '') {
             $content = $task->sampleSolution;
             $language = $language ?? ($type === 'code' ? 'java' : null);
+        }
+        // Issue #45: Angehängte Beispieldatenbank der Aufgabe seedet die
+        // Mini-Datenbank zuerst, .sql-Materialien kommen danach.
+        if ($type === 'code' && $task->dbTemplateId > 0) {
+            $template = SqlTemplate::findById($task->dbTemplateId);
+            if ($template !== null) {
+                $file = SqlWorkshop::templatePath($template->slug);
+                if (is_file($file)) {
+                    $dbSeed = trim((string) file_get_contents($file)) . "\n" . $dbSeed;
+                }
+            }
         }
         if ($type === 'code' && $language === null) {
             $language = SiteSetting::defaultLanguage();

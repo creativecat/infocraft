@@ -217,14 +217,14 @@ final class DiagramDsl
         }
         if ($item['type'] === 'if') {
             $html = '<div class="nassi-if"><div class="nassi-cond"><span class="nassi-tri"></span>' . e($item['cond']) . '</div><div class="nassi-branches">';
-            $html .= '<div class="nassi-branch"><div class="nassi-branch-title">wahr</div>' . self::renderStrukturSeqHtml($item['true']) . '</div>';
-            $html .= '<div class="nassi-branch"><div class="nassi-branch-title">falsch</div>' . self::renderStrukturSeqHtml($item['false']) . '</div>';
+            $html .= '<div class="nassi-branch"><span class="nassi-branch-label">wahr</span>' . self::renderStrukturSeqHtml($item['true']) . '</div>';
+            $html .= '<div class="nassi-branch"><span class="nassi-branch-label">falsch</span>' . self::renderStrukturSeqHtml($item['false']) . '</div>';
             return $html . '</div></div>';
         }
         if ($item['type'] === 'while') {
-            return '<div class="nassi-loop nassi-while"><div class="nassi-loop-head">solange ' . e($item['cond']) . '</div><div class="nassi-loop-body">' . self::renderStrukturSeqHtml($item['body']) . '</div></div>';
+            return '<div class="nassi-loop nassi-while"><div class="nassi-loop-head">' . e($item['cond']) . '</div><div class="nassi-loop-body">' . self::renderStrukturSeqHtml($item['body']) . '</div></div>';
         }
-        return '<div class="nassi-loop nassi-until"><div class="nassi-loop-body">' . self::renderStrukturSeqHtml($item['body']) . '</div><div class="nassi-loop-head">bis ' . e($item['cond']) . '</div></div>';
+        return '<div class="nassi-loop nassi-until"><div class="nassi-loop-body">' . self::renderStrukturSeqHtml($item['body']) . '</div><div class="nassi-loop-head">' . e($item['cond']) . '</div></div>';
     }
 
     /** Eine Item-Liste als vertikale Sequenz (leere Listen bekommen eine Schraffur). */

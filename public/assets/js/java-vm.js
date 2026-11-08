@@ -2456,10 +2456,14 @@
    * Datenbank wie bisher leer - der Programmablauf selbst bleibt unverändert.
    */
   var DB_SEED_SQL = '';
+  /* Issue #45: Angehängte Datenbank nur mit Leserechten -> DB_RO. */
+  var DB_RO = false;
   function dbSeedRead() {
     if (typeof document === 'undefined') { return; }
     var el = document.getElementById('java-db-seed');
     DB_SEED_SQL = el && el.value ? String(el.value) : '';
+    var ro = document.getElementById('java-db-ro');
+    DB_RO = !!(ro && ro.value);
   }
   /* SQL-Text in Einzelbefehle zerlegen (Semikolon außerhalb von 'Texten'). */
   function dbSplitSql(text) {
@@ -2791,6 +2795,9 @@
     var kw = km ? km[1].toUpperCase() : '';
     if (kw === '') {
       throw rt(ctx, line, 'Der SQL-Befehl ist leer.', 'z. B. Database.execute("CREATE TABLE tabelle (spalte TEXT)")');
+    }
+    if (DB_RO && kw !== 'SELECT' && kw !== 'WITH') {
+      throw rt(ctx, line, 'Nur Leserechte: Diese Datenbank wurde von der Aufgabe nur zum Lesen angehängt, der Befehl ' + kw + ' ist nicht erlaubt.', 'Mit SELECT und Database.query kannst du die Daten abfragen. Schreibrechte vergibt deine Lehrkraft an der Aufgabe.');
     }
     var m;
     var table;
