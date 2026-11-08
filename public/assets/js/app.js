@@ -837,6 +837,8 @@
     window.mermaid.render('dg-svg-' + seq, text).then(function (out) {
       lastGoodSvg = out.svg;
       target.innerHTML = out.svg;
+      if (currentKind === 'manuell') { styleClassDiagramSvg(target); }
+      lastGoodSvg = target.innerHTML;
       hideStatus();
     }).catch(function (err) {
       var msg = cleanError(err && err.message ? err.message : '');
@@ -952,7 +954,84 @@
   var DIAGRAM_AUTOSAVE_DELAY = 1500;
   var KIND_LINE_RE = /^\s*(?:struktogramm|datenfluss|classDiagram)\s*\r?\n/i;
 
-  if (window.mermaid && window.mermaid.initialize) { window.mermaid.initialize({ startOnLoad: false }); }
+  /* Einheitliche UML-Optik fuer Klassendiagramme: blauer Titelkopf, weisser
+     Boxkoerper, harte Ecken und Trennstriche zwischen Titel, Attributen und
+     Methoden - genauso wie das Klassendiagramm in der Code-Werkstatt.
+     Mermaid zeichnet von sich aus graue Standardboxen. Deshalb wird nach dem
+     Rendern nachgebessert. Alle Werte werden direkt als Attribute an das SVG
+     gesetzt (nicht per CSS), damit der PNG-Export die Optik behaelt.
+     Zwei Renderer werden abgedeckt: der klassische (g.classGroup mit rect und
+     line.divider) und der aktuelle (g.node mit label-group/members-group/
+     methods-group und divider-Gruppen). */
+  function styleClassDiagramSvg(target) {
+    if (!target) { return; }
+    var headFill = '#dbeafe';
+    var border = '#1d4ed8';
+    var dividerCol = '#93c5fd';
+    function setAttrs(el, attrs) {
+      for (var k in attrs) { if (Object.prototype.hasOwnProperty.call(attrs, k)) { el.setAttribute(k, attrs[k]); } }
+    }
+    function styleLegacyClassGroup(grp) {
+      var rect = grp.querySelector('rect');
+      var lines = grp.querySelectorAll('line.divider');
+      if (!rect || lines.length === 0) { return; }
+      var bx = parseFloat(rect.getAttribute('x')) || 0;
+      var by = parseFloat(rect.getAttribute('y')) || 0;
+      var bw = parseFloat(rect.getAttribute('width')) || 0;
+      setAttrs(rect, { 'fill': '#ffffff', 'stroke': border, 'stroke-width': '2', 'rx': '0', 'ry': '0' });
+      var li;
+      for (li = 0; li < lines.length; li++) { setAttrs(lines[li], { 'stroke': dividerCol, 'stroke-width': '1' }); }
+      var firstY = parseFloat(lines[0].getAttribute('y1'));
+      if (!(firstY > by)) { firstY = by + 20; }
+      var head = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      setAttrs(head, { 'x': bx, 'y': by, 'width': bw, 'height': Math.max(4, firstY - by), 'fill': headFill, 'stroke': 'none' });
+      grp.insertBefore(head, grp.firstChild);
+    }
+    function styleNeoClassGroup(node) {
+      /* Nur Klassengruppen: flowchart-Knoten haben keine members-/methods-group. */
+      var label = node.querySelector('.label-group');
+      if (!label) { return; }
+      var members = node.querySelector('.members-group');
+      var methods = node.querySelector('.methods-group');
+      if (!members && !methods) { return; }
+      var box = node.querySelector('.outer-path') || node.querySelector('.basic.label-container');
+      if (!box) { return; }
+      var b = box.getBBox();
+      var paths = box.querySelectorAll('path');
+      var pi;
+      for (pi = 0; pi < paths.length; pi++) { setAttrs(paths[pi], { 'fill': '#ffffff', 'stroke': border, 'stroke-width': '2' }); }
+      var dividers = node.querySelectorAll('g.divider');
+      var di;
+      for (di = 0; di < dividers.length; di++) {
+        var dp = dividers[di].querySelector('path');
+        if (dp) { setAttrs(dp, { 'stroke': dividerCol, 'stroke-width': '1' }); }
+      }
+      var firstY = null;
+      if (dividers.length > 0 && dividers[0].querySelector('path')) { firstY = dividers[0].querySelector('path').getBBox().y; }
+      if (firstY === null || !(firstY > b.y)) { firstY = b.y + Math.max(8, b.height * 0.25); }
+      var head = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      setAttrs(head, { 'x': b.x, 'y': b.y, 'width': b.width, 'height': Math.max(4, firstY - b.y), 'fill': headFill, 'stroke': 'none' });
+      node.insertBefore(head, box.nextSibling);
+    }
+    var legacy = target.querySelectorAll('g.classGroup');
+    var i;
+    for (i = 0; i < legacy.length; i++) { styleLegacyClassGroup(legacy[i]); }
+    var nodes = target.querySelectorAll('g.node');
+    for (i = 0; i < nodes.length; i++) { styleNeoClassGroup(nodes[i]); }
+  }
+
+  if (window.mermaid && window.mermaid.initialize) {
+    window.mermaid.initialize({
+      startOnLoad: false,
+      themeVariables: {
+        mainBkg: '#ffffff',
+        nodeBorder: '#1d4ed8',
+        classText: '#1e293b',
+        textColor: '#1e3a8a',
+        lineColor: '#475569'
+      }
+    });
+  }
   render(false);
   if (refreshBtn) { refreshBtn.addEventListener('click', function () { render(false); }); }
   if (pngBtn) { pngBtn.addEventListener('click', exportPng); }

@@ -47,18 +47,11 @@
                 </div>
             </div>
             <?php endforeach; ?>
-            <details class="ide-help">
-                <summary class="muted">💾 Mini-Datenbank: SQL direkt in Java</summary>
-                <p>Die eingebaute Klasse <code>Datenbank</code> speichert Tabellen im Speicher deines Browsers – ganz ohne Installation:</p>
-                <pre class="code">Datenbank.ausfuehren("CREATE TABLE schueler (name TEXT, punkte INT)");
-Datenbank.ausfuehren("INSERT INTO schueler VALUES ('Anna', 12), ('Ben', 8)");
-System.out.println(Datenbank.abfrage("SELECT * FROM schueler WHERE punkte > 10"));
-
-int anzahl = Datenbank.anzahl("SELECT * FROM schueler");   // Zeilen einer Abfrage
-String beste = Datenbank.wert("SELECT name FROM schueler ORDER BY punkte DESC");
-System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre>
-                <p class="muted">Verfügbar: <code>ausfuehren</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>abfrage</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>anzahl</code> die Zeilenanzahl, <code>wert</code> den ersten Wert, <code>tabellen</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank startet bei jedem Ausführen neu und leer.</p>
-            </details>
+            <div class="console-errors-box" id="java-errors-box">
+                <div class="console-errors-head">🚨 Fehlerkonsole <span class="err-badge" id="java-error-badge">0</span></div>
+                <div class="java-errors" id="java-errors">Noch nichts ausgeführt – hier erscheinen Fehler mit Datei, Zeile und Tipp.</div>
+                <button class="btn btn-ghost" id="java-clear" type="button" title="Leeren">🗑</button>
+            </div>
         </div>
         <div class="ide-console">
             <div class="console-run">
@@ -71,16 +64,16 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
             <div id="java-step-info" class="step-info"></div>
             <div class="console-tabs" role="tablist">
                 <button type="button" class="console-tab active" data-ctab="out" title="Ausgabe">▶</button>
-                <button type="button" class="console-tab" data-ctab="classes" title="Klassen (Klassendiagramm)">📐</button>
+                <button type="button" class="console-tab" data-ctab="classes" title="Klassen (Klassendiagramm) und Objekte (Objektdiagramm)">📐 <span class="err-badge" id="java-obj-badge">0</span></button>
                 <button type="button" class="console-tab" data-ctab="repl" title="Objektkonsole">🧪</button>
-                <button type="button" class="console-tab" data-ctab="objects" title="Objekte">🧩 <span class="err-badge" id="java-obj-badge">0</span></button>
                 <button type="button" class="console-tab api-open" id="java-api-open" title="Öffnet die API-Hilfe in einem eigenen Fenster. Es bleibt offen, während du weiterprogrammierst.">📖</button>
             </div>
             <div class="console-pane" data-cpane="out">
                 <pre id="java-console" class="code ide-console-out">Noch nichts ausgeführt.</pre>
             </div>
             <div class="console-pane" data-cpane="classes" hidden>
-                <p class="muted">Dein Klassendiagramm wie in BlueJ: live aus deinem Code, ganz ohne Ausführen. Jede Klasse mit Attributen und Methoden (+ öffentlich, - privat, # geschützt, ↳ Vererbung). Ändere den Code – das Diagramm folgt sofort.</p>
+                <h4 class="diag-head">📐 Klassendiagramm</h4>
+                <p class="muted">Live aus deinem Code, ganz ohne Ausführen. Jede Klasse mit harten Ecken: blauer Kopf, Attribute und Methoden mit Strich davor getrennt (+ öffentlich, - privat, # geschützt, ↳ Vererbung). Genau wie in der Diagramm-Werkstatt.</p>
                 <div id="java-classes" class="umldiag"></div>
                 <?php if ($diagramAuto): ?>
                 <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/diagramm') ?>" class="form-inline">
@@ -90,6 +83,9 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
                 <?php else: ?>
                 <p class="muted">Das Übernehmen in die Diagramm-Werkstatt hat deine Lehrkraft für deine Klasse deaktiviert.</p>
                 <?php endif; ?>
+                <h4 class="diag-head">🧩 Objektdiagramm <span class="pill">nach UML</span></h4>
+                <p class="muted">Jedes <code>new</code> landet hier: alle Objekte deines Programms als Kacheln mit abgerundeten Ecken, darunter ihre Attributwerte – die kleine Objektbank neben dem Klassendiagramm, wie in BlueJ.</p>
+                <div id="java-objects" class="objdiag">Noch keine Objekte. Klicke oben auf ▶ Ausführen.</div>
             </div>
             <div class="console-pane" data-cpane="repl" hidden>
                 <p class="muted" id="java-repl-hint">Erst ▶ Ausführen klicken, dann kannst du hier Objekte erzeugen und Methoden aufrufen.</p>
@@ -115,7 +111,7 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
                             <tr><td><pre class="code">text.length() · text.toUpperCase()</pre></td><td>String-Methoden: Länge, Großbuchstaben u.&nbsp;a. (charAt, substring, indexOf, equals, contains, replace, trim).</td></tr>
                             <tr><td><pre class="code">Integer.parseInt(text)</pre></td><td>Macht aus "42" die Zahl 42.</td></tr>
                         </table>
-                        <p class="muted">Die Mini-Datenbank <code>Datenbank</code> ist oben im Editor unter "Mini-Datenbank" erklärt.</p>
+                        <p class="muted">Die Mini-Datenbank <code>Database</code> ist ganz unten im Fenster Mini-Datenbank erklärt.</p>
                     </details>
 
                     <details>
@@ -144,8 +140,7 @@ Color.darkGray · Color.brown · Color.purple</pre></td><td>Fertige Farben. Übe
                     <details>
                         <summary>⭐ Figuren anlegen: Circle, Rectangle, Text u. a.</summary>
                         <table>
-                            <tr><td><pre class="code">Circle c = new Circle(100, 200, 30);</pre></td><td>Kreis an Position (100|200) mit Radius 30.</td></tr>
-                            <tr><td><pre class="code">Punkt p = new Punkt(100, 200);</pre></td><td>Punkt an Position (100|200). Optionaler 3. Parameter: Durchmesser in Pixeln, z. B. <code>new Punkt(100, 200, 20)</code>.</td></tr>
+                            <tr><td><pre class="code">Circle c = new Circle(100, 200, 30);</pre></td><td>Kreis an Position (100|200) mit Radius 30. Für einen einzelnen Punkt nimm einen kleinen Kreis: <code>new Circle(100, 200, 5)</code>.</td></tr>
                             <tr><td><pre class="code">Ellipse e = new Ellipse(100, 200, 40, 20);</pre></td><td>Ellipse mit Radius horizontal (40) und vertikal (20).</td></tr>
                             <tr><td><pre class="code">Rectangle r = new Rectangle(50, 60, 80, 40);</pre></td><td>Rechteck an Position (50|60), Breite 80, Höhe 40.</td></tr>
                             <tr><td><pre class="code">RoundedRectangle rr = new RoundedRectangle(50, 60, 80, 40, 15);</pre></td><td>Rechteck mit abgerundeten Ecken (Ecken-Radius 15).</td></tr>
@@ -380,19 +375,26 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
                     <p class="muted">Vorbild für die Grafik-API ist die <a href="https://www.onlineide.net" rel="noopener" target="_blank">OnlineIDE/learnj</a> ("Java lernen durch Ausprobieren"). Fast alle deren Klassen und Methoden funktionieren hier genauso – kleine Unterschiede stehen direkt bei den Klassen.</p>
                 </div>
             </div>
-            <div class="console-pane" data-cpane="objects" hidden>
-                <p class="muted">Jedes <code>new</code> landet hier: Alle Objekte deines Programms mit ihren Attributwerten – dein Objektdiagramm neben dem Klassendiagramm.</p>
-                <div id="java-objects" class="objdiag">Noch keine Objekte.</div>
-            </div>
-            <div class="console-errors-box" id="java-errors-box">
-                <div class="console-errors-head">🚨 Fehlerkonsole <span class="err-badge" id="java-error-badge">0</span></div>
-                <div class="java-errors" id="java-errors">Noch nichts ausgeführt – hier erscheinen Fehler mit Datei, Zeile und Tipp.</div>
-                <button class="btn btn-ghost" id="java-clear" type="button" title="Leeren">🗑</button>
-            </div>
             </div>
             <div class="gfx-dock" id="gfx-dock" hidden></div>
         </div>
     </div>
+    <?php if ($dbPanel): ?>
+    <section class="panel" id="db-panel">
+        <div class="panel-head">
+            <h3>💾 Mini-Datenbank: SQL direkt in Java</h3>
+        </div>
+        <p>Die eingebaute Klasse <code>Database</code> speichert Tabellen im Speicher deines Browsers – ganz ohne Installation:</p>
+        <pre class="code">Database.execute("CREATE TABLE schueler (name TEXT, punkte INT)");
+Database.execute("INSERT INTO schueler VALUES ('Anna', 12), ('Ben', 8)");
+System.out.println(Database.query("SELECT * FROM schueler WHERE punkte > 10"));
+
+int anzahl = Database.count("SELECT * FROM schueler");   // Zeilen einer Abfrage
+String beste = Database.value("SELECT name FROM schueler ORDER BY punkte DESC");
+System.out.println(Database.tables());                     // alle Tabellen</pre>
+        <p class="muted">Verfügbar: <code>execute</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>query</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>count</code> die Zeilenanzahl, <code>value</code> den ersten Wert, <code>tables</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank startet bei jedem Ausführen neu und leer.</p>
+    </section>
+    <?php endif; ?>
     <?php else: ?>
     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="form">
         <?= csrf_field() ?>

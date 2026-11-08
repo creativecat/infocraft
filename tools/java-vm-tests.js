@@ -223,123 +223,123 @@ t('StringArgVerkettetMitZahl', { 'Main.java': mainOf('        double preis = 1.5
   eq(r.output, 'Preis: 1.5 EUR' + NL, 'double in String-Konkatenation');
 });
 
-/* --- Mini-Datenbank (eingebaute Klasse Datenbank) --- */
+/* --- Mini-Datenbank (eingebaute Klasse Database) --- */
 t('DbCreateInsertSelect', { 'Main.java': mainOf(
-  '        Datenbank.ausfuehren("CREATE TABLE schueler (name TEXT, punkte INT)");' + NL +
-  "        Datenbank.ausfuehren(\"INSERT INTO schueler VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
-  '        System.out.println(Datenbank.abfrage("SELECT * FROM schueler"));') }, r => {
+  '        Database.execute("CREATE TABLE schueler (name TEXT, punkte INT)");' + NL +
+  "        Database.execute(\"INSERT INTO schueler VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
+  '        System.out.println(Database.query("SELECT * FROM schueler"));') }, r => {
   eq(r.ok, true, 'ok');
   eq(r.output, 'name | punkte' + NL + '-----+-------' + NL + 'Anna | 12    ' + NL + 'Ben  | 8     ' + NL, 'tabellenausgabe');
 });
 t('DbSelectWhere', { 'Main.java': mainOf(
-  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
-  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
-  '        System.out.println(Datenbank.abfrage("SELECT name FROM s WHERE punkte > 10"));') }, r => {
+  '        Database.execute("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Database.execute(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
+  '        System.out.println(Database.query("SELECT name FROM s WHERE punkte > 10"));') }, r => {
   eq(r.ok, true, 'ok');
   eq(r.output, 'name' + NL + '----' + NL + 'Anna' + NL, 'gefilterte ausgabe');
 });
 t('DbSelectOrderByLimit', { 'Main.java': mainOf(
-  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
-  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
-  '        System.out.println(Datenbank.abfrage("SELECT name FROM s ORDER BY punkte DESC LIMIT 1"));') }, r => {
+  '        Database.execute("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Database.execute(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
+  '        System.out.println(Database.query("SELECT name FROM s ORDER BY punkte DESC LIMIT 1"));') }, r => {
   eq(r.ok, true, 'ok');
   eq(r.output, 'name' + NL + '----' + NL + 'Anna' + NL, 'sortiert und begrenzt');
 });
 t('DbAnzahlUndCount', { 'Main.java': mainOf(
-  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
-  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
-  '        System.out.println(Datenbank.anzahl("SELECT * FROM s WHERE punkte > 10"));' + NL +
-  '        System.out.println(Datenbank.abfrage("SELECT COUNT(*) FROM s"));') }, r => {
+  '        Database.execute("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Database.execute(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
+  '        System.out.println(Database.count("SELECT * FROM s WHERE punkte > 10"));' + NL +
+  '        System.out.println(Database.query("SELECT COUNT(*) FROM s"));') }, r => {
   eq(r.ok, true, 'ok');
   eq(r.output, '1' + NL + 'COUNT(*)' + NL + '--------' + NL + '2       ' + NL, 'anzahl und COUNT(*)');
 });
 t('DbWert', { 'Main.java': mainOf(
-  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
-  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
-  '        String beste = Datenbank.wert("SELECT name FROM s ORDER BY punkte DESC");' + NL +
+  '        Database.execute("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Database.execute(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
+  '        String beste = Database.value("SELECT name FROM s ORDER BY punkte DESC");' + NL +
   '        System.out.println("Beste: " + beste);' + NL +
-  '        System.out.println("[" + Datenbank.wert("SELECT name FROM s WHERE punkte > 99") + "]");') }, r => {
+  '        System.out.println("[" + Database.value("SELECT name FROM s WHERE punkte > 99") + "]");') }, r => {
   eq(r.ok, true, 'ok');
   eq(r.output, 'Beste: Anna' + NL + '[]' + NL, 'wert und leerer wert');
 });
 t('DbUpdate', { 'Main.java': mainOf(
-  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
-  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
-  "        Datenbank.ausfuehren(\"UPDATE s SET punkte = 20 WHERE name = 'Ben'\");" + NL +
-  '        System.out.println(Datenbank.abfrage("SELECT * FROM s WHERE punkte >= 20"));') }, r => {
+  '        Database.execute("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Database.execute(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
+  "        Database.execute(\"UPDATE s SET punkte = 20 WHERE name = 'Ben'\");" + NL +
+  '        System.out.println(Database.query("SELECT * FROM s WHERE punkte >= 20"));') }, r => {
   eq(r.ok, true, 'ok');
   eq(r.output, 'name | punkte' + NL + '-----+-------' + NL + 'Ben  | 20    ' + NL, 'nach update');
 });
 t('DbDelete', { 'Main.java': mainOf(
-  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
-  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
-  '        Datenbank.ausfuehren("DELETE FROM s WHERE punkte < 10");' + NL +
-  '        System.out.println(Datenbank.anzahl("SELECT * FROM s"));') }, r => {
+  '        Database.execute("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Database.execute(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
+  '        Database.execute("DELETE FROM s WHERE punkte < 10");' + NL +
+  '        System.out.println(Database.count("SELECT * FROM s"));') }, r => {
   eq(r.ok, true, 'ok');
   eq(r.output, '1' + NL, 'zeilen geloescht');
 });
 t('DbInsertSpaltenlisteNull', { 'Main.java': mainOf(
-  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
-  "        Datenbank.ausfuehren(\"INSERT INTO s (name) VALUES ('Caesar')\");" + NL +
-  '        String erg = Datenbank.abfrage("SELECT * FROM s");' + NL +
+  '        Database.execute("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Database.execute(\"INSERT INTO s (name) VALUES ('Caesar')\");" + NL +
+  '        String erg = Database.query("SELECT * FROM s");' + NL +
   '        if (erg.indexOf("Caesar") < 0) { System.out.println("FEHLER"); }' + NL +
   '        else { System.out.println("OK"); }' + NL +
-  '        System.out.println(Datenbank.wert("SELECT punkte FROM s"));') }, r => {
+  '        System.out.println(Database.value("SELECT punkte FROM s"));') }, r => {
   eq(r.ok, true, 'ok');
   eq(r.output, 'OK' + NL + 'null' + NL, 'nicht genannte spalte ist null');
 });
 t('DbLike', { 'Main.java': mainOf(
-  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT)");' + NL +
-  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna'), ('Ben'), ('Clara')\");" + NL +
-  '        System.out.println(Datenbank.abfrage("SELECT name FROM s WHERE name LIKE ' + "'%an%'" + '"));') }, r => {
+  '        Database.execute("CREATE TABLE s (name TEXT)");' + NL +
+  "        Database.execute(\"INSERT INTO s VALUES ('Anna'), ('Ben'), ('Clara')\");" + NL +
+  '        System.out.println(Database.query("SELECT name FROM s WHERE name LIKE ' + "'%an%'" + '"));') }, r => {
   eq(r.ok, true, 'ok');
   eq(r.output, 'name' + NL + '----' + NL + 'Anna' + NL, 'like mit platzhalter');
 });
 t('DbUndOder', { 'Main.java': mainOf(
-  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
-  "        Datenbank.ausfuehren(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8), ('Clara', 3)\");" + NL +
-  '        System.out.println(Datenbank.anzahl("SELECT * FROM s WHERE punkte > 5 AND punkte < 20"));' + NL +
-  "        System.out.println(Datenbank.anzahl(\"SELECT * FROM s WHERE name = 'Anna' OR name = 'Clara'\"));") }, r => {
+  '        Database.execute("CREATE TABLE s (name TEXT, punkte INT)");' + NL +
+  "        Database.execute(\"INSERT INTO s VALUES ('Anna', 12), ('Ben', 8), ('Clara', 3)\");" + NL +
+  '        System.out.println(Database.count("SELECT * FROM s WHERE punkte > 5 AND punkte < 20"));' + NL +
+  "        System.out.println(Database.count(\"SELECT * FROM s WHERE name = 'Anna' OR name = 'Clara'\"));") }, r => {
   eq(r.ok, true, 'ok');
   eq(r.output, '2' + NL + '2' + NL, 'AND und OR');
 });
 t('DbTabellen', { 'Main.java': mainOf(
-  '        Datenbank.ausfuehren("CREATE TABLE schueler (name TEXT)");' + NL +
-  '        Datenbank.ausfuehren("CREATE TABLE produkte (titel TEXT)");' + NL +
-  '        System.out.println(Datenbank.tabellen());') }, r => {
+  '        Database.execute("CREATE TABLE schueler (name TEXT)");' + NL +
+  '        Database.execute("CREATE TABLE produkte (titel TEXT)");' + NL +
+  '        System.out.println(Database.tables());') }, r => {
   eq(r.ok, true, 'ok');
   eq(r.output, 'schueler, produkte' + NL, 'tabellenliste');
 });
 t('DbResetProLauf', { 'Main.java': mainOf(
-  '        System.out.println(Datenbank.tabellen());') }, r => {
+  '        System.out.println(Database.tables());') }, r => {
   eq(r.ok, true, 'ok');
   eq(r.output, '(noch keine Tabellen)' + NL, 'datenbank ist pro lauf neu');
 });
 t('DbFehlerTabelleUnbekannt', { 'Main.java': mainOf(
-  '        System.out.println(Datenbank.abfrage("SELECT * FROM fehlt_ganz"));') }, r => {
+  '        System.out.println(Database.query("SELECT * FROM fehlt_ganz"));') }, r => {
   err1(r, 'runtime');
   if (r.errors[0].message.indexOf('gibt es noch nicht') < 0) { throw new Error('Tabellen-Fehlermeldung erwartet'); }
 });
 t('DbFehlerSpalteUnbekannt', { 'Main.java': mainOf(
-  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT)");' + NL +
-  '        System.out.println(Datenbank.abfrage("SELECT falsch FROM s"));') }, r => {
+  '        Database.execute("CREATE TABLE s (name TEXT)");' + NL +
+  '        System.out.println(Database.query("SELECT falsch FROM s"));') }, r => {
   err1(r, 'runtime');
   if (r.errors[0].message.indexOf('Spalte') < 0) { throw new Error('Spalten-Fehlermeldung erwartet'); }
 });
 t('DbFehlerSelectBeiAusfuehren', { 'Main.java': mainOf(
-  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT)");' + NL +
-  '        Datenbank.ausfuehren("SELECT * FROM s");') }, r => {
+  '        Database.execute("CREATE TABLE s (name TEXT)");' + NL +
+  '        Database.execute("SELECT * FROM s");') }, r => {
   err1(r, 'runtime');
-  if (r.errors[0].message.indexOf('abfrage') < 0) { throw new Error('Hinweis auf abfrage erwartet'); }
+  if (r.errors[0].message.indexOf('query') < 0) { throw new Error('Hinweis auf query erwartet'); }
 });
 t('DbFehlerFehlendeAnfuehrungszeichen', { 'Main.java': mainOf(
-  '        Datenbank.ausfuehren("CREATE TABLE s (name TEXT)");' + NL +
-  '        Datenbank.ausfuehren("INSERT INTO s VALUES (Anna)");') }, r => {
+  '        Database.execute("CREATE TABLE s (name TEXT)");' + NL +
+  '        Database.execute("INSERT INTO s VALUES (Anna)");') }, r => {
   err1(r, 'runtime');
   if (r.errors[0].message.indexOf('gültiger SQL-Wert') < 0) { throw new Error('Literal-Fehlermeldung erwartet'); }
 });
 t('DbFehlerMethodeUnbekannt', { 'Main.java': mainOf(
-  '        Datenbank.speichern("irgendwas");') }, r => {
+  '        Database.speichern("irgendwas");') }, r => {
   err1(r, 'runtime');
 });
 
@@ -453,9 +453,9 @@ sesOk('SessionAutocomplete', { 'Auto.java': AUTO_JAVA }, s => {
   var c5 = s.complete('System.out.');
   labels = labelsOf(c5);
   if (labels.indexOf('println(') < 0) { throw new Error('println fehlt: ' + JSON.stringify(labels)); }
-  var c6 = s.complete('Datenbank.');
+  var c6 = s.complete('Database.');
   labels = labelsOf(c6);
-  if (labels.indexOf('abfrage(') < 0) { throw new Error('abfrage fehlt: ' + JSON.stringify(labels)); }
+  if (labels.indexOf('query(') < 0) { throw new Error('query fehlt: ' + JSON.stringify(labels)); }
 });
 
 sesOk('SessionVerweiseZwischenObjekten', { 'Hund.java':
@@ -762,58 +762,6 @@ t('GfxVererbungSuper', {
   if (s.fill !== 'rgb(255, 255, 0)') { throw new Error('Fuellung im Konstruktor: ' + JSON.stringify(s)); }
   V.gfxTick();
   if (Math.round(V.gfxSnapshot()[0].x) !== 61) { throw new Error('act() nach Vererbung: ' + JSON.stringify(V.gfxSnapshot()[0])); }
-});
-
-/* --- Punkt: eigener kleiner Punkt als Figur (zeichnen, bewegen, erben) --- */
-t('GfxPunkt', {
-  'Punkte.java': [
-    'Punkt p = new Punkt(10, 20);',
-    'p.move(3, 4);',
-    'Punkt q = new Punkt(50, 60, 24);',
-    'q.setFillColor(Color.red);',
-    'q.scale(2, 50, 60);',
-    'System.out.println(p.getX());',
-    'System.out.println(p.getY());'
-  ].join(NL)
-}, r => {
-  eq(r.ok, true, 'ok');
-  eq(r.output, '13.0' + NL + '24.0' + NL, 'Position nach move');
-  var snap = V.gfxSnapshot();
-  if (snap.length !== 2) { throw new Error('zwei Punkte erwartet: ' + JSON.stringify(snap)); }
-  var p = null, q = null;
-  snap.forEach(function (s) { if (s.kind === 'point' && s.d === 10) { p = s; } if (s.kind === 'point' && s.d === 24) { q = s; } });
-  if (!p || Math.round(p.x) !== 13 || Math.round(p.y) !== 24) { throw new Error('Punkt nach move: ' + JSON.stringify(p)); }
-  if (!q) { throw new Error('Punkt mit Durchmesser 24 fehlt: ' + JSON.stringify(snap)); }
-  if (q.fill !== 'rgb(255, 0, 0)') { throw new Error('Fuellfarbe: ' + JSON.stringify(q)); }
-  if (q.scaleF !== 2) { throw new Error('Streckung: ' + JSON.stringify(q)); }
-});
-t('GfxPunktVererbung', {
-  'Fliese.java': [
-    'class Fliese extends Punkt {',
-    '    Fliese() { super(50, 50, 8); setFillColor(Color.green); }',
-    '    void act() { move(1, 1); }',
-    '}',
-    'Fliese f = new Fliese();',
-    'f.move(10, 0);',
-    'System.out.println(f.getX());'
-  ].join(NL)
-}, r => {
-  eq(r.ok, true, 'ok');
-  eq(r.output, '60.0' + NL, 'Position nach super-Konstruktor und move');
-  var s = V.gfxSnapshot()[0];
-  if (s.kind !== 'point' || s.d !== 8) { throw new Error('Punkt-Erbstück: ' + JSON.stringify(s)); }
-  if (s.fill !== 'rgb(0, 128, 0)') { throw new Error('Fuellung im Konstruktor: ' + JSON.stringify(s)); }
-  V.gfxTick();
-  var s2 = V.gfxSnapshot()[0];
-  if (Math.round(s2.x) !== 61 || Math.round(s2.y) !== 51) { throw new Error('act() nach Vererbung: ' + JSON.stringify(s2)); }
-});
-t('GfxPunktFehler', {
-  'PunktNeg.java': [
-    'Punkt p = new Punkt(0, 0, -3);'
-  ].join(NL)
-}, r => {
-  if (r.ok) { throw new Error('negativer Durchmesser sollte einen Fehler geben'); }
-  if (r.errors.length === 0 || r.errors[0].message.indexOf('Durchmesser') === -1) { throw new Error('Durchmesser-Fehlermeldung: ' + JSON.stringify(r.errors)); }
 });
 
 /* --- Einzelschritt (stepLimit) --- */

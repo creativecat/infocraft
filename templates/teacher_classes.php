@@ -30,6 +30,16 @@
             <button class="btn btn-ghost" type="submit" title="Klassendiagramme automatisch erzeugen: <?= $entry['class']->diagramAuto === 1 ? 'derzeit erlaubt, klicken zum Deaktivieren' : 'derzeit deaktiviert, klicken zum Erlauben' ?>"> <?= $entry['class']->diagramAuto === 1 ? '🚫' : '✅' ?> </button>
         </form>
     </div>
+    <div class="diagram-toggle-row">
+        <span>💾 Fenster Mini-Datenbank im Code-Bereich: <strong><?= $entry['class']->dbPanel === 1 ? 'sichtbar' : 'deaktiviert' ?></strong></span>
+        <form method="post" action="<?= url('unterricht/klassen/datenbank') ?>" class="form-inline">
+            <?= csrf_field() ?>
+            <input type="hidden" name="class_id" value="<?= (int) $entry['class']->id ?>">
+            <input type="hidden" name="enabled" value="<?= $entry['class']->dbPanel === 1 ? '0' : '1' ?>">
+            <button class="btn btn-ghost" type="submit" title="Fenster Mini-Datenbank: <?= $entry['class']->dbPanel === 1 ? 'derzeit sichtbar, klicken zum Deaktivieren' : 'derzeit deaktiviert, klicken zum Sichtbarmachen' ?>"> <?= $entry['class']->dbPanel === 1 ? '🚫' : '✅' ?> </button>
+        </form>
+    </div>
+    <p class="muted">Das Fenster Mini-Datenbank steht in der Code-Werkstatt ganz unten: SQL direkt im Java-Programm. Deaktiviert es die Lehrkraft, verschwindet das Fenster für diese Klasse, die Klasse <code>Database</code> im Programm bleibt aber erreichbar.</p>
     <p class="muted">Schülerinnen und Schüler zeichnen Klassendiagramme immer selbst. Hier stellst du nur ein, ob Diagramme automatisch aus Java-, Python- und SQL-Skripten erzeugt werden dürfen.</p>
     <h4>🧩 Arbeitsbereiche für diese Klasse</h4>
     <p class="muted">Standard: die Jahrgangsstufe im LehrplanPLUS entscheidet. <strong>Freigeben</strong> macht einen Bereich früher nutzbar, <strong>sperren</strong> blendet ihn für die Klasse aus. Austeilungen bleiben auch bei gesperrtem Bereich gespeichert.</p>

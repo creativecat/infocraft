@@ -23,8 +23,9 @@ final class Migrator
             $pdo->exec($statement);
         }
 
-        // Bestehende Installationen: Spalte classes.diagram_auto idempotent nachziehen.
+        // Bestehende Installationen: Spalten classes.diagram_auto und classes.db_panel idempotent nachziehen.
         self::ensureDiagramAutoColumn($pdo, $driver);
+        self::ensureDbPanelColumn($pdo, $driver);
 
         // Bestehende Installationen: Spalte presentations.slug idempotent nachziehen.
         self::ensurePresentationSlugColumn($pdo, $driver);
@@ -551,6 +552,24 @@ final class Migrator
             }
         }
         $pdo->exec('ALTER TABLE classes ADD COLUMN diagram_auto INTEGER NOT NULL DEFAULT 1');
+    }
+
+    /** Bestehende Installationen: Spalte classes.db_panel fehlt evtl. noch. */
+    private static function ensureDbPanelColumn(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $exists = $pdo->query("SHOW COLUMNS FROM classes LIKE 'db_panel'")->fetchColumn();
+            if ($exists === false || $exists === null) {
+                $pdo->exec('ALTER TABLE classes ADD COLUMN db_panel TINYINT(1) NOT NULL DEFAULT 1');
+            }
+            return;
+        }
+        foreach ($pdo->query('PRAGMA table_info(classes)')->fetchAll() as $column) {
+            if ((string) ($column['name'] ?? '') === 'db_panel') {
+                return;
+            }
+        }
+        $pdo->exec('ALTER TABLE classes ADD COLUMN db_panel INTEGER NOT NULL DEFAULT 1');
     }
 
     private static function seedDemoDiagrams(PDO $pdo): void

@@ -268,14 +268,13 @@ pane2.setAttribute('hidden', 'hidden');
 var tabOut = consoleTab('out', 'Ausgabe', true);
 var tabClasses = consoleTab('classes', 'Klassen', false);
 var tabRepl = consoleTab('repl', 'Objektkonsole', false);
-var tabObjects = consoleTab('objects', 'Objekte', false);
 /* API-Hilfe als eigener Knopf (java-api-open) + versteckte Quelle, Stopp-Knopf,
  * Dock-Zeile unterhalb der Konsole (wie templates/code_project.php) */
 var apiBtn = new FakeEl('button');
 doc.register(apiBtn, 'java-api-open');
 var apiSrc = new FakeEl('div');
 doc.register(apiSrc, 'java-api-src');
-apiSrc.innerHTML = '<p>Mini-Datenbank: <code>Datenbank.ausfuehren(...)</code> und <code>Input.readString</code></p>';
+apiSrc.innerHTML = '<p>Mini-Datenbank: <code>Database.execute(...)</code> und <code>Input.readString</code></p>';
 var stopBtn = new FakeEl('button');
 doc.register(stopBtn, 'java-stop');
 var gfxDock = new FakeEl('div');
@@ -285,7 +284,6 @@ doc.body.appendChild(gfxDock);
 var paneOut = consolePane('out', true);
 var paneClasses = consolePane('classes', false);
 var paneRepl = consolePane('repl', false);
-var paneObjects = consolePane('objects', false);
 
 var runBtn = new FakeEl('button');
 doc.register(runBtn, 'run-java');
@@ -418,8 +416,8 @@ setTimeout(function () {
   ok(classBox.innerHTML.indexOf('Fahrrad') !== -1, 'T7 neue Klasse erscheint im Diagramm, ohne Ausfuehren');
 
   /* T8: Objekte-Tab und Leeren-Button. */
-  tabObjects.dispatch('click');
-  ok(!hidden(paneObjects), 'T8a Objekte-Fenster oeffnet');
+  tabClasses.dispatch('click');
+  ok(!hidden(paneClasses), 'T8a Klassen-Fenster mit Klassen- und Objektdiagramm oeffnet');
   clearBtn.dispatch('click');
   ok(consoleEl.textContent === '' && errBox.innerHTML === '', 'T8b Leeren rueumt Konsole und Fehler auf');
 
@@ -696,7 +694,6 @@ setTimeout(function () {
             'Auto a = new Auto("BMW");';
           taE.dispatch('input');
           runBtn.dispatch('click');
-          tabObjects.dispatch('click');
           var objsTxt = objBox.textOf();
           ok(objsTxt.indexOf('a : Auto') !== -1, 'T28a Objekt aus dem Programm steht mit Namen im Objekte-Fenster');
           ok(objsTxt.indexOf(': Auto') === -1 || objsTxt.indexOf('a : Auto') !== -1, 'T28b kein kaputter Doppelpunkt-Name mehr');

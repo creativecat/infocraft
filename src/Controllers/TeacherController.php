@@ -179,6 +179,31 @@ final class TeacherController
         redirect('/unterricht/klassen');
     }
 
+    /** Sichtbarkeit des Mini-Datenbank-Fensters im Code-Bereich pro Klasse ein- oder ausschalten. */
+    public static function toggleDbPanel(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Dieser Bereich ist nur für Lehrkräfte zugänglich.');
+            redirect('/');
+        }
+        csrf_validate();
+        $isAdmin = $user->role === 'admin';
+        $classId = (int) ($_POST['class_id'] ?? 0);
+        $class = SchoolClass::find($classId);
+        if ($class === null || (!$isAdmin && !SchoolClass::hasTeacher($classId, $user->id))) {
+            flash('error', 'Diese Klasse unterrichtest du nicht.');
+            redirect('/unterricht/klassen');
+        }
+        $enabled = (string) ($_POST['enabled'] ?? '') === '1';
+        SchoolClass::setDbPanel($classId, $enabled);
+        flash('success', 'Klasse ' . $class->name . ': Das Fenster Mini-Datenbank im Code-Bereich ist jetzt ' . ($enabled ? 'sichtbar.' : 'deaktiviert.'));
+        redirect('/unterricht/klassen');
+    }
+
     /**
      * Modul-Freigabe je Klasse: 'freigeben' = vorzeitig sichtbar,
      * 'sperren' = ausgeblendet, 'standard' = LehrplanPLUS-Stufe entscheidet.

@@ -11,12 +11,13 @@ final class SchoolClass
         public readonly int $id,
         public readonly string $name,
         public readonly int $diagramAuto = 1,
+        public readonly int $dbPanel = 1,
     ) {
     }
 
     public static function fromRow(array $row): self
     {
-        return new self((int) $row['id'], (string) $row['name'], (int) ($row['diagram_auto'] ?? 1));
+        return new self((int) $row['id'], (string) $row['name'], (int) ($row['diagram_auto'] ?? 1), (int) ($row['db_panel'] ?? 1));
     }
 
     /** Jahrgangsstufe aus dem Klassennamen lesen (6R -> 6, 10G -> 10). */
@@ -96,6 +97,25 @@ final class SchoolClass
     {
         $stmt = Database::pdo()->prepare('UPDATE classes SET diagram_auto = ? WHERE id = ?');
         $stmt->execute([$enabled ? 1 : 0, $classId]);
+    }
+
+    /** Sichtbarkeit des Mini-Datenbank-Fensters für die Klasse ein- oder ausschalten. */
+    public static function setDbPanel(int $classId, bool $enabled): void
+    {
+        $stmt = Database::pdo()->prepare('UPDATE classes SET db_panel = ? WHERE id = ?');
+        $stmt->execute([$enabled ? 1 : 0, $classId]);
+    }
+
+    /** Darf diese Person das Fenster Mini-Datenbank im Code-Bereich sehen? */
+    public static function dbPanelForUser(User $user): bool
+    {
+        if ($user->role !== 'student' || $user->classId === null) {
+            return true;
+        }
+        $stmt = Database::pdo()->prepare('SELECT db_panel FROM classes WHERE id = ? LIMIT 1');
+        $stmt->execute([$user->classId]);
+        $value = $stmt->fetchColumn();
+        return $value === false || (int) $value === 1;
     }
 
     /** Darf diese Person Klassendiagramme automatisch aus Skripten erzeugen lassen? */

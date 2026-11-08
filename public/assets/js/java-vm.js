@@ -1087,7 +1087,7 @@
 
   var STRING_METHODS = ['length()', 'charAt(', 'substring(', 'indexOf(', 'equals(', 'equalsIgnoreCase(', 'contains(', 'startsWith(', 'toUpperCase()', 'toLowerCase()', 'trim()', 'replace(', 'isEmpty()'];
   var REPL_KEYWORDS = ['new', 'int', 'double', 'boolean', 'char', 'if', 'while', 'for', 'return', 'true', 'false', 'null'];
-  var BUILTIN_CLASSES = ['System', 'Math', 'Integer', 'Double', 'String', 'Datenbank', 'Input', 'Key', 'Random', 'Assertions', 'MathTools', 'Vector2', 'Position', 'Direction', 'CollisionPair', 'SystemTools', 'Sound', 'Gamepad'];
+  var BUILTIN_CLASSES = ['System', 'Math', 'Integer', 'Double', 'String', 'Database', 'Input', 'Key', 'Random', 'Assertions', 'MathTools', 'Vector2', 'Position', 'Direction', 'CollisionPair', 'SystemTools', 'Sound', 'Gamepad'];
 
   /* Empfänger vor einem abschließenden Punkt ermitteln (auch System.out.). */
   function dotReceiver(t, dotIdx) {
@@ -1302,9 +1302,9 @@
         out.push({ label: 'valueOf(', insert: 'valueOf(', hint: 'String' });
         return out;
       }
-      if (recv === 'Datenbank') {
-        var dbs = ['ausfuehren(', 'abfrage(', 'anzahl(', 'wert(', 'tabellen()'];
-        for (i = 0; i < dbs.length; i++) { out.push({ label: dbs[i], insert: dbs[i], hint: 'Datenbank (SQL direkt in Java)' }); }
+      if (recv === 'Database' || recv === 'Datenbank') {
+        var dbs = ['execute(', 'query(', 'count(', 'value(', 'tables()'];
+        for (i = 0; i < dbs.length; i++) { out.push({ label: dbs[i], insert: dbs[i], hint: 'Database (SQL direkt in Java)' }); }
         return out;
       }
       if (recv === 'Input') {
@@ -2273,7 +2273,7 @@
     if (target.type === 'name' && target.v === 'Integer') { return integerCall(name, args, ctx, e.line); }
     if (target.type === 'name' && target.v === 'Double') { return doubleCall(name, args, ctx, e.line); }
     if (target.type === 'name' && target.v === 'String') { return stringStaticCall(name, args, ctx, e.line); }
-    if (target.type === 'name' && target.v === 'Datenbank') { return dbCall(name, args, ctx, e.line); }
+    if (target.type === 'name' && (target.v === 'Database' || target.v === 'Datenbank')) { return dbCall(name, args, ctx, e.line); }
     /* Klassen nach dem Vorbild der Online-IDE */
     if (target.type === 'name' && target.v === 'Input') { return inputCall(name, args, ctx, e.line); }
     if (target.type === 'name' && target.v === 'Assertions') { return assertCall(name, args, ctx, e.line); }
@@ -2467,7 +2467,7 @@
   function dbFindTable(name, ctx, line) {
     var t = dbTables()[String(name).toLowerCase()];
     if (!t) {
-      throw rt(ctx, line, 'Die Tabelle ' + name + ' gibt es noch nicht.', 'Lege sie zuerst an: Datenbank.ausfuehren("CREATE TABLE ' + name + ' (spalte TYP, ...)")');
+      throw rt(ctx, line, 'Die Tabelle ' + name + ' gibt es noch nicht.', 'Lege sie zuerst an: Database.execute("CREATE TABLE ' + name + ' (spalte TYP, ...)")');
     }
     return t;
   }
@@ -2678,7 +2678,7 @@
     var km = /^\s*([A-Za-z]+)/.exec(sql);
     var kw = km ? km[1].toUpperCase() : '';
     if (kw === '') {
-      throw rt(ctx, line, 'Der SQL-Befehl ist leer.', 'z. B. Datenbank.ausfuehren("CREATE TABLE tabelle (spalte TEXT)")');
+      throw rt(ctx, line, 'Der SQL-Befehl ist leer.', 'z. B. Database.execute("CREATE TABLE tabelle (spalte TEXT)")');
     }
     var m;
     var table;
@@ -2829,7 +2829,7 @@
       return;
     }
     if (kw === 'SELECT') {
-      throw rt(ctx, line, 'SELECT gehört in Datenbank.abfrage(...), nicht in ausfuehren(...).', 'z. B. System.out.println(Datenbank.abfrage("SELECT * FROM tabelle"));');
+      throw rt(ctx, line, 'SELECT gehört in Database.query(...), nicht in execute(...).', 'z. B. System.out.println(Database.query("SELECT * FROM tabelle"));');
     }
     throw rt(ctx, line, 'Den SQL-Befehl ' + kw + ' unterstützt die Mini-Datenbank nicht.', 'Verfügbar: CREATE TABLE, INSERT INTO, UPDATE, DELETE FROM, DROP TABLE, SELECT.');
   }
@@ -2974,28 +2974,28 @@
   function dbCall(name, args, ctx, line) {
     function wantSql(method) {
       if (args.length !== 1 || args[0].t !== 'String') {
-        throw rt(ctx, line, 'Datenbank.' + method + ' braucht genau 1 Parameter: den SQL-Befehl als Text.', 'z. B. Datenbank.' + method + '("SELECT * FROM tabelle")');
+        throw rt(ctx, line, 'Database.' + method + ' braucht genau 1 Parameter: den SQL-Befehl als Text.', 'z. B. Database.' + method + '("SELECT * FROM tabelle")');
       }
       return args[0].v;
     }
-    if (name === 'ausfuehren') {
-      dbExec(wantSql('ausfuehren'), ctx, line);
+    if (name === 'execute' || name === 'ausfuehren') {
+      dbExec(wantSql(name), ctx, line);
       return VOIDV;
     }
-    if (name === 'abfrage') {
-      return mkStr(dbFormat(dbSelect(wantSql('abfrage'), ctx, line)));
+    if (name === 'query' || name === 'abfrage') {
+      return mkStr(dbFormat(dbSelect(wantSql(name), ctx, line)));
     }
-    if (name === 'anzahl') {
-      return mkInt(dbSelect(wantSql('anzahl'), ctx, line).rows.length);
+    if (name === 'count' || name === 'anzahl') {
+      return mkInt(dbSelect(wantSql(name), ctx, line).rows.length);
     }
-    if (name === 'wert') {
-      var res = dbSelect(wantSql('wert'), ctx, line);
+    if (name === 'value' || name === 'wert') {
+      var res = dbSelect(wantSql(name), ctx, line);
       if (res.rows.length === 0 || res.rows[0].length === 0) { return mkStr(''); }
       return mkStr(dbText(res.rows[0][0]));
     }
-    if (name === 'tabellen') {
+    if (name === 'tables' || name === 'tabellen') {
       if (args.length !== 0) {
-        throw rt(ctx, line, 'Datenbank.tabellen braucht keine Parameter.', 'z. B. System.out.println(Datenbank.tabellen());');
+        throw rt(ctx, line, 'Database.tables braucht keine Parameter.', 'z. B. System.out.println(Database.tables());');
       }
       var alle = [];
       var k;
@@ -3004,7 +3004,7 @@
       }
       return mkStr(alle.length === 0 ? '(noch keine Tabellen)' : alle.join(', '));
     }
-    throw rt(ctx, line, 'Datenbank.' + name + ' wird nicht unterstützt.', 'Verfügbar: ausfuehren(sql), abfrage(sql), anzahl(sql), wert(sql), tabellen().');
+    throw rt(ctx, line, 'Database.' + name + ' wird nicht unterstützt.', 'Verfügbar: execute(sql), query(sql), count(sql), value(sql), tables().');
   }
 
   function stringCall(recv, name, args, ctx, line) {
@@ -3537,7 +3537,7 @@
    * Dazu aus der Online-IDE übernommen: Arc (Kreisbogen) und Sector (Kreissektor).
    */
   var GFX_CLASSES = Object.create(null);
-  var GFCL = ['World', 'Color', 'Alignment', 'Circle', 'Ellipse', 'Rectangle', 'RoundedRectangle', 'Text', 'Triangle', 'Line', 'Polygon', 'Bitmap', 'Turtle', 'Group', 'Actor', 'Shape', 'FilledShape', 'Button', 'Textfield', 'Checkbox', 'Radiobutton', 'Arc', 'Sector', 'Punkt'];
+  var GFCL = ['World', 'Color', 'Alignment', 'Circle', 'Ellipse', 'Rectangle', 'RoundedRectangle', 'Text', 'Triangle', 'Line', 'Polygon', 'Bitmap', 'Turtle', 'Group', 'Actor', 'Shape', 'FilledShape', 'Button', 'Textfield', 'Checkbox', 'Radiobutton', 'Arc', 'Sector'];
   var gfci;
   for (gfci = 0; gfci < GFCL.length; gfci++) { GFX_CLASSES[GFCL[gfci]] = 1; }
 
@@ -3562,12 +3562,11 @@
   GFX_KIND_OF.Radiobutton = 'radiobutton';
   GFX_KIND_OF.Arc = 'arc';
   GFX_KIND_OF.Sector = 'sector';
-  GFX_KIND_OF.Punkt = 'point';
 
   var GFX_SHAPE_KINDS = Object.create(null);
   var GFX_FILLED_KINDS = Object.create(null);
-  var GS = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'line', 'polygon', 'bitmap', 'turtle', 'button', 'textfield', 'checkbox', 'radiobutton', 'arc', 'sector', 'point'];
-  var GFILLED = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'polygon', 'bitmap', 'arc', 'sector', 'point'];
+  var GS = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'line', 'polygon', 'bitmap', 'turtle', 'button', 'textfield', 'checkbox', 'radiobutton', 'arc', 'sector'];
+  var GFILLED = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'polygon', 'bitmap', 'arc', 'sector'];
   var gsi;
   for (gsi = 0; gsi < GS.length; gsi++) { GFX_SHAPE_KINDS[GS[gsi]] = 1; }
   for (gsi = 0; gsi < GFILLED.length; gsi++) { GFX_FILLED_KINDS[GFILLED[gsi]] = 1; }
@@ -3803,11 +3802,6 @@
       g.y = args.length > 1 ? gfxNum(args, 1, 'Circle', ctx, line) : 0;
       g.r = args.length > 2 ? gfxNum(args, 2, 'Circle', ctx, line) : 10;
       if (g.r < 0) { throw rt(ctx, line, 'Der Radius von Circle darf nicht negativ sein.', 'new Circle(400, 300, 100) zeichnet einen Kreis mit Mittelpunkt (400, 300) und Radius 100.'); }
-    } else if (kind === 'point') {
-      g.x = args.length > 0 ? gfxNum(args, 0, 'Punkt', ctx, line) : 0;
-      g.y = args.length > 1 ? gfxNum(args, 1, 'Punkt', ctx, line) : 0;
-      g.d = args.length > 2 ? gfxNum(args, 2, 'Punkt', ctx, line) : 10;
-      if (g.d < 0) { throw rt(ctx, line, 'Der Durchmesser von Punkt darf nicht negativ sein.', 'z. B. new Punkt(400, 300) zeichnet einen Punkt mit Durchmesser 10, new Punkt(400, 300, 20) mit Durchmesser 20.'); }
     } else if (kind === 'ellipse') {
       g.x = args.length > 0 ? gfxNum(args, 0, 'Ellipse', ctx, line) : 0;
       g.y = args.length > 1 ? gfxNum(args, 1, 'Ellipse', ctx, line) : 0;
@@ -3965,7 +3959,7 @@
   function gfxAttach(obj, baseName, args, vm, ctx, line) {
     var kind = GFX_KIND_OF[baseName];
     if (!kind || kind === 'world' || kind === 'color') {
-      throw rt(ctx, line, 'Von ' + baseName + ' kann nicht geerbt werden.', 'Erlaubte Basisklassen: Actor, Circle, Ellipse, Rectangle, RoundedRectangle, Text, Triangle, Line, Polygon, Bitmap, Turtle, Group, Arc, Sector, Punkt.');
+      throw rt(ctx, line, 'Von ' + baseName + ' kann nicht geerbt werden.', 'Erlaubte Basisklassen: Actor, Circle, Ellipse, Rectangle, RoundedRectangle, Text, Triangle, Line, Polygon, Bitmap, Turtle, Group, Arc, Sector.');
     }
     if (kind === 'group') {
       obj.g = { kind: 'group', members: [], dead: false, ref: obj };
@@ -4050,7 +4044,6 @@
     var f = g.scaleF || 1;
     var bb;
     if (g.kind === 'circle') { bb = { x: g.x - g.r, y: g.y - g.r, w: 2 * g.r, h: 2 * g.r }; }
-    else if (g.kind === 'point') { bb = { x: g.x - (g.d || 10) / 2, y: g.y - (g.d || 10) / 2, w: g.d || 10, h: g.d || 10 }; }
     else if (g.kind === 'arc' || g.kind === 'sector') {
       var arR = g.kind === 'arc' ? Math.max(g.ri || 0, g.ra || 0) : (g.r || 0);
       var arIn = g.kind === 'arc' ? Math.min(g.ri || 0, g.ra || 0) : 0;
@@ -4148,7 +4141,7 @@
     var mx = g.mirrorX ? -1 : 1;
     var my = g.mirrorY ? -1 : 1;
     var cx, cy;
-    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'arc' || g.kind === 'sector' || g.kind === 'point') { cx = g.x; cy = g.y; }
+    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'arc' || g.kind === 'sector') { cx = g.x; cy = g.y; }
     else if (g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') { cx = g.x + g.w / 2; cy = g.y + g.h / 2; }
     else if (g.kind === 'text') { cx = g.x; cy = g.y; }
     else if (g.kind === 'triangle') { cx = (g.p1x + g.p2x + g.p3x) / 3; cy = (g.p1y + g.p2y + g.p3y) / 3; }
@@ -4162,10 +4155,9 @@
     ctx2d.beginPath();
     var doFill = g.fill !== null && g.fill !== undefined;
     var doStroke = g.border !== null && g.border !== undefined;
-    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'point') {
-      var pr = g.kind === 'point' ? Math.max(0.5, (g.d || 10) / 2) : null;
-      var rx = g.kind === 'circle' ? g.r : (pr !== null ? pr : g.rx);
-      var ry = g.kind === 'circle' ? g.r : (pr !== null ? pr : g.ry);
+    if (g.kind === 'circle' || g.kind === 'ellipse') {
+      var rx = g.kind === 'circle' ? g.r : g.rx;
+      var ry = g.kind === 'circle' ? g.r : g.ry;
       if (ctx2d.ellipse) { ctx2d.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); }
       else { ctx2d.arc(0, 0, rx, 0, Math.PI * 2); }
     } else if (g.kind === 'rectangle' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') {
@@ -4727,7 +4719,7 @@
     return { x: (minx + maxx) / 2, y: (miny + maxy) / 2 };
   }
   function gfxMoveShape(g, dx, dy) {
-    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'point' || g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'text' || g.kind === 'turtle' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton' || g.kind === 'arc' || g.kind === 'sector') {
+    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'text' || g.kind === 'turtle' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton' || g.kind === 'arc' || g.kind === 'sector') {
       g.x = (g.x || 0) + dx;
       g.y = (g.y || 0) + dy;
       if (g.kind === 'turtle' && g.pen) { g.path.push([g.x, g.y]); }
@@ -5489,10 +5481,11 @@
       for (var i2 = 0; i2 < list.length; i2++) {
         var o = list[i2];
         var box = document.createElement('div');
-        box.className = 'obj-box';
+        box.className = 'uml-object';
         var head = document.createElement('div');
-        head.className = 'obj-head';
-        head.textContent = (o.name ? o.name + ' : ' : '') + o.cls + '  (Objekt ' + o.id + ')';
+        head.className = 'uml-name obj-title';
+        head.textContent = (o.name ? o.name + ' : ' : ' : ') + o.cls;
+        head.title = 'Objekt ' + o.id;
         box.appendChild(head);
         for (var j2 = 0; j2 < o.fields.length; j2++) {
           var row = document.createElement('div');
@@ -5669,18 +5662,21 @@
       }
       function nodeHtml(clsName, depth) {
         var cls = classMap[clsName];
-        var rows = '';
+        /* Zwei Abteile wie im UML-Klassendiagramm: Attribute, darunter mit
+         * Trennstrich die Methoden (Konstruktoren zaehlen zu den Methoden). */
+        var attrRows = '';
         var fi;
         for (fi = 0; fi < cls.fields.length; fi++) {
           var fd = cls.fields[fi];
-          rows = rows + '<div class="uml-row">' + visMark(fd.visibility) + escapeHtml(fd.name) + ' : ' + escapeHtml(typeName(fd.type)) + '</div>';
+          attrRows = attrRows + '<div class="uml-row">' + visMark(fd.visibility) + escapeHtml(fd.name) + ' : ' + escapeHtml(typeName(fd.type)) + '</div>';
         }
+        var methRows = '';
         for (fi = 0; fi < cls.ctors.length; fi++) {
           var ct = cls.ctors[fi];
           var cp = [];
           var pi;
           for (pi = 0; pi < ct.params.length; pi++) { cp.push(escapeHtml(typeName(ct.params[pi].type) + ' ' + ct.params[pi].name)); }
-          rows = rows + '<div class="uml-row">' + visMark(ct.visibility) + escapeHtml(cls.name) + '(' + cp.join(', ') + ')</div>';
+          methRows = methRows + '<div class="uml-row">' + visMark(ct.visibility) + escapeHtml(cls.name) + '(' + cp.join(', ') + ')</div>';
         }
         for (fi = 0; fi < cls.methods.length; fi++) {
           var mt = cls.methods[fi];
@@ -5688,12 +5684,18 @@
           var pj;
           for (pj = 0; pj < mt.params.length; pj++) { mp.push(escapeHtml(typeName(mt.params[pj].type) + ' ' + mt.params[pj].name)); }
           var ret = (mt.ret && mt.ret.void) ? '' : ' : ' + escapeHtml(typeName(mt.ret));
-          rows = rows + '<div class="uml-row">' + visMark(mt.visibility) + escapeHtml(mt.name) + '(' + mp.join(', ') + ')' + ret + '</div>';
+          methRows = methRows + '<div class="uml-row">' + visMark(mt.visibility) + escapeHtml(mt.name) + '(' + mp.join(', ') + ')' + ret + '</div>';
         }
-        if (rows === '') { rows = '<div class="uml-row uml-empty">(noch ohne Attribute und Methoden)</div>'; }
+        var secs = '';
+        if (attrRows === '' && methRows === '') {
+          secs = '<div class="uml-sec"><div class="uml-row uml-empty">(noch ohne Attribute und Methoden)</div></div>';
+        } else {
+          if (attrRows !== '') { secs = secs + '<div class="uml-sec">' + attrRows + '</div>'; }
+          if (methRows !== '') { secs = secs + '<div class="uml-sec uml-methods-sec">' + methRows + '</div>'; }
+        }
         /* Notiz nur für Eltern ausserhalb des Projekts (z.B. Grafik-Basisklassen) */
         var parentNote = (cls.parent && kids[cls.parent] === undefined) ? '<div class="uml-parent">↳ erbt von ' + escapeHtml(cls.parent) + '</div>' : '';
-        var box = '<div class="uml-class"><div class="uml-name">' + escapeHtml(cls.name) + '</div><div class="uml-sec">' + rows + '</div>' + parentNote + '</div>';
+        var box = '<div class="uml-class"><div class="uml-name">' + escapeHtml(cls.name) + '</div>' + secs + parentNote + '</div>';
         var kidNames = kids[clsName] || [];
         if (depth > 12 || kidNames.length === 0) { return box; }
         var kidHtml = '';

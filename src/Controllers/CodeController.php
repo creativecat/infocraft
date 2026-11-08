@@ -207,6 +207,7 @@ final class CodeController
             'ownerName' => $owner !== null ? $owner->fullName() : '',
             'isForeign' => $project->ownerId !== $user->id,
             'diagramAuto' => SchoolClass::diagramAutoForUser($user),
+            'dbPanel' => SchoolClass::dbPanelForUser($user),
         ]);
     }
 

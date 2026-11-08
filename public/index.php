@@ -87,6 +87,7 @@ $router->post('/diagramme/{id}/loeschen', [DiagramController::class, 'delete']);
 $router->post('/werkstatt/code/{id}/diagramm', [DiagramController::class, 'fromProject']);
 $router->post('/werkstatt/sql/{slug}/diagramm', [DiagramController::class, 'fromSql']);
 $router->post('/unterricht/klassen/diagramm', [TeacherController::class, 'toggleDiagramAuto']);
+$router->post('/unterricht/klassen/datenbank', [TeacherController::class, 'toggleDbPanel']);
 
 // Quiz-Arena (Lehrkraefte verwalten, Schuelerinnen und Schueler spielen)
 $router->get('/quiz', [QuizController::class, 'index']);

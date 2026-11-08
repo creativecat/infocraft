@@ -585,18 +585,16 @@ body.sidebar-mini .nav-item { justify-content: center; padding: 10px 8px; }
 .ac-label { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 600; }
 .ac-hint { color: var(--muted); font-size: 0.78rem; text-align: right; }
 
-/* Objektdiagramm */
-.objdiag { display: flex; flex-direction: column; gap: 10px; }
-.obj-box {
-    border: 2px solid #c7d2fe;
-    border-radius: 10px;
-    background: var(--surface);
-    overflow: hidden;
+/* Objektdiagramm: UML-Objektkacheln (abgerundet, wie BlueJ) */
+.objdiag { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+.uml-object {
+    border: 2px solid #1d4ed8; border-radius: 10px; background: var(--surface);
+    overflow: hidden; min-width: 160px; max-width: 260px;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 0.85rem;
+    font-size: 0.85rem; box-shadow: var(--shadow);
 }
-.obj-head { background: #eef0fe; color: var(--primary-2); font-weight: 700; padding: 6px 10px; }
-.obj-field { padding: 4px 10px; border-top: 1px solid var(--border); white-space: pre-wrap; }
+.uml-object .uml-name { text-decoration: underline; text-align: left; }
+.obj-field { padding: 4px 10px; border-top: 1px solid #93c5fd; white-space: pre-wrap; }
 
 @media (max-width: 1280px) {
     .ide { grid-template-columns: 200px minmax(0, 1fr); }
@@ -679,18 +677,20 @@ body.sidebar-mini .nav-item { justify-content: center; padding: 10px 8px; }
 .proj-empty { margin: 0; font-size: 0.88rem; }
 
 /* ===== Klassendiagramm direkt in der Java-IDE (BlueJ-Idee) ===== */
+/* Gleicher Look wie der Diagramm-Bereich: harte Ecken, blauer Kopf, Trennstriche. */
 .umldiag { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px; align-items: flex-start; }
 .uml-class {
-    border: 2px solid #1d4ed8; border-radius: 8px; background: var(--surface);
+    border: 2px solid #1d4ed8; border-radius: 0; background: var(--surface);
     min-width: 180px; max-width: 280px; overflow: hidden;
     box-shadow: var(--shadow);
 }
 .uml-name {
-    background: #dbeafe; border-bottom: 1px solid #93c5fd;
+    background: #dbeafe; color: #1e3a8a; border-bottom: 1px solid #93c5fd;
     font-weight: 700; text-align: center; padding: 6px 8px;
     font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem;
 }
 .uml-sec { padding: 6px 10px; }
+.uml-class .uml-sec + .uml-sec { border-top: 1px solid #93c5fd; }
 .uml-row { font-family: ui-monospace, Consolas, monospace; font-size: 0.78rem; padding: 1px 0; word-break: break-word; }
 .uml-parent {
     font-size: 0.75rem; color: var(--muted); padding: 4px 10px 6px;
