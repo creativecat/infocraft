@@ -19,7 +19,10 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: pdo_sqlite, curl
       - name: Syntaxpruefung (php -l)
-        run: find . -name "*.php" -print0 | xargs -0 -n1 php -l
+        run: |
+          OUT=$(find . -name "*.php" -print0 | xargs -0 -n1 php -l 2>&1); ST=$?
+          echo "$OUT"
+          if [ "$ST" -ne 0 ]; then echo "::error::$(echo "$OUT" | grep -m1 'Parse error' || true)"; exit 1; fi
       - name: Migration mit Beispieldaten
         run: php tools/migrate.php --driver sqlite
       - name: Migration erneut ausfuehren (Idempotenz)
@@ -585,4 +588,3 @@ jobs:
           CODE_DCLASSES=$(curl -sS -o dclasses.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/unterricht/klassen)
           grep -q "Klassendiagramme" dclasses.html && DIAG_CLASSES_OK=1 || DIAG_CLASSES_OK=0
           CODE_DTOGGLE=$(curl -sS -L -o dtoggle_off.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "class_id=$CLASS6" -d "enabled=0" http://127.0.0.1:8080/unterricht/klassen/diagramm)
-          grep -q "deaktiviert" dtoggle_off.html && DIAG_TOGGLE_OFF_OK=1 || DIAG_TOGGLE_OFF_OK=0
