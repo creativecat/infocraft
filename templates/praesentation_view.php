@@ -49,8 +49,8 @@
     <?php endforeach; ?>
     <?php endif; ?>
 
-    <!-- Live-Abstimmung (Issue #3): erscheint nur, wenn die Lehrkraft im
-         Moderatorenbildschirm eine Abstimmung gestartet hat. -->
+    <!-- Live-Abstimmung (Issue #3): erscheint nur, wenn die Lehrkraft in der
+         Steuerzentrale eine Abstimmung gestartet hat. -->
     <div class="poll-box" id="poll-box" data-status="<?= url('praesentationen/' . (int) $presentation->id . '/abstimmung/status') ?>" data-vote="<?= url('praesentationen/' . (int) $presentation->id . '/abstimmung/stimme') ?>" data-csrf="<?= e(csrf_token()) ?>" hidden></div>
 </div>
 
