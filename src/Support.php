@@ -81,11 +81,16 @@ function flash_all(): array
 
 function render(string $template, array $data = []): void
 {
-    $title = 'InfoCraft';
-    $active = '';
-    $bare = false;
+    // Reihenfolge wichtig: extract(EXTR_SKIP) ueberschreibt niemals bereits
+    // gesetzte Variablen. Titel, aktiver Navi-Punkt und die Layout-Wahl stehen
+    // deshalb bewusst NACH dem extract und werden aus $data gelesen, sonst
+    // wuerde jeder Seite der Default-Titel bleiben bzw. das bare-Layout
+    // (Login, Musterloesungsfenster) nie greifen.
     $user = Infocraft\Auth::user();
     extract($data, EXTR_SKIP);
+    $title = isset($data['title']) ? (string) $data['title'] : 'InfoCraft';
+    $active = isset($data['active']) ? (string) $data['active'] : '';
+    $bare = isset($data['bare']) ? (bool) $data['bare'] : false;
     ob_start();
     require INFOCRAFT_ROOT . '/templates/' . $template . '.php';
     $content = (string) ob_get_clean();
