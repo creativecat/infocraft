@@ -45,9 +45,17 @@ final class SqlWorkshop
         return $dir . '/' . $slug . '_u' . $userId . '.sqlite';
     }
 
-    /** Eigene Arbeitskopie der Person (wird beim ersten Öffnen aus der Vorlage erzeugt). */
-    public static function workspacePdo(string $slug, int $userId): PDO
+    /**
+     * PDO für die Arbeit in der Werkstatt (#45, Redundanz vermeiden):
+     * Bei Leserechten reicht die gemeinsame Vorlage im Speicher - es wird
+     * KEINE eigene Kopie pro Person angelegt. Nur bei Schreibrechten
+     * entsteht die eigene (datensparsame) Kopie je Person.
+     */
+    public static function workspacePdo(string $slug, int $userId, string $permission = 'write'): PDO
     {
+        if ($permission === 'read') {
+            return self::pristinePdo($slug);
+        }
         $path = self::workspacePath($slug, $userId);
         $fresh = !is_file($path);
         $pdo = self::sqlite($path);

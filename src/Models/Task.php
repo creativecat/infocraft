@@ -36,6 +36,8 @@ final class Task
         public readonly int $variantOf = 0,
         public readonly int $solutionVisible = 0,
         public readonly ?int $presentationProjectId = null,
+        public readonly int $dbTemplateId = 0,
+        public readonly int $dbWrite = 0,
     ) {
     }
 
@@ -77,6 +79,8 @@ final class Task
             (int) ($row['variant_of'] ?? 0),
             (int) ($row['solution_visible'] ?? 0),
             isset($row['presentation_project_id']) && $row['presentation_project_id'] !== null ? (int) $row['presentation_project_id'] : null,
+            (int) ($row['db_template_id'] ?? 0),
+            (int) ($row['db_write'] ?? 0),
         );
     }
 
@@ -186,10 +190,10 @@ final class Task
         return self::createFull($teacherId, $title, $description, $type, $level, 0, '');
     }
 
-    public static function createFull(int $teacherId, string $title, string $description, string $type, int $level, int $shared, string $sampleSolution, int $lateLock = 0, int $maxPoints = 0, string $rubric = '', int $topicId = 0, string $descriptionFormat = 'text', int $variantOf = 0, int $solutionVisible = 0): self
+    public static function createFull(int $teacherId, string $title, string $description, string $type, int $level, int $shared, string $sampleSolution, int $lateLock = 0, int $maxPoints = 0, string $rubric = '', int $topicId = 0, string $descriptionFormat = 'text', int $variantOf = 0, int $solutionVisible = 0, int $dbTemplateId = 0, int $dbWrite = 0): self
     {
         $pdo = Database::pdo();
-        $stmt = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level, shared, sample_solution, late_lock, max_points, rubric, topic_id, description_format, variant_of, solution_visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt = $pdo->prepare('INSERT INTO tasks (teacher_id, title, description, type, level, shared, sample_solution, late_lock, max_points, rubric, topic_id, description_format, variant_of, solution_visible, db_template_id, db_write) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $stmt->execute([
             $teacherId,
             substr(trim($title), 0, 200),
@@ -205,6 +209,8 @@ final class Task
             $descriptionFormat === 'html' ? 'html' : 'text',
             max(0, $variantOf),
             $solutionVisible === 1 ? 1 : 0,
+            max(0, $dbTemplateId),
+            $dbWrite === 1 ? 1 : 0,
         ]);
         $stmt2 = $pdo->prepare('SELECT * FROM tasks WHERE id = ?');
         $stmt2->execute([(int) $pdo->lastInsertId()]);
@@ -213,9 +219,9 @@ final class Task
     }
 
     /** Eigene Aufgabe nachträglich bearbeiten. */
-    public static function update(int $id, string $title, string $description, string $type, int $level, string $sampleSolution, int $lateLock = 0, int $maxPoints = 0, string $rubric = '', int $topicId = 0, string $descriptionFormat = 'text', int $solutionVisible = 0): void
+    public static function update(int $id, string $title, string $description, string $type, int $level, string $sampleSolution, int $lateLock = 0, int $maxPoints = 0, string $rubric = '', int $topicId = 0, string $descriptionFormat = 'text', int $solutionVisible = 0, int $dbTemplateId = 0, int $dbWrite = 0): void
     {
-        $stmt = Database::pdo()->prepare('UPDATE tasks SET title = ?, description = ?, type = ?, level = ?, sample_solution = ?, late_lock = ?, max_points = ?, rubric = ?, topic_id = ?, description_format = ?, solution_visible = ? WHERE id = ?');
+        $stmt = Database::pdo()->prepare('UPDATE tasks SET title = ?, description = ?, type = ?, level = ?, sample_solution = ?, late_lock = ?, max_points = ?, rubric = ?, topic_id = ?, description_format = ?, solution_visible = ?, db_template_id = ?, db_write = ? WHERE id = ?');
         $stmt->execute([
             substr(trim($title), 0, 200),
             $description,
@@ -228,6 +234,8 @@ final class Task
             max(0, $topicId),
             $descriptionFormat === 'html' ? 'html' : 'text',
             $solutionVisible === 1 ? 1 : 0,
+            max(0, $dbTemplateId),
+            $dbWrite === 1 ? 1 : 0,
             $id,
         ]);
     }

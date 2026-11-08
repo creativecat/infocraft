@@ -41,6 +41,10 @@ final class Migrator
         self::ensureTaskTargetDueAtColumn($pdo, $driver);
         self::ensureTaskTimingAndGradingColumns($pdo, $driver);
         self::ensureTaskOrganizationTables($pdo, $driver);
+        // Issue #45: angehängte Beispieldatenbanken an Aufgaben und Ordnerbaum
+        // (Unterordner) in Bestehensinstallationen idempotent nachziehen.
+        self::ensureTaskDatabaseColumns($pdo, $driver);
+        self::ensureFolderParentColumn($pdo, $driver);
         self::ensureSiteSettingsTable($pdo, $driver);
         self::ensureUserPrefsTable($pdo, $driver);
         self::ensureProjectStateTable($pdo, $driver);
@@ -139,16 +143,22 @@ final class Migrator
 
     private static function seedSqlTemplates(PDO $pdo): void
     {
-        if ((int) $pdo->query('SELECT COUNT(*) FROM sql_templates')->fetchColumn() > 0) {
-            return;
-        }
+        /* Idempotent je Slug (#45): Bestehende Installationen bekommen neue
+         * Beispieldatenbanken nach, ohne dass alte Vorlagen angerührt werden. */
         $templates = [
             ['shop', 'Online-Shop', 'Kunden, Produkte und Bestellungen: von einfachen SELECTs bis zu JOINs und GROUP BY.', 9, 0],
             ['instagram', 'Instagram-Modell', 'Profile, Posts, Likes und Follower als Datenmodell nachgebaut.', 9, 0],
             ['adventure', 'Dateninsel-Abenteuer', 'Rette die Insel mit SQL: erzählte Missionen vom SELECT bis zum UPDATE. Für die Aufgaben sind Schreibrechte nötig.', 9, 1],
+            ['schule', 'Schule', 'Lehrkräfte, Kurse, Schülerinnen und Schüler und ihre Kursteilnahmen: Noten auswerten mit JOIN und GROUP BY.', 9, 0],
+            ['bibliothek', 'Schulbibliothek', 'Bücher, Leserinnen und Leser und Ausleihen: unterwegs mit SELECT, JOIN und IS NULL.', 9, 0],
         ];
+        $exists = $pdo->prepare('SELECT COUNT(*) FROM sql_templates WHERE slug = ?');
         $insert = $pdo->prepare('INSERT INTO sql_templates (slug, title, description, level, is_adventure) VALUES (?, ?, ?, ?, ?)');
         foreach ($templates as $template) {
+            $exists->execute([$template[0]]);
+            if ((int) $exists->fetchColumn() > 0) {
+                continue;
+            }
             $insert->execute([$template[0], $template[1], $template[2], $template[3], $template[4]]);
             $templateId = (int) $pdo->lastInsertId();
             self::insertMissions($pdo, $templateId, $template[0]);
@@ -193,6 +203,23 @@ final class Migrator
                 ['position' => 3, 'kind' => 'query', 'title' => 'Beliebtester Post', 'story' => 'Wie viele Likes hat der Post mit der ID 3?', 'hint' => 'SELECT COUNT(*) FROM likes WHERE post_id = 3', 'solution_sql' => 'SELECT COUNT(*) AS likes FROM likes WHERE post_id = 3'],
                 ['position' => 4, 'kind' => 'query', 'title' => 'Kommentare lesen', 'story' => 'Zeige zu jedem Kommentar den Benutzernamen und den Text.', 'hint' => 'JOIN kommentare mit nutzer über die nutzer_id.', 'solution_sql' => 'SELECT n.benutzername, k.text FROM kommentare k JOIN nutzer n ON n.id = k.nutzer_id'],
                 ['position' => 5, 'kind' => 'query', 'title' => 'Fanzahl', 'story' => "Wie viele Nutzer folgen dem Profil 'luna'?", 'hint' => 'Eine Unterabfrage findet zuerst die id von luna.', 'solution_sql' => "SELECT COUNT(*) AS follower FROM folgt WHERE folgt_id = (SELECT id FROM nutzer WHERE benutzername = 'luna')"],
+            ];
+        }
+        if ($slug === 'schule') {
+            return [
+                ['position' => 1, 'kind' => 'query', 'title' => 'Das Kursangebot', 'story' => 'Zeige alle Kurse mit Name und Jahrgangsstufe.', 'hint' => 'SELECT name, stufe FROM kurse', 'solution_sql' => 'SELECT name, stufe FROM kurse'],
+                ['position' => 2, 'kind' => 'query', 'title' => 'Wer unterrichtet was?', 'story' => 'Zeige zu jedem Kurs den Namen der Lehrkraft.', 'hint' => 'JOIN kurse mit lehrkraefte über die lehrkraft_id.', 'solution_sql' => 'SELECT k.name, l.name FROM kurse k JOIN lehrkraefte l ON l.id = k.lehrkraft_id'],
+                ['position' => 3, 'kind' => 'query', 'title' => 'Noch keine Note', 'story' => 'Manche Kursteilnahmen sind noch nicht bewertet. Zeige Vor- und Nachname aller Schülerinnen und Schüler mit einer Teilnahme ohne Note.', 'hint' => 'JOIN kursteilnahmen mit schuelerinnen und filtere mit note IS NULL.', 'solution_sql' => 'SELECT DISTINCT s.vorname, s.nachname FROM kursteilnahmen t JOIN schuelerinnen s ON s.id = t.schuelerin_id WHERE t.note IS NULL'],
+                ['position' => 4, 'kind' => 'query', 'title' => 'Der Kursdurchschnitt', 'story' => 'Wie gut ist der Kurs Informatik 9a im Durchschnitt? Zeige Kursname und Durchschnittsnote.', 'hint' => 'GROUP BY mit AVG(note), gefiltert auf den einen Kurs.', 'solution_sql' => "SELECT k.name, AVG(t.note) FROM kursteilnahmen t JOIN kurse k ON k.id = t.kurs_id WHERE k.name = 'Informatik 9a' GROUP BY k.name"],
+                ['position' => 5, 'kind' => 'query', 'title' => 'Die Klasse 9a im Vergleich', 'story' => 'Berechne die Durchschnittsnote je Kurs der Klasse 9a, sortiert nach bestem Schnitt.', 'hint' => 'JOIN über kursteilnahmen, kurse und schuelerinnen, GROUP BY kurs, ORDER BY AVG(note).', 'solution_sql' => 'SELECT k.name, AVG(t.note) FROM kursteilnahmen t JOIN kurse k ON k.id = t.kurs_id JOIN schuelerinnen s ON s.id = t.schuelerin_id WHERE s.klasse = '9a' GROUP BY k.name ORDER BY AVG(t.note)'],
+            ];
+        }
+        if ($slug === 'bibliothek') {
+            return [
+                ['position' => 1, 'kind' => 'query', 'title' => 'Das Regal', 'story' => 'Zeige alle Bücher mit Titel und Autor, sortiert nach Titel.', 'hint' => 'SELECT titel, autor FROM buecher ORDER BY titel', 'solution_sql' => 'SELECT titel, autor FROM buecher ORDER BY titel'],
+                ['position' => 2, 'kind' => 'query', 'title' => 'Fantasy-Abteilung', 'story' => 'Zeige Titel aller Fantasy-Bücher.', 'hint' => "WHERE genre = 'Fantasy'", 'solution_sql' => "SELECT titel FROM buecher WHERE genre = 'Fantasy'"],
+                ['position' => 3, 'kind' => 'query', 'title' => 'Noch nicht zurück', 'story' => 'Welche Bücher sind gerade ausgeliehen? Zeige Titel und Ausleihdatum.', 'hint' => 'JOIN ausleihen mit buecher und filtere zurueck_am IS NULL.', 'solution_sql' => 'SELECT b.titel, a.ausgeliehen_am FROM ausleihen a JOIN buecher b ON b.id = a.buch_id WHERE a.zurueck_am IS NULL'],
+                ['position' => 4, 'kind' => 'query', 'title' => 'Stammleserinnen', 'story' => 'Wie viele Ausleihen hat jede Leserin und jeder Leser? Zeige Name und Anzahl.', 'hint' => 'JOIN ausleihen mit leser, dann GROUP BY name.', 'solution_sql' => 'SELECT l.name, COUNT(*) FROM ausleihen a JOIN leser l ON l.id = a.leser_id GROUP BY l.name ORDER BY l.name'],
             ];
         }
         // adventure (Dateninsel)
@@ -1135,6 +1162,55 @@ final class Migrator
         }
     }
 
+    /**
+     * Issue #45: Spalten tasks.db_template_id (angehängte Beispieldatenbank)
+     * und tasks.db_write (Schreibrechte für Schülerinnen und Schüler)
+     * in Bestehensinstallationen idempotent nachziehen.
+     */
+    private static function ensureTaskDatabaseColumns(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            foreach ([
+                ['db_template_id', 'ALTER TABLE tasks ADD COLUMN db_template_id INT UNSIGNED NOT NULL DEFAULT 0'],
+                ['db_write', 'ALTER TABLE tasks ADD COLUMN db_write TINYINT(1) NOT NULL DEFAULT 0'],
+            ] as [$column, $statement]) {
+                $exists = $pdo->query('SHOW COLUMNS FROM tasks LIKE ' . $pdo->quote($column))->fetchColumn();
+                if ($exists === false || $exists === null) {
+                    $pdo->exec($statement);
+                }
+            }
+            return;
+        }
+        $columns = [];
+        foreach ($pdo->query('PRAGMA table_info(tasks)')->fetchAll() as $column) {
+            $columns[] = (string) ($column['name'] ?? '');
+        }
+        if (!in_array('db_template_id', $columns, true)) {
+            $pdo->exec('ALTER TABLE tasks ADD COLUMN db_template_id INTEGER NOT NULL DEFAULT 0');
+        }
+        if (!in_array('db_write', $columns, true)) {
+            $pdo->exec('ALTER TABLE tasks ADD COLUMN db_write INTEGER NOT NULL DEFAULT 0');
+        }
+    }
+
+    /** Issue #45: Spalte folders.parent_id (Unterordner) idempotent nachziehen. */
+    private static function ensureFolderParentColumn(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $exists = $pdo->query("SHOW COLUMNS FROM folders LIKE 'parent_id'")->fetchColumn();
+            if ($exists === false || $exists === null) {
+                $pdo->exec('ALTER TABLE folders ADD COLUMN parent_id INT UNSIGNED NOT NULL DEFAULT 0');
+            }
+            return;
+        }
+        foreach ($pdo->query('PRAGMA table_info(folders)')->fetchAll() as $column) {
+            if ((string) ($column['name'] ?? '') === 'parent_id') {
+                return;
+            }
+        }
+        $pdo->exec('ALTER TABLE folders ADD COLUMN parent_id INTEGER NOT NULL DEFAULT 0');
+    }
+
     private static function ensureSiteSettingsTable(PDO $pdo, string $driver): void
     {
         if ($driver === 'mysql') {
@@ -1382,46 +1458,6 @@ final class Migrator
                 ['type' => 'text', 'title' => 'Lösung: Deine Daten (Musterantwort)', 'body' => "**Musterantwort (Auszug)**\n\n- **Stammdaten** (Name, Adresse, Geburtsdatum): Verwaltung und Lehrkräfte; für dich per Auskunft einsehbar.\n- **Noten**: nur du und deine Lehrkräfte - klassische **Mehrbenutzerproblematik**: Mitschülerinnen und Mitschüler haben keinen Zugriff.\n- **Fotos aus dem Projekt**: Zweck war der Projektbericht - danach Löschung (**Datensparsamkeit**).\n- **Login-Zeiten im Schulnetz**: für Data-Mining am interessantesten, weil sich daraus Verhalten vorhersagen lässt.\n\nMerke: Auskunft gibt es schriftlich über den Datenschutzbeauftragten der Schule."],
             ]],
             ['slug' => 'informatik-jahr-10', 'title' => 'Dein Informatik-Jahr in der 10', 'level' => 10, 'v' => 2, 'legacy' => [], 'notes' => ['Einstieg: Begrueszen und Fahrplan des Jahres kurz vorstellen. (3 Min)', 'LB1 bis LB3 anhand der Folie vorstellen; Frage: Was war euer Highlight in der 9? (5 Min)', 'Abfragerunde: Klasse, Objekt, Attribut, Methode. (4 Min)', 'Live in der Java-IDE zeigen; SuS beschreiben, was der Code macht. (6 Min)', 'Motivation Shop mit Kunden und Bestellungen; Frage: Wo entsteht Redundanz? (5 Min)', 'JOIN an der Folie skizzieren; Live-Demo folgt in der naechsten Stunde. (4 Min)', 'OOP-Ziele nennen: Kapselung, Vererbung, Polymorphismus. (4 Min)', 'Demo vorbereitet starten (Projekt teilen); Array von Fahrraedern zeigen. (8 Min)', 'Projektvorstellung: Teams, Themen, Zeitplan; Motivation geben. (5 Min)'], 'slides' => [
-                ['type' => 'text', 'title' => 'Willkommen in der 10. Klasse', 'body' => "# Informatik 10\n\n**Was dich dieses Schuljahr erwartet**\n\nDu knüpfst direkt an Klasse 9 an: **die Dateninsel, der Online-Shop und dein Java-Wissen** werden zum Fundament für Neues.\n\nDieses Jahr hat vier Stationen: **Warm-up**, **Datenbanken Level 2**, **Java - das große Ganze** und am Ende **dein eigenes Projekt**.\n\n*(Grundlage: LehrplanPLUS Bayern, Informatik, Jahrgangsstufe 10 (NTG), Gymnasium)*"],
-                ['type' => 'text', 'title' => 'Deine Reise durchs Schuljahr', 'body' => "## Vier Stationen\n\n- **Warm-up**: Dein Java aus Klasse 9 auffrischen - und mit einer Kurzarbeit beweisen\n- **Datenbanken 2.0**: Mehrere Tabellen verknüpfen - wie echte Profi-Datenbanken\n- **Java: aufbauend**: Objekte, die miteinander reden - Arrays, Referenzen, Vererbung und mehr\n- **Dein Projekt**: Ein eigenes Java-Projekt entwickeln - im Team oder allein\n\nAm Ende des Jahres steht dein eigenes, funktionierendes Projekt, das du der Klasse vorstellst."],
-                ['type' => 'text', 'title' => 'Warm-up: Dein Java aus Klasse 9', 'body' => "## Bevor wir Neues starten ...\n\n... machst du dein **Klassen-9-Wissen wieder fit** - du wirst es dieses Jahr ständig brauchen:\n\n- **Klassen, Objekte, Attribute und Methoden**\n- **Konstruktoren** - damit Objekte richtig entstehen\n- **Parameter und Rückgabewerte**\n- **Kontrollstrukturen**: `if`, `while`, `for`\n\nDanach folgt eine **Kurzarbeit** - und dann: Level 2!"],
-                ['type' => 'code', 'title' => 'Warm-up-Code: Das kennst du noch?', 'lang' => 'java', 'code' => 'class Haustier {\n    String name;\n    int alter;\n\n    Haustier(String nameStart, int alterStart) {\n        name = nameStart;\n        alter = alterStart;\n    }\n\n    String gibLaut() {\n        if (alter < 3) {\n            return \"Ich bin noch klein!\";\n        }\n        return \"Streichel mich!\";\n    }\n}\n\nHaustier brock = new Haustier(\"Brock\", 2);\nSystem.out.println(brock.name + \" sagt: \" + brock.gibLaut());'],
-                ['type' => 'text', 'title' => 'Datenbanken: Level 2', 'body' => "## Mehrere Tabellen, eine Abfrage\n\nIn Klasse 9 hast du eine Tabelle abgefragt. Jetzt wird es richtig interessant: **Echte Datenbanken bestehen aus vielen verknüpften Tabellen** - Kunden, Bestellungen und Produkte gehören zusammen.\n\n- Datenmodelle mit mehreren Klassen entwerfen (Klassendiagramm)\n- Tabellen geschickt verknüpfen: **Primär- und Fremdschlüssel**\n- Abfragen über mehrere Tabellen - z. B. *Was hat welcher Kunde bestellt?*\n- Verstehen, warum doppelte Daten Probleme machen (**Anomalien**)\n\nGenau so arbeiten Shops, Airlines und Streaming-Dienste - nur größer."],
-                ['type' => 'code', 'title' => 'JOIN: Zwei Tabellen, eine Abfrage', 'lang' => 'sql', 'code' => '-- Wer hat was bestellt? Zwei Tabellen, eine Abfrage!\nSELECT kunde.name, bestellung.artikel\nFROM kunde\nJOIN bestellung ON kunde.kunden_nr = bestellung.kunden_nr;'],
-                ['type' => 'text', 'title' => 'Java: Das große Ganze', 'body' => "## Vom Einzelkämpfer zum System\n\nDeine Objekte aus Klasse 9 waren Einzelkämpfer. Jetzt lernst du, **ganze Systeme daraus zu bauen**, in denen Objekte miteinander sprechen - z. B. ein Fahrradverleih oder die Mitgliederverwaltung eines Vereins.\n\n- Viele gleichartige Objekte verwalten - mit **Arrays**\n- Objekte per **Referenz** miteinander verbinden und Methoden aufrufen lassen\n- **Vererbung und Polymorphismus**: gleiche Nachricht, anderes Verhalten - ein E-Bike zahlt mehr Miete als ein normales Fahrrad"],
-                ['type' => 'code', 'title' => 'Live-Demo: Der Fahrradverleih', 'lang' => 'java', 'code' => 'class Fahrrad {\n    String farbe;\n\n    Fahrrad(String farbeStart) {\n        farbe = farbeStart;\n    }\n\n    double miete() {\n        return 5.0;\n    }\n}\n\nclass EBike extends Fahrrad {\n    EBike(String farbeStart) {\n        super(farbeStart);\n    }\n\n    @Override\n    double miete() {\n        return 9.0;\n    }\n}\n\nFahrrad[] flotte = new Fahrrad[2];\nflotte[0] = new Fahrrad(\"rot\");\nflotte[1] = new EBike(\"blau\");\n\nfor (int i = 0; i < flotte.length; i++) {\n    System.out.println(flotte[i].farbe + \" kostet \" + flotte[i].miete() + \" Euro.\");\n}'],
-                ['type' => 'text', 'title' => 'Das Herzstück: Dein Projekt', 'body' => "## Dein eigenes Java-Projekt\n\nAuf jeden Fall dabei: **Java, Klassendiagramme und echter Code** von dir. Ob im Team oder allein - am Ende steht dein eigenes, funktionierendes Projekt, das du vorstellst.\n\n- **Idee und Plan**: Ein Szenario wählen - Buchungssystem, Verwaltung oder ein einfaches Spiel\n- **Modellieren**: Klassendiagramme entwerfen - wie echte Softwareentwickler\n- **Implementieren**: Echt programmieren - Klasse für Klasse in der Code-Werkstatt\n- **Testen und Vorstellen**: Prüfen, ob alles läuft - und dein Projekt am Ende präsentieren\n\n**Los geht's!**\n\n*(Grundlage: LehrplanPLUS Bayern, Informatik, Jahrgangsstufe 10 (NTG), Gymnasium)*"],
-            ]],
-            ['slug' => 'java-wiederholung', 'title' => 'Warm-up: Java-Wiederholung aus der 9. Klasse', 'level' => 10, 'v' => 3, 'legacy' => [], 'notes' => ['Einstieg: Abfragerunde zu Klasse, Objekt, Attribut, Methode. (5 Min)', 'Live tippen oder vorbereitet zeigen; Klasse Spielcharakter mit Attributen und Methoden. (8 Min)', 'SuS tippen die Klasse Song in der Java-IDE; Hilfe ueber das Klassendiagramm-Tool. (12 Min)', 'Gemeinsam am Moderator-Pool vergleichen; typische Fehler: fehlende Konstruktorklammern. (5 Min)'], 'slides' => [
-                ['type' => 'text', 'title' => 'Was nimmst du mit?', 'body' => "# Warm-up: Java aus der 9. Klasse\n\nStart in die 10: Wir wiederholen, was ihr sicher können solltet:\n\n- **Klassen**: Bauplan mit Attributen und Methoden\n- **Konstruktor**: legt die Startwerte fest (Parameter auf ...Start)\n- **Methoden mit Parameter und Rückgabe** (`return`)\n- **Kontrollstrukturen**: if / else if / else\n\nDanach: kurze **Kurzarbeit**. Anschließend geht es weiter mit Datenbanken Level 2 und neuen Java-Themen (Arrays, Datenkapselung, Polymorphismus)."],
-                ['type' => 'code', 'title' => 'Warm-up-Code: Spielcharakter', 'lang' => 'java', 'code' => 'class Spielcharakter {\n    // Attribute\n    String name;\n    int punkte;\n\n    // Konstruktor\n    Spielcharakter(String nameStart, int punkteStart) {\n        name = nameStart;\n        punkte = punkteStart;\n    }\n\n    // eigene Methode mit Rueckgabe\n    String kategorie() {\n        if (punkte >= 1000) {\n            return "Legende";\n        } else if (punkte >= 500) {\n            return "Bronze";\n        }\n        return "Anfaenger";\n    }\n}\n\nSpielcharakter held = new Spielcharakter("Rio", 1500);\nSystem.out.println(held.name + ": " + held.kategorie());'],
-                ['type' => 'text', 'title' => 'Übung: Warm-up vor der Kurzarbeit', 'body' => "**Übung: Klasse Song**\n\nSchreibe die Klasse **Song** in der Code-Werkstatt:\n\n1. **Attribute**: `titel` (String), `dauer` (int, Sekunden)\n2. **Konstruktor** mit `titelStart` und `dauerStart`\n3. **Eigene Methode** `vorspielen()`: druckt Titel und Dauer\n4. **Eigene Methode mit Rückgabe** `istLang()`: `true`, wenn der Song länger als 240 Sekunden ist\n\nWer fertig ist: Teste mit einem kurzen und einem langen Song."],
-                ['type' => 'code', 'title' => 'Lösung: Klasse Song', 'lang' => 'java', 'code' => 'class Song {\n    // Attribute\n    String titel;\n    int dauer;\n\n    // Konstruktor\n    Song(String titelStart, int dauerStart) {\n        titel = titelStart;\n        dauer = dauerStart;\n    }\n\n    // eigene Methode\n    void vorspielen() {\n        System.out.println(titel + " (" + dauer + " Sekunden)");\n    }\n\n    // eigene Methode mit Rueckgabe\n    boolean istLang() {\n        return dauer > 240;\n    }\n}\n\nSong s = new Song("Sommerhit", 210);\ns.vorspielen();\nSystem.out.println("Lang? " + s.istLang());'],
-            ]],
-            ['slug' => 'sql-join', 'title' => 'Datenbanken Level 2: Primär-/Fremdschlüssel und JOIN', 'level' => 10, 'v' => 2, 'legacy' => [], 'notes' => ['Einstieg: Warum speichert eine Bestellung den Kundennamen nicht mit? Redundanz erfragen. (5 Min)', 'SQL-Werkstatt zeigen; Fremdschluessel betonen; SuS diktionieren mit. (10 Min)', 'Syntax sauber vorstellen: SELECT ... FROM a JOIN b ON ...; ON betonen. (10 Min)', 'SuS arbeiten in der SQL-Werkstatt; unterschiedliche Spaltenreihenfolgen zulassen. (12 Min)', 'Loesung zeigen; auf ON-Bedingung und Tabellen-Aliase achten. (5 Min)'], 'slides' => [
-                ['type' => 'text', 'title' => 'Warum zwei Tabellen?', 'body' => "# Datenbanken Level 2\n\nSpeichern wir Namen mehrfach (**Redundanz**), drohen **Anomalien**: Ändert sich ein Name, muss er überall geändert werden - vergisst man eine Stelle, ist die Datenbank widersprüchlich.\n\nDie Lösung: **Aufteilen** in mehrere Tabellen mit Beziehungen:\n\n- **Primärschlüssel** (PK): identifiziert jeden Datensatz eindeutig (id)\n- **Fremdschlüssel** (FK): verweist auf den Primärschlüssel einer anderen Tabelle (kunde_id)\n\nSo entsteht das **relationale Modell** aus dem OO-Datenmodell: Jede Klasse wird zur Tabelle, Beziehungen laufen über Schlüssel."],
-                ['type' => 'code', 'title' => 'Live-Demo: Verknüpfte Tabellen', 'lang' => 'sql', 'code' => "CREATE TABLE klasse (\n    id INTEGER PRIMARY KEY,\n    name TEXT\n);\n\nCREATE TABLE schueler (\n    id INTEGER PRIMARY KEY,\n    name TEXT,\n    klasse_id INTEGER REFERENCES klasse (id)\n);\n\nINSERT INTO klasse (id, name) VALUES (1, '10G');\nINSERT INTO schueler (id, name, klasse_id) VALUES (1, 'Nele', 1);"],
-                ['type' => 'text', 'title' => 'JOIN: Abfrage über zwei Tabellen', 'body' => "## JOIN\n\nEin **JOIN** führt zwei Tabellen für eine Abfrage zusammen - verbunden über den Fremdschlüssel:\n\n```sql\nSELECT schueler.name, klasse.name\nFROM schueler\nJOIN klasse ON schueler.klasse_id = klasse.id;\n```\n\nDas Präfix (schueler./klasse.) sagt, aus welcher Tabelle die Spalte kommt.\n\nIm **Shop** aus der SQL-Werkstatt gilt das genauso: Bestellungen und Kunden sind über `kunde_id` verbunden."],
-                ['type' => 'text', 'title' => 'Übung: JOIN im Shop', 'body' => "**Übung: Bestellungen mit Kundennamen**\n\nÖffne deine **Shop-Datenbank** in der SQL-Werkstatt:\n\n1. Zeige zu jeder Bestellung den **Vor- und Nachnamen** des Kunden und das **Datum** (JOIN über `kunde_id`).\n2. Zeige zu jeder Bestellposition das **Produkt** und die **Menge** (JOIN über `produkt_id`).\n3. Bonus: Berechne den **Gesamtwert** aller Bestellungen (Menge mal Preis, SUM).\n\nTipp: Erst die kleine Abfrage schreiben, dann Schritt für Schritt erweitern."],
-                ['type' => 'code', 'title' => 'Lösung: JOIN im Shop', 'lang' => 'sql', 'code' => "-- 1) Bestellungen mit Kundennamen\nSELECT k.vorname, k.nachname, b.datum\nFROM bestellungen b\nJOIN kunden k ON k.id = b.kunde_id;\n\n-- 2) Positionen mit Produkt und Menge\nSELECT p.name, bp.menge\nFROM bestellpositionen bp\nJOIN produkte p ON p.id = bp.produkt_id;\n\n-- 3) Gesamtwert\nSELECT SUM(bp.menge * p.preis) AS umsatz\nFROM bestellpositionen bp\nJOIN produkte p ON p.id = bp.produkt_id;"],
-            ]],
-            ['slug' => 'java-arrays', 'title' => 'Java: Arrays und Referenzen', 'level' => 10, 'v' => 3, 'legacy' => [], 'notes' => ['Einstieg: Notenliste als Analogie; Frage: Mit welchem Index beginnt ein Array? (5 Min)', 'Code vorfuehren; Schleife und length betonen. (10 Min)', 'Zeichnung an die Tafel: zwei Pfeile auf ein Array; Unterschied Kopie und Referenz. (8 Min)', 'SuS arbeiten in der IDE; Minimum-Suche ueber alle Laufzeiten. (12 Min)', 'Minimum-Suche gemeinsam nachvollziehen; Startwert bei Index 0 setzen. (5 Min)'], 'slides' => [
-                ['type' => 'text', 'title' => 'Viele Werte, eine Variable', 'body' => "# Arrays\n\nEin **Array** speichert **mehrere Werte desselben Typs** unter einem Namen:\n\n```java\nint[] noten = new int[4];\nnoten[0] = 1;\nnoten[1] = 2;\n```\n\nDer **Index** beginnt bei 0: `noten[0]` ist das erste Element, `noten[3]` das vierte - `noten[4]` existiert nicht (**ArrayIndexOutOfBounds**).\n\n## Referenz\n\nDie Variable speichert nicht die Werte selbst, sondern eine **Referenz** (Adresse) auf das Array-Objekt im Speicher."],
-                ['type' => 'code', 'title' => 'Live-Demo: Notendurchschnitt', 'lang' => 'java', 'code' => 'int[] noten = {1, 2, 3, 2};\n\nint summe = 0;\nfor (int i = 0; i < noten.length; i++) {\n    summe = summe + noten[i];\n}\n\ndouble schnitt = (double) summe / noten.length;\nSystem.out.println("Schnitt: " + schnitt);'],
-                ['type' => 'text', 'title' => 'Referenzen verstehen', 'body' => "## Zwei Namen, ein Array\n\n```java\nint[] a = {1, 2, 3};\nint[] b = a;\nb[0] = 9;\nSystem.out.println(a[0]);  // 9!\n```\n\n`b = a` kopiert nicht das Array, sondern die **Referenz**: a und b zeigen auf **dasselbe** Objekt. Änderungen über b sind auch über a sichtbar - ein häufiger Fehler.\n\n## Objekte genauso\n\nGilt auch für Objekte: `Schueler s2 = s1;` - beide Namen zeigen auf **einen** Schüler."],
-                ['type' => 'text', 'title' => 'Übung: Bester Lauf', 'body' => "**Übung: Kleinste Zeit finden**\n\nGegeben: `int[] zeiten = {312, 287, 305, 298};` (Rundenzeiten in Sekunden)\n\n1. Schreibe eine Methode `besteZeit(int[] zeitenStart)`, die die **kleinste** Zeit zurückgibt.\n2. Drucke zusätzlich, an welchem **Index** die beste Zeit liegt.\n3. Erkläre deinem Nachbarn: Warum startet man bei Index 1 statt 0?\n\nTipp: Starte mit `zeitenStart[0]` als vorläufigem Bestwert und vergleiche in einer Schleife."],
-                ['type' => 'code', 'title' => 'Lösung: besteZeit', 'lang' => 'java', 'code' => 'int besteZeit(int[] zeitenStart) {\n    int beste = zeitenStart[0];\n    int index = 0;\n    for (int i = 1; i < zeitenStart.length; i++) {\n        if (zeitenStart[i] < beste) {\n            beste = zeitenStart[i];\n            index = i;\n        }\n    }\n    System.out.println("Beste Zeit liegt bei Index " + index);\n    return beste;\n}\n\nint[] zeiten = {312, 287, 305, 298};\nSystem.out.println("Beste Zeit: " + besteZeit(zeiten));'],
-            ]],
-            ['slug' => 'java-datenkapselung', 'title' => 'Java: Datenkapselung mit private', 'level' => 10, 'v' => 3, 'legacy' => [], 'notes' => ['Einstieg: Was passiert bei note = 99? Problem erfragen und stehen lassen. (5 Min)', 'private Attribut plus Getter und Setter mit Pruefung zeigen. (10 Min)', 'SuS: Klasse Schueler mit setNote; ungueltige Werte muessen abgelehnt werden. (12 Min)', 'Loesung vergleichen; Merksatz: Das Objekt schuetzt sich selbst. (5 Min)'], 'slides' => [
-                ['type' => 'text', 'title' => 'Warum Kapselung?', 'body' => "# Datenkapselung\n\nBisher konnte jeder einfach `konto.stand = -99999;` schreiben. **Datenkapselung** schützt:\n\n- Attribute werden `private`: nur die **eigene Klasse** darf direkt darauf zugreifen\n- Zugriff von außen nur über **öffentliche Methoden**: `getKontostand()`, `einzahlen(betrag)`\n\n## Vorteile\n\n- **Kontrolle**: `einzahlen()` kann negative Beträge ablehnen\n- **Änderbar**: Internes kann geändert werden, ohne dass Nutzer der Klasse etwas merken\n- **Verständlich**: Die Methoden sagen, was erlaubt ist"],
-                ['type' => 'code', 'title' => 'Live-Demo: Klasse Konto', 'lang' => 'java', 'code' => 'class Konto {\n    // Attribute (privat!)\n    private String inhaber;\n    private double stand;\n\n    // Konstruktor\n    Konto(String inhaberStart, double standStart) {\n        inhaber = inhaberStart;\n        stand = standStart;\n    }\n\n    // eigene Methode: kontrollierter Zugriff\n    void einzahlen(double betrag) {\n        if (betrag > 0) {\n            stand = stand + betrag;\n        }\n    }\n\n    // Lesemethode (getter)\n    double getKontostand() {\n        return stand;\n    }\n\n    // Schreibmethode (setter)\n    void setInhaber(String inhaberNeu) {\n        inhaber = inhaberNeu;\n    }\n}\n\nKonto k = new Konto("Lena", 100);\nk.einzahlen(50);\nSystem.out.println("Neuer Stand: " + k.getKontostand());'],
-                ['type' => 'text', 'title' => 'Übung: Noten sicher kapseln', 'body' => "**Übung: Schueler mit Prüfung kapseln**\n\n1. Baue die Klasse **Schueler** mit **private** Attributen `name` (String) und `note` (double), Konstruktor mit ...Start.\n2. Schreibe `getName()`, `setName(String nameNeu)` und `setNote(double noteNeu)`.\n3. `setNote` lehnt Noten außerhalb von **1 bis 6** ab - es passiert dann einfach nichts.\n4. Teste: Was passiert bei `setNote(99)`? Die Note darf sich **nicht** ändern.\n\nNaming: Setter-Parameter enden auf **Neu**."],
-                ['type' => 'code', 'title' => 'Lösung: Schueler kapseln', 'lang' => 'java', 'code' => 'class Schueler {\n    // Attribute (privat!)\n    private String name;\n    private double note;\n\n    // Konstruktor\n    Schueler(String nameStart, double noteStart) {\n        name = nameStart;\n        note = noteStart;\n    }\n\n    // Lesemethode (getter)\n    String getName() {\n        return name;\n    }\n\n    // Schreibmethode (setter) mit Pruefung\n    void setNote(double noteNeu) {\n        if (noteNeu >= 1 && noteNeu <= 6) {\n            note = noteNeu;\n        }\n    }\n}\n\nSchueler s = new Schueler("Jonas", 2.3);\ns.setNote(99);\nSystem.out.println("Name bleibt: " + s.getName());'],
-            ]],
-            ['slug' => 'java-polymorphismus', 'title' => 'Java: Überschreiben und Polymorphismus', 'level' => 10, 'v' => 3, 'legacy' => [], 'notes' => ['Einstieg: Tier-Variable, Hund-Objekt: Welche Methode laeuft? (5 Min)', 'Tier[] mit Hund und Katze fuellen; gibLaut in der Schleife vorfuehren. (10 Min)', 'SuS: Klasse Kuh anlegen und ins Gehege-Array; Ueberschreiben ueben. (12 Min)', 'Loesung zeigen; Merksatz: Typ der Variablen, Klasse des Objekts entscheidet. (5 Min)'], 'slides' => [
-                ['type' => 'text', 'title' => 'Dynamische Bindung', 'body' => "# Polymorphismus\n\nEin Objekt einer **Unterklasse** darf in einer Variable des **Oberklassen-Typs** liegen:\n\n```java\nTier t = new Hund(\"Bello\");\nt.gibLaut();  // bellt!\n```\n\nJava ruft **immer die Methode des konkreten Objekts** auf (**dynamische Bindung**) - obwohl t vom Typ Tier ist, bellt es.\n\n## Warum ist das mächtig?\n\nMan sammelt Tier-Objekte in einem Array - Hunde, Katzen, Papageien - und ruft für alle `gibLaut()` auf. Eine Methode, **viele Erscheinungsformen**: Poly-morphismus."],
-                ['type' => 'code', 'title' => 'Live-Demo: Das Tierheim-Gehege', 'lang' => 'java', 'code' => '// Klassen Tier, Hund, Katze, Papagei wie in der Vererbungs-Stunde\n\nTier[] gehege = new Tier[3];\ngehege[0] = new Hund("Bello");\ngehege[1] = new Katze("Mimi");\ngehege[2] = new Papagei("Rio");\n\nfor (int i = 0; i < gehege.length; i++) {\n    gehege[i].gibLaut();\n}'],
-                ['type' => 'text', 'title' => 'Übung: Neues Tier im Gehege', 'body' => "**Übung: Gehege erweitern**\n\n1. Schreibe eine weitere Unterklasse von Tier, z. B. **Kuh**: Konstruktor mit `nameStart`, `@Override gibLaut()`.\n2. Vergrößere das gehege-Array auf 4 Tiere und füge deine Kuh hinzu.\n3. Erkläre deinem Nachbarn: Warum reicht **eine** Schleife für alle Tiere - ganz ohne if-Abfrage?\n\nBonus: Was passiert, wenn eine Unterklasse `gibLaut()` **nicht** überschreibt?"],
                 ['type' => 'code', 'title' => 'Lösung: Kuh im Gehege', 'lang' => 'java', 'code' => 'class Kuh extends Tier {\n    // Konstruktor\n    Kuh(String nameStart) {\n        super(nameStart);\n    }\n\n    // eigene Methode (ueberschreibt Tier)\n    @Override\n    void gibLaut() {\n        System.out.println(name + " muht: Muh!");\n    }\n}\n\nTier[] gehege = new Tier[4];\ngehege[3] = new Kuh("Berta");\ngehege[3].gibLaut();'],
             ]],
             ['slug' => 'projekt', 'title' => 'Projekt: Von der Idee zur Dokumentation', 'level' => 10, 'v' => 2, 'legacy' => [], 'notes' => ['Einstieg: Projekte im Alltag; die fuenf Phasen vorstellen. (5 Min)', 'Planung vertiefen; Tabelle mit Meilensteinen zeigen. (8 Min)', 'Teams bilden; je Team einen Plan fuer alle Phasen auf Papier erstellen. (15 Min)', 'Einen Plan gemeinsam vergleichen; Dokumentation ist Teil der Arbeit. (5 Min)'], 'slides' => [
