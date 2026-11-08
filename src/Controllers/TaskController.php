@@ -6,6 +6,8 @@ namespace Infocraft\Controllers;
 use Infocraft\Auth;
 use Infocraft\Models\AiSettings;
 use Infocraft\Models\HtmlSanitizer;
+use Infocraft\Models\Project;
+use Infocraft\Models\ProjectFile;
 use Infocraft\Models\SchoolClass;
 use Infocraft\Models\Task;
 use Infocraft\Models\TaskCatalog;
@@ -27,6 +29,9 @@ final class TaskController
             redirect('/login');
         }
         if (Auth::isTeacher()) {
+            // Wiederkehrende Aufgaben: überfällige Abgabetermine einmal je
+            // Aufruf in die Zukunft schieben (idempotent, ohne Migration).
+            Task::rollRecurringDeadlines();
             $classes = SchoolClass::forTeacher($user->id, $user->role === 'admin');
             // Unter-Navigation des Aufgabenpools: Meine Aufgaben (Kacheln),
             // Aufgabenkatalog (fertige Aufgaben) und gemeinsamer Pool.
@@ -299,6 +304,8 @@ final class TaskController
             'todoTemplates' => TaskTodo::templatesForTasks($taskIds),
             'studentTodos' => TaskTodo::forStudentTasks($user->id, $taskIds),
             'materials' => TaskMaterial::forTasks($taskIds),
+            // Eigene Projekte der Werkstatt für die Abgabe per Projektverweis (Issue #11).
+            'studentProjects' => Project::all($user->id),
             'user' => $user,
         ]);
     }
@@ -688,6 +695,11 @@ final class TaskController
             redirect('/aufgaben/' . $task->id . '/bearbeiten');
         }
         $classId = (int) ($_POST['class_id'] ?? 0);
+        // Wiederkehrender Rhythmus (optional): '', weekly, biweekly, monthly.
+        $recurrence = (string) ($_POST['recurrence'] ?? '');
+        if (!in_array($recurrence, ['', 'weekly', 'biweekly', 'monthly'], true)) {
+            $recurrence = '';
+        }
         // Einzelne Personen: Auswahl im Verteilen-Panel (Mehrfachauswahl)
         // oder klassisches Einzelfeld.
         $userIds = [];
@@ -708,10 +720,11 @@ final class TaskController
                 flash('error', 'Du unterrichtest diese Klasse nicht.');
                 redirect('/aufgaben/' . $task->id . '/bearbeiten');
             }
-            Task::assign($task->id, $classId, null, $dueAt, $visibleFrom);
+            Task::assign($task->id, $classId, null, $dueAt, $visibleFrom, $recurrence);
+            $recurrenceLabels = ['weekly' => ' (wöchentlich)', 'biweekly' => ' (alle 2 Wochen)', 'monthly' => ' (monatlich)'];
             flash('success', $visibleFrom === null
-                ? 'Aufgabe an die Klasse ausgeteilt.'
-                : 'Aufgabe an die Klasse ausgeteilt. Sie erscheint am ' . $visibleFrom . ' Uhr.');
+                ? 'Aufgabe an die Klasse ausgeteilt.' . ($recurrenceLabels[$recurrence] ?? '')
+                : 'Aufgabe an die Klasse ausgeteilt.' . ($recurrenceLabels[$recurrence] ?? '') . ' Sie erscheint am ' . $visibleFrom . ' Uhr.');
             redirect('/aufgaben/' . $task->id . '/bearbeiten');
         }
         if ($userIds !== []) {
@@ -722,7 +735,7 @@ final class TaskController
                 if ($student === null || $student->role !== 'student' || (!$isAdmin && ($student->classId === null || !SchoolClass::hasTeacher((int) $student->classId, $user->id)))) {
                     continue;
                 }
-                if (Task::assign($task->id, null, $student->id, $dueAt, $visibleFrom)) {
+                if (Task::assign($task->id, null, $student->id, $dueAt, $visibleFrom, $recurrence)) {
                     $count++;
                 } else {
                     $skipped++;
@@ -954,6 +967,150 @@ final class TaskController
     }
 
     /**
+     * Präsentationsmodus starten (Issue #35): Die Lehrkraft arbeitet in einer
+     * temporären Kopie in der Werkstatt, ohne die Aufgabe oder die Vorlage
+     * (Materialien) zu überschreiben. Die Kopie ist als Musterlösung
+     * herunterladbar und wird über den Präsentationsmodus wieder gelöscht.
+     */
+    public static function presentationStart(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Der Präsentationsmodus ist nur für Lehrkräfte.');
+            redirect('/');
+        }
+        csrf_validate();
+        $task = Task::find((int) ($params['id'] ?? 0));
+        if ($task === null || !Task::ownedBy($task, $user)) {
+            flash('error', 'Aufgabe nicht gefunden.');
+            redirect('/aufgaben');
+        }
+        // Läuft bereits? Dann direkt weiter im laufenden Projekt.
+        if ($task->presentationProjectId !== null) {
+            $existing = Project::find($task->presentationProjectId);
+            if ($existing !== null && $existing->ownerId === $user->id) {
+                redirect('/werkstatt/' . ($existing->type === 'html' ? 'html' : 'code') . '/' . $existing->id);
+            }
+        }
+        // Startinhalt: erstes Code-Material (Java/Python/Assembler/HTML),
+        // sonst die Musterlösung, sonst ein Hinweis-Kommentar.
+        $content = '';
+        $language = null;
+        $type = $task->type === 'html' ? 'html' : 'code';
+        foreach (TaskMaterial::forTask($task->id) as $material) {
+            $lower = mb_strtolower($material->filename);
+            if (preg_match('/\.(java|py|asm|html)$/i', $lower, $match) === 1) {
+                $content = $material->raw();
+                $language = $type === 'html' ? null : ['java' => 'java', 'py' => 'python', 'asm' => 'asm', 'html' => null][$match[1]];
+                break;
+            }
+        }
+        if ($content === '' && $task->sampleSolution !== '') {
+            $content = $task->sampleSolution;
+            $language = $language ?? ($type === 'code' ? 'java' : null);
+        }
+        if ($content === '') {
+            $content = "// Präsentationsmodus: " . $task->title . "\n// Hier live programmieren, die Vorlage bleibt unangetastet.\n";
+            $language = $language ?? ($type === 'code' ? 'java' : null);
+        }
+        $project = Project::create($user->id, null, '🎬 Präsentation: ' . $task->title, $type, $language, $content);
+        Task::setPresentationProject($task->id, $project->id);
+        flash('success', 'Präsentationsmodus gestartet. Deine Änderungen bleiben in der temporären Kopie.');
+        redirect('/werkstatt/' . ($type === 'html' ? 'html' : 'code') . '/' . $project->id);
+    }
+
+    /** Präsentationsmodus beenden: temporäres Projekt löschen. */
+    public static function presentationEnd(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Der Präsentationsmodus ist nur für Lehrkräfte.');
+            redirect('/');
+        }
+        csrf_validate();
+        $task = Task::find((int) ($params['id'] ?? 0));
+        if ($task === null || !Task::ownedBy($task, $user)) {
+            flash('error', 'Aufgabe nicht gefunden.');
+            redirect('/aufgaben');
+        }
+        if ($task->presentationProjectId !== null) {
+            $project = Project::find($task->presentationProjectId);
+            if ($project !== null && $project->ownerId === $user->id) {
+                Project::delete($project->id);
+            }
+            Task::setPresentationProject($task->id, null);
+        }
+        flash('success', 'Präsentationsmodus beendet, die temporäre Kopie wurde gelöscht.');
+        redirect('/aufgaben/' . $task->id . '/bearbeiten');
+    }
+
+    /** Temporäre Kopie (Musterlösung) als Datei herunterladen. */
+    public static function presentationDownload(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Nur Lehrkräfte können die Musterlösung herunterladen.');
+            redirect('/');
+        }
+        $task = Task::find((int) ($params['id'] ?? 0));
+        if ($task === null || !Task::ownedBy($task, $user) || $task->presentationProjectId === null) {
+            flash('error', 'Für diese Aufgabe läuft gerade kein Präsentationsmodus.');
+            redirect('/aufgaben');
+        }
+        $project = Project::find($task->presentationProjectId);
+        if ($project === null || $project->ownerId !== $user->id) {
+            flash('error', 'Das Präsentationsprojekt existiert nicht mehr.');
+            redirect('/aufgaben/' . $task->id . '/bearbeiten');
+        }
+        $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9]+/', '-', $task->title) ?? '', '-'));
+        $ext = $project->language === 'python' ? 'py' : ($project->language === 'asm' ? 'asm' : ($project->type === 'html' ? 'html' : 'java'));
+        $filename = 'Musterloesung-' . ($slug !== '' ? $slug : 'aufgabe-' . $task->id) . '.' . $ext;
+        header('Content-Type: text/plain; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        echo $project->content;
+        foreach (ProjectFile::allForProject($project->id) as $file) {
+            echo "\n\n/* ===== Datei: " . $file->name . " ===== */\n" . $file->content;
+        }
+        exit;
+    }
+
+    /**
+     * Musterlösung in einem eigenen Fenster anzeigen (Issue #36): Nur die
+     * Lehrkraft, die die Aufgabe besitzt. Für den Zweitbildschirm, unabhängig
+     * vom Arbeitsfenster offenbleibend, ohne Navigation.
+     */
+    public static function solutionWindow(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Die Musterlösung ist nur für Lehrkräfte sichtbar.');
+            redirect('/');
+        }
+        $task = Task::find((int) ($params['id'] ?? 0));
+        if ($task === null || !Task::ownedBy($task, $user)) {
+            flash('error', 'Aufgabe nicht gefunden.');
+            redirect('/aufgaben');
+        }
+        render('task_solution_window', [
+            'title' => 'Musterlösung: ' . $task->title,
+            'bare' => true,
+            'task' => $task,
+        ]);
+    }
+
+    /**
      * Aufgabe als Java- oder Python-Variante duplizieren: Kopie mit
      * Rückverweis, Materialien und ToDo-Vorlagen werden mitkopiert. Ist eine
      * Chat-KI-Schnittstelle hinterlegt, wird die Musterlösung automatisch
@@ -1083,8 +1240,24 @@ final class TaskController
             redirect('/aufgaben');
         }
         $content = trim((string) ($_POST['content'] ?? ''));
-        if ($content === '') {
-            flash('error', 'Bitte schreibe deine Lösung in das Feld.');
+        // Projektverweis aus der Code- bzw. HTML-Werkstatt (Issue #11):
+        // Bei Typ code/html darf statt Text auch ein eigenes Projekt verknüpft
+        // werden. Das Projekt muss der Schülerin bzw. dem Schüler gehören.
+        $projectId = max(0, (int) ($_POST['project_id'] ?? 0));
+        $project = null;
+        if ($projectId > 0) {
+            if (!in_array($task->type, ['code', 'html'], true)) {
+                flash('error', 'Für diesen Aufgabentyp kannst du kein Projekt verknüpfen.');
+                redirect('/aufgaben');
+            }
+            $project = Project::find($projectId);
+            if ($project === null || $project->ownerId !== $user->id) {
+                flash('error', 'Das ausgewählte Projekt gehört dir nicht.');
+                redirect('/aufgaben');
+            }
+        }
+        if ($content === '' && $project === null) {
+            flash('error', 'Bitte schreibe deine Lösung in das Feld oder verknüpfe ein Projekt aus deiner Werkstatt.');
             redirect('/aufgaben');
         }
         $selfRating = max(0, min(3, (int) ($_POST['self_rating'] ?? 0)));
@@ -1100,7 +1273,7 @@ final class TaskController
             flash('error', 'Der Abgabetermin dieser Aufgabe ist abgelaufen, neue Abgaben sind nicht mehr möglich.');
             redirect('/aufgaben');
         }
-        TaskSubmission::upsert($task->id, $user->id, $content, $selfRating);
+        TaskSubmission::upsert($task->id, $user->id, $content, $selfRating, $project !== null ? $project->id : null);
         if ($dueAt !== null && date('Y-m-d H:i') > $dueAt) {
             flash('success', 'Abgabe gespeichert, aber verspätet (Abgabetermin war ' . $dueAt . ' Uhr).');
         } else {
@@ -1268,12 +1441,23 @@ final class TaskController
                 }
             }
             $late = $submission !== null && $dueAt !== null && substr($submission['submittedAt'], 0, 16) > $dueAt;
+            // Verknüpftes Projekt (Abgabe aus der Code-/HTML-Werkstatt, Issue #11):
+            // Für die Quelltext-Ansicht in der Korrektur mitliefern.
+            $project = null;
+            $projectId = $submission['projectId'] ?? null;
+            if ($projectId !== null) {
+                $candidate = Project::find($projectId);
+                if ($candidate !== null && $candidate->ownerId === $student->id) {
+                    $project = $candidate;
+                }
+            }
             $rows[] = [
                 'student' => $student,
                 'submission' => $submission,
                 'grading' => $grading,
                 'dueAt' => $dueAt,
                 'late' => $late,
+                'project' => $project,
             ];
         }
         // Kennzahlen für die Lehrkraft: Abgabequote, verspätete Abgaben,

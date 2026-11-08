@@ -175,6 +175,19 @@ $currentRating = $entry['submission'] !== null ? (int) ($entry['submission']['se
         <label class="field"><span>Deine Lösung (Text)</span>
             <textarea name="content" rows="5" placeholder="Schreibe hier deine Lösung hinein ..."><?= $entry['submission'] !== null ? e($entry['submission']['content']) : '' ?></textarea>
         </label>
+        <?php if (in_array($task->type, ['code', 'html'], true)): ?>
+        <label class="field"><span>oder Projekt aus deiner Werkstatt verknüpfen (statt Text)</span>
+            <select name="project_id">
+                <option value="0">- kein Projekt, nur Text -</option>
+                <?php $currentProjectId = $entry['submission']['projectId'] ?? null; ?>
+                <?php foreach (($studentProjects ?? []) as $workshopProject): ?>
+                <?php if ($task->type === 'code' && $workshopProject->type !== 'code') { continue; } ?>
+                <?php if ($task->type === 'html' && $workshopProject->type !== 'html') { continue; } ?>
+                <option value="<?= (int) $workshopProject->id ?>"<?= $currentProjectId === $workshopProject->id ? ' selected' : '' ?>><?= e($workshopProject->title) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <?php endif; ?>
         <label class="field"><span>Wie sicher fühlst du dich bei dieser Aufgabe? (freiwillig, deine Lehrkraft sieht es bei der Korrektur)</span>
             <select name="self_rating">
                 <option value="0"<?= $currentRating === 0 ? ' selected' : '' ?>>nicht angeben</option>

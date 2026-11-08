@@ -35,6 +35,7 @@ final class Task
         public readonly string $descriptionFormat = 'text',
         public readonly int $variantOf = 0,
         public readonly int $solutionVisible = 0,
+        public readonly ?int $presentationProjectId = null,
     ) {
     }
 
@@ -75,6 +76,7 @@ final class Task
             ($row['description_format'] ?? 'text') === 'html' ? 'html' : 'text',
             (int) ($row['variant_of'] ?? 0),
             (int) ($row['solution_visible'] ?? 0),
+            isset($row['presentation_project_id']) && $row['presentation_project_id'] !== null ? (int) $row['presentation_project_id'] : null,
         );
     }
 
@@ -310,11 +312,12 @@ final class Task
     }
 
     /** Aufgabe aus teilen; false, wenn es die Zuweisung schon gab. */
-    public static function assign(int $taskId, ?int $classId, ?int $userId, ?string $dueAt = null, ?string $visibleFrom = null): bool
+    public static function assign(int $taskId, ?int $classId, ?int $userId, ?string $dueAt = null, ?string $visibleFrom = null, string $recurrence = ''): bool
     {
         if ($classId === null && $userId === null) {
             return false;
         }
+        $recurrence = in_array($recurrence, ['', 'weekly', 'biweekly', 'monthly'], true) ? $recurrence : '';
         $pdo = Database::pdo();
         if ($classId !== null) {
             $stmt = $pdo->prepare('SELECT COUNT(*) FROM task_targets WHERE task_id = ? AND class_id = ?');
@@ -326,9 +329,53 @@ final class Task
         if ((int) $stmt->fetchColumn() > 0) {
             return false;
         }
-        $insert = $pdo->prepare('INSERT INTO task_targets (task_id, class_id, user_id, due_at, visible_from) VALUES (?, ?, ?, ?, ?)');
-        $insert->execute([$taskId, $classId, $userId, $dueAt, $visibleFrom]);
+        $insert = $pdo->prepare('INSERT INTO task_targets (task_id, class_id, user_id, due_at, visible_from, recurrence) VALUES (?, ?, ?, ?, ?, ?)');
+        $insert->execute([$taskId, $classId, $userId, $dueAt, $visibleFrom, $recurrence]);
         return true;
+    }
+
+    public static function setPresentationProject(int $taskId, ?int $projectId): void
+    {
+        $stmt = Database::pdo()->prepare('UPDATE tasks SET presentation_project_id = ? WHERE id = ?');
+        $stmt->execute([$projectId, $taskId]);
+    }
+
+    public static function findByPresentationProject(int $projectId): ?self
+    {
+        $stmt = Database::pdo()->prepare('SELECT * FROM tasks WHERE presentation_project_id = ?');
+        $stmt->execute([$projectId]);
+        $row = $stmt->fetch();
+        return $row ? self::fromRow($row) : null;
+    }
+
+    public static function rollRecurringDeadlines(): void
+    {
+        $pdo = Database::pdo();
+        $intervals = [
+            'weekly' => '+7 days',
+            'biweekly' => '+14 days',
+            'monthly' => '+1 month',
+        ];
+        $today = date('Y-m-d');
+        foreach ($intervals as $rec => $sql) {
+            $stmt = $pdo->prepare(
+                "SELECT id, due_at FROM task_targets WHERE recurrence = ? AND due_at IS NOT NULL AND due_at < ?"
+            );
+            $stmt->execute([$rec, $today]);
+            $update = $pdo->prepare('UPDATE task_targets SET due_at = ? WHERE id = ?');
+            foreach ($stmt->fetchAll() as $row) {
+                $due = (string) $row['due_at'];
+                $max = 60;
+                while ($due < $today && $max-- > 0) {
+                    $next = date('Y-m-d', strtotime($sql, strtotime($due)));
+                    if ($next <= $due) {
+                        break;
+                    }
+                    $due = $next;
+                }
+                $update->execute([$due, (int) $row['id']]);
+            }
+        }
     }
 
     /** Abgabetermin einer bestehenden Zuweisung setzen oder streichen. */
@@ -373,7 +420,7 @@ final class Task
     public static function targets(int $taskId): array
     {
         $stmt = Database::pdo()->prepare(
-            'SELECT tt.id, tt.class_id, tt.user_id, tt.due_at, tt.visible_from, c.name AS class_name, u.first_name, u.last_name
+            'SELECT tt.id, tt.class_id, tt.user_id, tt.due_at, tt.visible_from, tt.recurrence, c.name AS class_name, u.first_name, u.last_name
              FROM task_targets tt
              LEFT JOIN classes c ON c.id = tt.class_id
              LEFT JOIN users u ON u.id = tt.user_id
@@ -384,6 +431,7 @@ final class Task
         foreach ($stmt->fetchAll() as $row) {
             $dueAt = ($row['due_at'] ?? null) !== null && $row['due_at'] !== '' ? (string) $row['due_at'] : null;
             $visibleFrom = ($row['visible_from'] ?? null) !== null && $row['visible_from'] !== '' ? (string) $row['visible_from'] : null;
+            $recurrence = in_array((string) ($row['recurrence'] ?? ''), ['weekly', 'biweekly', 'monthly'], true) ? (string) $row['recurrence'] : '';
             if ($row['class_name'] !== null) {
                 $list[] = [
                     'id' => (int) $row['id'],
@@ -394,6 +442,7 @@ final class Task
                     'assignedAt' => (string) $row['created_at'],
                     'classId' => (int) $row['class_id'],
                     'userId' => null,
+                    'recurrence' => $recurrence,
                 ];
             } else {
                 $list[] = [
@@ -405,6 +454,7 @@ final class Task
                     'assignedAt' => (string) $row['created_at'],
                     'classId' => null,
                     'userId' => (int) $row['user_id'],
+                    'recurrence' => $recurrence,
                 ];
             }
         }

@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     description_format TEXT NOT NULL DEFAULT 'text',
     variant_of INTEGER NOT NULL DEFAULT 0,
     solution_visible INTEGER NOT NULL DEFAULT 0,
+    presentation_project_id INTEGER NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -136,6 +137,7 @@ CREATE TABLE IF NOT EXISTS task_targets (
     user_id INTEGER NULL REFERENCES users (id) ON DELETE CASCADE,
     due_at TEXT NULL,
     visible_from TEXT NULL,
+    recurrence TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -146,6 +148,7 @@ CREATE TABLE IF NOT EXISTS task_submissions (
     content TEXT NOT NULL DEFAULT '',
     submitted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     self_rating INTEGER NOT NULL DEFAULT 0,
+    project_id INTEGER NULL,
     PRIMARY KEY (task_id, student_id)
 );
 

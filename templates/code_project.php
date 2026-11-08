@@ -10,6 +10,19 @@
         <p>Du bist als Lehrkraft hier. Änderungen speicherst du wie gewohnt, die Schülerin oder der Schüler sieht dieselben Dateien. Perfekt, um den Zwischenstand anzusehen oder gemeinsam am Code zu arbeiten.</p>
     </div>
     <?php endif; ?>
+    <?php if (($presentationTask ?? null) !== null): ?>
+    <div class="notice">
+        <strong>🎬 Präsentationsmodus: <?= e($presentationTask->title) ?></strong>
+        <p>Du arbeitest in einer temporären Kopie. Die Aufgabenvorlage und die Materialien bleiben unangetastet, dein Code wird nur hier gespeichert.</p>
+        <div class="btn-row">
+            <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen">⬇️ als Musterlösung herunterladen</a>
+            <form method="post" action="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/ende') ?>" class="form-inline">
+                <?= csrf_field() ?>
+                <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese Kopie löschen">✕ Präsentation beenden und löschen</button>
+            </form>
+        </div>
+    </div>
+    <?php endif; ?>
     <?php if ($project->type === 'code' && $project->language === 'java'): ?>
     <!-- Java-IDE über die volle Breite: Dateien im eigenen Fenster, Editor und Konsole in einem gemeinsamen Fenster -->
     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="ide-savebar" id="code-save-form" aria-hidden="true">

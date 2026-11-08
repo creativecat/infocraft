@@ -9,6 +9,19 @@
         <p>Du bist als Lehrkraft hier. Änderungen speicherst du wie gewohnt, die Schülerin oder der Schüler sieht dieselbe Seite.</p>
     </div>
     <?php endif; ?>
+    <?php if (($presentationTask ?? null) !== null): ?>
+    <div class="notice">
+        <strong>🎬 Präsentationsmodus: <?= e($presentationTask->title) ?></strong>
+        <p>Du arbeitest in einer temporären Kopie. Die Aufgabenvorlage und die Materialien bleiben unangetastet.</p>
+        <div class="btn-row">
+            <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen">⬇️ als Musterlösung herunterladen</a>
+            <form method="post" action="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/ende') ?>" class="form-inline">
+                <?= csrf_field() ?>
+                <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese Kopie löschen">✕ Präsentation beenden und löschen</button>
+            </form>
+        </div>
+    </div>
+    <?php endif; ?>
     <form method="post" action="<?= url('werkstatt/html/' . (int) $project->id) ?>" class="form" id="html-form">
         <?= csrf_field() ?>
         <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>

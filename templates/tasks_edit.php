@@ -88,6 +88,20 @@ foreach ($classes as $class) {
         </form>
         <div class="btn-row">
             <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $task->id . '/export') ?>" title="Aufgabe als Datei sichern oder an Kolleginnen und Kollegen weitergeben (inkl. ToDos, Vorlagen, Musterlösung)">⬇️</a>
+            <?php if ($task->presentationProjectId !== null): ?>
+            <a class="btn btn-primary" href="<?= url('werkstatt/' . ($task->type === 'html' ? 'html' : 'code') . '/' . (int) $task->presentationProjectId) ?>" title="Präsentationsmodus läuft: zurück in die temporäre Kopie">🎬 läuft</a>
+            <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $task->id . '/praesentation/download') ?>" title="Temporäre Kopie als Musterlösung herunterladen">⬇️ Musterlösung</a>
+            <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/praesentation/ende') ?>" class="form-inline">
+                <?= csrf_field() ?>
+                <button class="btn btn-ghost" type="submit" title="Präsentationsmodus beenden und die temporäre Kopie löschen">✕ beenden</button>
+            </form>
+            <?php else: ?>
+            <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/praesentation/start') ?>" class="form-inline">
+                <?= csrf_field() ?>
+                <button class="btn btn-primary" type="submit" title="Live im Unterricht programmieren, ohne Vorlage zu überschreiben: temporäre Kopie, später als Musterlösung herunterladbar und wieder löschbar">🎬 Präsentationsmodus</button>
+            </form>
+            <?php endif; ?>
+            <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $task->id . '/loesung/fenster') ?>" target="_blank" rel="noopener" title="Musterlösung in einem eigenen Fenster öffnen, z. B. für den Zweitbildschirm">🪟 Musterlösung im Fenster</a>
             <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/teilen') ?>" class="form-inline">
                 <?= csrf_field() ?>
                 <input type="hidden" name="shared" value="<?= $task->shared === 1 ? '0' : '1' ?>">
@@ -125,7 +139,7 @@ foreach ($classes as $class) {
             <?php $hidden = $target['visibleFrom'] !== null && $target['visibleFrom'] > date('Y-m-d H:i'); ?>
             <?php $prog = $progress[$target['id']] ?? ['total' => 0, 'submitted' => 0]; ?>
             <div class="target-row">
-                <span class="pill"><?= e($target['kind']) ?> <?= e($target['name']) ?><?= $hidden ? ' · ⏳ erscheint am ' . e($target['visibleFrom']) : '' ?><?= $target['dueAt'] !== null ? ' · 📅 ' . e($target['dueAt']) : '' ?> · ✍️ <?= (int) $prog['submitted'] ?>/<?= (int) $prog['total'] ?> abgegeben</span>
+                <span class="pill"><?= e($target['kind']) ?> <?= e($target['name']) ?><?= $hidden ? ' · ⏳ erscheint am ' . e($target['visibleFrom']) : '' ?><?= $target['dueAt'] !== null ? ' · 📅 ' . e($target['dueAt']) : '' ?><?= ($target['recurrence'] ?? '') !== '' ? ' · 🔁 ' . e(['weekly' => 'wöchentlich', 'biweekly' => 'alle 2 Wochen', 'monthly' => 'monatlich'][$target['recurrence']]) : '' ?> · ✍️ <?= (int) $prog['submitted'] ?>/<?= (int) $prog['total'] ?> abgegeben</span>
                 <form method="post" action="<?= url('aufgaben/start') ?>" class="form-inline" style="display:flex;gap:6px;align-items:center;">
                     <?= csrf_field() ?>
                     <input type="hidden" name="target_id" value="<?= (int) $target['id'] ?>">
@@ -181,6 +195,14 @@ foreach ($classes as $class) {
                             <input type="datetime-local" name="due_at">
                         </label>
                     </div>
+                    <label class="field"><span>Wiederkehrend (optional): überfällige Abgabetermine rutschen automatisch weiter</span>
+                        <select name="recurrence">
+                            <option value="">- einmalig -</option>
+                            <option value="weekly">🔁 wöchentlich</option>
+                            <option value="biweekly">🔁 alle 2 Wochen</option>
+                            <option value="monthly">🔁 monatlich</option>
+                        </select>
+                    </label>
                     <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Austeilen">📤</button></div>
                 </form>
             </details>

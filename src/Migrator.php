@@ -864,6 +864,7 @@ final class Migrator
                 'description_format' => "ALTER TABLE tasks ADD COLUMN description_format VARCHAR(8) NOT NULL DEFAULT 'text'",
                 'variant_of' => 'ALTER TABLE tasks ADD COLUMN variant_of INT UNSIGNED NOT NULL DEFAULT 0',
                 'solution_visible' => 'ALTER TABLE tasks ADD COLUMN solution_visible TINYINT(1) NOT NULL DEFAULT 0',
+                'presentation_project_id' => 'ALTER TABLE tasks ADD COLUMN presentation_project_id INT UNSIGNED NULL',
             ];
         } else {
             foreach ($pdo->query('PRAGMA table_info(tasks)')->fetchAll() as $column) {
@@ -874,6 +875,7 @@ final class Migrator
                 'description_format' => "ALTER TABLE tasks ADD COLUMN description_format TEXT NOT NULL DEFAULT 'text'",
                 'variant_of' => 'ALTER TABLE tasks ADD COLUMN variant_of INTEGER NOT NULL DEFAULT 0',
                 'solution_visible' => 'ALTER TABLE tasks ADD COLUMN solution_visible INTEGER NOT NULL DEFAULT 0',
+                'presentation_project_id' => 'ALTER TABLE tasks ADD COLUMN presentation_project_id INTEGER NULL',
             ];
         }
         foreach ($types as $column => $statement) {
@@ -887,6 +889,14 @@ final class Migrator
             if ($exists === false || $exists === null) {
                 $pdo->exec('ALTER TABLE task_submissions ADD COLUMN self_rating TINYINT UNSIGNED NOT NULL DEFAULT 0');
             }
+            $exists = $pdo->query("SHOW COLUMNS FROM task_submissions LIKE 'project_id'")->fetchColumn();
+            if ($exists === false || $exists === null) {
+                $pdo->exec('ALTER TABLE task_submissions ADD COLUMN project_id INT UNSIGNED NULL');
+            }
+            $exists = $pdo->query("SHOW COLUMNS FROM task_targets LIKE 'recurrence'")->fetchColumn();
+            if ($exists === false || $exists === null) {
+                $pdo->exec("ALTER TABLE task_targets ADD COLUMN recurrence VARCHAR(12) NOT NULL DEFAULT ''");
+            }
         } else {
             $found = false;
             foreach ($pdo->query('PRAGMA table_info(task_submissions)')->fetchAll() as $column) {
@@ -897,6 +907,26 @@ final class Migrator
             }
             if (!$found) {
                 $pdo->exec('ALTER TABLE task_submissions ADD COLUMN self_rating INTEGER NOT NULL DEFAULT 0');
+            }
+            $found = false;
+            foreach ($pdo->query('PRAGMA table_info(task_submissions)')->fetchAll() as $column) {
+                if ((string) ($column['name'] ?? '') === 'project_id') {
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) {
+                $pdo->exec('ALTER TABLE task_submissions ADD COLUMN project_id INTEGER NULL');
+            }
+            $found = false;
+            foreach ($pdo->query('PRAGMA table_info(task_targets)')->fetchAll() as $column) {
+                if ((string) ($column['name'] ?? '') === 'recurrence') {
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) {
+                $pdo->exec("ALTER TABLE task_targets ADD COLUMN recurrence TEXT NOT NULL DEFAULT ''");
             }
         }
     }

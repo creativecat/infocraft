@@ -6,6 +6,7 @@ namespace Infocraft\Controllers;
 use Infocraft\Auth;
 use Infocraft\Models\Folder;
 use Infocraft\Models\Project;
+use Infocraft\Models\Task;
 use Infocraft\Models\User;
 
 /**
@@ -59,6 +60,11 @@ final class HtmlController
             return;
         }
         $owner = User::find($project->ownerId);
+        // Präsentationsmodus (Issue #35): Hinweis-Banner in temporären Kopien.
+        $presentationTask = Task::findByPresentationProject($project->id);
+        if ($presentationTask !== null && $presentationTask->teacherId !== $user->id) {
+            $presentationTask = null;
+        }
         render('html_editor', [
             'title' => $project->title,
             'active' => 'module-html',
@@ -66,6 +72,7 @@ final class HtmlController
             'user' => $user,
             'ownerName' => $owner !== null ? $owner->fullName() : '',
             'isForeign' => $project->ownerId !== $user->id,
+            'presentationTask' => $presentationTask,
         ]);
     }
 

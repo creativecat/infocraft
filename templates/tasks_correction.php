@@ -1,7 +1,7 @@
 <?php
 /** @var \Infocraft\Models\Task $task */
 /** @var array{total: int, submitted: int, late: int, graded: int, open: int, avgGrade: float|null} $stats */
-/** @var list<array{student: \Infocraft\Models\User, submission: array{content: string, submittedAt: string, selfRating: int, firstName: string, lastName: string}|null, grading: array{grade: string, comment: string, source: string, checked: bool}|null, dueAt: string|null, late: bool}> $rows */
+/** @var list<array{student: \Infocraft\Models\User, submission: array{content: string, submittedAt: string, selfRating: int, firstName: string, lastName: string, projectId: int|null}|null, grading: array{grade: string, comment: string, source: string, checked: bool}|null, dueAt: string|null, late: bool, project: \Infocraft\Models\Project|null}> $rows */
 $topic = $task->topicId > 0 ? \Infocraft\Models\TaskTopic::find($task->topicId) : null;
 ?>
 <section class="hero">
@@ -75,7 +75,20 @@ $topic = $task->topicId > 0 ? \Infocraft\Models\TaskTopic::find($task->topicId) 
         </div>
         <?php if ($row['submission'] !== null): ?>
         <p class="muted">Abgegeben: <?= e($row['submission']['submittedAt']) ?><?= $row['dueAt'] !== null ? ' · Abgabetermin: ' . e($row['dueAt']) . ' Uhr' : '' ?><?= ($row['submission']['selfRating'] ?? 0) > 0 ? ' · Selbsteinschätzung: ' . e(\Infocraft\Models\TaskSubmission::SELF_RATING_LABELS[(int) $row['submission']['selfRating']] ?? '') : '' ?></p>
+        <?php if (($row['project'] ?? null) !== null): ?>
+        <p><a class="btn btn-ghost" href="<?= url('werkstatt/' . ($row['project']->type === 'html' ? 'html' : 'code') . '/' . (int) $row['project']->id) ?>" title="Projekt in der Werkstatt öffnen (Quelltext ansehen)">🔗 Projekt: <?= e($row['project']->title) ?></a></p>
+        <?php if ($row['submission']['content'] !== ''): ?><div class="own"><?= e($row['submission']['content']) ?></div><?php endif; ?>
+        <details>
+            <summary>Quelltext des Projekts ansehen</summary>
+            <div class="own" style="white-space:pre-wrap;max-height:40vh;overflow:auto;"><?= e($row['project']->content) ?></div>
+            <?php foreach (\Infocraft\Models\ProjectFile::allForProject((int) $row['project']->id) as $projectFile): ?>
+            <p class="muted" style="margin-bottom:2px;">📄 <?= e($projectFile->name) ?></p>
+            <div class="own" style="white-space:pre-wrap;max-height:25vh;overflow:auto;"><?= e($projectFile->content) ?></div>
+            <?php endforeach; ?>
+        </details>
+        <?php else: ?>
         <div class="own"><?= e($row['submission']['content']) ?></div>
+        <?php endif; ?>
         <?php else: ?>
         <p class="muted">Noch keine Abgabe.<?= $row['dueAt'] !== null ? ' Abgabetermin: ' . e($row['dueAt']) . ' Uhr' : '' ?></p>
         <?php endif; ?>

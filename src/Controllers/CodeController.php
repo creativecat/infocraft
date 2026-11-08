@@ -10,6 +10,7 @@ use Infocraft\Models\ProjectFile;
 use Infocraft\Models\ProjectImage;
 use Infocraft\Models\SchoolClass;
 use Infocraft\Models\SiteSetting;
+use Infocraft\Models\Task;
 use Infocraft\Models\User;
 
 /**
@@ -210,12 +211,19 @@ final class CodeController
                 $imageUrls[$image->name] = url('werkstatt/code/' . $project->id . '/bild/' . rawurlencode($image->name));
             }
         }
+        // Präsentationsmodus (Issue #35): läuft dieses Projekt als temporäre
+        // Kopie einer Aufgabe, zeigt die IDE einen Hinweis-Banner an.
+        $presentationTask = Task::findByPresentationProject($project->id);
+        if ($presentationTask !== null && $presentationTask->teacherId !== $user->id) {
+            $presentationTask = null;
+        }
         render('code_project', [
             'title' => $project->title,
             'active' => 'module-code',
             'project' => $project,
             'files' => $files,
             'user' => $user,
+            'presentationTask' => $presentationTask,
             'ownerName' => $owner !== null ? $owner->fullName() : '',
             'isForeign' => $project->ownerId !== $user->id,
             'diagramAuto' => SchoolClass::diagramAutoForUser($user),
