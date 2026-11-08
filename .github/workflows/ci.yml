@@ -158,7 +158,7 @@ jobs:
           CSRF10=$(grep -o 'value="[a-f0-9]*"' login6.html | head -n1 | cut -d'"' -f2)
           CODE_JONAS=$(curl -sS -L -o jonas_home.html -w "%{http_code}" -b cookies6.txt -c cookies6.txt -d "csrf=$CSRF10" -d "user_id=$JONAS" http://127.0.0.1:8080/login/demo)
           grep -q "Prüfungsmodus aktiv" jonas_home.html && JONAS_LOCK_OK=1 || JONAS_LOCK_OK=0
-          ARBEIT=$(sqlite3 "$DB" "SELECT id FROM exams WHERE kind = 'arbeit'")
+          ARBEIT=$(sqlite3 "$DB" "SELECT id FROM exams WHERE kind = 'arbeit' AND title = 'Schularbeit: SQL-Grundlagen'")
           CODE_ARBEITRES=$(curl -sS -o arbeit_res.html -w "%{http_code}" -b cookies2.txt http://127.0.0.1:8080/pruefungen/$ARBEIT/ergebnis)
           grep -q "Musterlösung" arbeit_res.html && ARBEIT_RES_OK=1 || ARBEIT_RES_OK=0
           # Klassendiagramme: Editor, Auto-Erzeugung aus Java/Python/SQL, Lehrer-Schalter
@@ -571,6 +571,7 @@ jobs:
           [ "$TGRATING" = "2" ] && TGSELFRATING_DB_OK=1 || TGSELFRATING_DB_OK=0
           CODE_TGSTU21=$(curl -sS -L -o tgstu21.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/aufgaben)
           grep -q "CI Musterloesung 21" tgstu21.html && TGNOSOL_OK=0 || TGNOSOL_OK=1
+          CODE_TGOV=$(curl -sS -L -o tgov.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt http://127.0.0.1:8080/aufgaben)
           grep -q "zu korrigieren" tgov.html && TGOPEN_OK=1 || TGOPEN_OK=0
           CODE_TGCORR=$(curl -sS -L -o tgcorr.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt http://127.0.0.1:8080/aufgaben/$TA21/korrektur)
           grep -q "Selbsteinschätzung" tgcorr.html && TGSELRATING_OK=1 || TGSELRATING_OK=0

@@ -132,7 +132,7 @@
       var noteText = nodes[current].getAttribute('data-notes') || '';
       while (noteEl.firstChild) { noteEl.removeChild(noteEl.firstChild); }
       if (noteText !== '') {
-        var lines = noteText.split('\n');
+        var lines = noteText.split(String.fromCharCode(10));
         for (var ln = 0; ln < lines.length; ln++) {
           if (ln > 0) { noteEl.appendChild(document.createElement('br')); }
           noteEl.appendChild(document.createTextNode(lines[ln]));
