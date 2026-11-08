@@ -26,6 +26,7 @@ final class Migrator
         // Bestehende Installationen: Spalten classes.diagram_auto und classes.db_panel idempotent nachziehen.
         self::ensureDiagramAutoColumn($pdo, $driver);
         self::ensureDbPanelColumn($pdo, $driver);
+        self::ensureProjectImagesTable($pdo, $driver);
 
         // Bestehende Installationen: Spalte presentations.slug idempotent nachziehen.
         self::ensurePresentationSlugColumn($pdo, $driver);
@@ -570,6 +571,36 @@ final class Migrator
             }
         }
         $pdo->exec('ALTER TABLE classes ADD COLUMN db_panel INTEGER NOT NULL DEFAULT 1');
+    }
+
+    /** Bestehende Installationen: Tabelle project_images (Sprite-Bilder) fehlt evtl. noch. */
+    private static function ensureProjectImagesTable(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS project_images (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                project_id INT UNSIGNED NOT NULL,
+                name VARCHAR(60) NOT NULL,
+                mime VARCHAR(30) NOT NULL,
+                size INT UNSIGNED NOT NULL DEFAULT 0,
+                data LONGBLOB NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_pimages (project_id, name),
+                CONSTRAINT fk_pimages_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+            return;
+        }
+        $pdo->exec('CREATE TABLE IF NOT EXISTS project_images (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            mime TEXT NOT NULL,
+            size INTEGER NOT NULL DEFAULT 0,
+            data BLOB NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE (project_id, name)
+        )');
     }
 
     private static function seedDemoDiagrams(PDO $pdo): void

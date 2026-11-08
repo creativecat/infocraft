@@ -787,6 +787,18 @@
     return text;
   }
 
+  /* Fehler aus dem Quelltext: die betroffene Zeile in den Zeilennummern rot
+     markieren (Modul am Dateiende stellt die Zeilennummern fuer alle Felder). */
+  function markSourceError(msg) {
+    if (!window.IC_GUTTER || !source) { return; }
+    var m = /Zeile (\d+)/.exec(String(msg || ''));
+    if (m) { window.IC_GUTTER.markError(source, parseInt(m[1], 10)); }
+  }
+  function clearSourceError() {
+    if (!window.IC_GUTTER || !source) { return; }
+    window.IC_GUTTER.clearError(source);
+  }
+
   function render(isAuto) {
     if (!source) { return; }
     var text = source.value;
@@ -795,6 +807,7 @@
       if (!box) { return; }
       var parsed = parseStruktogramm(text);
       if (parsed.error) {
+        markSourceError(parsed.error);
         if (isAuto && lastGoodNassi !== null) {
           box.innerHTML = lastGoodNassi;
           setStatus('Vorschau pausiert, bis der Quelltext wieder gezeichnet werden kann.');
@@ -806,6 +819,7 @@
       }
       lastGoodNassi = renderNassi(parsed.root);
       box.innerHTML = lastGoodNassi;
+      clearSourceError();
       hideStatus();
       return;
     }
@@ -818,6 +832,7 @@
     if (currentKind === 'datenfluss') {
       var t = transpileDatenfluss(text);
       if (t.error) {
+        markSourceError(t.error);
         /* Waehrend des Tippens bleibt die letzte gueltige Zeichnung stehen,
            statt eine rote Fehlermeldung ueber halbfertige Eingaben zu zeigen. */
         if (isAuto && lastGoodSvg !== null) {
@@ -835,10 +850,10 @@
     }
     seq += 1;
     window.mermaid.render('dg-svg-' + seq, text).then(function (out) {
-      lastGoodSvg = out.svg;
       target.innerHTML = out.svg;
       if (currentKind === 'manuell') { styleClassDiagramSvg(target); }
       lastGoodSvg = target.innerHTML;
+      clearSourceError();
       hideStatus();
     }).catch(function (err) {
       var msg = cleanError(err && err.message ? err.message : '');
@@ -1168,3 +1183,76 @@
   });
 })();
 
+
+/* ---------- Zeilennummern fuer alle Textfelder mit Syntax-Highlight ----------
+ * Wie in der Java-IDE: links vom Quelltext stehen Zeilennummern, damit im
+ * Unterricht immer ueber Zeilen gesprochen werden kann ("Schau mal in Zeile 4").
+ * Die Java-IDE baut ihre eigenen Zeilennummern (mit Fehler- und Schritt-
+ * Markierung) in java-vm.js - sie wird hier ausgelassen.
+ * Ueber window.IC_GUTTER koennen Fehlerzeilen rot markiert werden. */
+(function () {
+  'use strict';
+  var NL = String.fromCharCode(10);
+  var records = [];
+
+  function updateGutter(rec) {
+    var lines = rec.ta.value.split(NL).length;
+    if (lines < 1) { lines = 1; }
+    if (lines === rec.count) { return; }
+    rec.inner.innerHTML = '';
+    rec.cells = [];
+    var li;
+    for (li = 1; li <= lines; li++) {
+      var cell = document.createElement('div');
+      cell.className = 'ln-cell';
+      cell.textContent = String(li);
+      rec.inner.appendChild(cell);
+      rec.cells.push(cell);
+    }
+    rec.count = lines;
+  }
+
+  function recFor(ta) {
+    var i;
+    for (i = 0; i < records.length; i++) {
+      if (records[i].ta === ta) { return records[i]; }
+    }
+    return null;
+  }
+
+  function markError(ta, line) {
+    var rec = recFor(ta);
+    if (!rec || !line || line < 1 || line > rec.cells.length) { return; }
+    clearError(ta);
+    rec.cells[line - 1].className = 'ln-cell ln-err';
+  }
+
+  function clearError(ta) {
+    var rec = recFor(ta);
+    if (!rec) { return; }
+    var i;
+    for (i = 0; i < rec.cells.length; i++) { rec.cells[i].className = 'ln-cell'; }
+  }
+
+  window.IC_GUTTER = { markError: markError, clearError: clearError };
+
+  document.querySelectorAll('[data-hl]').forEach(function (wrap) {
+    var ta = wrap.querySelector('textarea');
+    if (!ta) { return; }
+    /* Java-IDE: eigene Zeilennummern mit Einzelschritt- und Fehlermarkierung. */
+    if (wrap.closest && wrap.closest('[data-file-pane]')) { return; }
+    if (wrap.querySelector('.ln-gutter')) { return; }
+    var box = document.createElement('div');
+    box.className = 'ln-gutter';
+    var inner = document.createElement('div');
+    inner.className = 'ln-inner';
+    box.appendChild(inner);
+    wrap.appendChild(box);
+    if (wrap.classList && wrap.classList.add) { wrap.classList.add('has-gutter'); }
+    var rec = { ta: ta, box: box, inner: inner, cells: [], count: 0 };
+    records.push(rec);
+    updateGutter(rec);
+    ta.addEventListener('input', function () { updateGutter(rec); });
+    ta.addEventListener('scroll', function () { box.scrollTop = ta.scrollTop; });
+  });
+})();

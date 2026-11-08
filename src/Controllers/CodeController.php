@@ -7,6 +7,7 @@ use Infocraft\Auth;
 use Infocraft\Models\Folder;
 use Infocraft\Models\Project;
 use Infocraft\Models\ProjectFile;
+use Infocraft\Models\ProjectImage;
 use Infocraft\Models\SchoolClass;
 use Infocraft\Models\SiteSetting;
 use Infocraft\Models\User;
@@ -198,6 +199,14 @@ final class CodeController
             $files = [new ProjectFile(0, $project->id, $name, $project->content, 0, null)];
         }
         $owner = User::find($project->ownerId);
+        $images = [];
+        $imageUrls = [];
+        if ($project->type === 'code' && $project->language === 'java') {
+            $images = ProjectImage::allForProject($project->id);
+            foreach ($images as $image) {
+                $imageUrls[$image->name] = url('werkstatt/code/' . $project->id . '/bild/' . rawurlencode($image->name));
+            }
+        }
         render('code_project', [
             'title' => $project->title,
             'active' => 'module-code',
@@ -208,6 +217,8 @@ final class CodeController
             'isForeign' => $project->ownerId !== $user->id,
             'diagramAuto' => SchoolClass::diagramAutoForUser($user),
             'dbPanel' => SchoolClass::dbPanelForUser($user),
+            'images' => $images,
+            'imageUrls' => $imageUrls,
         ]);
     }
 
@@ -326,6 +337,100 @@ final class CodeController
         ProjectFile::delete($file->id);
         flash('success', 'Datei gelöscht.');
         redirect('/werkstatt/code/' . $project->id);
+    }
+
+    /** Eigenes Bild (Sprite) fuer ein Java-Projekt hochladen. */
+    public static function uploadImage(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $project = Project::find((int) ($params['id'] ?? 0));
+        if ($project === null || !self::canOpen($user, $project)) {
+            flash('error', 'Projekt nicht gefunden.');
+            redirect('/werkstatt/code');
+        }
+        if ($project->type !== 'code' || $project->language !== 'java') {
+            flash('error', 'Bilder gibt es nur in Java-Projekten.');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        $file = $_FILES['image'] ?? null;
+        if (!is_array($file) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string) ($file['tmp_name'] ?? ''))) {
+            flash('error', 'Bitte eine Bilddatei auswählen.');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        $size = (int) ($file['size'] ?? 0);
+        if ($size <= 0 || $size > 1024 * 1024) {
+            flash('error', 'Das Bild ist zu groß. Bitte maximal 1 MB.');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        $info = @getimagesize((string) $file['tmp_name']);
+        $allowed = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/gif' => 'gif', 'image/webp' => 'webp'];
+        if ($info === false || !isset($allowed[(string) ($info['mime'] ?? '')])) {
+            flash('error', 'Das Format wird nicht unterstützt. Bitte PNG, JPEG, GIF oder WebP hochladen.');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        $mime = (string) $info['mime'];
+        if (ProjectImage::countForProject($project->id) >= 8) {
+            flash('error', 'Pro Projekt sind maximal 8 Bilder möglich. Bitte zuerst ein Bild löschen.');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        $name = ProjectImage::uniqueName($project->id, (string) ($file['name'] ?? 'Bild'));
+        $data = (string) file_get_contents((string) $file['tmp_name']);
+        ProjectImage::create($project->id, $name, $mime, $data);
+        flash('success', 'Bild "' . $name . '" hochgeladen. Im Code nutzt du es mit new Sprite(x, y, "' . $name . '").');
+        redirect('/werkstatt/code/' . $project->id);
+    }
+
+    /** Eigenes Bild loeschen. */
+    public static function deleteImage(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $project = Project::find((int) ($params['id'] ?? 0));
+        $name = (string) ($params['name'] ?? '');
+        if ($project === null || !self::canOpen($user, $project)) {
+            flash('error', 'Projekt nicht gefunden.');
+            redirect('/werkstatt/code');
+        }
+        if (!ProjectImage::existsByName($project->id, $name)) {
+            flash('error', 'Bild nicht gefunden.');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        ProjectImage::deleteByName($project->id, $name);
+        flash('success', 'Bild "' . $name . '" gelöscht.');
+        redirect('/werkstatt/code/' . $project->id);
+    }
+
+    /** Eigenes Bild ausliefern (fuer die Sprite-Darstellung in der IDE). */
+    public static function serveImage(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        $project = Project::find((int) ($params['id'] ?? 0));
+        $name = (string) ($params['name'] ?? '');
+        if ($project === null || $name === '' || !self::canOpen($user, $project)) {
+            http_response_code(404);
+            exit;
+        }
+        $image = ProjectImage::findByName($project->id, $name);
+        $data = $image !== null ? ProjectImage::dataByName($project->id, $name) : null;
+        if ($image === null || $data === null) {
+            http_response_code(404);
+            exit;
+        }
+        header('Content-Type: ' . $image->mime);
+        header('Content-Length: ' . strlen($data));
+        header('Cache-Control: private, max-age=86400');
+        echo $data;
+        exit;
     }
 
     /** Dateiname fuer eine virtuelle Java-Datei: erste Klasse im Quelltext oder Main.java. */

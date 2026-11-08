@@ -81,6 +81,21 @@ CREATE TABLE IF NOT EXISTS project_files (
     CONSTRAINT fk_pfiles_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- Java-Projekte: eigene Bilder (Sprites). Hochgeladene Grafiken wandern
+-- bei verteilten Kopien mit und heissen im Code new Sprite(x, y, "Name").
+CREATE TABLE IF NOT EXISTS project_images (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    project_id INT UNSIGNED NOT NULL,
+    name VARCHAR(60) NOT NULL,
+    mime VARCHAR(30) NOT NULL,
+    size INT UNSIGNED NOT NULL DEFAULT 0,
+    data LONGBLOB NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_pimages (project_id, name),
+    CONSTRAINT fk_pimages_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 -- Aufgabenpool (Lehrkräfte) und Austeilen an Klassen oder Einzelne.
 -- shared = 1: Aufgabe liegt bewusst im gemeinsamen Pool aller Lehrkräfte.
 CREATE TABLE IF NOT EXISTS tasks (

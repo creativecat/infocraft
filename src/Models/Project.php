@@ -79,10 +79,23 @@ final class Project
         $stmt->execute([$folderId, $this->id]);
     }
 
-    /** Kopie für eine andere Person anlegen (Austeilen durch die Lehrkraft). */
+    /**
+     * Kopie für eine andere Person anlegen (Austeilen durch die Lehrkraft).
+     * Mehrere Quelldateien und eigene Bilder (Sprites) wandern mit.
+     */
     public static function copyTo(self $project, int $ownerId, ?int $createdBy): self
     {
-        return self::create($ownerId, null, $project->title, $project->type, $project->language, $project->content, $createdBy);
+        $copy = self::create($ownerId, null, $project->title, $project->type, $project->language, $project->content, $createdBy);
+        foreach (ProjectFile::allForProject($project->id) as $file) {
+            ProjectFile::create($copy->id, $file->name, $file->content);
+        }
+        foreach (ProjectImage::allForProject($project->id) as $image) {
+            $data = ProjectImage::dataByName($project->id, $image->name);
+            if ($data !== null) {
+                ProjectImage::create($copy->id, $image->name, $image->mime, $data);
+            }
+        }
+        return $copy;
     }
 
     public static function delete(int $id): void

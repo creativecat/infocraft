@@ -63,6 +63,19 @@ CREATE TABLE IF NOT EXISTS project_files (
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Java-Projekte: eigene Bilder (Sprites). Hochgeladene Grafiken wandern
+-- bei verteilten Kopien mit und heissen im Code new Sprite(x, y, "Name").
+CREATE TABLE IF NOT EXISTS project_images (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    mime TEXT NOT NULL,
+    size INTEGER NOT NULL DEFAULT 0,
+    data BLOB NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (project_id, name)
+);
+
 -- Aufgabenpool (Lehrkräfte) und Austeilen an Klassen oder Einzelne.
 -- shared = 1: Aufgabe liegt bewusst im gemeinsamen Pool aller Lehrkräfte.
 CREATE TABLE IF NOT EXISTS tasks (

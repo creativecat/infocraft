@@ -690,6 +690,55 @@ t('GfxTurtleBitmapPolygon', {
   if (!turtle.pathCount || turtle.pathCount !== 3) { throw new Error('Turtle-Pfad: ' + JSON.stringify(turtle)); }
   if (!poly || poly.pointsCount !== 4) { throw new Error('Polygon-Punkte: ' + JSON.stringify(poly)); }
 });
+t('SpriteStandard', {
+  'Std.java': [
+    'Sprite s = new Sprite(100, 200, "Schildkröte");',
+    's.scale(2);',
+    's.rotate(90);',
+    's.move(10, 5);',
+    'System.out.println(s.getX());',
+    'System.out.println(s.getY());',
+    'Sprite d = new Sprite();',
+    'System.out.println(d.getX());'
+  ].join(NL)
+}, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '110.0' + NL + '205.0' + NL + '400.0' + NL, 'Ausgaben und Default-Position');
+  var snap = V.gfxSnapshot();
+  var sp = null, sp2 = null;
+  snap.forEach(function (s) { if (s.kind === 'sprite') { if (sp === null) { sp = s; } else { sp2 = s; } } });
+  if (!sp) { throw new Error('Sprite fehlt im Snapshot: ' + JSON.stringify(snap)); }
+  if (sp.spriteKey !== 'Schildkröte') { throw new Error('spriteKey: ' + JSON.stringify(sp.spriteKey)); }
+  if (sp.scaleF !== 2 || sp.rot !== 90) { throw new Error('scale/rotate: ' + JSON.stringify(sp)); }
+  if (Math.round(sp.x) !== 110 || Math.round(sp.y) !== 205) { throw new Error('Position: ' + JSON.stringify(sp)); }
+  if (!sp2 || sp2.spriteKey !== 'Schildkröte' || Math.round(sp2.x) !== 400) { throw new Error('Default-Sprite: ' + JSON.stringify(sp2)); }
+});
+t('SpriteUnbekannt', {
+  'Std.java': [
+    'Sprite s = new Sprite(100, 200, "Nashorn");'
+  ].join(NL)
+}, r => {
+  err1(r, 'runtime');
+  var msg = r.errors[0].message + ' ' + r.errors[0].hint;
+  if (msg.indexOf('gibt es nicht') === -1) { throw new Error('Meldung nennt unbekannten Namen nicht: ' + JSON.stringify(r.errors[0])); }
+  if (msg.indexOf('Schildkröte') === -1) { throw new Error('Hilfestellung nennt Standard-Namen nicht: ' + JSON.stringify(r.errors[0])); }
+});
+global.window = { IC_IMAGES: { Ball: 'data:image/png;base64,AAAA' } };
+t('SpriteEigenesBild', {
+  'Std.java': [
+    'Sprite s = new Sprite(50, 60, "Ball");',
+    'System.out.println(s.getX());'
+  ].join(NL)
+}, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '50.0' + NL, 'output');
+  var snap = V.gfxSnapshot();
+  var sp = null;
+  snap.forEach(function (s) { if (s.kind === 'sprite') { sp = s; } });
+  if (!sp || sp.spriteKey !== 'Ball') { throw new Error('Eigenes Bild: ' + JSON.stringify(sp)); }
+  if (!sp.spriteSrc || sp.spriteSrc.indexOf('data:image/png') !== 0) { throw new Error('spriteSrc: ' + JSON.stringify(sp.spriteSrc)); }
+});
+delete global.window;
 t('GfxDefaultsUndDestroy', {
   'Std.java': [
     'Shape.setDefaultVisibility(false);',

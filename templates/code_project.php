@@ -1,6 +1,7 @@
 <section class="panel">
     <div class="panel-head">
         <h3><?= $project->type === 'html' ? '🌐' : '💻' ?> <?= e($project->title) ?></h3>
+        <span class="save-status" id="java-save-info" title="Dein Code wird bei jeder Änderung automatisch gespeichert – auch ohne Speichern-Klick."></span>
         <a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück">←</a>
     </div>
     <?php if ($isForeign): ?>
@@ -11,10 +12,8 @@
     <?php endif; ?>
     <?php if ($project->type === 'code' && $project->language === 'java'): ?>
     <!-- Java-IDE über die volle Breite: Dateien im eigenen Fenster, Editor und Konsole in einem gemeinsamen Fenster -->
-    <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="ide-savebar" id="code-save-form">
+    <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="ide-savebar" id="code-save-form" aria-hidden="true">
         <?= csrf_field() ?>
-        <button class="btn btn-ghost" type="button" id="java-format" title="Formatieren: rückt deinen Java-Code automatisch ein, 4 Leerzeichen pro Ebene, sauber eingerückt und ausgerückt.">🧹</button>
-        <span class="save-status" id="java-save-info" title="Dein Code wird bei jeder Änderung automatisch gespeichert – auch ohne Speichern-Klick."></span>
     </form>
     <div class="ide">
         <aside class="ide-side">
@@ -37,9 +36,33 @@
                 <input type="text" name="name" placeholder="Auto.java" pattern="[A-Za-z][A-Za-z0-9_]*\.java" required>
                 <button class="btn btn-primary" type="submit" title="Neue Datei">＋</button>
             </form>
+            <div class="ide-side-title">Bilder</div>
+            <p class="muted ide-img-hint">Lade ein Bild hoch und benutze es im Code mit <code>new Sprite(400, 300, "Name");</code>. Es wandert beim Austeilen mit.</p>
+            <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/bild') ?>" enctype="multipart/form-data" class="form-inline ide-side-new">
+                <?= csrf_field() ?>
+                <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp" required title="Bild hochladen (PNG, JPEG, GIF oder WebP, maximal 1 MB)">
+                <button class="btn btn-primary" type="submit" title="Bild hochladen">⬆</button>
+            </form>
+            <?php if ($images !== []): ?>
+            <div class="ide-img-list">
+                <?php foreach ($images as $image): ?>
+                <div class="ide-img-row">
+                    <img src="<?= url('werkstatt/code/' . (int) $project->id . '/bild/' . rawurlencode($image->name)) ?>" alt="<?= e($image->name) ?>" class="ide-img-thumb">
+                    <code class="ide-img-name"><?= e($image->name) ?></code>
+                    <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/bild/' . rawurlencode($image->name) . '/loeschen') ?>" class="form-inline ide-img-del">
+                        <?= csrf_field() ?>
+                        <button class="btn btn-ghost" type="submit" title="Bild <?= e($image->name) ?> löschen">✕</button>
+                    </form>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php else: ?>
+            <p class="muted">Noch keine eigenen Bilder (maximal 8 pro Projekt, jeweils maximal 1 MB).</p>
+            <?php endif; ?>
         </aside>
         <div class="ide-work">
         <div class="ide-main">
+            <div class="ide-editors">
             <?php foreach ($files as $i => $file): ?>
             <div class="file-pane" data-file-pane="<?= (int) $file->id ?>" data-file-name="<?= e($file->name) ?>"<?= $i === 0 ? '' : ' hidden' ?>>
                 <div class="hlwrap ide-hlwrap" data-hl="java">
@@ -47,6 +70,8 @@
                 </div>
             </div>
             <?php endforeach; ?>
+            <button class="btn btn-ghost editor-float-btn" type="button" id="java-format" title="Formatieren: rückt deinen Java-Code automatisch ein, 4 Leerzeichen pro Ebene, sauber eingerückt und ausgerückt.">🧹</button>
+            </div>
             <div class="console-errors-box" id="java-errors-box">
                 <div class="console-errors-head">🚨 Fehlerkonsole <span class="err-badge" id="java-error-badge">0</span></div>
                 <div class="java-errors" id="java-errors">Noch nichts ausgeführt – hier erscheinen Fehler mit Datei, Zeile und Tipp.</div>
@@ -191,13 +216,26 @@ r.getX(); · r.getY();</pre></td><td>Welt und Position der Figur abfragen (getX/
                         <summary>🐢 Turtle: Zeichnen wie ein Stift</summary>
                         <table>
                             <tr><td><pre class="code">Turtle t = new Turtle();
-Turtle t2 = new Turtle(100, 200);</pre></td><td>Turtle in der Mitte (oder an Position). Sie zeigt zunächst nach rechts.</td></tr>
+Turtle t2 = new Turtle(100, 200);</pre></td><td>Turtle in der Mitte (oder an Position). Sie zeigt zunächst nach rechts und wird als echte Schildkröte gezeichnet.</td></tr>
                             <tr><td><pre class="code">t.forward(50);</pre></td><td>50 Pixel geradeaus laufen (zeichichnet eine Linie).</td></tr>
                             <tr><td><pre class="code">t.turn(90);</pre></td><td>Um 90 Grad drehen (plus = im Uhrzeigersinn).</td></tr>
                             <tr><td><pre class="code">t.penUp(); · t.penDown();</pre></td><td>Stift anheben: ab jetzt bewegt sich die Turtle, ohne zu zeichnen.</td></tr>
                             <tr><td><pre class="code">t.setBorderColor(Color.blue);
 t.setBorderWidth(3);</pre></td><td>Stiftfarbe und Strichdicke.</td></tr>
                         </table>
+                    </details>
+
+                    <details>
+                        <summary>🧩 Sprite: fertige Figuren und eigene Bilder</summary>
+                        <p>Mit <code>Sprite</code> zeigst du sofort schöne Figuren – wie in einem echten Spiel. Der Name ist ein String, die Figur sitzt mit ihrer Mitte an der Position:</p>
+                        <table>
+                            <tr><td><pre class="code">Sprite s = new Sprite(400, 300, "Schildkröte");</pre></td><td>Legt eine Figur an (Mittelpunkt 400|300). Ohne Namen: automatisch die Schildkröte.</td></tr>
+                            <tr><td><pre class="code">s.scale(2); · s.rotate(45);
+s.move(10, 0); · s.destroy();</pre></td><td>Wie jede Figur strecken, drehen, bewegen, entfernen – auch <code>setAlpha</code>, <code>setVisible</code>, <code>mirrorX</code> und alles unter „Bewegen, Drehen, Spiegeln“.</td></tr>
+                            <tr><td><pre class="code">Sprite a = new Sprite(100, 100, "Auto");</pre></td><td>Standard-Figuren: <code>Schildkröte</code>, <code>Auto</code>, <code>Katze</code>, <code>Hund</code>, <code>Fisch</code>, <code>Baum</code>, <code>Wolke</code>, <code>Sonne</code>, <code>Stern</code>, <code>Herz</code>, <code>Raumschiff</code>, <code>Geist</code>, <code>Pilz</code>, <code>Blume</code>.</td></tr>
+                            <tr><td><pre class="code">Sprite b = new Sprite(400, 300, "Ball");</pre></td><td>Eigene Bilder: Lade links unter <strong>Bilder</strong> eine Grafik hoch (PNG, JPEG, GIF, WebP, maximal 1 MB). Ihr Name ohne Endung ist der Sprite-Name – bei „ball.png“ also <code>"Ball"</code> bzw. <code>"ball"</code>.</td></tr>
+                        </table>
+                        <p class="muted">Eigene Bilder gehören zum Projekt: Wenn deine Lehrkraft es austeilten, bekommen alle dieselben Sprites. Und mit <code>class Auto extends Sprite</code> kannst du wie gewohnt <code>act()</code>, Tasten und Maus nutzen.</p>
                     </details>
 
                     <details>
@@ -383,22 +421,6 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
             <div class="gfx-dock" id="gfx-dock" hidden></div>
         </div>
     </div>
-    <?php if ($dbPanel): ?>
-    <section class="panel" id="db-panel">
-        <div class="panel-head">
-            <h3>💾 Mini-Datenbank: SQL direkt in Java</h3>
-        </div>
-        <p>Die eingebaute Klasse <code>Database</code> speichert Tabellen im Speicher deines Browsers – ganz ohne Installation:</p>
-        <pre class="code">Database.execute("CREATE TABLE schueler (name TEXT, punkte INT)");
-Database.execute("INSERT INTO schueler VALUES ('Anna', 12), ('Ben', 8)");
-System.out.println(Database.query("SELECT * FROM schueler WHERE punkte > 10"));
-
-int anzahl = Database.count("SELECT * FROM schueler");   // Zeilen einer Abfrage
-String beste = Database.value("SELECT name FROM schueler ORDER BY punkte DESC");
-System.out.println(Database.tables());                     // alle Tabellen</pre>
-        <p class="muted">Verfügbar: <code>execute</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>query</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>count</code> die Zeilenanzahl, <code>value</code> den ersten Wert, <code>tables</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank startet bei jedem Ausführen neu und leer.</p>
-    </section>
-    <?php endif; ?>
     <?php else: ?>
     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="form">
         <?= csrf_field() ?>
@@ -445,11 +467,29 @@ System.out.println(Database.tables());                     // alle Tabellen</pre
 </section>
 <?php elseif ($project->type === 'code' && $project->language === 'java'): ?>
 <script src="<?= url('assets/js/java-vm.js') ?>"></script>
+<script>window.IC_IMAGES = <?= json_encode((object) ($imageUrls ?? []), JSON_HEX_TAG | JSON_UNESCAPED_SLASHES) ?>;</script>
 <?php elseif ($project->type === 'html'): ?>
 <section class="panel">
     <div class="notice">
         <strong>💡 Tipp</strong>
         <p>Für HTML-Seiten gibt es die <a href="<?= url('werkstatt/html') ?>">HTML-Werkstatt</a> mit Sofortvorschau beim Tippen.</p>
     </div>
+</section>
+<?php endif; ?>
+
+<?php if ($project->type === 'code' && $project->language === 'java' && $dbPanel): ?>
+<section class="panel" id="db-panel">
+    <div class="panel-head">
+        <h3>💾 Mini-Datenbank: SQL direkt in Java</h3>
+    </div>
+    <p>Die eingebaute Klasse <code>Database</code> speichert Tabellen im Speicher deines Browsers – ganz ohne Installation:</p>
+    <pre class="code">Database.execute("CREATE TABLE schueler (name TEXT, punkte INT)");
+Database.execute("INSERT INTO schueler VALUES ('Anna', 12), ('Ben', 8)");
+System.out.println(Database.query("SELECT * FROM schueler WHERE punkte > 10"));
+
+int anzahl = Database.count("SELECT * FROM schueler");   // Zeilen einer Abfrage
+String beste = Database.value("SELECT name FROM schueler ORDER BY punkte DESC");
+System.out.println(Database.tables());                     // alle Tabellen</pre>
+    <p class="muted">Verfügbar: <code>execute</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>query</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>count</code> die Zeilenanzahl, <code>value</code> den ersten Wert, <code>tables</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank startet bei jedem Ausführen neu und leer.</p>
 </section>
 <?php endif; ?>

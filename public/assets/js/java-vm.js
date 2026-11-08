@@ -3537,7 +3537,7 @@
    * Dazu aus der Online-IDE übernommen: Arc (Kreisbogen) und Sector (Kreissektor).
    */
   var GFX_CLASSES = Object.create(null);
-  var GFCL = ['World', 'Color', 'Alignment', 'Circle', 'Ellipse', 'Rectangle', 'RoundedRectangle', 'Text', 'Triangle', 'Line', 'Polygon', 'Bitmap', 'Turtle', 'Group', 'Actor', 'Shape', 'FilledShape', 'Button', 'Textfield', 'Checkbox', 'Radiobutton', 'Arc', 'Sector'];
+  var GFCL = ['World', 'Color', 'Alignment', 'Circle', 'Ellipse', 'Rectangle', 'RoundedRectangle', 'Text', 'Triangle', 'Line', 'Polygon', 'Bitmap', 'Turtle', 'Sprite', 'Group', 'Actor', 'Shape', 'FilledShape', 'Button', 'Textfield', 'Checkbox', 'Radiobutton', 'Arc', 'Sector'];
   var gfci;
   for (gfci = 0; gfci < GFCL.length; gfci++) { GFX_CLASSES[GFCL[gfci]] = 1; }
 
@@ -3554,6 +3554,7 @@
   GFX_KIND_OF.Polygon = 'polygon';
   GFX_KIND_OF.Bitmap = 'bitmap';
   GFX_KIND_OF.Turtle = 'turtle';
+  GFX_KIND_OF.Sprite = 'sprite';
   GFX_KIND_OF.Group = 'group';
   GFX_KIND_OF.Actor = 'actor';
   GFX_KIND_OF.Button = 'button';
@@ -3565,7 +3566,7 @@
 
   var GFX_SHAPE_KINDS = Object.create(null);
   var GFX_FILLED_KINDS = Object.create(null);
-  var GS = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'line', 'polygon', 'bitmap', 'turtle', 'button', 'textfield', 'checkbox', 'radiobutton', 'arc', 'sector'];
+  var GS = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'line', 'polygon', 'bitmap', 'turtle', 'sprite', 'button', 'textfield', 'checkbox', 'radiobutton', 'arc', 'sector'];
   var GFILLED = ['circle', 'ellipse', 'rectangle', 'rounded', 'text', 'triangle', 'polygon', 'bitmap', 'arc', 'sector'];
   var gsi;
   for (gsi = 0; gsi < GS.length; gsi++) { GFX_SHAPE_KINDS[GS[gsi]] = 1; }
@@ -3786,6 +3787,267 @@
     return vm.gfx.world;
   }
 
+  /* ---------- Sprite-Bibliothek (Vektorfiguren, 40x40 um den Mittelpunkt) ----------
+   * new Sprite(x, y, "Name") zeigt eine fertige Figur. Alle Figuren werden als
+   * Vektorgrafik gezeichnet und sehen auch im PNG-Export gut aus. Eigene Bilder
+   * stehen unter window.IC_IMAGES (Name -> URL) und gehen vor den Standard-Namen. */
+  var SPRITES = Object.create(null);
+  var SPRITE_LOWER = Object.create(null);
+  function spriteRegister(label, fn) {
+    SPRITES[label] = fn;
+    SPRITE_LOWER[label.toLowerCase()] = label;
+  }
+  function spriteFillStroke(c, fill, stroke) {
+    c.fillStyle = fill;
+    c.fill();
+    if (stroke) { c.strokeStyle = stroke; c.lineWidth = 1.5; c.stroke(); }
+  }
+  function spriteCircle(c, x, y, r, fill, stroke) {
+    c.beginPath();
+    c.arc(x, y, r, 0, Math.PI * 2);
+    spriteFillStroke(c, fill, stroke);
+  }
+  function spriteEllipse(c, x, y, rx, ry, fill, stroke) {
+    c.beginPath();
+    if (c.ellipse) { c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); }
+    else { c.arc(x, y, rx, 0, Math.PI * 2); }
+    spriteFillStroke(c, fill, stroke);
+  }
+  function spritePoly(c, pts, fill, stroke) {
+    var i;
+    c.beginPath();
+    c.moveTo(pts[0][0], pts[0][1]);
+    for (i = 1; i < pts.length; i++) { c.lineTo(pts[i][0], pts[i][1]); }
+    c.closePath();
+    spriteFillStroke(c, fill, stroke);
+  }
+  function spriteRoundRect(c, x, y, w, h, r, fill, stroke) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.lineTo(x + w - r, y);
+    c.quadraticCurveTo(x + w, y, x + w, y + r);
+    c.lineTo(x + w, y + h - r);
+    c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    c.lineTo(x + r, y + h);
+    c.quadraticCurveTo(x, y + h, x, y + h - r);
+    c.lineTo(x, y + r);
+    c.quadraticCurveTo(x, y, x + r, y);
+    spriteFillStroke(c, fill, stroke);
+  }
+  /* Schildkröte: schaut nach rechts (heading 0). */
+  spriteRegister('Schildkröte', function (c) {
+    var i;
+    /* Beine */
+    spriteEllipse(c, -4, -12, 5, 3.5, '#2f9e44');
+    spriteEllipse(c, -4, 12, 5, 3.5, '#2f9e44');
+    spriteEllipse(c, -13, -9, 4.5, 3, '#2f9e44');
+    spriteEllipse(c, -13, 9, 4.5, 3, '#2f9e44');
+    /* Schwanz */
+    spritePoly(c, [[-17, 0], [-23, -2], [-23, -1], [-21, 0]], '#2f9e44');
+    spritePoly(c, [[-17, 0], [-23, 2], [-23, 1], [-21, 0]], '#2f9e44');
+    /* Kopf */
+    spriteCircle(c, 13, 0, 6, '#37b24d', '#2b8a3e');
+    spriteCircle(c, 16, -2, 1.2, '#1e293b');
+    /* Panzer */
+    spriteEllipse(c, -2, 0, 14, 11, '#40c057', '#2b8a3e');
+    spriteEllipse(c, -2, 0, 9, 6.5, '#69db7c');
+    c.strokeStyle = '#2b8a3e';
+    c.lineWidth = 1;
+    for (i = 0; i < 4; i++) {
+      c.beginPath();
+      c.arc(-2, 0, 12, Math.PI * 0.15 + i * Math.PI * 0.45, Math.PI * 0.45 + i * Math.PI * 0.45);
+      c.stroke();
+    }
+  });
+  spriteRegister('Auto', function (c) {
+    /* Auto: schaut nach rechts. */
+    spriteRoundRect(c, -19, -7, 38, 12, 4, '#e03131', '#c92a2a');
+    spriteRoundRect(c, -11, -15, 22, 10, 4, '#e03131', '#c92a2a');
+    c.fillStyle = '#a5d8ff';
+    c.beginPath();
+    c.moveTo(-8, -13); c.lineTo(-1, -13); c.lineTo(3, -6.5); c.lineTo(-8, -6.5);
+    c.closePath(); c.fill();
+    c.beginPath();
+    c.moveTo(1, -13); c.lineTo(8, -13); c.lineTo(11, -6.5); c.lineTo(4, -6.5);
+    c.closePath(); c.fill();
+    spriteCircle(c, -10, 6, 5, '#343a40', '#212529');
+    spriteCircle(c, -10, 6, 2, '#adb5bd');
+    spriteCircle(c, 11, 6, 5, '#343a40', '#212529');
+    spriteCircle(c, 11, 6, 2, '#adb5bd');
+    spritePoly(c, [[19, -4], [22, -6], [22, -1]], '#ffd43b');
+  });
+  spriteRegister('Katze', function (c) {
+    /* Katze: Gesicht. */
+    spritePoly(c, [[-13, -10], [-16, -20], [-7, -14]], '#fab005', '#e8590c');
+    spritePoly(c, [[13, -10], [16, -20], [7, -14]], '#fab005', '#e8590c');
+    spriteCircle(c, 0, 0, 14, '#fcc419', '#e8590c');
+    spritePoly(c, [[0, -4], [-3, 3], [3, 3]], '#f59f00');
+    spritePoly(c, [[0, 2], [-2.5, 7], [2.5, 7]], '#f59f00');
+    spriteCircle(c, -5, -3, 1.6, '#212529');
+    spriteCircle(c, 5, -3, 1.6, '#212529');
+    c.strokeStyle = '#212529';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.arc(-5, 3, 2.5, Math.PI * 0.15, Math.PI * 0.85);
+    c.stroke();
+    c.beginPath();
+    c.arc(5, 3, 2.5, Math.PI * 0.15, Math.PI * 0.85);
+    c.stroke();
+    c.beginPath();
+    c.arc(0, 6, 4, Math.PI * 0.15, Math.PI * 0.85);
+    c.stroke();
+    c.strokeStyle = '#fcc419';
+    c.beginPath();
+    c.moveTo(-8, 2); c.lineTo(-20, 1); c.stroke();
+    c.beginPath();
+    c.moveTo(-8, 5); c.lineTo(-20, 6); c.stroke();
+    c.beginPath();
+    c.moveTo(8, 2); c.lineTo(20, 1); c.stroke();
+    c.beginPath();
+    c.moveTo(8, 5); c.lineTo(20, 6); c.stroke();
+  });
+  spriteRegister('Hund', function (c) {
+    /* Hund: Gesicht mit Schlappohren. */
+    spriteEllipse(c, -13, -2, 5, 12, '#a97142', '#8d5b2f');
+    spriteEllipse(c, 13, -2, 5, 12, '#a97142', '#8d5b2f');
+    spriteCircle(c, 0, 0, 14, '#c99a6c', '#8d5b2f');
+    spriteEllipse(c, 0, 5, 8, 6, '#e6c79c');
+    spriteCircle(c, 0, 2, 4, '#212529');
+    spriteCircle(c, -5, -4, 1.6, '#212529');
+    spriteCircle(c, 5, -4, 1.6, '#212529');
+    spritePoly(c, [[-14, -14], [-7, -14], [-10, -8]], '#8d5b2f');
+    spritePoly(c, [[14, -14], [7, -14], [10, -8]], '#8d5b2f');
+  });
+  spriteRegister('Fisch', function (c) {
+    /* Fisch: schwimmt nach rechts. */
+    spritePoly(c, [[-6, 0], [-19, -8], [-19, 8]], '#22b8cf', '#1098ad');
+    spriteEllipse(c, 3, 0, 13, 8, '#3bc9db', '#1098ad');
+    spriteEllipse(c, 3, -2, 8, 4, '#66d9e8');
+    spriteCircle(c, 11, -2, 1.6, '#212529');
+    c.strokeStyle = '#1098ad';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(1, -7);
+    c.quadraticCurveTo(5, -12, 8, -6);
+    c.stroke();
+  });
+  spriteRegister('Baum', function (c) {
+    spriteRoundRect(c, -3, 4, 6, 15, 2, '#a4761b', '#7a5012');
+    spriteCircle(c, 0, -6, 12, '#37b24d', '#2b8a3e');
+    spriteCircle(c, -7, -2, 7, '#40c057');
+    spriteCircle(c, 7, -2, 7, '#40c057');
+    spriteCircle(c, 0, -13, 7, '#51cf66');
+  });
+  spriteRegister('Wolke', function (c) {
+    spriteCircle(c, -8, 3, 7, '#e9ecef');
+    spriteCircle(c, 8, 3, 7, '#e9ecef');
+    spriteCircle(c, -4, -4, 8, '#f8f9fa');
+    spriteCircle(c, 5, -3, 8, '#f8f9fa');
+    spriteEllipse(c, 0, 5, 14, 6, '#f8f9fa', '#dee2e6');
+  });
+  spriteRegister('Sonne', function (c) {
+    var i;
+    c.strokeStyle = '#fab005';
+    c.lineWidth = 3;
+    for (i = 0; i < 8; i++) {
+      var a = i * Math.PI / 4;
+      c.beginPath();
+      c.moveTo(Math.cos(a) * 13, Math.sin(a) * 13);
+      c.lineTo(Math.cos(a) * 19, Math.sin(a) * 19);
+      c.stroke();
+    }
+    spriteCircle(c, 0, 0, 11, '#fcc419', '#f59f00');
+  });
+  spriteRegister('Stern', function (c) {
+    var pts = [], i;
+    for (i = 0; i < 10; i++) {
+      var r = i % 2 === 0 ? 19 : 8;
+      var a = -Math.PI / 2 + i * Math.PI / 5;
+      pts.push([Math.cos(a) * r, Math.sin(a) * r]);
+    }
+    spritePoly(c, pts, '#fcc419', '#f59f00');
+  });
+  spriteRegister('Herz', function (c) {
+    c.beginPath();
+    c.moveTo(0, 16);
+    c.bezierCurveTo(-22, 4, -14, -14, 0, -6);
+    c.bezierCurveTo(14, -14, 22, 4, 0, 16);
+    spriteFillStroke(c, '#e64980', '#d6336c');
+  });
+  spriteRegister('Raumschiff', function (c) {
+    /* Raumschiff: fliegt nach rechts. */
+    spritePoly(c, [[-16, -9], [-8, -9], [-16, -2]], '#f03e3e');
+    spritePoly(c, [[-16, 9], [-8, 9], [-16, 2]], '#f03e3e');
+    spritePoly(c, [[-19, 0], [-26, -3], [-26, 3]], '#ff922b');
+    c.beginPath();
+    c.moveTo(-14, -9);
+    c.quadraticCurveTo(10, -10, 20, 0);
+    c.quadraticCurveTo(10, 10, -14, 9);
+    c.closePath();
+    spriteFillStroke(c, '#adb5bd', '#868e96');
+    spriteCircle(c, 4, 0, 4, '#a5d8ff', '#74c0fc');
+  });
+  spriteRegister('Geist', function (c) {
+    c.beginPath();
+    c.arc(0, -3, 12, Math.PI, Math.PI * 2);
+    c.lineTo(12, 12);
+    c.lineTo(8, 8);
+    c.lineTo(4, 13);
+    c.lineTo(0, 8);
+    c.lineTo(-4, 13);
+    c.lineTo(-8, 8);
+    c.lineTo(-12, 12);
+    c.closePath();
+    spriteFillStroke(c, '#f8f9fa', '#adb5bd');
+    spriteCircle(c, -4, -5, 2, '#212529');
+    spriteCircle(c, 4, -5, 2, '#212529');
+  });
+  spriteRegister('Pilz', function (c) {
+    spriteRoundRect(c, -5, 2, 10, 15, 3, '#ffe8cc', '#d9a066');
+    c.beginPath();
+    c.arc(0, 3, 14, Math.PI, Math.PI * 2);
+    c.closePath();
+    spriteFillStroke(c, '#e8590c', '#d9480f');
+    spriteCircle(c, -6, -4, 3, '#ffe8cc');
+    spriteCircle(c, 5, -6, 3.5, '#ffe8cc');
+    spriteCircle(c, 0, -1, 2, '#ffe8cc');
+  });
+  spriteRegister('Blume', function (c) {
+    var i;
+    spriteRoundRect(c, -1.5, 6, 3, 13, 1.5, '#2f9e44');
+    spriteEllipse(c, 5, 12, 4, 2.5, '#37b24d');
+    for (i = 0; i < 6; i++) {
+      var a = i * Math.PI / 3;
+      spriteCircle(c, Math.cos(a) * 7, -6 + Math.sin(a) * 7, 5.5, '#f783ac', '#e64980');
+    }
+    spriteCircle(c, 0, -6, 5, '#fcc419', '#f59f00');
+  });
+  var SPRITE_NAMES = [];
+  (function () {
+    var n;
+    for (n in SPRITES) { if (Object.prototype.hasOwnProperty.call(SPRITES, n)) { SPRITE_NAMES.push(n); } }
+    SPRITE_NAMES.sort();
+  })();
+  /* Cache fuer hochgeladene eigene Bilder. */
+  var SPRITE_IMG_CACHE = Object.create(null);
+  function spriteImageFor(src) {
+    if (typeof Image !== 'function') { return null; }
+    if (Object.prototype.hasOwnProperty.call(SPRITE_IMG_CACHE, src)) { return SPRITE_IMG_CACHE[src]; }
+    var img = new Image();
+    img.onload = function () {
+      var key;
+      for (key in SPRITE_IMG_CACHE) {
+        if (Object.prototype.hasOwnProperty.call(SPRITE_IMG_CACHE, key) && SPRITE_IMG_CACHE[key] && SPRITE_IMG_CACHE[key].img === img) {
+          SPRITE_IMG_CACHE[key].loaded = true;
+        }
+      }
+      if (RUN_VM && RUN_VM.gfx) { gfxRedraw(RUN_VM); }
+    };
+    img.src = src;
+    SPRITE_IMG_CACHE[src] = { img: img, loaded: false };
+    return SPRITE_IMG_CACHE[src];
+  }
+
   /* ---------- Figuren anlegen ---------- */
   function makeShape(kind, args, ctx, line) {
     var g = {
@@ -3868,6 +4130,44 @@
       g.pen = true;
       g.path = [[g.x, g.y]];
       g.fill = null;
+    } else if (kind === 'sprite') {
+      /* Sprite: fertige Figur oder eigenes Bild. z. B. new Sprite(400, 300, "Schildkröte") */
+      g.x = args.length > 0 ? gfxNum(args, 0, 'Sprite', ctx, line) : 400;
+      g.y = args.length > 1 ? gfxNum(args, 1, 'Sprite', ctx, line) : 300;
+      g.w = 40;
+      g.h = 40;
+      var spriteName = 'Schildkröte';
+      if (args.length > 2) {
+        if (args[2].t !== 'String') {
+          throw rt(ctx, line, 'Der Sprite-Name muss ein String sein.', 'z. B. new Sprite(400, 300, "Schildkröte")');
+        }
+        spriteName = javaStr(args[2], ctx, line);
+      }
+      var customSrc = null;
+      if (typeof window !== 'undefined' && window.IC_IMAGES && Object.prototype.hasOwnProperty.call(window.IC_IMAGES, spriteName)) {
+        customSrc = String(window.IC_IMAGES[spriteName]);
+      }
+      if (customSrc !== null) {
+        g.spriteKey = spriteName;
+        g.spriteSrc = customSrc;
+        g.spriteImg = spriteImageFor(customSrc);
+      } else if (SPRITE_LOWER[spriteName.toLowerCase()]) {
+        g.spriteKey = SPRITE_LOWER[spriteName.toLowerCase()];
+        g.spriteSrc = null;
+        g.spriteImg = null;
+      } else {
+        var known = SPRITE_NAMES.join(', ');
+        var ownHint = '';
+        if (typeof window !== 'undefined' && window.IC_IMAGES) {
+          var own = [];
+          var ok;
+          for (ok in window.IC_IMAGES) { if (Object.prototype.hasOwnProperty.call(window.IC_IMAGES, ok)) { own.push(ok); } }
+          if (own.length > 0) { ownHint = ' Deine eigenen Bilder: ' + own.join(', ') + '.'; }
+        }
+        throw rt(ctx, line, 'Den Sprite-Namen "' + spriteName + '" gibt es nicht.', 'Standard-Figuren: ' + known + '. Eigene Bilder lädst du links unter Bilder hoch und benutzt sie dann mit ihrem Namen.' + ownHint);
+      }
+      g.fill = null;
+      g.border = null;
     } else if (kind === 'button') {
       g.x = args.length > 0 ? gfxNum(args, 0, 'Button', ctx, line) : 0;
       g.y = args.length > 1 ? gfxNum(args, 1, 'Button', ctx, line) : 0;
@@ -3959,7 +4259,7 @@
   function gfxAttach(obj, baseName, args, vm, ctx, line) {
     var kind = GFX_KIND_OF[baseName];
     if (!kind || kind === 'world' || kind === 'color') {
-      throw rt(ctx, line, 'Von ' + baseName + ' kann nicht geerbt werden.', 'Erlaubte Basisklassen: Actor, Circle, Ellipse, Rectangle, RoundedRectangle, Text, Triangle, Line, Polygon, Bitmap, Turtle, Group, Arc, Sector.');
+      throw rt(ctx, line, 'Von ' + baseName + ' kann nicht geerbt werden.', 'Erlaubte Basisklassen: Actor, Circle, Ellipse, Rectangle, RoundedRectangle, Text, Triangle, Line, Polygon, Bitmap, Turtle, Sprite, Group, Arc, Sector.');
     }
     if (kind === 'group') {
       obj.g = { kind: 'group', members: [], dead: false, ref: obj };
@@ -4069,6 +4369,7 @@
     }
     else if (g.kind === 'ellipse') { bb = { x: g.x - g.rx, y: g.y - g.ry, w: 2 * g.rx, h: 2 * g.ry }; }
     else if (g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') { bb = { x: g.x, y: g.y, w: g.w || 10, h: g.h || 10 }; }
+    else if (g.kind === 'sprite') { bb = { x: g.x - (g.w || 40) / 2, y: g.y - (g.h || 40) / 2, w: g.w || 40, h: g.h || 40 }; }
     else if (g.kind === 'text') { bb = { x: g.x, y: g.y, w: (g.size || 20) * 0.6 * (g.text ? g.text.length : 0), h: g.size || 20 }; }
     else if (g.kind === 'triangle') {
       bb = { x: Math.min(g.p1x, g.p2x, g.p3x), y: Math.min(g.p1y, g.p2y, g.p3y), w: Math.abs(Math.max(g.p1x, g.p2x, g.p3x) - Math.min(g.p1x, g.p2x, g.p3x)), h: Math.abs(Math.max(g.p1y, g.p2y, g.p3y) - Math.min(g.p1y, g.p2y, g.p3y)) };
@@ -4143,6 +4444,7 @@
     var cx, cy;
     if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'arc' || g.kind === 'sector') { cx = g.x; cy = g.y; }
     else if (g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton') { cx = g.x + g.w / 2; cy = g.y + g.h / 2; }
+    else if (g.kind === 'sprite') { cx = g.x; cy = g.y; }
     else if (g.kind === 'text') { cx = g.x; cy = g.y; }
     else if (g.kind === 'triangle') { cx = (g.p1x + g.p2x + g.p3x) / 3; cy = (g.p1y + g.p2y + g.p3y) / 3; }
     else if (g.kind === 'line') { cx = (g.x1 + g.x2) / 2; cy = (g.y1 + g.y2) / 2; }
@@ -4229,6 +4531,37 @@
       }
       ctx2d.restore();
       return;
+    } else if (g.kind === 'sprite') {
+      /* Sprite: eigenes Bild oder Vektor-Figur, zentriert am Mittelpunkt. */
+      var spEntry = g.spriteImg;
+      if (g.spriteSrc && spEntry && spEntry.loaded && spEntry.img && spEntry.img.width) {
+        if (!g.natSet) {
+          /* Naturgroesse des Bildes uebernehmen, auf max. 120 px begrenzt. */
+          var nw = spEntry.img.width, nh = spEntry.img.height;
+          var mx2 = Math.max(nw, nh);
+          if (mx2 > 120) { nw = nw * 120 / mx2; nh = nh * 120 / mx2; }
+          if (nw < 8) { nw = 8; }
+          if (nh < 8) { nh = 8; }
+          g.w = Math.round(nw);
+          g.h = Math.round(nh);
+          g.natSet = true;
+        }
+        ctx2d.drawImage(spEntry.img, -g.w / 2, -g.h / 2, g.w, g.h);
+      } else if (g.spriteSrc) {
+        /* Bild laedt noch: heller Platzhalter. */
+        ctx2d.fillStyle = '#dee2e6';
+        ctx2d.fillRect(-g.w / 2, -g.h / 2, g.w, g.h);
+        ctx2d.fillStyle = '#adb5bd';
+        ctx2d.font = '9px sans-serif';
+        ctx2d.textAlign = 'center';
+        ctx2d.textBaseline = 'middle';
+        ctx2d.fillText('...', 0, 0);
+      } else {
+        var spFn = SPRITES[g.spriteKey];
+        if (spFn) { spFn(ctx2d); }
+      }
+      ctx2d.restore();
+      return;
     } else if (g.kind === 'turtle') {
       if (g.path.length > 1) {
         ctx2d.strokeStyle = g.border || '#000000';
@@ -4241,13 +4574,9 @@
       var hr = g.heading * Math.PI / 180;
       ctx2d.translate((g.x - cx), (g.y - cy));
       ctx2d.rotate(hr);
-      ctx2d.beginPath();
-      ctx2d.moveTo(10, 0);
-      ctx2d.lineTo(-6, 6);
-      ctx2d.lineTo(-6, -6);
-      ctx2d.closePath();
-      ctx2d.fillStyle = g.border || '#000000';
-      ctx2d.fill();
+      /* Echte Schildkröte statt Dreieck (Vektorgrafik, schaut nach heading 0 rechts). */
+      var turtleFn = SPRITES['Schildkröte'];
+      if (turtleFn) { turtleFn(ctx2d); }
       ctx2d.restore();
       return;
     }
@@ -4719,7 +5048,7 @@
     return { x: (minx + maxx) / 2, y: (miny + maxy) / 2 };
   }
   function gfxMoveShape(g, dx, dy) {
-    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'text' || g.kind === 'turtle' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton' || g.kind === 'arc' || g.kind === 'sector') {
+    if (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'rectangle' || g.kind === 'rounded' || g.kind === 'bitmap' || g.kind === 'text' || g.kind === 'turtle' || g.kind === 'sprite' || g.kind === 'button' || g.kind === 'textfield' || g.kind === 'checkbox' || g.kind === 'radiobutton' || g.kind === 'arc' || g.kind === 'sector') {
       g.x = (g.x || 0) + dx;
       g.y = (g.y || 0) + dy;
       if (g.kind === 'turtle' && g.pen) { g.path.push([g.x, g.y]); }
