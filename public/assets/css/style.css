@@ -678,6 +678,21 @@ span.hlwrap { display: block; }
     box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
 }
 .db-console-out { min-height: 0; margin: 0 0 8px; }
+/* DB-Konsole einklappbar (#45): eigene Abfragen sind Hintergrund-Option */
+.db-console-details > summary {
+    cursor: pointer; user-select: none;
+    list-style: none;
+    padding: 8px 12px;
+    border: 1px dashed #a5b4fc; border-radius: 12px;
+    background: var(--surface);
+    font-size: 0.95rem;
+}
+.db-console-details > summary::before {
+    content: "▸ ";
+    display: inline-block;
+}
+.db-console-details[open] > summary::before { content: "▾ "; }
+.db-console-details[open] > summary { margin-bottom: 10px; }
 
 @media (max-width: 1280px) {
     .ide { grid-template-columns: 200px minmax(0, 1fr); }

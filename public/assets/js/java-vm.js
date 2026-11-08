@@ -6846,8 +6846,12 @@
     var dbIn = document.getElementById('java-db-in');
     var dbOut = document.getElementById('java-db-out');
     var dbRunBtn = document.getElementById('java-db-run');
+    var dbSchemaStatic = document.getElementById('java-dbschema-static');
     function renderDbSchema() {
       if (!dbSchemaBox) { return; }
+      /* Serverseitig gerendertes Schema (#45): verstecken, sobald die
+       * Live-Anzeige uebernimmt, damit nichts doppelt erscheint. */
+      if (dbSchemaStatic) { dbSchemaStatic.style.display = 'none'; }
       dbSchemaBox.innerHTML = '';
       var tables = dbTables();
       var all = [];
@@ -6950,7 +6954,15 @@
      * auch bevor das Programm zum ersten Mal gelaufen ist. */
     dbSeedRead();
     if (DB_SEED_SQL !== '') { dbResetToSeed(); }
-    renderDbSchema();
+    /* Hat der Seed Tabellen ergeben, zeigt die Live-Anzeige das Schema;
+     * sonst bleibt die serverseitige Vorschau stehen (#45). */
+    var seedTableCount = 0;
+    var seedTablesObj = dbTables();
+    var stk;
+    for (stk in seedTablesObj) {
+      if (Object.prototype.hasOwnProperty.call(seedTablesObj, stk)) { seedTableCount++; }
+    }
+    if (seedTableCount > 0) { renderDbSchema(); }
 
     /* ---------- Dateifenster links: nur so hoch wie das Codefenster ----------
      * Die Liste der Dateien scrollt dann selbst, und das Feld fuer neue
