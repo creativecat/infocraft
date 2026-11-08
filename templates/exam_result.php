@@ -38,4 +38,4 @@
 </section>
 <?php endforeach; ?>
 
-<div class="btn-row"><a class="btn btn-ghost" href="<?= url('pruefungen') ?>">← Zur Übersicht</a></div>
+<div class="btn-row"><a class="btn btn-ghost" href="<?= url('pruefungen') ?>" title="Zur Übersicht">←</a></div>

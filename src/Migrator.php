@@ -43,6 +43,7 @@ final class Migrator
         self::ensureUserPrefsTable($pdo, $driver);
         self::seedSiteSettings($pdo);
         self::seedTaskTopics($pdo);
+        self::removeLevel8Topics($pdo);
 
         $classes = 0;
         $users = 0;
@@ -913,13 +914,15 @@ final class Migrator
 
     /**
      * Themengebiete kuratieren (nur bei leerer Tabelle), abgestimmt auf den
-     * LehrplanPLUS Informatik Bayern: Gymnasium NTG ab Jgst. 8 (Algorithmen
-     * und Programmierung, Datenmodellierung und relationale Datenbanken,
-     * Objektorientierte Modellierung, Projekt), davor Pluskurse bzw.
-     * Arbeitsgemeinschaften (z. B. Informationen darstellen, erste
-     * Webseiten), Oberstufe Q11/Q12 (Datenstrukturen, Theoretische
-     * Informatik, Softwareentwicklung). Eigene Themengebiete bleiben
-     * unberührt, der Seed läuft nur einmal.
+     * LehrplanPLUS Informatik Bayern: Am Gymnasium gibt es kein Informatik in
+     * der Jahrgangsstufe 8, der Basiskurs beginnt ab Jahrgangsstufe 9
+     * (funktionale Modellierung, Tabellenkalkulation, Datenmodellierung und
+     * SQL, Java-OO, Datenschutz), in Jahrgangsstufe 10 folgen verknüpfte
+     * Datenbanken, objektorientierte Programmierung und das Projekt;
+     * davor Pluskurse bzw. Arbeitsgemeinschaften (z. B. Informationen
+     * darstellen, erste Webseiten), Oberstufe Q11/Q12 (Datenstrukturen,
+     * Theoretische Informatik, Softwareentwicklung). Eigene Themengebiete
+     * bleiben unberührt, der Seed läuft nur einmal.
      */
     private static function seedTaskTopics(PDO $pdo): void
     {
@@ -936,14 +939,11 @@ final class Migrator
             [7, 'Digitale Kommunikation', 2],
             [7, 'Webseiten mit HTML bauen', 3],
             [7, 'Algorithmen und Flussdiagramme', 4],
-            [8, 'Algorithmen und Programmierung (Python)', 1],
-            [8, 'Daten und Informationen', 2],
-            [8, 'Informatik, Mensch und Gesellschaft', 3],
-            [8, 'Projekt', 4],
-            [9, 'Tabellenkalkulation und Funktionen', 1],
-            [9, 'Java: Klassen und Objekte', 2],
-            [9, 'Datenmodellierung und SQL', 3],
-            [9, 'Datenschutz und Sicherheit', 4],
+            [9, 'Funktionale Modellierung', 1],
+            [9, 'Tabellenkalkulation und Funktionen', 2],
+            [9, 'Java: Klassen und Objekte', 3],
+            [9, 'Datenmodellierung und SQL', 4],
+            [9, 'Datenschutz und Sicherheit', 5],
             [10, 'Relationale Datenbanken und JOINs', 1],
             [10, 'Objektorientierte Modellierung (OOP)', 2],
             [10, 'Java: Vererbung und Polymorphismus', 3],
@@ -958,6 +958,20 @@ final class Migrator
         foreach ($topics as [$level, $name, $sort]) {
             $insert->execute([$name, $level, $sort]);
         }
+    }
+
+    /**
+     * Bestehende Installationen aufräumen: Am Gymnasium gibt es kein Informatik
+     * in der Jahrgangsstufe 8 (der Basiskurs beginnt ab Jahrgangsstufe 9).
+     * Themengebiete der Stufe 8 werden entfernt, sofern keine Aufgabe sie noch
+     * referenziert; referenzierte Themen bleiben als eigene Themen stehen.
+     */
+    private static function removeLevel8Topics(PDO $pdo): void
+    {
+        $pdo->exec(
+            "DELETE FROM task_topics WHERE level = 8 AND id NOT IN ("
+            . "SELECT topic_id FROM tasks WHERE topic_id IS NOT NULL)"
+        );
     }
 
     /**

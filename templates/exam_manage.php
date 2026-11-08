@@ -5,7 +5,7 @@
         <span class="muted">ab Jahrgangsstufe <?= e($exam->level) ?><?= $exam->description !== '' ? ' · ' . e($exam->description) : '' ?></span>
     </div>
     <div class="btn-row">
-        <a class="btn btn-ghost" href="<?= url('pruefungen') ?>">← Übersicht</a>
+        <a class="btn btn-ghost" href="<?= url('pruefungen') ?>" title="Übersicht">←</a>
         <?php if ($exam->phase === 'korrektur' || $exam->phase === 'herausgegeben'): ?>
         <a class="btn btn-primary" href="<?= url('pruefungen/' . $exam->id . '/korrektur') ?>">Korrektur &amp; Ergebnisse</a>
         <?php endif; ?>
@@ -53,7 +53,7 @@
                             <?php endforeach; ?>
                         </select>
                     </label>
-                    <div class="btn-row"><button class="btn btn-primary" type="submit">Hinzufügen</button></div>
+                    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Hinzufügen">➕</button></div>
                 </form>
             </div>
             <div>
@@ -69,7 +69,7 @@
                             <?php endforeach; ?>
                         </select>
                     </label>
-                    <div class="btn-row"><button class="btn btn-ghost" type="submit">Vorlage festlegen</button></div>
+                    <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Vorlage festlegen">📎</button></div>
                 </form>
             </div>
         </div>
@@ -80,7 +80,7 @@
         <?= csrf_field() ?>
         <div class="form-row form">
             <label class="field"><span>Neue Gruppe</span><input type="text" name="name" required maxlength="100" placeholder="z. B. Gruppe A"></label>
-            <button class="btn btn-primary" type="submit">Gruppe anlegen</button>
+            <button class="btn btn-primary" type="submit" title="Gruppe anlegen">➕</button>
         </div>
     </form>
 </section>
@@ -110,7 +110,7 @@
         </div>
         <label class="field"><span>Aufgabenstellung (was ist zu tun?)</span><textarea name="description" rows="2" maxlength="2000" placeholder="Beschreibe die Aufgabe für die Schülerinnen und Schüler."></textarea></label>
         <label class="field"><span>Musterlösung</span><textarea name="sample_solution" rows="3" placeholder="Die Lösung, die nach der Herausgabe im Vergleich gezeigt wird."></textarea></label>
-        <div class="btn-row"><button class="btn btn-primary" type="submit">Teilaufgabe hinzufügen</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Teilaufgabe hinzufügen">➕</button></div>
     </form>
 </section>
 
@@ -121,7 +121,7 @@
     <?php endif; ?>
     <form method="post" action="<?= url('pruefungen/' . $exam->id . '/start') ?>">
         <?= csrf_field() ?>
-        <button class="btn btn-primary" type="submit">Jetzt starten und austeilen</button>
+        <button class="btn btn-primary" type="submit" title="Jetzt starten und austeilen">▶</button>
     </form>
 </section>
 
@@ -149,7 +149,7 @@
     <?php endif; ?>
     <form method="post" action="<?= url('pruefungen/' . $exam->id . '/ende') ?>" style="margin-top:14px;">
         <?= csrf_field() ?>
-        <button class="btn btn-primary" type="submit">Abgabe beenden &amp; Korrektur starten</button>
+        <button class="btn btn-primary" type="submit" title="Abgabe beenden & Korrektur starten">⏹</button>
     </form>
 </section>
 
@@ -158,7 +158,7 @@
 <section class="panel">
     <h3>Korrektur läuft</h3>
     <p class="muted">Die Abgabe ist beendet. Jetzt alle Arbeiten bewerten: manuell oder mit einem Klick anonymisiert über die API-Korrektur.</p>
-    <div class="btn-row"><a class="btn btn-primary" href="<?= url('pruefungen/' . $exam->id . '/korrektur') ?>">Zur Korrektur</a></div>
+    <div class="btn-row"><a class="btn btn-primary" href="<?= url('pruefungen/' . $exam->id . '/korrektur') ?>" title="Zur Korrektur">✅</a></div>
 </section>
 
 <?php else: ?>

@@ -1,7 +1,7 @@
 <section class="panel">
     <div class="panel-head">
         <h3>🌐 <?= e($project->title) ?></h3>
-        <a class="btn btn-ghost" href="<?= url('werkstatt/html') ?>">← Zurück</a>
+        <a class="btn btn-ghost" href="<?= url('werkstatt/html') ?>" title="Zurück">←</a>
     </div>
     <?php if ($isForeign): ?>
     <div class="notice">
@@ -14,16 +14,16 @@
         <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
 
         <div class="vw-bar" role="tablist" aria-label="Ansichten">
-            <button type="button" class="vw-tab vw-on" id="vt-wy" role="tab" aria-selected="true" aria-controls="vp-wy" data-vtab="wy">🖌️ Gestalten</button>
-            <button type="button" class="vw-tab" id="vt-src" role="tab" aria-selected="false" aria-controls="vp-src" data-vtab="src">📝 Quelltext</button>
-            <button type="button" class="vw-tab" id="vt-view" role="tab" aria-selected="false" aria-controls="vp-view" data-vtab="view">👁️ Vorschau</button>
+            <button type="button" class="vw-tab vw-on" id="vt-wy" role="tab" aria-selected="true" aria-controls="vp-wy" data-vtab="wy" title="Gestalten">🖌️</button>
+            <button type="button" class="vw-tab" id="vt-src" role="tab" aria-selected="false" aria-controls="vp-src" data-vtab="src" title="Quelltext">📝</button>
+            <button type="button" class="vw-tab" id="vt-view" role="tab" aria-selected="false" aria-controls="vp-view" data-vtab="view" title="Vorschau">👁️</button>
         </div>
 
         <div class="html-io">
-            <button type="button" class="btn btn-ghost" id="html-upload-btn">⬆ HTML öffnen</button>
+            <button type="button" class="btn btn-ghost" id="html-upload-btn" title="HTML-Datei öffnen">⬆</button>
             <input type="file" id="html-upload" accept=".html,.htm,text/html" hidden>
-            <button type="button" class="btn btn-ghost" id="html-download">⬇ HTML herunterladen</button>
-            <button type="button" class="btn btn-ghost" id="html-newwin">↗ Vorschau in neuem Fenster</button>
+            <button type="button" class="btn btn-ghost" id="html-download" title="HTML herunterladen">⬇</button>
+            <button type="button" class="btn btn-ghost" id="html-newwin" title="Vorschau in neuem Fenster">↗</button>
             <span class="muted" id="html-io-note" role="status" aria-live="polite"></span>
         </div>
 
@@ -41,10 +41,10 @@
                 <button type="button" class="wy-btn" data-wycmd="bold" title="Fett"><b>F</b></button>
                 <button type="button" class="wy-btn" data-wycmd="italic" title="Kursiv"><i>K</i></button>
                 <button type="button" class="wy-btn" data-wycmd="underline" title="Unterstrichen"><u>U</u></button>
-                <button type="button" class="wy-btn" data-wycmd="insertUnorderedList" title="Liste mit Punkten">• Liste</button>
-                <button type="button" class="wy-btn" data-wycmd="insertOrderedList" title="Nummerierte Liste">1. Liste</button>
+                <button type="button" class="wy-btn" data-wycmd="insertUnorderedList" title="Liste mit Punkten">•</button>
+                <button type="button" class="wy-btn" data-wycmd="insertOrderedList" title="Nummerierte Liste">1.</button>
                 <label class="wy-tool">Farbe <input type="color" id="wy-color" value="#4f46e5" title="Schriftfarbe" aria-label="Schriftfarbe"></label>
-                <button type="button" class="wy-btn" data-wycmd="createLink" title="Link einfügen">🔗 Link</button>
+                <button type="button" class="wy-btn" data-wycmd="createLink" title="Link einfügen">🔗</button>
                 <button type="button" class="wy-btn" data-wycmd="undo" title="Rückgängig">↶</button>
                 <button type="button" class="wy-btn" data-wycmd="redo" title="Wiederholen">↷</button>
             </div>
@@ -222,7 +222,7 @@
             <iframe id="html-preview" class="preview-frame" sandbox="" title="Vorschau deiner Seite"></iframe>
         </div>
 
-        <div class="btn-row"><button class="btn btn-primary" type="submit">💾 Speichern</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
     </form>
 </section>
 <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>

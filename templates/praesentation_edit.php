@@ -3,7 +3,7 @@
         <h3>🎬 Präsentation bearbeiten</h3>
         <div class="btn-row">
             <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">▶ Präsentieren</a>
-            <a class="btn btn-ghost" href="<?= url('praesentationen') ?>">← Alle Präsentationen</a>
+            <a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen">←</a>
         </div>
     </div>
     <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id) ?>" class="form">
@@ -17,7 +17,7 @@
                     <?php endfor; ?>
                 </select>
             </label>
-            <div class="btn-row"><button class="btn btn-primary" type="submit">💾 Speichern</button></div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
         </div>
     </form>
 </section>
@@ -36,7 +36,7 @@
         <div class="btn-row">
             <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/hoch') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit"<?= $pos === 0 ? ' disabled' : '' ?>>↑</button></form>
             <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/runter') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit"<?= $pos === count($slides) - 1 ? ' disabled' : '' ?>>↓</button></form>
-            <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/loeschen') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit">Löschen</button></form>
+            <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/loeschen') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit" title="Löschen">🗑</button></form>
         </div>
     </div>
     <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos) ?>" class="form">
@@ -63,7 +63,7 @@
         <label class="field"><span>🎙 Sprechernotiz (nur im Moderatorenbildschirm für Lehrkräfte sichtbar, Schülerinnen und Schüler sehen sie nie)</span>
             <textarea name="notes" rows="3" class="mono" spellcheck="true" placeholder="Kernbotschaft, Impulsfrage, Zeitangabe - z. B.: &quot;Frage zuerst: Wer hat schon mal ...? (3 Min)&quot;"><?= e($slide['notes'] ?? '') ?></textarea>
         </label>
-        <div class="btn-row"><button class="btn btn-primary" type="submit">💾 Folie speichern</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Folie speichern">💾</button></div>
     </form>
 </section>
 <?php endforeach; ?>
@@ -78,6 +78,6 @@
                 <option value="code">💻 Code-Folie (Java, Python oder SQL mit Highlighting)</option>
             </select>
         </label>
-        <button class="btn btn-primary" type="submit">+ Folie anfügen</button>
+        <button class="btn btn-primary" type="submit" title="Folie anfügen">➕</button>
     </form>
 </section>

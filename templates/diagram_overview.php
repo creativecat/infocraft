@@ -18,7 +18,7 @@
                 <option value="datenfluss">🌊 Datenflussdiagramm</option>
             </select>
         </label>
-        <button class="btn btn-primary" type="submit">Anlegen und bearbeiten</button>
+        <button class="btn btn-primary" type="submit" title="Anlegen und bearbeiten">➕</button>
     </form>
     <?php if (!$diagramAuto): ?>
     <div class="notice">
@@ -41,7 +41,7 @@
         <h2><?= e($diagram->title) ?></h2>
         <p class="card-desc muted"><?= e($diagram->kindLabel()) ?></p>
         <div class="card-meta">
-            <a class="btn btn-primary" href="<?= url('diagramme/' . (int) $diagram->id) ?>">Bearbeiten</a>
+            <a class="btn btn-primary" href="<?= url('diagramme/' . (int) $diagram->id) ?>" title="Bearbeiten">✏️</a>
         </div>
     </div>
     <?php endforeach; ?>

@@ -21,8 +21,8 @@
             <textarea name="csv_text" id="csv-text" rows="6" class="mono" placeholder="Vorname;Nachname;Klasse;Rolle&#10;Mia;Sommer;6R;Schülerin"></textarea>
         </label>
         <div class="btn-row">
-            <button class="btn btn-ghost" type="button" id="fill-example">Beispiel einfügen</button>
-            <button class="btn btn-primary" type="submit">Import starten</button>
+            <button class="btn btn-ghost" type="button" id="fill-example" title="Beispiel einfügen">📋</button>
+            <button class="btn btn-primary" type="submit" title="Import starten">⬆️</button>
         </div>
     </form>
     <p class="muted">Bestehende Konten (gleicher Vor- und Nachname) werden aktualisiert, keine Dubletten angelegt. Neue Konten bekommen einen Anmeldenamen (vorname.nachname) und ein OTP.</p>

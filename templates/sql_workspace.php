@@ -14,7 +14,7 @@
                 <textarea name="sql" rows="5" class="mono sql-input" placeholder="SELECT * FROM ..."><?= e($lastSql) ?></textarea>
             </div>
         </label>
-        <div class="btn-row"><button class="btn btn-primary" type="submit">▶ Ausführen</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Ausführen">▶</button></div>
     </form>
     <?php if ($result !== null): ?>
         <?php if ($result['ok']): ?>
@@ -62,7 +62,7 @@
         <?php if ($diagramAuto): ?>
         <form method="post" action="<?= url('werkstatt/sql/' . $template->slug . '/diagramm') ?>" class="form-inline" style="margin-top:10px;">
             <?= csrf_field() ?>
-            <button class="btn btn-ghost" type="submit">📐 Tabellen als Klassendiagramm übernehmen</button>
+            <button class="btn btn-ghost" type="submit" title="Tabellen als Klassendiagramm übernehmen">📐</button>
         </form>
         <?php else: ?>
         <p class="muted" style="margin-top:10px;">Das automatische Erzeugen von Klassendiagrammen ist für deine Klasse deaktiviert.</p>
@@ -100,7 +100,7 @@
                     <textarea name="mission_sql" rows="3" class="mono" placeholder="SELECT ..."></textarea>
                 </div>
             </label>
-            <div class="btn-row"><button class="btn btn-primary" type="submit">Prüfen</button></div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Prüfen">✅</button></div>
         </form>
         <details>
             <summary class="muted">💡 Tipp anzeigen</summary>

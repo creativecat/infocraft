@@ -11,7 +11,7 @@ if ($isStruktur) {
 <section class="panel">
     <div class="panel-head">
         <h3>📐 <?= e($diagram->title) ?> <span class="pill"><?= e($diagram->kindLabel()) ?></span></h3>
-        <a class="btn btn-ghost" href="<?= url('diagramme') ?>">← Zurück</a>
+        <a class="btn btn-ghost" href="<?= url('diagramme') ?>" title="Zurück">←</a>
     </div>
     <form method="post" action="<?= url('diagramme/' . (int) $diagram->id) ?>" class="form">
         <?= csrf_field() ?>
@@ -32,11 +32,11 @@ if ($isStruktur) {
             <p class="muted">Quellen und Senken sind Rechtecke (<strong>quelle</strong> "Lehrkraft", <strong>senke</strong> "Zeugnis"), Funktionen sind Kreise in Klammern (<strong>(notenErfassen)</strong>), Datenspeicher sind Zylinder (<strong>speicher</strong> "Schuelerliste"). Pfeile verbinden alles: <strong>--></strong> oder mit Datenbeschriftung <strong>-->|Noten|</strong>. Kommentare beginnen mit %% oder //.</p>
         </details>
         <?php endif; ?>
-        <div class="btn-row"><button class="btn btn-primary" type="submit">💾 Speichern</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
     </form>
     <form method="post" action="<?= url('diagramme/' . (int) $diagram->id . '/loeschen') ?>" class="form-inline" onsubmit="return confirm('Diagramm wirklich löschen?');">
         <?= csrf_field() ?>
-        <button class="btn btn-ghost" type="submit">🗑️ Diagramm löschen</button>
+        <button class="btn btn-ghost" type="submit" title="Diagramm löschen">🗑️</button>
     </form>
 </section>
 
@@ -64,7 +64,7 @@ if ($isStruktur) {
     <div class="panel-head">
         <h3>👁️ Vorschau</h3>
         <div class="btn-row">
-            <button class="btn btn-ghost" id="diagram-refresh" type="button">↻ Aktualisieren</button>
+            <button class="btn btn-ghost" id="diagram-refresh" type="button" title="Aktualisieren">↻</button>
             <button class="btn btn-primary" id="diagram-png" type="button" data-png-name="<?= e(preg_replace('/[^\w.-]+/', '_', $diagram->title)) ?>">🖼️ PNG herunterladen</button>
         </div>
     </div>

@@ -13,14 +13,14 @@ $topic = $task->topicId > 0 ? \Infocraft\Models\TaskTopic::find($task->topicId) 
 <section class="panel">
     <div class="panel-head">
         <h3><span class="pill"><?= e($task->type) ?> · Jgst. <?= (int) $task->level ?><?= $topic !== null ? ' · 📁 ' . e($topic->name) : '' ?><?= $task->maxPoints > 0 ? ' · max. ' . (int) $task->maxPoints . ' Punkte' : '' ?><?= $task->lateLock === 1 ? ' · 🔒 Frist-Sperre' : '' ?></span> <?= e($task->title) ?></h3>
-        <a class="btn btn-ghost" href="<?= url('aufgaben') ?>">← Zurück zum Aufgabenpool</a>
+        <a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool">←</a>
     </div>
     <?php if ($task->description !== ''): ?><div class="task-desc"><?= $task->descriptionHtml() ?></div><?php endif; ?>
     <div class="btn-row">
         <?php if ($aiConfigured): ?>
         <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/ki') ?>" class="form-inline">
             <?= csrf_field() ?>
-            <button class="btn btn-primary" type="submit">🤖 KI-Erstbewertung für alle offenen Abgaben (anonymisiert)</button>
+            <button class="btn btn-primary" type="submit" title="KI-Erstbewertung für alle offenen Abgaben (anonymisiert)">🤖</button>
         </form>
         <?php else: ?>
         <a class="btn btn-ghost" href="<?= url('aufgaben/ki') ?>">🤖 KI-Schnittstelle einrichten, dann kannst du hier KI-Vorschläge anfordern</a>
@@ -90,6 +90,6 @@ $topic = $task->topicId > 0 ? \Infocraft\Models\TaskTopic::find($task->topicId) 
     </section>
     <?php endforeach; ?>
     <?php if ($rows !== []): ?>
-    <div class="btn-row"><button class="btn btn-primary" type="submit">Korrektur speichern (zählt als übernommen)</button></div>
+    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Korrektur speichern (zählt als übernommen)">💾</button></div>
     <?php endif; ?>
 </form>

@@ -44,7 +44,7 @@
                 <option value="4">Antwort 4</option>
             </select>
         </label>
-        <div class="btn-row"><button class="btn btn-primary" type="submit">Frage hinzufügen</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Frage hinzufügen">➕</button></div>
     </form>
 </section>
 
@@ -76,7 +76,7 @@
                     <?php endforeach; ?>
                 </select>
             </label>
-            <button class="btn btn-primary" type="submit">Austeilen</button>
+            <button class="btn btn-primary" type="submit" title="Austeilen">📤</button>
         </div>
     </form>
     <?php if ($targets !== []): ?>

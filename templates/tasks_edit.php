@@ -61,10 +61,10 @@ foreach ($classes as $class) {
                         <button type="button" data-cmd="italic" title="Kursiv"><i>K</i></button>
                         <button type="button" data-cmd="underline" title="Unterstrichen"><u>U</u></button>
                         <button type="button" data-cmd="formatblock" data-arg="h3" title="Überschrift">H</button>
-                        <button type="button" data-cmd="insertunorderedlist" title="Liste">• Liste</button>
-                        <button type="button" data-cmd="insertorderedlist" title="Nummerierte Liste">1. Liste</button>
-                        <button type="button" data-cmd="formatblock" data-arg="pre" title="Code-Block">Code</button>
-                        <button type="button" data-cmd="createlink" title="Link einfügen">🔗 Link</button>
+                        <button type="button" data-cmd="insertunorderedlist" title="Liste">•</button>
+                        <button type="button" data-cmd="insertorderedlist" title="Nummerierte Liste">1.</button>
+                        <button type="button" data-cmd="formatblock" data-arg="pre" title="Code-Block">{ }</button>
+                        <button type="button" data-cmd="createlink" title="Link einfügen">🔗</button>
                         <button type="button" data-cmd="removeFormat" title="Formatierung entfernen">✗</button>
                     </div>
                     <div class="wysiwyg-view" contenteditable="true" data-placeholder="Was ist zu tun?"></div>
@@ -84,7 +84,7 @@ foreach ($classes as $class) {
                 </div>
             </div>
             <p class="muted"><?= e($typeHints[$task->type] ?? $typeHints['allgemein']) ?></p>
-            <div class="btn-row"><button class="btn btn-primary" type="submit">💾 Speichern</button></div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
         </form>
         <div class="btn-row">
             <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $task->id . '/export') ?>" title="Aufgabe als Datei sichern oder an Kolleginnen und Kollegen weitergeben (inkl. ToDos, Vorlagen, Musterlösung)">⬇️</a>

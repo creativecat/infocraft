@@ -19,7 +19,7 @@
                 </select>
             </label>
         </div>
-        <div class="btn-row"><button class="btn btn-primary" type="submit">Präsentation anlegen</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Präsentation anlegen">➕</button></div>
     </form>
 </section>
 
@@ -49,12 +49,12 @@ foreach ($items as $presentation) {
         </div>
         <div class="praes-actions">
             <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">▶ Präsentieren</a>
-            <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id . '/moderator') ?>" title="Steuerzentrale: aktuelle und nächste Folie, Timer - synchron zur Präsentationsansicht">🖥 Moderator</a>
+            <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id . '/moderator') ?>" title="Moderator: Steuerzentrale - aktuelle und nächste Folie, Timer - synchron zur Präsentationsansicht">🖥</a>
             <?php if ($user->role === 'admin' || $presentation->teacherId === $user->id): ?>
-            <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id) ?>">Bearbeiten</a>
+            <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id) ?>" title="Bearbeiten">✏️</a>
             <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/loeschen') ?>" class="form-inline">
                 <?= csrf_field() ?>
-                <button class="btn btn-ghost" type="submit">Löschen</button>
+                <button class="btn btn-ghost" type="submit" title="Löschen">🗑</button>
             </form>
             <?php endif; ?>
         </div>

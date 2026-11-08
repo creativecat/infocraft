@@ -35,7 +35,7 @@
                 <form method="post" action="<?= url('unterricht/passwort') ?>" class="form-inline">
                     <?= csrf_field() ?>
                     <input type="hidden" name="user_id" value="<?= (int) $u->id ?>">
-                    <button class="btn btn-ghost" type="submit">🔑 Neues OTP</button>
+                    <button class="btn btn-ghost" type="submit" title="Neues OTP">🔑</button>
                 </form>
                 <?php else: ?>
                 <span class="muted">-</span>

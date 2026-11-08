@@ -4,10 +4,10 @@
  * synchron: Pfeiltasten steuern beide Fenster. */ ?>
 <section class="panel">
     <div class="mod-toolbar">
-        <a class="btn btn-ghost" href="<?= url('praesentationen') ?>">← Alle</a>
+        <a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen">←</a>
         <h3 class="mod-title">🎬 <?= e($presentation->title) ?></h3>
         <span class="pill">Moderator</span>
-        <button class="btn btn-ghost" type="button" id="mod-open" title="Präsentationsansicht im neuen Fenster öffnen (z. B. für den Beamer)">⛶ Folienansicht öffnen</button>
+        <button class="btn btn-ghost" type="button" id="mod-open" title="Präsentationsansicht im neuen Fenster öffnen (z. B. für den Beamer)">⛶</button>
         <div class="slide-counter"><button class="btn btn-ghost" type="button" id="mod-prev" title="Zurück (Pfeiltaste links)">◀</button><span id="mod-counter"></span><button class="btn btn-ghost" type="button" id="mod-next" title="Weiter (Pfeiltaste rechts)">▶</button></div>
     </div>
 
@@ -33,8 +33,8 @@
                 <div class="mod-clock" id="mod-clock">--:--</div>
                 <div class="mod-timer" id="mod-timer">00:00</div>
                 <div class="btn-row">
-                    <button class="btn btn-primary" type="button" id="mod-timer-toggle">▶ Start</button>
-                    <button class="btn btn-ghost" type="button" id="mod-timer-reset">Reset</button>
+                    <button class="btn btn-primary" type="button" id="mod-timer-toggle" title="Start">▶</button>
+                    <button class="btn btn-ghost" type="button" id="mod-timer-reset" title="Reset">↺</button>
                 </div>
             </div>
             <div class="mod-note-box">

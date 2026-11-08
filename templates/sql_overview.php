@@ -69,7 +69,7 @@
                     <?php endforeach; ?>
                 </select>
             </label>
-            <div class="btn-row"><button class="btn btn-primary" type="submit">Austeilen</button></div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Austeilen">📤</button></div>
         </form>
         <p class="muted">Wird beides angegeben, gilt die ganze Klasse. Jede Person arbeitet an ihrer eigenen Kopie der Datenbank.</p>
     </section>
@@ -84,7 +84,7 @@
             <form method="post" action="<?= url('werkstatt/sql/kopie') ?>" class="form-inline">
                 <?= csrf_field() ?>
                 <input type="hidden" name="template_id" value="<?= (int) $template->id ?>">
-                <button class="btn btn-ghost" type="submit">Eigene Übungskopie</button>
+                <button class="btn btn-ghost" type="submit" title="Eigene Übungskopie">📄</button>
             </form>
         </div>
         <?php endforeach; ?>
@@ -109,7 +109,7 @@
                 <form method="post" action="<?= url('werkstatt/sql/entfernen') ?>" class="form-inline">
                     <?= csrf_field() ?>
                     <input type="hidden" name="grant_id" value="<?= (int) $assignment['grantId'] ?>">
-                    <button class="btn btn-ghost" type="submit">Zurückziehen</button>
+                    <button class="btn btn-ghost" type="submit" title="Zurückziehen">⏹</button>
                 </form>
             </td>
         </tr>

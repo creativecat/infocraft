@@ -132,7 +132,7 @@ $viewLabels = ['meine' => '📋 Meine Aufgaben', 'katalog' => '📦 Aufgabenkata
                 <label class="field"><span>Datei auswählen (.json)</span><input type="file" name="import_file" accept=".json,application/json"></label>
                 <label class="field"><span>...oder JSON direkt einfügen</span><textarea name="import_json" rows="3" placeholder='{"infocraft_task": 1, "title": "...", ...}'></textarea></label>
             </div>
-            <div class="btn-row"><button class="btn btn-ghost" type="submit">⬆️ Importieren</button></div>
+            <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Importieren">⬆️</button></div>
         </form>
     </details>
 <?php endif; ?>
@@ -145,9 +145,9 @@ $viewLabels = ['meine' => '📋 Meine Aufgaben', 'katalog' => '📦 Aufgabenkata
             <?= csrf_field() ?>
             <label class="field"><span>Alle einer Jahrgangsstufe auf einmal übernehmen</span>
                 <select name="level">
-                    <?php for ($level = 6; $level <= 13; $level++): ?>
-                    <option value="<?= $level ?>"<?= $filterLevel === $level ? ' selected' : '' ?>>Jgst. <?= $level ?></option>
-                    <?php endfor; ?>
+                    <?php foreach (array_keys($groupedCatalog) as $level): ?>
+                    <option value="<?= (int) $level ?>"><?= (int) $level ?>. Jahrgangsstufe (<?= array_sum(array_map(static fn (array $g): int => count($g), $groupedCatalog[$level])) ?> Aufgaben)</option>
+                    <?php endforeach; ?>
                 </select>
             </label>
             <button class="btn btn-primary" type="submit" title="Ganze Stufe übernehmen">⬇️</button>

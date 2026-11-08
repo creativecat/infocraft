@@ -31,12 +31,12 @@
                     <?php endforeach; ?>
                 </select>
             </label>
-            <div class="btn-row"><button class="btn btn-primary" type="submit">Projekt anlegen</button></div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Projekt anlegen">➕</button></div>
         </form>
         <form method="post" action="<?= url('werkstatt/code/ordner') ?>" class="form">
             <?= csrf_field() ?>
             <label class="field"><span>Neuer Ordner</span><input type="text" name="name" required placeholder="z. B. Hausaufgaben"></label>
-            <div class="btn-row"><button class="btn btn-ghost" type="submit">Ordner anlegen</button></div>
+            <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Ordner anlegen">📁</button></div>
         </form>
         <?php if ($isTeacher && $projects !== []): ?>
         <h3>📤 Projekt an Klasse oder Person verteilen</h3>
@@ -71,7 +71,7 @@
                     </select>
                 </label>
             </div>
-            <div class="btn-row"><button class="btn btn-primary" type="submit">Kopie austeilen</button></div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Kopie austeilen">📤</button></div>
         </form>
         <?php endif; ?>
         <?php if ($isTeacher && $studentsByClass !== []): ?>

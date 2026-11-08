@@ -28,8 +28,8 @@
             </label>
         </div>
         <div class="btn-row">
-            <button class="btn btn-primary" type="submit">Speichern</button>
-            <a class="btn btn-ghost" href="<?= url('aufgaben') ?>">← Zurück zum Aufgabenpool</a>
+            <button class="btn btn-primary" type="submit" title="Speichern">💾</button>
+            <a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool">←</a>
         </div>
     </form>
     <p class="muted">Alle Felder leeren und speichern = eigene Angaben entfernen.</p>
@@ -58,7 +58,7 @@
                 <input type="text" name="model" placeholder="Modellname" value="<?= e($school['model'] ?? '') ?>">
             </label>
         </div>
-        <div class="btn-row"><button class="btn btn-primary" type="submit">Schulweit speichern</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Schulweit speichern (für alle Lehrkräfte)">💾</button></div>
     </form>
 </section>
 <?php endif; ?>

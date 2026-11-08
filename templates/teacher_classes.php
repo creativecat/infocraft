@@ -18,7 +18,7 @@
         <form method="post" action="<?= url('unterricht/passwort') ?>" class="form-inline">
             <?= csrf_field() ?>
             <input type="hidden" name="class_id" value="<?= (int) $entry['class']->id ?>">
-            <button class="btn btn-primary" type="submit">🔑 OTP für die ganze Klasse</button>
+            <button class="btn btn-primary" type="submit" title="OTP für die ganze Klasse">🔑</button>
         </form>
     </div>
     <div class="diagram-toggle-row">
@@ -51,7 +51,7 @@
                         <option value="freigeben"<?= $mMode === 'freigeben' ? ' selected' : '' ?>>Freigeben (früher nutzbar)</option>
                         <option value="sperren"<?= $mMode === 'sperren' ? ' selected' : '' ?>>Sperren (ausgeblendet)</option>
                     </select>
-                    <button class="btn btn-ghost" type="submit">Speichern</button>
+                    <button class="btn btn-ghost" type="submit" title="Speichern">💾</button>
                 </form>
             </td>
             <td class="muted"><?= $mMode === 'freigeben' ? 'freigegeben' : ($mMode === 'sperren' ? 'gesperrt' : 'Standard') ?></td>
@@ -73,7 +73,7 @@
                 <form method="post" action="<?= url('unterricht/passwort') ?>" class="form-inline">
                     <?= csrf_field() ?>
                     <input type="hidden" name="user_id" value="<?= (int) $student->id ?>">
-                    <button class="btn btn-ghost" type="submit">🔑 Neues OTP</button>
+                    <button class="btn btn-ghost" type="submit" title="Neues OTP">🔑</button>
                 </form>
             </td>
         </tr>
@@ -105,7 +105,7 @@
                 <?php endforeach; ?>
             </select>
         </label>
-        <button class="btn btn-primary" type="submit">Zuordnen</button>
+        <button class="btn btn-primary" type="submit" title="Zuordnen">🔗</button>
     </form>
 </section>
 <?php endif; ?>

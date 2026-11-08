@@ -22,7 +22,7 @@
         <label class="field"><span>Inhalt (Markdown-lite: # Überschrift, **fett**, *kursiv*, `Code`, - Liste, ``` Block)</span>
             <textarea name="content" rows="10" class="mono" spellcheck="true" placeholder="# Was ist ein Algorithmus?&#10;&#10;Eine **eindeutige** Handlungsvorschrift ..."></textarea>
         </label>
-        <div class="btn-row"><button class="btn btn-primary" type="submit">Seite anlegen</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Seite anlegen">📄</button></div>
     </form>
 </section>
 
@@ -42,10 +42,10 @@
     <div class="btn-row">
         <a class="btn btn-primary" href="<?= url('wiki/' . (int) $page->id) ?>">Lesen</a>
         <?php if ($user->role === 'admin' || $page->teacherId === $user->id): ?>
-        <a class="btn btn-ghost" href="<?= url('wiki/' . (int) $page->id . '/bearbeiten') ?>">Bearbeiten</a>
+        <a class="btn btn-ghost" href="<?= url('wiki/' . (int) $page->id . '/bearbeiten') ?>" title="Bearbeiten">✏️</a>
         <form method="post" action="<?= url('wiki/' . (int) $page->id . '/loeschen') ?>" class="form-inline">
             <?= csrf_field() ?>
-            <button class="btn btn-ghost" type="submit">Löschen</button>
+            <button class="btn btn-ghost" type="submit" title="Löschen">🗑</button>
         </form>
         <?php endif; ?>
     </div>

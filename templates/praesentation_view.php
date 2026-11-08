@@ -3,14 +3,14 @@
  * Lehrkräfte direkt hier editierbar und speicherbar. */ ?>
 <div class="slide-stage" id="slide-stage" data-pid="<?= (int) $presentation->id ?>">
     <div class="slide-toolbar">
-        <a class="btn btn-ghost" href="<?= url('praesentationen') ?>">← Alle</a>
+        <a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen">←</a>
         <?php if ($mayEdit): ?>
-        <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id) ?>">Bearbeiten</a>
+        <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id) ?>" title="Bearbeiten">✏️</a>
         <?php endif; ?>
         <?php if ($isTeacher): ?>
-        <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id . '/moderator') ?>" title="Steuerzentrale: aktuelle und nächste Folie, Timer - synchron zu diesem Fenster">🖥 Moderator</a>
+        <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id . '/moderator') ?>" title="Moderator: Steuerzentrale - aktuelle und nächste Folie, Timer - synchron zu diesem Fenster">🖥</a>
         <?php endif; ?>
-        <button class="btn btn-ghost" type="button" id="slide-full" title="Vollbild (Taste F)">⛶ Vollbild</button>
+        <button class="btn btn-ghost" type="button" id="slide-full" title="Vollbild (Taste F)">⛶</button>
         <div class="slide-counter"><button class="btn btn-ghost" type="button" id="slide-prev" title="Zurück (Pfeiltaste links)">◀</button><span id="slide-counter"></span><button class="btn btn-ghost" type="button" id="slide-next" title="Weiter (Pfeiltaste rechts)">▶</button></div>
     </div>
 
@@ -26,7 +26,7 @@
         <h2 class="slide-title"><?= e($slide['title']) ?> <span class="pill"><?= e($slide['lang']) ?></span></h2>
         <pre class="code slide-code"><code class="language-<?= e($slide['lang']) ?>"><?= e($slide['code']) ?></code></pre>
         <?php if ($mayEdit): ?>
-        <button class="btn btn-ghost" type="button" data-edit-toggle="slide-edit-<?= $pos ?>">✏️ Code verändern (live)</button>
+        <button class="btn btn-ghost" type="button" data-edit-toggle="slide-edit-<?= $pos ?>" title="Code verändern (live)">✏️</button>
         <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos) ?>" class="form slide-edit" id="slide-edit-<?= $pos ?>" hidden>
             <?= csrf_field() ?>
             <input type="hidden" name="title" value="<?= e($slide['title']) ?>">
@@ -36,8 +36,8 @@
                 <span class="hlwrap" data-hl="<?= e($slide['lang']) ?>"><textarea name="code" rows="12" class="mono" spellcheck="false"><?= e($slide['code']) ?></textarea></span>
             </label>
             <div class="btn-row">
-                <button class="btn btn-primary" type="submit">💾 Speichern</button>
-                <button class="btn btn-ghost" type="button" data-edit-cancel="slide-edit-<?= $pos ?>">Abbrechen</button>
+                <button class="btn btn-primary" type="submit" title="Speichern">💾</button>
+                <button class="btn btn-ghost" type="button" data-edit-cancel="slide-edit-<?= $pos ?>" title="Abbrechen">✕</button>
             </div>
         </form>
         <?php endif; ?>

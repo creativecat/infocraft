@@ -32,13 +32,13 @@ foreach ($projects as $project) {
                     <?php endforeach; ?>
                 </select>
             </label>
-            <div class="btn-row"><button class="btn btn-primary" type="submit">Seite anlegen</button></div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Seite anlegen">📄</button></div>
         </form>
         <h3>🗂️ Neuer Ordner</h3>
         <form method="post" action="<?= url('werkstatt/code/ordner') ?>" class="form">
             <?= csrf_field() ?>
             <label class="field"><span>Ordnername</span><input type="text" name="name" required placeholder="z. B. Hausaufgaben"></label>
-            <div class="btn-row"><button class="btn btn-ghost" type="submit">Ordner anlegen</button></div>
+            <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Ordner anlegen">📁</button></div>
         </form>
     </section>
     <section class="panel">

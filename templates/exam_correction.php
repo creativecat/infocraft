@@ -5,7 +5,7 @@
         <span class="muted"><?= count($tasks) ?> Teilaufgaben · <?= count($summary) ?> Arbeiten</span>
     </div>
     <div class="btn-row">
-        <a class="btn btn-ghost" href="<?= url('pruefungen/' . $exam->id) ?>">← Verwaltung</a>
+        <a class="btn btn-ghost" href="<?= url('pruefungen/' . $exam->id) ?>" title="Verwaltung">←</a>
     </div>
 </section>
 
@@ -15,7 +15,7 @@
     <p class="muted">Ein Klick bewertet alle Arbeiten dieser Prüfung über die konfigurierte API. Die API sieht nur Pseudonyme wie Arbeit A und Arbeit B, keine Namen. Jeder Vorschlag muss anschließend gegengeprüft und gespeichert werden, erst dann zählt er als geprüft.</p>
     <form method="post" action="<?= url('pruefungen/' . $exam->id . '/api-korrektur') ?>">
         <?= csrf_field() ?>
-        <button class="btn btn-primary" type="submit"<?= $apiConfigured ? '' : ' disabled title="In der Konfiguration fehlt exam.api (url)"' ?>>🤖 API-Korrektur für alle Arbeiten starten</button>
+        <button class="btn btn-primary" type="submit"<?= $apiConfigured ? '' : ' disabled title="In der Konfiguration fehlt exam.api (url)"' ?>>🤖</button>
         <?php if (!$apiConfigured): ?>
         <span class="muted"> Nicht konfiguriert: in config/config.php unter exam.api die url (und optional mode: json oder chat) eintragen.</span>
         <?php endif; ?>
@@ -39,7 +39,7 @@
             <td><?= e($row['note']) ?></td>
             <td><?= $row['unchecked'] > 0 ? '<span class="status status-in-arbeit">' . e($row['graded']) . ' von ' . e(count($tasks)) . ' (ungeprüft: ' . e($row['unchecked']) . ')</span>' : '<span class="badge-solved">' . e($row['graded']) . ' von ' . e(count($tasks)) . '</span>' ?></td>
             <td><?= $row['apiCount'] > 0 ? e($row['apiCount']) : '-' ?></td>
-            <td><a class="btn btn-ghost" href="<?= url('pruefungen/' . $exam->id . '/korrektur/' . $row['work']['userId']) ?>">Korrigieren</a></td>
+            <td><a class="btn btn-ghost" href="<?= url('pruefungen/' . $exam->id . '/korrektur/' . $row['work']['userId']) ?>" title="Korrigieren">✅</a></td>
         </tr>
         <?php endforeach; ?>
         </tbody>
@@ -53,7 +53,7 @@
     <p class="muted">Herausgegeben wird erst, wenn jede Arbeit vollständig bewertet und jede Bewertung geprüft ist. Danach sehen alle Teilnehmer ihr Ergebnis mit Note und Musterlösungs-Vergleich.</p>
     <form method="post" action="<?= url('pruefungen/' . $exam->id . '/herausgeben') ?>">
         <?= csrf_field() ?>
-        <button class="btn btn-primary" type="submit"<?= $allGraded ? '' : ' disabled title="Noch nicht vollständig bewertet und geprüft"' ?>>Ergebnisse herausgeben</button>
+        <button class="btn btn-primary" type="submit"<?= $allGraded ? '' : ' disabled title="Noch nicht vollständig bewertet und geprüft"' ?>>📤</button>
         <?php if (!$allGraded): ?>
         <span class="muted"> Noch nicht alle Arbeiten sind vollständig bewertet und gegengeprüft.</span>
         <?php endif; ?>

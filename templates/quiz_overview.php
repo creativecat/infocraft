@@ -19,7 +19,7 @@
                     <?php endfor; ?>
                 </select>
             </label>
-            <button class="btn btn-primary" type="submit">Anlegen</button>
+            <button class="btn btn-primary" type="submit" title="Anlegen">➕</button>
         </div>
     </form>
 </section>
@@ -38,8 +38,8 @@
         <span class="muted">ab Jahrgangsstufe <?= e($quiz->level) ?><?= $quiz->description !== '' ? ' · ' . e($quiz->description) : '' ?></span>
     </div>
     <div class="btn-row">
-        <a class="btn btn-ghost" href="<?= url('quiz/' . $quiz->id) ?>">Fragen &amp; Austeilen</a>
-        <a class="btn btn-primary" href="<?= url('quiz/' . $quiz->id . '/ergebnisse') ?>">Ergebnisse</a>
+        <a class="btn btn-ghost" href="<?= url('quiz/' . $quiz->id) ?>" title="Fragen & Austeilen">❓</a>
+        <a class="btn btn-primary" href="<?= url('quiz/' . $quiz->id . '/ergebnisse') ?>" title="Ergebnisse">📊</a>
     </div>
 </section>
 <?php endforeach; ?>
@@ -73,7 +73,7 @@
     <div class="btn-row">
         <a class="btn btn-primary" href="<?= url('quiz/' . $quiz->id . '/spielen') ?>"><?= $entry['best'] !== null ? 'Nochmal spielen' : 'Spielen' ?></a>
         <?php if ($entry['best'] !== null): ?>
-        <a class="btn btn-ghost" href="<?= url('quiz/' . $quiz->id . '/ergebnis') ?>">Ergebnis ansehen</a>
+        <a class="btn btn-ghost" href="<?= url('quiz/' . $quiz->id . '/ergebnis') ?>" title="Ergebnis ansehen">📊</a>
         <?php endif; ?>
     </div>
 </section>

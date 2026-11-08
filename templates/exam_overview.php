@@ -26,7 +26,7 @@
             </label>
             <label class="field"><span>Beschreibung</span><input type="text" name="description" maxlength="300" placeholder="Worum geht es?"></label>
         </div>
-        <div class="btn-row"><button class="btn btn-primary" type="submit">Anlegen</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Anlegen">➕</button></div>
     </form>
 </section>
 
@@ -85,7 +85,7 @@
         <?php if ($exam->phase === 'durchfuehrung' && ($work === null || $work['submitted_at'] === null)): ?>
         <a class="btn btn-primary" href="<?= url('pruefungen/' . $exam->id . '/arbeit') ?>">Zur Arbeit</a>
         <?php elseif ($exam->phase === 'herausgegeben'): ?>
-        <a class="btn btn-primary" href="<?= url('pruefungen/' . $exam->id . '/ergebnis') ?>">Ergebnis ansehen</a>
+        <a class="btn btn-primary" href="<?= url('pruefungen/' . $exam->id . '/ergebnis') ?>" title="Ergebnis ansehen">📊</a>
         <?php endif; ?>
     </div>
 </section>

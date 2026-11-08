@@ -50,7 +50,7 @@ $statusLabels = ['offen' => 'offen', 'abgegeben' => 'abgegeben', 'korrigiert' =>
             </label>
         </div>
         <div class="btn-row">
-            <button class="btn btn-primary" type="submit">Filtern</button>
+            <button class="btn btn-primary" type="submit" title="Filtern">🔎</button>
             <a class="btn btn-ghost" href="<?= url('aufgaben') ?>">Zurücksetzen</a>
         </div>
     </form>
@@ -138,7 +138,7 @@ $currentRating = $entry['submission'] !== null ? (int) ($entry['submission']['se
             <?php endforeach; ?>
         </ul>
         <label class="field"><span>Eigenes ToDo ergänzen</span><input type="text" name="todo_title" placeholder="z. B. Nochmal die Schleife üben"></label>
-        <div class="btn-row"><button class="btn btn-ghost" type="submit">➕ ToDo hinzufügen</button></div>
+        <div class="btn-row"><button class="btn btn-ghost" type="submit" title="ToDo hinzufügen">➕</button></div>
     </form>
     <?php endif; ?>
 

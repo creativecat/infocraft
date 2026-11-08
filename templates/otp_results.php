@@ -33,7 +33,7 @@
     </tbody>
 </table>
 <div class="btn-row">
-    <button class="btn btn-ghost" type="button" onclick="window.print()">🖨️ Liste drucken</button>
+    <button class="btn btn-ghost" type="button" onclick="window.print()" title="Liste drucken">🖨️</button>
     <a class="btn btn-primary" href="<?= url('unterricht/klassen') ?>">Fertig, zu meinen Klassen</a>
 </div>
 <?php endif; ?>

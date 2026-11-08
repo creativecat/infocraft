@@ -2,7 +2,7 @@
 <section class="panel">
     <div class="panel-head">
         <h3>Arbeit von <?= e($student->fullName()) ?> <span class="pill"><?= e($exam->title) ?></span></h3>
-        <a class="btn btn-ghost" href="<?= url('pruefungen/' . $exam->id . '/korrektur') ?>">← Alle Arbeiten</a>
+        <a class="btn btn-ghost" href="<?= url('pruefungen/' . $exam->id . '/korrektur') ?>" title="Alle Arbeiten">←</a>
     </div>
     <?php if ($work !== null): ?>
     <p class="muted">Begonnen: <?= e($work['started_at'] ?? '-') ?><?= $work['submitted_at'] !== null ? ' · Abgegeben: ' . e($work['submitted_at']) : ' · nicht abgegeben' ?></p>
@@ -51,5 +51,5 @@
         </div>
     </section>
     <?php endforeach; ?>
-    <div class="btn-row"><button class="btn btn-primary" type="submit">Bewertung speichern (zählt als geprüft)</button></div>
+    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Bewertung speichern (zählt als geprüft)">💾</button></div>
 </form>

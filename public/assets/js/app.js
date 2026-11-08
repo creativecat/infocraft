@@ -9,9 +9,9 @@
 
   function syncLabel() {
     if (!toggle) { return; }
-    toggle.textContent = root.classList.contains('presenting')
-      ? '✓ Präsentationsmodus'
-      : '🖥️ Präsentieren';
+    var active = root.classList.contains('presenting');
+    toggle.title = active ? 'Präsentationsmodus ist aktiv' : 'Präsentieren';
+    toggle.setAttribute('aria-label', toggle.title);
   }
 
   if (localStorage.getItem(key) === '1') {

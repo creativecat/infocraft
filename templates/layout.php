@@ -83,14 +83,14 @@ $navView = $user !== null ? \Infocraft\Models\UserPref::navView($user->id) : 'fu
             </div>
             <div class="topbar-actions">
                 <?php if ($examLock === null && $isTeacher): ?>
-                <button id="present-toggle" class="btn btn-ghost" type="button">🖥️ Präsentieren</button>
+                <button id="present-toggle" class="btn btn-ghost" type="button" title="Präsentieren" aria-label="Präsentieren">🖥️</button>
                 <?php endif; ?>
                 <?php if ($user !== null): ?>
                 <div class="user-chip">
                     <span class="user-name"><?= e($user->fullName()) ?></span>
                     <span class="role role-<?= e($user->role) ?>"><?= e($user->roleLabel()) ?></span>
                 </div>
-                <form method="post" action="<?= url('logout') ?>"><?= csrf_field() ?><button class="btn btn-ghost" type="submit">Abmelden</button></form>
+                <form method="post" action="<?= url('logout') ?>"><?= csrf_field() ?><button class="btn btn-ghost" type="submit" title="Abmelden">🚪</button></form>
                 <?php endif; ?>
             </div>
         </header>

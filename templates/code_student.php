@@ -4,7 +4,7 @@
     <p><?= $className !== '' ? 'Klasse ' . e($className) : 'Ohne Klasse' ?> · Als Lehrkraft kannst du jedes Projekt öffnen, ansehen und bearbeiten.</p>
 </section>
 
-<p><a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>">← Zurück zur Code-Werkstatt</a></p>
+<p><a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück zur Code-Werkstatt">←</a></p>
 
 <div class="cards">
     <?php foreach ($projects as $project): ?>

@@ -19,7 +19,7 @@
                     <option value="python"<?= $defaultLanguage === 'python' ? ' selected' : '' ?>>🐍 Python</option>
                 </select>
             </label>
-            <div class="btn-row" style="align-items:flex-end;"><button class="btn btn-primary" type="submit">💾 Speichern</button></div>
+            <div class="btn-row" style="align-items:flex-end;"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
         </div>
     </form>
 </section>

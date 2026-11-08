@@ -1,7 +1,7 @@
 <section class="panel">
     <div class="panel-head">
         <h3><?= $project->type === 'html' ? '🌐' : '💻' ?> <?= e($project->title) ?></h3>
-        <a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>">← Zurück</a>
+        <a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück">←</a>
     </div>
     <?php if ($isForeign): ?>
     <div class="notice">
@@ -13,7 +13,7 @@
     <!-- Java-IDE über die volle Breite: Dateien im eigenen Fenster, Editor und Konsole in einem gemeinsamen Fenster -->
     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="ide-savebar" id="code-save-form">
         <?= csrf_field() ?>
-        <button class="btn btn-ghost" type="button" id="java-format" title="Rückt deinen Java-Code automatisch ein: 4 Leerzeichen pro Ebene, sauber eingerückt und ausgerückt.">🧹 Formatieren</button>
+        <button class="btn btn-ghost" type="button" id="java-format" title="Rückt deinen Java-Code automatisch ein: 4 Leerzeichen pro Ebene, sauber eingerückt und ausgerückt.">🧹</button>
         <span class="save-status" id="java-save-info" title="Dein Code wird bei jeder Änderung automatisch gespeichert – auch ohne Speichern-Klick."></span>
     </form>
     <div class="ide">
@@ -35,7 +35,7 @@
             <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/datei') ?>" class="form-inline ide-side-new">
                 <?= csrf_field() ?>
                 <input type="text" name="name" placeholder="Auto.java" pattern="[A-Za-z][A-Za-z0-9_]*\.java" required>
-                <button class="btn btn-primary" type="submit">＋ Neue Datei</button>
+                <button class="btn btn-primary" type="submit" title="Neue Datei">＋</button>
             </form>
         </aside>
         <div class="ide-work">
@@ -70,11 +70,11 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
             </div>
             <div id="java-step-info" class="step-info"></div>
             <div class="console-tabs" role="tablist">
-                <button type="button" class="console-tab active" data-ctab="out">▶ Ausgabe</button>
-                <button type="button" class="console-tab" data-ctab="classes">📐 Klassen</button>
-                <button type="button" class="console-tab" data-ctab="repl">🧪 Objektkonsole</button>
-                <button type="button" class="console-tab" data-ctab="objects">🧩 Objekte <span class="err-badge" id="java-obj-badge">0</span></button>
-                <button type="button" class="console-tab api-open" id="java-api-open" title="Öffnet die API-Hilfe in einem eigenen Fenster. Es bleibt offen, während du weiterprogrammierst.">📖 API-Hilfe ↗</button>
+                <button type="button" class="console-tab active" data-ctab="out" title="Ausgabe">▶</button>
+                <button type="button" class="console-tab" data-ctab="classes" title="Klassen (Klassendiagramm)">📐</button>
+                <button type="button" class="console-tab" data-ctab="repl" title="Objektkonsole">🧪</button>
+                <button type="button" class="console-tab" data-ctab="objects" title="Objekte">🧩 <span class="err-badge" id="java-obj-badge">0</span></button>
+                <button type="button" class="console-tab api-open" id="java-api-open" title="Öffnet die API-Hilfe in einem eigenen Fenster. Es bleibt offen, während du weiterprogrammierst.">📖</button>
             </div>
             <div class="console-pane" data-cpane="out">
                 <pre id="java-console" class="code ide-console-out">Noch nichts ausgeführt.</pre>
@@ -85,7 +85,7 @@ System.out.println(Datenbank.tabellen());                  // alle Tabellen</pre
                 <?php if ($diagramAuto): ?>
                 <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/diagramm') ?>" class="form-inline">
                     <?= csrf_field() ?>
-                    <button class="btn btn-ghost" type="submit" title="In der Diagramm-Werkstatt weiterbearbeiten und als PNG exportieren">📐 Als Diagramm übernehmen (PNG-Export)</button>
+                    <button class="btn btn-ghost" type="submit" title="In der Diagramm-Werkstatt weiterbearbeiten und als PNG exportieren">📐</button>
                 </form>
                 <?php else: ?>
                 <p class="muted">Das Übernehmen in die Diagramm-Werkstatt hat deine Lehrkraft für deine Klasse deaktiviert.</p>
@@ -387,7 +387,7 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
             <div class="console-errors-box" id="java-errors-box">
                 <div class="console-errors-head">🚨 Fehlerkonsole <span class="err-badge" id="java-error-badge">0</span></div>
                 <div class="java-errors" id="java-errors">Noch nichts ausgeführt – hier erscheinen Fehler mit Datei, Zeile und Tipp.</div>
-                <button class="btn btn-ghost" id="java-clear" type="button">Leeren</button>
+                <button class="btn btn-ghost" id="java-clear" type="button" title="Leeren">🗑</button>
             </div>
             </div>
             <div class="gfx-dock" id="gfx-dock" hidden></div>
@@ -402,7 +402,7 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
                 <textarea name="content" id="code-editor" rows="18" class="mono code-editor" spellcheck="false"><?= e($project->content) ?></textarea>
             </div>
         </label>
-        <div class="btn-row"><button class="btn btn-primary" type="submit">💾 Speichern</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
     </form>
     <?php endif; ?>
 </section>
@@ -416,7 +416,7 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
     <p class="muted">Aus diesem <?= e($project->language ?? 'Code') ?>-Skript wird automatisch ein Klassendiagramm erzeugt (Klassen, Attribute, Methoden, Vererbung). Danach kannst du es weiterbearbeiten und als PNG exportieren.</p>
     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/diagramm') ?>" class="form-inline">
         <?= csrf_field() ?>
-        <button class="btn btn-primary" type="submit">Klassendiagramm erzeugen</button>
+        <button class="btn btn-primary" type="submit" title="Klassendiagramm erzeugen">📐</button>
     </form>
     <?php else: ?>
     <div class="notice">
@@ -432,7 +432,7 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
 <section class="panel">
     <div class="panel-head">
         <h3>▶️ Python ausführen</h3>
-        <button class="btn btn-primary" id="run-python" type="button">▶ Los</button>
+        <button class="btn btn-primary" id="run-python" type="button" title="Los">▶</button>
     </div>
     <p class="muted">Dein Programm läuft vollständig in deinem Browser (Pyodide): Es wird kein Code auf dem Server ausgeführt. Mit Strg + Enter startest du ebenfalls. Beim ersten Start wird Python geladen, das dauert einen Moment.</p>
     <pre id="code-output" class="code">Noch nichts ausgeführt.</pre>
