@@ -4,7 +4,7 @@
             <h3><?= $template->isAdventure ? '🏝️' : '🗄️' ?> <?= e($template->title) ?></h3>
             <p class="muted"><?= e($template->description) ?></p>
         </div>
-        <span class="pill"><?= e($permissionLabel) ?></span>
+        <span class="pill" title="<?= $permission === 'read' ? 'Nur Leserechte: Du arbeitest an der gemeinsamen Datenbank, es wird keine eigene Kopie angelegt.' : 'Schreibrechte: Du arbeitest an deiner eigenen datensparsamen Kopie der Daten.' ?>"><?= e($permissionLabel) ?></span>
     </div>
     <form method="post" action="<?= url('werkstatt/sql/' . $template->slug) ?>" class="form" id="sql-form">
         <?= csrf_field() ?>

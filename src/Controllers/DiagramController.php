@@ -178,7 +178,7 @@ final class DiagramController
             flash('error', 'Deine Lehrkraft hat das automatische Erzeugen von Klassendiagrammen für deine Klasse deaktiviert.');
             redirect('/werkstatt/sql/' . $template->slug);
         }
-        $mermaid = ClassDiagramGen::fromSqlTables(SqlWorkshop::tables(SqlWorkshop::workspacePdo($template->slug, $user->id)));
+        $mermaid = ClassDiagramGen::fromSqlTables(SqlWorkshop::tables(SqlWorkshop::workspacePdo($template->slug, $user->id, ($grant !== null ? $grant['permission'] : 'admin'))));
         if ($mermaid === '') {
             flash('error', 'In dieser Datenbank gibt es noch keine Tabellen.');
             redirect('/werkstatt/sql/' . $template->slug);

@@ -74,6 +74,17 @@ foreach ($classes as $class) {
             </div>
             <label class="field"><span>Musterlösung (optional, dient der Korrektur und der KI als Vergleich)</span><textarea name="sample_solution" rows="3"><?= e($task->sampleSolution) ?></textarea></label>
             <label class="field"><span>Erwartungshorizont (optional, wird dir in der Korrektur und der KI als Bewertungshilfe mitgegeben)</span><textarea name="rubric" rows="3"><?= e($task->rubric) ?></textarea></label>
+            <label class="field"><span>Beispieldatenbank anhängen (erscheint mit ihren Daten in der Mini-Datenbank der Arbeitskopie)</span>
+                <select name="db_template_id">
+                    <option value="0">- keine Datenbank -</option>
+                    <?php foreach (($sqlTemplates ?? []) as $tpl): ?>
+                    <option value="<?= (int) $tpl->id ?>"<?= (int) $task->dbTemplateId === (int) $tpl->id ? ' selected' : '' ?>><?= e($tpl->title) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <div class="field"><span>Datenbankrechte der Schülerinnen und Schüler</span>
+                <label style="display:flex;gap:6px;align-items:center;font-weight:normal;margin-top:6px;"><input type="checkbox" name="db_write" value="1"<?= $task->dbWrite === 1 ? ' checked' : '' ?>> Schreibrechte vergeben: jede Person bekommt beim Öffnen ihre eigene datensparsame Kopie der Daten. Ohne Haken ist die angehängte Datenbank nur lesbar (keine eigenen Kopien, INSERT/UPDATE/DELETE sind gesperrt).</label>
+            </div>
             <div class="two-col">
                 <label class="field"><span>Maximale Punktzahl (0 = keine Punktevergabe)</span>
                     <input type="number" name="max_points" min="0" max="1000" value="<?= (int) $task->maxPoints ?>">
@@ -87,6 +98,7 @@ foreach ($classes as $class) {
             <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
         </form>
         <div class="btn-row">
+            <a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool">←</a>
             <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $task->id . '/export') ?>" title="Aufgabe als Datei sichern oder an Kolleginnen und Kollegen weitergeben (inkl. ToDos, Vorlagen, Musterlösung)">⬇️</a>
             <?php if ($task->presentationProjectId !== null): ?>
             <a class="btn btn-primary" href="<?= url('werkstatt/' . ($task->type === 'html' ? 'html' : 'code') . '/' . (int) $task->presentationProjectId) ?>" title="Präsentationsmodus läuft: zurück in die temporäre Kopie">🎬 läuft</a>
@@ -126,7 +138,6 @@ foreach ($classes as $class) {
                 <?= csrf_field() ?>
                 <button class="btn btn-ghost" type="submit" title="Aufgabe löschen">🗑</button>
             </form>
-            <a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool">←</a>
         </div>
     </section>
     <div>

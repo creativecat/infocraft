@@ -32,6 +32,11 @@ final class CodeController
         }
         $projects = Project::all($user->id);
         $folders = Folder::all($user->id);
+        $folderRows = Folder::orderedTree($folders);
+        $projectsByFolder = [];
+        foreach ($projects as $project) {
+            $projectsByFolder[$project->folderId ?? 0][] = $project;
+        }
         $counts = [];
         foreach ($projects as $project) {
             $key = $project->folderId ?? 0;
@@ -43,7 +48,9 @@ final class CodeController
             'active' => 'module-code',
             'projects' => $projects,
             'folders' => $folders,
-            'folderNames' => self::folderNames($folders),
+            'folderRows' => $folderRows,
+            'folderNames' => self::folderNames($folderRows),
+            'projectsByFolder' => $projectsByFolder,
             'counts' => $counts,
             'isTeacher' => $isTeacher,
             'defaultLanguage' => SiteSetting::defaultLanguage(),
@@ -94,7 +101,9 @@ final class CodeController
             flash('error', 'Bitte einen Ordnernamen angeben.');
             redirect('/werkstatt/code');
         }
-        Folder::create($user->id, $name);
+        $parentId = (int) ($_POST['parent_id'] ?? 0);
+        $parentId = $parentId > 0 && Folder::belongsTo($parentId, $user->id) ? $parentId : null;
+        Folder::create($user->id, $name, $parentId);
         flash('success', 'Ordner angelegt.');
         redirect('/werkstatt/code');
     }
@@ -251,10 +260,17 @@ final class CodeController
         $workingOwnTodos = [];
         $workingMaterials = [];
         $workingSubmitted = false;
+        $dbReadOnly = false;
         if ($presentationTask === null) {
             $working = TaskWorking::forProject($project->id);
             if ($working !== null && $working->studentId === $user->id) {
                 $workingTask = Task::find($working->taskId);
+                // Issue #45: Angehängte Datenbank der Aufgabe nur mit
+                // Schreibrechten beschreibbar, sonst ist die Mini-Datenbank
+                // lesbar (alle teilen sich dieselben Daten).
+                if ($workingTask !== null && $workingTask->dbTemplateId > 0 && $workingTask->dbWrite !== 1) {
+                    $dbReadOnly = true;
+                }
             }
         }
         if ($workingTask !== null) {
@@ -288,6 +304,7 @@ final class CodeController
             'workingSubmitted' => $workingSubmitted,
             'replText' => $state['replText'] ?? '',
             'dbSql' => $state['dbSql'] ?? '',
+            'dbReadOnly' => $dbReadOnly,
             'ownerName' => $owner !== null ? $owner->fullName() : '',
             'isForeign' => $project->ownerId !== $user->id,
             'diagramAuto' => SchoolClass::diagramAutoForUser($user),
@@ -635,11 +652,12 @@ final class CodeController
     }
 
     /** @return array<int, string> */
-    private static function folderNames(array $folders): array
+    /** @param list<array{folder: Folder, depth: int}> $folderRows */
+    private static function folderNames(array $folderRows): array
     {
         $names = [0 => 'Ohne Ordner'];
-        foreach ($folders as $folder) {
-            $names[$folder->id] = $folder->name;
+        foreach ($folderRows as $row) {
+            $names[$row['folder']->id] = str_repeat('· ', $row['depth']) . $row['folder']->name;
         }
         return $names;
     }

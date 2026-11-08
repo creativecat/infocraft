@@ -52,7 +52,7 @@ final class SqlWorkshopController
             unset($_SESSION['sql_result']);
         }
 
-        $pdo = SqlWorkshop::workspacePdo($template->slug, $user->id);
+        $pdo = SqlWorkshop::workspacePdo($template->slug, $user->id, $grant['permission']);
         render('sql_workspace', [
             'title' => $template->title,
             'active' => 'module-sql',
@@ -84,7 +84,7 @@ final class SqlWorkshopController
             redirect('/werkstatt/sql');
         }
         $sql = (string) ($_POST['sql'] ?? '');
-        $pdo = SqlWorkshop::workspacePdo($template->slug, $user->id);
+        $pdo = SqlWorkshop::workspacePdo($template->slug, $user->id, $grant['permission']);
         $result = SqlWorkshop::run($grant['permission'], $sql, $pdo);
         $_SESSION['sql_result'] = ['slug' => $template->slug, 'result' => $result, 'sql' => $sql];
         redirect('/werkstatt/sql/' . $template->slug);
@@ -110,7 +110,7 @@ final class SqlWorkshopController
             return;
         }
         $sql = (string) ($_POST['mission_sql'] ?? '');
-        $pdo = SqlWorkshop::workspacePdo($template->slug, $user->id);
+        $pdo = SqlWorkshop::workspacePdo($template->slug, $user->id, $grant['permission']);
         $run = SqlWorkshop::run($grant['permission'], $sql, $pdo);
         if (!$run['ok']) {
             flash('error', 'Die Anweisung war nicht ausführbar: ' . $run['error']);

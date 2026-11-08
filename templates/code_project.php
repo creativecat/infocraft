@@ -751,8 +751,14 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
 <?php if ($project->type === 'code' && $project->language === 'java' && $dbPanel): ?>
 <section class="panel" id="db-panel">
     <input type="hidden" id="java-db-seed" value="<?= e($dbSql ?? '') ?>">
+    <?php if (!empty($dbReadOnly)): ?>
+    <input type="hidden" id="java-db-ro" value="1">
+    <?php endif; ?>
     <div class="panel-head">
         <h3>💾 Mini-Datenbank: SQL direkt in Java</h3>
+        <?php if (!empty($dbReadOnly)): ?>
+        <span class="pill" title="Deine Lehrkraft hat diese Datenbank nur mit Leserechten an die Aufgabe angehängt: Alle arbeiten mit denselben Daten, SELECT und Database.query sind erlaubt, schreibende Befehle sind gesperrt.">🔒 Nur Leserechte</span>
+        <?php endif; ?>
     </div>
     <p>Die eingebaute Klasse <code>Database</code> speichert Tabellen im Speicher deines Browsers – ganz ohne Installation:</p>
     <pre class="code">Database.execute("CREATE TABLE schueler (name TEXT, punkte INT)");
@@ -773,7 +779,7 @@ System.out.println(Database.tables());                     // alle Tabellen</pre
 
         <div class="db-block">
             <h4 class="diag-head">🗄 DB-Konsole: Abfragen testen und Daten anlegen</h4>
-            <p class="muted">Schicke Abfragen direkt an die Datenbank, ohne dein Programm zu ändern: <code>SELECT</code> zeigt das Ergebnis an, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>CREATE TABLE</code> und <code>DROP TABLE</code> ändern die Datenbank dauerhaft (sie wird automatisch mit deinem Projekt gespeichert). Damit legst du hier auch neue Daten an und prüfst sofort, was dein Programm daraus liest.</p>
+                        <p class="muted"><?php if (empty($dbReadOnly)): ?>Schicke Abfragen direkt an die Datenbank, ohne dein Programm zu ändern: <code>SELECT</code> zeigt das Ergebnis an, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>CREATE TABLE</code> und <code>DROP TABLE</code> ändern die Datenbank dauerhaft (sie wird automatisch mit deinem Projekt gespeichert). Damit legst du hier auch neue Daten an und prüfst sofort, was dein Programm daraus liest.<?php else: ?>Schicke Abfragen an die angehängte Datenbank: <code>SELECT</code> zeigt das Ergebnis an. Schreibende Befehle sind gesperrt, weil deine Lehrkraft nur Leserechte vergeben hat - alle arbeiten mit denselben Daten.<?php endif; ?></p>
             <textarea id="java-db-in" class="mono db-console-in" rows="3" autocomplete="off" spellcheck="false"></textarea>
             <div class="repl-actions">
                 <button class="btn btn-primary" id="java-db-run" type="button" title="Abfrage ausführen (Strg + Enter): schickt den SQL-Befehl an die Datenbank und zeigt das Ergebnis.">▶ Abfrage ausführen</button>

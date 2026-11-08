@@ -68,10 +68,11 @@
                     <option value="<?= e($key) ?>"><?= e($label) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <p class="muted">Nur lesen = alle arbeiten an derselben gemeinsamen Datenbank, ohne eigene Kopie. Erst mit Schreibrechten erhält jede Person ihre eigene datensparsame Kopie.</p>
             </label>
             <div class="btn-row"><button class="btn btn-primary" type="submit" title="Austeilen">📤</button></div>
         </form>
-        <p class="muted">Wird beides angegeben, gilt die ganze Klasse. Jede Person arbeitet an ihrer eigenen Kopie der Datenbank.</p>
+        <p class="muted">Wird beides angegeben, gilt die ganze Klasse.</p>
     </section>
     <section class="panel">
         <h3>🗃️ Vorlagen</h3>
