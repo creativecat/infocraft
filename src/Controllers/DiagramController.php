@@ -98,8 +98,11 @@ final class DiagramController
         if ($title === '') {
             $title = $diagram->title;
         }
-        $diagram->save($title, (string) ($_POST['mermaid'] ?? ''));
-        $label = $diagram->kind === 'struktogramm' ? 'Struktogramm' : ($diagram->kind === 'datenfluss' ? 'Datenflussdiagramm' : 'Klassendiagramm');
+        // Typ-Buttons im Editor: Beim Speichern darf der Typ mit umschalten.
+        $kind = (string) ($_POST['kind'] ?? '');
+        $diagram->save($title, (string) ($_POST['mermaid'] ?? ''), $kind !== '' ? $kind : null);
+        $savedKind = ClassDiagram::find($diagram->id);
+        $label = $savedKind === null ? 'Diagramm' : ($savedKind->kind === 'struktogramm' ? 'Struktogramm' : ($savedKind->kind === 'datenfluss' ? 'Datenflussdiagramm' : 'Klassendiagramm'));
         flash('success', $label . ' gespeichert.');
         redirect('/diagramme/' . $diagram->id);
     }

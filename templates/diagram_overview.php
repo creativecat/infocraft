@@ -1,7 +1,7 @@
 <section class="hero">
     <div class="hero-emoji">📐</div>
     <h1>Diagramme</h1>
-    <p>Struktur sichtbar machen: Klassendiagramme (Mermaid), Struktogramme (Nassi-Shneiderman) und Datenflussdiagramme zeichnen - oder Klassendiagramme automatisch aus Java-, Python- und SQL-Skripten erzeugen. Alles bleibt gespeichert und lässt sich exportieren.</p>
+    <p>Struktur sichtbar machen: Klassendiagramme, Struktogramme (Nassi-Shneiderman) und Datenflussdiagramme zeichnen - oder Klassendiagramme automatisch aus Java-, Python- und SQL-Skripten erzeugen. Alles bleibt gespeichert und lässt sich exportieren.</p>
 </section>
 
 <section class="panel">
@@ -12,11 +12,11 @@
         <?= csrf_field() ?>
         <label class="field"><span>Titel</span><input type="text" name="title" required maxlength="200" placeholder="z. B. Notenrechner"></label>
         <label class="field"><span>Typ</span>
-            <select name="kind">
-                <option value="manuell">📐 Klassendiagramm (Mermaid)</option>
-                <option value="struktogramm">🧱 Struktogramm (Nassi-Shneiderman)</option>
-                <option value="datenfluss">🌊 Datenflussdiagramm</option>
-            </select>
+            <div class="kind-picker">
+                <label class="kind-btn"><input type="radio" name="kind" value="manuell" checked><span>📐 Klassendiagramm</span></label>
+                <label class="kind-btn"><input type="radio" name="kind" value="struktogramm"><span>🧱 Struktogramm</span></label>
+                <label class="kind-btn"><input type="radio" name="kind" value="datenfluss"><span>🌊 Datenflussdiagramm</span></label>
+            </div>
         </label>
         <button class="btn btn-primary" type="submit" title="Anlegen und bearbeiten">➕</button>
     </form>

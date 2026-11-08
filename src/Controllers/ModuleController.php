@@ -32,7 +32,7 @@ final class ModuleController
                 'features' => [
                     'Abbildung eines Shops und von Instagram als Datenmodell',
                     'SQL-Werkbank: Abfragen ausführen, Ergebnisse als Tabelle, Rechte je Person',
-                    'Automatisch generierte ER-Diagramme (Mermaid-Quelltext zum Weiterverwenden)',
+                    'Automatisch generierte ER-Diagramme (Quelltext zum Weiterverwenden)',
                     'SQL-Text-Adventure im Stil von SQL Island (Dateninsel)',
                     'Lehrkräfte teilen Vorlagen an Klassen aus: nur lesen, lesen und schreiben oder Tabellen anlegen',
                 ],
@@ -65,8 +65,8 @@ final class ModuleController
                 'route' => 'diagramme',
                 'description' => 'Struktur sichtbar machen: Klassendiagramme, Struktogramme und Datenflussdiagramme zeichnen und automatisch aus Java, Python und SQL erzeugen.',
                 'features' => [
-                    'Klassendiagramme selbst zeichnen (Mermaid) mit Live-Vorschau und Zwischenspeichern',
-                    'Struktogramme (Nassi-Shneiderman) mit eigener, Mermaid-ähnlicher Syntax: anweisung, wenn/dann/sonst, solange, wiederhole/bis',
+                    'Klassendiagramme selbst zeichnen mit Live-Vorschau und Zwischenspeichern',
+                    'Struktogramme (Nassi-Shneiderman) mit eigener Syntax: anweisung, wenn/dann/sonst, solange, wiederhole/bis',
                     'Datenflussdiagramme: Quellen, Senken, Datenspeicher und Funktionen mit beschrifteten Pfeilen - Vorschau live beim Tippen',
                     'Automatisch aus Java- und Python-Skripten: Klassen, Attribute, Methoden und Vererbung',
                     'SQL-Tabellen als Klassendiagramm übernehmen: Spalten, Primärschlüssel, Beziehungen',

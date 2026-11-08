@@ -455,6 +455,50 @@
   });
 })();
 
+/* ===== Diagramm-Editor: Typ-Buttons umschalten, Klammern schliessen automatisch ===== */
+(function () {
+  'use strict';
+  var picker = document.querySelector('[data-kind-switch]');
+  if (picker) {
+    var form = picker.closest('form');
+    var radios = picker.querySelectorAll('input[name="kind"]');
+    var helps = form ? form.querySelectorAll('[data-help-kind]') : [];
+    var labels = form ? form.querySelectorAll('[data-label-kind]') : [];
+    function applyKind() {
+      var current = '';
+      radios.forEach(function (r) { if (r.checked) { current = r.value; } });
+      helps.forEach(function (b) { b.hidden = b.getAttribute('data-help-kind') !== current; });
+      labels.forEach(function (l) { l.hidden = l.getAttribute('data-label-kind') !== current; });
+    }
+    radios.forEach(function (r) { r.addEventListener('change', applyKind); });
+    applyKind();
+  }
+
+  var area = document.getElementById('diagram-source');
+  if (!area) { return; }
+  var openers = { '(': ')', '[': ']', '{': '}' };
+  var closers = { ')': '(', ']': '[', '}': '{' };
+  function fireInput() {
+    area.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  area.addEventListener('keydown', function (ev) {
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) { return; }
+    var start = area.selectionStart;
+    var end = area.selectionEnd;
+    if (openers[ev.key]) {
+      ev.preventDefault();
+      var inner = area.value.slice(start, end);
+      area.value = area.value.slice(0, start) + ev.key + inner + openers[ev.key] + area.value.slice(end);
+      area.selectionStart = start + 1;
+      area.selectionEnd = start + 1 + inner.length;
+      fireInput();
+    } else if (closers[ev.key] && area.value.charAt(end) === ev.key) {
+      /* schließende Klammer direkt daneben? Cursor springt drueber statt doppelt */
+      ev.preventDefault();
+      area.selectionStart = area.selectionEnd = end + 1;
+    }
+  });
+})();
 /* ===== Klassendiagramme: Live-Vorschau und PNG-Export ===== */
 (function () {
   'use strict';
@@ -547,12 +591,31 @@
     return { error: '', mermaid: out.join(NL) };
   }
 
-  function render() {
+  /* Fehler der Diagramm-Bibliothek saeubern: keine internen Namen und
+     Versionsnummern im Gesichtsfeld der Schuelerinnen und Schueler. */
+  function cleanError(msg) {
+    var text = String(msg || 'Unbekannter Fehler im Diagramm-Quelltext.');
+    text = text.replace(/mermaid/gi, 'Diagramm');
+    text = text.replace(/\s*version\s+[0-9][0-9.]*/gi, '');
+    return text;
+  }
+
+  var lastGoodSvg = null;
+  var statusEl = document.getElementById('diagram-status');
+
+  function render(isAuto) {
     if (!preview || !source) { return; }
     var text = source.value;
     if (kind === 'datenfluss') {
       var t = transpileDatenfluss(text);
       if (t.error) {
+        /* Waehrend des Tippens bleibt die letzte gueltige Zeichnung stehen,
+           statt eine rote Fehlermeldung ueber halbfertige Eingaben zu zeigen. */
+        if (isAuto && lastGoodSvg !== null) {
+          preview.innerHTML = lastGoodSvg;
+          if (statusEl) { statusEl.textContent = 'Vorschau pausiert, bis der Quelltext wieder gezeichnet werden kann.'; statusEl.hidden = false; }
+          return;
+        }
         preview.innerHTML = '<div class="notice"><strong>Datenflussdiagramm kann nicht gezeichnet werden</strong><p>' + escapeText(t.error) + '</p></div>';
         return;
       }
@@ -560,9 +623,17 @@
     }
     seq += 1;
     window.mermaid.render('dg-svg-' + seq, text).then(function (out) {
+      lastGoodSvg = out.svg;
       preview.innerHTML = out.svg;
+      if (statusEl) { statusEl.hidden = true; }
     }).catch(function (err) {
-      preview.innerHTML = '<div class="notice"><strong>Diagramm kann nicht gezeichnet werden</strong><p>' + escapeText(err && err.message ? err.message : 'Unbekannter Fehler im Mermaid-Quelltext.') + '</p></div>';
+      var msg = cleanError(err && err.message ? err.message : '');
+      if (isAuto && lastGoodSvg !== null) {
+        preview.innerHTML = lastGoodSvg;
+        if (statusEl) { statusEl.textContent = 'Vorschau pausiert, bis der Quelltext wieder gezeichnet werden kann.'; statusEl.hidden = false; }
+        return;
+      }
+      preview.innerHTML = '<div class="notice"><strong>Diagramm kann nicht gezeichnet werden</strong><p>' + escapeText(msg) + '</p></div>';
     });
   }
 
@@ -594,19 +665,21 @@
       link.click();
     };
     img.onerror = function () {
-      window.alert('PNG-Export fehlgeschlagen. Der Mermaid-Quelltext bleibt kopierbar.');
+      window.alert('PNG-Export fehlgeschlagen. Der Diagramm-Quelltext bleibt kopierbar.');
     };
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(data);
   }
 
+  /* Mehr Ruhe beim Tippen: erst nach dieser Pause wird neu gezeichnet und geprueft. */
+  var DIAGRAM_RENDER_DELAY = 1200;
   window.mermaid.initialize({ startOnLoad: false });
-  render();
-  if (refreshBtn) { refreshBtn.addEventListener('click', render); }
+  render(false);
+  if (refreshBtn) { refreshBtn.addEventListener('click', function () { render(false); }); }
   if (pngBtn) { pngBtn.addEventListener('click', exportPng); }
   if (source) {
     source.addEventListener('input', function () {
       if (timer) { clearTimeout(timer); }
-      timer = setTimeout(render, 500);
+      timer = setTimeout(function () { render(true); }, DIAGRAM_RENDER_DELAY);
     });
   }
 })();
@@ -616,6 +689,34 @@
   if (typeof hljs === 'undefined') { return; }
   var NL = String.fromCharCode(10);
 
+  if (hljs.getLanguage && !hljs.getLanguage('struktogramm')) {
+    hljs.registerLanguage('struktogramm', function () {
+      return {
+        case_insensitive: true,
+        keywords: 'struktogramm anweisung wenn dann sonst solange wiederhole bis ende',
+        contains: [
+          hljs.COMMENT('%%', NL),
+          hljs.COMMENT('//', NL),
+          { className: 'string', begin: '"', end: '"' },
+          { className: 'number', begin: '[0-9]+' }
+        ]
+      };
+    });
+  }
+  if (hljs.getLanguage && !hljs.getLanguage('datenfluss')) {
+    hljs.registerLanguage('datenfluss', function () {
+      return {
+        case_insensitive: true,
+        keywords: 'datenfluss quelle senke speicher',
+        contains: [
+          hljs.COMMENT('%%', NL),
+          hljs.COMMENT('//', NL),
+          { className: 'string', begin: '"', end: '"' },
+          { className: 'title', begin: '\\([A-Za-z_][A-Za-z0-9_]*\\)' }
+        ]
+      };
+    });
+  }
   if (hljs.getLanguage && !hljs.getLanguage('mermaid')) {
     hljs.registerLanguage('mermaid', function () {
       return {
@@ -650,6 +751,7 @@
     code.className = 'language-' + lang;
     pre.appendChild(code);
     wrap.appendChild(pre);
+    wrap.classList.add('hl-active');
     var sync = function () {
       pre.scrollTop = area.scrollTop;
       pre.scrollLeft = area.scrollLeft;

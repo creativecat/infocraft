@@ -304,12 +304,14 @@ body.sidebar-mini .nav-item { justify-content: center; padding: 10px 8px; }
     font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
     font-size: 0.85rem; line-height: 1.5;
     white-space: pre-wrap; overflow-wrap: break-word; tab-size: 4;
-    background: transparent; color: transparent; caret-color: var(--text);
+    background: transparent; color: var(--text); caret-color: var(--text);
     position: relative; z-index: 2; display: block; width: 100%; resize: vertical;
     /* exakt wie das farbige pre-Overlay darunter: sonst wirkt der Cursor verschoben */
     padding: 10px 12px; border: 1px solid var(--border);
 }
 .hlwrap.sql > textarea { font-size: 0.95rem; }
+/* Transparent wird der Text erst, wenn das farbige Overlay wirklich da ist (hl-active). */
+.hlwrap.hl-active > textarea { color: transparent; }
 .hlwrap > textarea::placeholder { color: #94a3b8; opacity: 1; }
 .hlwrap > textarea::selection { color: #0f172a; background: #c7d2fe; }
 .hlwrap > pre {
@@ -945,3 +947,25 @@ body.sidebar-mini .nav-item { justify-content: center; padding: 10px 8px; }
     .task-grid { grid-template-columns: 1fr; }
     .hero-compact { flex-direction: row; }
 }
+
+/* ===== Diagramme: Typ-Buttons, Syntax-Hilfe, Vorschau-Status ===== */
+.kind-picker { display: flex; flex-wrap: wrap; gap: 8px; }
+.kind-picker .kind-btn { position: relative; display: inline-flex; }
+.kind-picker .kind-btn input { position: absolute; opacity: 0; pointer-events: none; }
+.kind-picker .kind-btn span {
+    display: inline-block; padding: 8px 14px; border: 1px solid var(--border);
+    border-radius: 10px; background: #f1f5f9; color: #334155;
+    cursor: pointer; font-weight: 600; user-select: none;
+}
+.kind-picker .kind-btn input:focus-visible + span { outline: 2px solid var(--primary, #4a6); outline-offset: 2px; }
+.kind-picker .kind-btn:hover span { border-color: #7c8aa0; }
+.kind-picker .kind-btn input:checked + span {
+    background: var(--primary, #4a6); color: #ffffff; border-color: var(--primary, #4a6);
+}
+.syntax-help { margin: 10px 0 4px; }
+.syntax-help .syntax-help-block { margin-bottom: 10px; }
+.syntax-help summary { cursor: pointer; }
+.syntax-table { width: 100%; font-size: 0.92rem; margin: 8px 0 0; }
+.syntax-table th, .syntax-table td { padding: 6px 10px; vertical-align: top; }
+.syntax-table code, .syntax-table td:nth-child(3) { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; white-space: nowrap; }
+.syntax-help .code { margin: 10px 0 0; overflow-x: auto; }

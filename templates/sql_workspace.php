@@ -56,7 +56,7 @@
         <h3>🕸️ ER-Diagramm</h3>
         <div class="mermaid"><?= e($er) ?></div>
         <details>
-            <summary class="muted">Mermaid-Quelltext anzeigen (zum Weiterverwenden, z. B. in Präsentationen)</summary>
+            <summary class="muted">ER-Diagramm-Quelltext anzeigen (zum Weiterverwenden, z. B. in Präsentationen)</summary>
             <pre class="code"><code class="language-mermaid"><?= e($er) ?></code></pre>
         </details>
         <?php if ($diagramAuto): ?>

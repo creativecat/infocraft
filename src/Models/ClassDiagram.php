@@ -86,10 +86,18 @@ final class ClassDiagram
         return $diagram ?? throw new \RuntimeException('Klassendiagramm konnte nicht angelegt werden.');
     }
 
-    public function save(string $title, string $mermaid): void
+    public function save(string $title, string $mermaid, ?string $kind = null): void
     {
-        $stmt = Database::pdo()->prepare('UPDATE class_diagrams SET title = ?, mermaid = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
-        $stmt->execute([substr(trim($title), 0, 200), $mermaid, $this->id]);
+        // Typwechsel nur zwischen den selbst angelegten Diagrammen: automatisch
+        // erzeugte (Java, Python, SQL) behalten ihre Herkunft.
+        $newKind = $this->kind;
+        if ($kind !== null
+            && in_array($kind, ['manuell', 'struktogramm', 'datenfluss'], true)
+            && in_array($this->kind, ['manuell', 'struktogramm', 'datenfluss'], true)) {
+            $newKind = $kind;
+        }
+        $stmt = Database::pdo()->prepare('UPDATE class_diagrams SET title = ?, mermaid = ?, kind = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
+        $stmt->execute([substr(trim($title), 0, 200), $mermaid, $newKind, $this->id]);
     }
 
     public static function delete(int $id): void
