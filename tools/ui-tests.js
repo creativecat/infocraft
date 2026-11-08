@@ -279,7 +279,8 @@ pane2.setAttribute('hidden', 'hidden');
 
 var tabOut = consoleTab('out', 'Ausgabe', true);
 var tabClasses = consoleTab('classes', 'Klassen', false);
-var tabRepl = consoleTab('repl', 'Objektkonsole', false);
+var tabObjects = consoleTab('objects', 'Objekte', false);
+var tabDb = consoleTab('db', 'Datenbank', false);
 /* API-Hilfe als eigener Knopf (java-api-open) + versteckte Quelle, Stopp-Knopf,
  * Dock-Zeile unterhalb der Konsole (wie templates/code_project.php) */
 var apiBtn = new FakeEl('button');
@@ -295,16 +296,28 @@ var gfxDock = new FakeEl('div');
 doc.register(gfxDock, 'gfx-dock');
 gfxDock.setAttribute('hidden', 'hidden');
 doc.body.appendChild(gfxDock);
-/* Hinweis unter dem Grafik-Fenster (wie templates/code_project.php) */
-var gfxDockHint = new FakeEl('p');
-gfxDockHint.className = 'gfx-dock-hint';
-gfxDockHint.textContent = 'Die Größe des Grafik-Fensters legst du im Code fest.';
-gfxDock.appendChild(gfxDockHint);
+/* Hinweis unter dem Grafik-Fenster (wie templates/code_project.php):
+ * eine Leiste mit Schliessen/Anzeigen-Knoepfen, das Fenster landet davor. */
+var gfxDockBar = new FakeEl('div');
+gfxDockBar.className = 'gfx-dock-bar';
+gfxDock.appendChild(gfxDockBar);
+var gfxHideBtn = new FakeEl('button');
+doc.register(gfxHideBtn, 'java-gfx-hide');
 var paneOut = consolePane('out', true);
 var paneClasses = consolePane('classes', false);
-var paneRepl = consolePane('repl', false);
+var paneObjects = consolePane('objects', false);
 var tabSprites = consoleTab('sprites', 'Sprites', false);
 var paneSprites = consolePane('sprites', false);
+var paneDb = consolePane('db', false);
+/* Datenbank-Tab: Schema der vorhandenen Tabellen + Abfrage-Konsole */
+var dbSchemaBox = new FakeEl('div');
+doc.register(dbSchemaBox, 'java-dbschema');
+var dbIn = new FakeEl('textarea');
+doc.register(dbIn, 'java-db-in');
+var dbOut = new FakeEl('pre');
+doc.register(dbOut, 'java-db-out');
+var dbRunBtn = new FakeEl('button');
+doc.register(dbRunBtn, 'java-db-run');
 
 var runBtn = new FakeEl('button');
 doc.register(runBtn, 'run-java');
@@ -402,10 +415,12 @@ ok(!hidden(pane1) && hidden(pane2), 'T1f zurueck zu Auto.java schaltet ebenfalls
 tabClasses.dispatch('click');
 ok(!hidden(paneClasses), 'T2a Tab Klassen zeigt das Klassendiagramm-Fenster');
 ok(hidden(paneOut), 'T2b Ausgabe-Fenster versteckt');
-tabRepl.dispatch('click');
-ok(!hidden(paneRepl) && hidden(paneClasses), 'T2c Objektkonsole erreicht');
+tabObjects.dispatch('click');
+ok(!hidden(paneObjects) && hidden(paneClasses), 'T2c Objekte-Tab zeigt das Objektdiagramm als eigenen Tab');
+tabDb.dispatch('click');
+ok(!hidden(paneDb) && hidden(paneObjects), 'T2d Datenbank-Tab erreicht');
 tabOut.dispatch('click');
-ok(!hidden(paneOut) && hidden(paneRepl), 'T2d zurueck zur Ausgabe');
+ok(!hidden(paneOut) && hidden(paneDb), 'T2d2 zurueck zur Ausgabe');
 
 /* T3: Klassendiagramm steht sofort (nur Parsen, ohne Ausfuehren). */
 var html0 = classBox.innerHTML;
@@ -612,10 +627,13 @@ setTimeout(function () {
     if (gfxClose) {
       gfxClose.dispatch('click');
       ok(win2b.style.display === 'none', 'T20c2 X schliesst das Grafik-Fenster');
-      ok(hidden(gfxDock), 'T20c3 Die Grafik-Zeile verschwindet mit dem Fenster');
+      ok(!hidden(gfxDock), 'T20c3 die Schliessen/Anzeigen-Leiste bleibt unter dem Fenster sichtbar');
       gfxOpenBtn.dispatch('click');
-      ok(win2b.style.display === '', 'T20c4 🎨-Knopf blendet das Grafik-Fenster wieder ein');
-      ok(!hidden(gfxDock), 'T20c5 Die Grafik-Zeile ist wieder sichtbar');
+      ok(win2b.style.display === '', 'T20c4 Anzeigen-Knopf blendet das Grafik-Fenster wieder ein');
+      gfxHideBtn.dispatch('click');
+      ok(win2b.style.display === 'none', 'T20c5 Schliessen-Knopf in der Leiste schliesst das Fenster');
+      gfxOpenBtn.dispatch('click');
+      ok(win2b.style.display === '', 'T20c6 Anzeigen-Knopf in der Leiste oeffnet es erneut');
     }
 
     /* T20d: new World(b, h) passt das Grafik-Fenster in der Groesse des Codes an. */
@@ -623,9 +641,9 @@ setTimeout(function () {
     ok(win2c !== null, 'T20d Grafik-Fenster ist offen');
     if (win2c) {
       var cnv = win2c.querySelector('canvas');
-      var hintIdx = gfxDock.children.indexOf(gfxDockHint);
+      var hintIdx = gfxDock.children.indexOf(gfxDockBar);
       var winIdx = gfxDock.children.indexOf(win2c);
-      ok(hintIdx > winIdx && winIdx !== -1, 'T20d2 Erklaer-Hinweis steht unter dem Grafik-Fenster');
+      ok(winIdx === 0 && hintIdx === 1, 'T20d2 Schliessen/Anzeigen-Leiste steht direkt unter dem Grafik-Fenster');
       ta.value = 'World w = new World(500, 400);';
       ta.dispatch('input');
       runBtn.dispatch('click');
@@ -643,7 +661,7 @@ setTimeout(function () {
     runBtn.dispatch('click');
     var win2e = doc.querySelector('#gfx-window');
     ok(win2e.style.display === 'none', 'T20e Start ohne Grafik versteckt das Fenster');
-    ok(hidden(gfxDock), 'T20e2 die Grafik-Zeile verschwindet mit dem Fenster');
+    ok(!hidden(gfxDock), 'T20e2 die Leiste am Grafik-Fenster bleibt fuer ein erneutes Anzeigen stehen');
     if (win2e) {
       var cnv2 = win2e.querySelector('canvas');
       ok(cnv2.width === 480 && cnv2.height === 360, 'T20e3 Canvas ist auf die Standardgroesse zurueckgesetzt');
@@ -901,6 +919,51 @@ setTimeout(function () {
               gta.dispatch('input');
               runBtn.dispatch('click');
               ok(!f2.row.classList.contains('has-err'), 'T34c rote Unterlage verschwindet, sobald der Fehler behoben ist');
+
+              /* T35: Objekte-Tab: Methoden im Objektdiagramm anklickbar. */
+              ta.value = AUTO_CODE;
+              ta.dispatch('input');
+              runBtn.dispatch('click');
+              tabObjects.dispatch('click');
+              ok(!hidden(paneObjects) && hidden(paneOut), 'T35a Objekte-Tab oeffnet das Objektdiagramm');
+              var chips = objBox.querySelectorAll('button');
+              var chipVor = null;
+              var chipFahr = null;
+              var ci3;
+              for (ci3 = 0; ci3 < chips.length; ci3++) {
+                if (chips[ci3].textContent === 'vorstellen()') { chipVor = chips[ci3]; }
+                if (chips[ci3].textContent === 'fahren(km)') { chipFahr = chips[ci3]; }
+              }
+              ok(chipVor !== null && chipFahr !== null, 'T35b Methoden der Klasse erscheinen als Chips am Objekt');
+              if (chipVor) {
+                chipVor.dispatch('click');
+                var lastM = replLog.children[replLog.children.length - 1];
+                ok(lastM.textOf().indexOf('BMW ist 0 km gefahren.') !== -1, 'T35c Klick auf Methode ohne Parameter ruft sie auf und zeigt den Rueckgabewert');
+                ok(!hidden(paneOut), 'T35d das Ergebnis erscheint im Ausgabe-Tab (Objektkonsole-Protokoll)');
+              }
+              if (chipFahr) {
+                replIn.value = '';
+                chipFahr.dispatch('click');
+                ok(replIn.value === 'a.fahren(km)', 'T35e Methode mit Parametern setzt den Aufruf ins Anweisungsfeld');
+              }
+
+              /* T36: Datenbank-Tab: Tabellen-Schema und DB-Konsole. */
+              ta.value = 'class Auto { }' + NLt +
+                'Database.execute("CREATE TABLE schueler (name TEXT, punkte INT)");' + NLt +
+                'Database.execute("INSERT INTO schueler VALUES (\'Anna\', 12)");' + NLt;
+              ta.dispatch('input');
+              runBtn.dispatch('click');
+              tabDb.dispatch('click');
+              ok(!hidden(paneDb) && hidden(paneObjects), 'T36a Datenbank-Tab oeffnet');
+              var schemaTxt = dbSchemaBox.textOf();
+              ok(schemaTxt.indexOf('schueler') !== -1, 'T36b angelegte Tabelle erscheint als Schema-Kachel');
+              ok(schemaTxt.indexOf('name : TEXT') !== -1 && schemaTxt.indexOf('punkte : INT') !== -1, 'T36c Spalten der Tabelle stehen mit Typ im Schema');
+              dbIn.value = 'SELECT * FROM schueler';
+              dbRunBtn.dispatch('click');
+              ok(dbOut.textContent.indexOf('Anna') !== -1 && dbOut.textContent.indexOf('12') !== -1, 'T36d SELECT in der DB-Konsole zeigt die Zeilen');
+              dbIn.value = 'SELECT * FROM fehlt';
+              dbRunBtn.dispatch('click');
+              ok(dbOut.textContent.indexOf('gibt es noch nicht') !== -1, 'T36e SQL-Fehler erscheinen mit Tipp in der DB-Konsole');
 
               console.log('');
               if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }

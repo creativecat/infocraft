@@ -1113,6 +1113,30 @@
       return names;
     };
 
+    /* Oeffentliche Instanz-Methoden einer Klasse (inkl. geerbter aus dem
+     * Projekt) fuer die anklickbaren Methoden im Objektdiagramm. */
+    s.methods = function (clsName) {
+      var list = [];
+      var seen = {};
+      var cls = classMap[clsName];
+      var guard = 0;
+      while (cls && guard < 30) {
+        for (var i = 0; i < cls.methods.length; i++) {
+          var m = cls.methods[i];
+          if (m.isStatic || m.visibility === 'private' || m.name === cls.name) { continue; }
+          var key = m.name + '/' + m.params.length;
+          if (seen[key]) { continue; }
+          seen[key] = true;
+          var ps = [];
+          for (var p2 = 0; p2 < m.params.length; p2++) { ps.push({ name: m.params[p2].name, type: typeName(m.params[p2].type) }); }
+          list.push({ name: m.name, params: ps, ret: (m.ret && m.ret.void) ? null : typeName(m.ret) });
+        }
+        cls = cls.parent ? classMap[cls.parent] : null;
+        guard++;
+      }
+      return list;
+    };
+
     s.objects = function () { return objectsSnapshotOf(comp, vm, env); };
 
     s.evalLine = function (input) {
@@ -3744,11 +3768,12 @@
     el.appendChild(guiLayer);
     /* Eigene Zeile unterhalb der Konsole (gfx-dock); ohne Dock (z. B. alte
      * Seiten) bleibt das Fenster wie bisher ein Overlay am Seitenrand.
-     * Ein eventueller Erklaer-Hinweis im Dock bleibt UNTER dem Fenster. */
+     * Im Dock sitzt die Schließen/Anzeigen-Leiste: Das Fenster wird als
+     * erstes Kind VOR der Leiste eingefuegt, die Leiste bleibt unten. */
     var host = document.getElementById('gfx-dock');
     if (!host) { host = document.body; }
-    var dockHint = host.querySelector ? host.querySelector('.gfx-dock-hint') : null;
-    if (dockHint && typeof host.insertBefore === 'function') { host.insertBefore(el, dockHint); }
+    var first = (host.children && host.children.length > 0) ? host.children[0] : (host.firstChild || null);
+    if (first && typeof host.insertBefore === 'function') { host.insertBefore(el, first); }
     else { host.appendChild(el); }
     st = { el: el, canvas: canvas, guiLayer: guiLayer, label: label, hidden: false };
     el.__gfxState = st;
@@ -3765,7 +3790,8 @@
   function gfxHideWindow() {
     var st = gfxWindowFind();
     if (st) { st.hidden = true; if (st.el.style) { st.el.style.display = 'none'; } }
-    gfxDockSync(false);
+    /* Die Schliessen/Anzeigen-Leiste im Dock bleibt sichtbar, damit das
+     * Fenster jederzeit wieder eingblendet werden kann. */
   }
   /* Die Groesse des Grafik-Fensters steht im Code: new World(b, h) passt das
      Fenster an (240 bis 960 Pixel Breite, Hoehre im selben Verhaeltnis).
@@ -5475,7 +5501,13 @@
     if (gfxOpenBtn) {
       gfxOpenBtn.addEventListener('click', function () {
         if (RUN_VM && RUN_VM.gfx && RUN_VM.gfx.windowState) { gfxShowWindow(RUN_VM); }
+        else { gfxShowWindow(RUN_VM || { gfx: {} }); }
       });
+    }
+    /* Schliessen-Knopf in der Leiste am Grafik-Fenster (unter dem Fenster) */
+    var gfxHideBtn = document.getElementById('java-gfx-hide');
+    if (gfxHideBtn) {
+      gfxHideBtn.addEventListener('click', function () { gfxHideWindow(); });
     }
     var gutterMap = Object.create(null);
     function setupGutters() {
@@ -5733,7 +5765,7 @@
       if (consoleEl) {
         if (res.output !== '') { consoleEl.textContent = res.output; }
         else if (res.paused) { consoleEl.textContent = '(bis zu diesem Schritt: noch keine Ausgabe)'; }
-        else if (res.ok && !res.ranMain) { consoleEl.textContent = 'Kein main nötig: Erzeuge dir Objekte in der Objektkonsole (Tab oben).'; }
+        else if (res.ok && !res.ranMain) { consoleEl.textContent = 'Kein main nötig: Erzeuge dir Objekte im Anweisungsfeld der Objektkonsole (Tab ▶).'; }
         else if (res.ok) { consoleEl.textContent = '(keine Ausgabe)'; }
         else { consoleEl.textContent = ''; }
       }
@@ -5741,6 +5773,7 @@
       var b = badge();
       if (b) { b.textContent = res.errors.length === 0 ? '0' : String(res.errors.length); }
       renderObjects(res.paused ? res.objects : null);
+      renderDbSchema();
       updateReplHint();
       markErrLines(res.errors);
       /* Einzelschritt: Datei der Pause in der Liste gelb unterlegen und im
@@ -5776,8 +5809,7 @@
         return;
       }
       if (res.hasGfx) { startGfxLoop(); }
-      if (!res.ranMain && res.output === '') { showPane('repl'); }
-      else { showPane('out'); }
+      showPane('out');
     }
     function internalError(e) {
       if (consoleEl) { consoleEl.textContent = ''; }
@@ -5874,8 +5906,54 @@
           row.textContent = o.fields[j2].name + ' = ' + o.fields[j2].text;
           box.appendChild(row);
         }
+        /* Methoden der Klasse als anklickbare Chips: Methoden ohne Parameter
+         * laufen sofort (Rueckgabewert und Ausgaben im Tab ▶ im Protokoll),
+         * Methoden mit Parametern setzen den Aufruf ins Anweisungsfeld. */
+        if (o.name && session && typeof session.methods === 'function') {
+          var mlist = [];
+          try { mlist = session.methods(o.cls); } catch (e3) { mlist = []; }
+          if (mlist.length > 0) {
+            var mrow = document.createElement('div');
+            mrow.className = 'obj-methods';
+            for (var m2 = 0; m2 < mlist.length; m2++) {
+              mrow.appendChild(objMethodChip(o, mlist[m2]));
+            }
+            box.appendChild(mrow);
+          }
+        }
         objBox.appendChild(box);
       }
+    }
+
+    function objMethodChip(o, m) {
+      var pnames = [];
+      var pi;
+      for (pi = 0; pi < m.params.length; pi++) { pnames.push(m.params[pi].name); }
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'obj-method';
+      btn.textContent = m.name + '(' + pnames.join(', ') + ')';
+      var zeroArgs = m.params.length === 0;
+      btn.title = zeroArgs
+        ? 'Methode aufrufen: ' + o.name + '.' + m.name + '() läuft sofort. Rückgabewert und Ausgaben erscheinen im Tab ▶.'
+        : 'Aufruf ins Anweisungsfeld setzen: Ergänze die Argumente für ' + pnames.join(', ') + ' und führe die Anweisungen aus.';
+      btn.addEventListener('click', function () {
+        var call = o.name + '.' + m.name + '(' + pnames.join(', ') + ')';
+        if (!session) { updateReplHint(); showPane('out'); return; }
+        if (zeroArgs) {
+          var res = session.evalLine(call);
+          replLine(call, res);
+        } else {
+          if (replIn) {
+            replIn.value = (replIn.value ? String(replIn.value).replace(/\s+$/, '') + '\n' : '') + call;
+            replGutterSync();
+            if (typeof replIn.focus === 'function') { replIn.focus(); }
+          }
+        }
+        showPane('out');
+        renderObjects();
+      });
+      return btn;
     }
 
     function replLine(input, res) {
@@ -6386,6 +6464,91 @@
       });
     }
 
+    /* ---------- Datenbank-Tab: vorhandene Tabellen + Abfrage-Konsole ----------
+     * Nach dem Ausführen zeigt der Tab das Schema aller angelegten Tabellen
+     * (als Kacheln wie im Klassendiagramm), darunter laesst sich SQL direkt
+     * testen: SELECT zeigt das Ergebnis, alles andere aendert die DB testweise. */
+    var dbSchemaBox = document.getElementById('java-dbschema');
+    var dbIn = document.getElementById('java-db-in');
+    var dbOut = document.getElementById('java-db-out');
+    var dbRunBtn = document.getElementById('java-db-run');
+    function renderDbSchema() {
+      if (!dbSchemaBox) { return; }
+      dbSchemaBox.innerHTML = '';
+      var tables = dbTables();
+      var all = [];
+      var k;
+      for (k in tables) {
+        if (Object.prototype.hasOwnProperty.call(tables, k)) { all.push(tables[k]); }
+      }
+      all.sort(function (a, b) { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
+      if (all.length === 0) {
+        dbSchemaBox.appendChild(document.createTextNode('Noch keine Tabellen: Lege sie im Programm an, z. B. Database.execute("CREATE TABLE schueler (name TEXT, punkte INT)"); danach erscheinen sie hier nach jedem Ausführen.'));
+        return;
+      }
+      for (var ti2 = 0; ti2 < all.length; ti2++) {
+        var t = all[ti2];
+        var box = document.createElement('div');
+        box.className = 'uml-class db-table';
+        var head = document.createElement('div');
+        head.className = 'uml-name';
+        head.textContent = t.name;
+        head.title = 'Tabelle ' + t.name;
+        box.appendChild(head);
+        var sec = document.createElement('div');
+        sec.className = 'uml-sec';
+        for (var ci2 = 0; ci2 < t.cols.length; ci2++) {
+          var row = document.createElement('div');
+          row.className = 'uml-row';
+          var kindName = { text: 'TEXT', int: 'INT', double: 'DOUBLE' }[t.cols[ci2].kind] || t.cols[ci2].kind;
+          row.textContent = t.cols[ci2].name + ' : ' + kindName;
+          sec.appendChild(row);
+        }
+        if (t.cols.length === 0) {
+          var empty = document.createElement('div');
+          empty.className = 'uml-row uml-empty';
+          empty.textContent = '(keine Spalten)';
+          sec.appendChild(empty);
+        }
+        box.appendChild(sec);
+        dbSchemaBox.appendChild(box);
+      }
+    }
+    function dbConsoleRun() {
+      if (!dbIn || !dbOut) { return; }
+      var sql = String(dbIn.value == null ? '' : dbIn.value).replace(/^\s+/, '').replace(/\s+$/, '');
+      if (sql === '') {
+        dbOut.textContent = 'Schreibe zuerst eine Abfrage, z. B. SELECT * FROM tabelle;';
+        return;
+      }
+      var ctx2 = { file: 'DB-Konsole', line: 1, cls: null, thisVal: null, vm: RUN_VM };
+      try {
+        var kwM = /^\s*([A-Za-z]+)/.exec(sql);
+        var kw = kwM ? kwM[1].toUpperCase() : '';
+        if (kw === 'SELECT') {
+          dbOut.textContent = dbFormat(dbSelect(sql, ctx2, 1));
+        } else {
+          dbExec(sql, ctx2, 1);
+          dbOut.textContent = 'Befehl ausgeführt (' + kw + '). Die Datenbank gilt bis zum nächsten ▶ Ausführen; INSERT, UPDATE und DELETE siehst du mit SELECT, neue Tabellen erscheinen oben.';
+        }
+      } catch (e) {
+        if (e && e.jerr) {
+          dbOut.textContent = e.jerr.message + (e.jerr.hint ? '  Tipp: ' + e.jerr.hint : '');
+        }
+        else { throw e; }
+      }
+      renderDbSchema();
+    }
+    if (dbRunBtn) { dbRunBtn.addEventListener('click', dbConsoleRun); }
+    if (dbIn) {
+      dbIn.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          dbConsoleRun();
+        }
+      });
+    }
+
     var clearBtn = document.getElementById('java-clear');
     if (clearBtn) {
       clearBtn.addEventListener('click', function () {
@@ -6399,6 +6562,7 @@
     renderObjects();
     updateReplHint();
     replGutterSync();
+    renderDbSchema();
 
     /* ---------- Dateifenster links: nur so hoch wie das Codefenster ----------
      * Die Liste der Dateien scrollt dann selbst, und das Feld fuer neue

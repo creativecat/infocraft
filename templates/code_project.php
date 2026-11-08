@@ -56,24 +56,38 @@
             </div>
         </div>
         <div class="ide-console">
-            <div class="console-run">
-                <button class="btn btn-primary run-icon" id="run-java" type="button" title="Ausführen (Strg + Enter): dein Programm läuft komplett in deinem Browser." aria-label="Ausführen">▶</button>
-                <button class="btn btn-ghost run-icon" id="java-step" type="button" title="Einzelschritt: führt genau eine Anweisung aus und zeigt in den Zeilennummern, welche Zeile als Nächstes dran ist." aria-label="Einzelschritt">👣</button>
-                <button class="btn btn-ghost run-icon" id="java-run-rest" type="button" title="Weiter: lässt dein Programm vom Pausenpunkt an bis zum Ende laufen." aria-label="Weiter">⏩</button>
-                <button class="btn btn-ghost run-icon" id="java-stop" type="button" title="Stopp: hält dein Programm an – die act()-Animation stoppt und ein angefangener Einzelschritt wird abgebrochen." aria-label="Stopp">⏹</button>
-                <button class="btn btn-ghost run-icon" id="java-gfx-open" type="button" title="Grafik-Fenster anzeigen: blendet das Grafik-Fenster wieder ein, nachdem du es mit ✕ geschlossen hast." aria-label="Grafik-Fenster anzeigen">🎨</button>
-                <span class="muted">Strg + Enter funktioniert auch. Dein Programm läuft komplett in deinem Browser.</span>
-            </div>
-            <div id="java-step-info" class="step-info"></div>
             <div class="console-tabs" role="tablist">
-                <button type="button" class="console-tab active" data-ctab="out" title="Ausgabe">▶</button>
-                <button type="button" class="console-tab" data-ctab="classes" title="Klassen (Klassendiagramm) und Objekte (Objektdiagramm)">📐 <span class="err-badge" id="java-obj-badge">0</span></button>
-                <button type="button" class="console-tab" data-ctab="repl" title="Objektkonsole">🧪</button>
+                <button type="button" class="console-tab active" data-ctab="out" title="Ausgabe und Objektkonsole: Startknöpfe, Ausgabe deines Programms und Anweisungsfeld">▶</button>
+                <button type="button" class="console-tab" data-ctab="classes" title="Klassendiagramm: live aus deinem Code, ganz ohne Ausführen">📐</button>
+                <button type="button" class="console-tab" data-ctab="objects" title="Objektdiagramm: alle Objekte mit Attributwerten, Methoden per Klick testen">🧩 <span class="err-badge" id="java-obj-badge">0</span></button>
                 <button type="button" class="console-tab" data-ctab="sprites" title="Sprites: eigene Bilder und Figuren für new Sprite(...)">🖼</button>
+                <?php if ($dbPanel): ?>
+                <button type="button" class="console-tab" data-ctab="db" title="Datenbank: vorhandene Tabellen und Spalten, Abfragen direkt testen">🗄</button>
+                <?php endif; ?>
                 <button type="button" class="console-tab api-open" id="java-api-open" title="Öffnet die API-Hilfe in einem eigenen Fenster. Es bleibt offen, während du weiterprogrammierst.">📖</button>
             </div>
             <div class="console-pane" data-cpane="out">
+                <div class="console-run">
+                    <button class="btn btn-primary run-icon" id="run-java" type="button" title="Ausführen (Strg + Enter): dein Programm läuft komplett in deinem Browser." aria-label="Ausführen">▶</button>
+                    <button class="btn btn-ghost run-icon" id="java-step" type="button" title="Einzelschritt: führt genau eine Anweisung aus und zeigt in den Zeilennummern, welche Zeile als Nächstes dran ist." aria-label="Einzelschritt">👣</button>
+                    <button class="btn btn-ghost run-icon" id="java-run-rest" type="button" title="Weiter: lässt dein Programm vom Pausenpunkt an bis zum Ende laufen." aria-label="Weiter">⏩</button>
+                    <button class="btn btn-ghost run-icon" id="java-stop" type="button" title="Stopp: hält dein Programm an – die act()-Animation stoppt und ein angefangener Einzelschritt wird abgebrochen." aria-label="Stopp">⏹</button>
+                </div>
+                <div id="java-step-info" class="step-info"></div>
+                <div class="console-block-title">Ausgabe</div>
                 <pre id="java-console" class="code ide-console-out">Noch nichts ausgeführt.</pre>
+                <div class="console-block-title">Objektkonsole</div>
+                <p class="muted" id="java-repl-hint">Erst ▶ Ausführen klicken. Dann schreibst du hier auf mehrere Zeilen, was dein Programm tun soll: Objekte erzeugen und Methoden aufrufen, getrennt vom Entwurf deiner Klassen im Codefenster.</p>
+                <div class="repl-edit">
+                    <div class="repl-gutter mono" id="java-repl-gutter">1</div>
+                    <textarea id="java-repl-in" class="mono" rows="4" autocomplete="off" spellcheck="false"></textarea>
+                </div>
+                <div class="repl-actions">
+                    <button class="btn btn-primary" id="java-repl-run" type="button" title="Anweisungen ausführen (Strg + Enter): erzeugt die Objekte und ruft die Methoden auf, je Zeile eine Anweisung.">▶ Anweisungen ausführen</button>
+                    <span class="muted">Strg + Enter funktioniert auch. Die Anweisungen bleiben stehen, du kannst sie ändern und erneut ausführen.</span>
+                </div>
+                <div id="java-repl-log" class="repl-log"></div>
+                <div id="java-repl-ac" class="ac-box" hidden></div>
             </div>
             <div class="console-pane" data-cpane="classes" hidden>
                 <h4 class="diag-head">📐 Klassendiagramm</h4>
@@ -87,24 +101,11 @@
                 <?php else: ?>
                 <p class="muted">Das Übernehmen in die Diagramm-Werkstatt hat deine Lehrkraft für deine Klasse deaktiviert.</p>
                 <?php endif; ?>
-                <h4 class="diag-head">🧩 Objektdiagramm <span class="pill">nach UML</span></h4>
-                <p class="muted">Jedes <code>new</code> landet hier: alle Objekte deines Programms als Kacheln mit abgerundeten Ecken, darunter ihre Attributwerte – die kleine Objektbank neben dem Klassendiagramm, wie in BlueJ.</p>
-                <div id="java-objects" class="objdiag">Noch keine Objekte. Klicke oben auf ▶ Ausführen.</div>
             </div>
-            <div class="console-pane" data-cpane="repl" hidden>
-                <p class="muted" id="java-repl-hint">Erst ▶ Ausführen klicken. Dann schreibst du hier auf mehrere Zeilen, was dein Programm tun soll: Objekte erzeugen und Methoden aufrufen, getrennt vom Entwurf deiner Klassen im Codefenster.</p>
-                <div class="repl-edit">
-                    <div class="repl-gutter mono" id="java-repl-gutter">1</div>
-                    <textarea id="java-repl-in" class="mono" rows="4" autocomplete="off" spellcheck="false" placeholder='Auto a = new Auto("BMW");
-a.fahren(100);
-System.out.println(a.vorstellen());'></textarea>
-                </div>
-                <div class="repl-actions">
-                    <button class="btn btn-primary" id="java-repl-run" type="button" title="Anweisungen ausführen (Strg + Enter): erzeugt die Objekte und ruft die Methoden auf, je Zeile eine Anweisung.">▶ Anweisungen ausführen</button>
-                    <span class="muted">Strg + Enter funktioniert auch. Die Anweisungen bleiben stehen, du kannst sie ändern und erneut ausführen.</span>
-                </div>
-                <div id="java-repl-log" class="repl-log"></div>
-                <div id="java-repl-ac" class="ac-box" hidden></div>
+            <div class="console-pane" data-cpane="objects" hidden>
+                <h4 class="diag-head">🧩 Objektdiagramm <span class="pill">nach UML</span></h4>
+                <p class="muted">Jedes <code>new</code> landet hier: alle Objekte deines Programms als Kacheln mit abgerundeten Ecken, darunter ihre Attributwerte – die kleine Objektbank neben dem Klassendiagramm, wie in BlueJ. <strong>Methoden per Klick testen:</strong> Klicke auf einen Methodennamen unter dem Objekt. Methoden ohne Parameter laufen sofort, Rückgabewert und Ausgaben erscheinen im Tab ▶ im Protokoll der Objektkonsole. Methoden mit Parametern setzen den Aufruf ins Anweisungsfeld, damit du die Argumente ergänzt.</p>
+                <div id="java-objects" class="objdiag">Noch keine Objekte. Klicke oben auf ▶ Ausführen.</div>
             </div>
             <div class="console-pane" data-cpane="sprites" hidden>
                 <p class="muted">Sprites sind fertige Figuren für dein Programm: <code>Sprite s = new Sprite(400, 300, "Schildkröte");</code>. Standard-Figuren: Schildkröte, Auto, Katze, Hund, Fisch, Baum, Wolke, Sonne, Stern, Herz, Raumschiff, Geist, Pilz, Blume.</p>
@@ -132,6 +133,21 @@ System.out.println(a.vorstellen());'></textarea>
                 <p class="muted">Noch keine eigenen Bilder (maximal 8 pro Projekt, jeweils maximal 1 MB).</p>
                 <?php endif; ?>
             </div>
+            <?php if ($dbPanel): ?>
+            <div class="console-pane" data-cpane="db" hidden>
+                <h4 class="diag-head">🗄 Vorhandene Tabellen</h4>
+                <p class="muted">Alle Tabellen und Spalten deiner Datenbank, live nach jedem ▶ Ausführen: Hier siehst du, worauf dein Programm zugreifen kann (<code>Database.execute(...)</code> und <code>Database.query(...)</code>).</p>
+                <div id="java-dbschema" class="umldiag"></div>
+                <h4 class="diag-head">🗄 DB-Konsole</h4>
+                <p class="muted">Schicke Abfragen direkt an die Datenbank, ohne dein Programm zu ändern: <code>SELECT</code> zeigt das Ergebnis an, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>CREATE TABLE</code> und <code>DROP TABLE</code> ändern die Datenbank testweise (bis zum nächsten ▶ Ausführen).</p>
+                <textarea id="java-db-in" class="mono db-console-in" rows="3" autocomplete="off" spellcheck="false"></textarea>
+                <div class="repl-actions">
+                    <button class="btn btn-primary" id="java-db-run" type="button" title="Abfrage ausführen (Strg + Enter): schickt den SQL-Befehl an die Datenbank und zeigt das Ergebnis.">▶ Abfrage ausführen</button>
+                    <span class="muted">Strg + Enter funktioniert auch.</span>
+                </div>
+                <pre id="java-db-out" class="code ide-console-out db-console-out"></pre>
+            </div>
+            <?php endif; ?>
             <div class="api-docs" id="java-api-src" hidden>
                 <div class="api-docs">
                     <p class="muted">Hier stehen alle fertigen Klassen, die du in deinen Java-Programmen benutzen kannst. Zum Aufklappen auf die Überschrift klicken.</p>
@@ -246,7 +262,7 @@ s.move(10, 0); · s.destroy();</pre></td><td>Wie jede Figur strecken, drehen, be
                             <tr><td><pre class="code">Sprite a = new Sprite(100, 100, "Auto");</pre></td><td>Standard-Figuren: <code>Schildkröte</code>, <code>Auto</code>, <code>Katze</code>, <code>Hund</code>, <code>Fisch</code>, <code>Baum</code>, <code>Wolke</code>, <code>Sonne</code>, <code>Stern</code>, <code>Herz</code>, <code>Raumschiff</code>, <code>Geist</code>, <code>Pilz</code>, <code>Blume</code>.</td></tr>
                             <tr><td><pre class="code">Sprite b = new Sprite(400, 300, "Ball");</pre></td><td>Eigene Bilder: Lade rechts im Tab 🖼 (Sprites) eine Grafik hoch (PNG, JPEG, GIF, WebP, maximal 1 MB). Ihr Name ohne Endung ist der Sprite-Name – bei „ball.png“ also <code>"Ball"</code> bzw. <code>"ball"</code>.</td></tr>
                         </table>
-                        <p class="muted">Eigene Bilder gehören zum Projekt: Wenn deine Lehrkraft es austeilt, bekommen alle dieselben Sprites. Die Größe des Grafik-Fensters legst du im Code fest (<code>new World(640, 480)</code>), bei jedem ▶ Ausführen startet es leer, und mit 🎨 über der Konsole blendest du es wieder ein, falls du es mit ✕ geschlossen hast. Und mit <code>class Auto extends Sprite</code> kannst du wie gewohnt <code>act()</code>, Tasten und Maus nutzen.</p>
+                        <p class="muted">Eigene Bilder gehören zum Projekt: Wenn deine Lehrkraft es austeilt, bekommen alle dieselben Sprites. Die Größe des Grafik-Fensters legst du im Code fest (<code>new World(640, 480)</code>), bei jedem ▶ Ausführen startet es leer, und Schließen/Anzeigen stehen direkt am Grafik-Fenster unten. Und mit <code>class Auto extends Sprite</code> kannst du wie gewohnt <code>act()</code>, Tasten und Maus nutzen.</p>
                     </details>
 
                     <details>
@@ -430,7 +446,11 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
             </div>
             </div>
             <div class="gfx-dock" id="gfx-dock" hidden>
-                <p class="muted gfx-dock-hint">Die Größe des Grafik-Fensters legst du im Code fest: <code>new World(640, 480)</code> passt es an dein Programm an (Standard 800 × 600). Bei jedem ▶ Ausführen startet das Fenster leer. Mit ✕ schließt du es, mit 🎨 über der Konsole blendest du es wieder ein.</p>
+                <div class="gfx-dock-bar">
+                    <button class="btn btn-ghost gfx-dock-btn" id="java-gfx-hide" type="button" title="Grafik-Fenster schließen">✕ Schließen</button>
+                    <button class="btn btn-ghost gfx-dock-btn" id="java-gfx-open" type="button" title="Grafik-Fenster anzeigen: blendet das Grafik-Fenster wieder ein. Es öffnet sich auch automatisch, sobald dein Programm etwas zeichnet.">🎨 Anzeigen</button>
+                    <span class="muted gfx-dock-hint">Größe im Code festlegen: <code>new World(640, 480)</code> (Standard 800 × 600). Bei jedem ▶ Ausführen startet das Fenster leer.</span>
+                </div>
             </div>
         </div>
     </div>

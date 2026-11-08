@@ -556,8 +556,15 @@ span.hlwrap { display: block; }
 /* Laufleiste (Ausführen/Einzelschritt/Weiter/Stopp): eigener, immer sichtbarer
  * Container über den Tabs. Reine Icon-Buttons: Die Erklärung kommt beim Hover
  * als Tooltip (title) und im aria-label für Screenreader. */
-.console-run { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; padding: 10px 10px 0; }
-.console-run + .step-info { margin: 0 10px 10px; }
+.console-run { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; padding: 0; }
+.console-run + .step-info { margin: 0 0 10px; }
+/* Beschriftungen innerhalb des zusammengeführten Ausgabe-/Objektkonsole-Tabs */
+.console-block-title {
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--muted);
+    margin: 12px 0 4px;
+}
+.console-block-title:first-child { margin-top: 0; }
 .run-icon { font-size: 1.05rem; line-height: 1; padding: 7px 11px; }
 .console-tab.api-open { margin-left: auto; color: var(--primary-2); font-weight: 600; }
 .ide-console-out { min-height: 120px; }
@@ -640,6 +647,27 @@ span.hlwrap { display: block; }
 }
 .uml-object .uml-name { text-decoration: underline; text-align: left; }
 .obj-field { padding: 4px 10px; border-top: 1px solid #93c5fd; white-space: pre-wrap; }
+/* Methoden eines Objekts als anklickbare Chips (Aufruf testen) */
+.obj-methods { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 10px 8px; border-top: 1px dashed #c7d2fe; }
+.obj-method {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78rem; padding: 2px 9px;
+    border: 1px solid #c7d2fe; border-radius: 999px;
+    background: var(--surface); color: var(--primary-2);
+    cursor: pointer;
+}
+.obj-method:hover { background: #eef2ff; border-color: var(--primary); }
+/* DB-Konsole im Datenbank-Tab */
+.db-console-in {
+    width: 100%; min-height: 70px;
+    border: 2px solid #a5b4fc; border-radius: 12px;
+    background: var(--surface); padding: 8px 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.88rem; line-height: 1.45; color: var(--text);
+    resize: vertical; outline: none;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+}
+.db-console-out { min-height: 0; margin: 0 0 8px; }
 
 @media (max-width: 1280px) {
     .ide { grid-template-columns: 200px minmax(0, 1fr); }
@@ -813,10 +841,13 @@ span.hlwrap { display: block; }
     background: var(--bg); border: none; border-radius: 0;
     box-shadow: none; overflow: hidden;
 }
-.gfx-dock-hint {
-    margin: 0; padding: 6px 12px 10px;
-    font-size: 0.8rem; color: var(--muted);
+/* Schliessen/Anzeigen-Leiste direkt unter dem Grafik-Fenster */
+.gfx-dock-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 6px 12px 10px;
 }
+.gfx-dock-btn { flex: none; }
+.gfx-dock-hint { font-size: 0.8rem; color: var(--muted); }
 .gfx-window {
     position: fixed; right: 18px; top: 72px; z-index: 60;
     width: 500px; max-width: calc(100vw - 36px);
