@@ -810,12 +810,14 @@ jobs:
           grep -q "nur für Lehrkräfte" tapwdeny.html && TAP_WIN_DENY_OK=1 || TAP_WIN_DENY_OK=0
           CODE_TAPROG=$(curl -sS -o taprog.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/unterricht/klassen/$CLASS6/fortschritt)
           grep -q "Fortschritt: Klasse 6R" taprog.html && FORT_OK=1 || FORT_OK=0
-          curl -sS -o jonas2.html -b cookies6.txt http://127.0.0.1:8080/werkstatt/code
-          JONCSRF=$(grep -o 'value="[a-f0-9]*"' jonas2.html | head -n1 | cut -d'"' -f2)
-          CODE_JONPROJ=$(curl -sS -L -o jonproj.html -w "%{http_code}" -b cookies6.txt -c cookies6.txt -d "csrf=$JONCSRF" -d "title=Jonas Eigenversuch" -d "type=code" -d "language=java" http://127.0.0.1:8080/werkstatt/code/projekt)
+          curl -sS -o login9.html -c cookies9.txt http://127.0.0.1:8080/login
+          JONCSRF=$(grep -o 'value="[a-f0-9]*"' login9.html | head -n1 | cut -d'"' -f2)
+          CODE_JONLOGIN=$(curl -sS -L -o jonas2.html -w "%{http_code}" -b cookies9.txt -c cookies9.txt -d "csrf=$JONCSRF" -d "user_id=$JONAS" http://127.0.0.1:8080/login/demo)
+          grep -q "Jonas" jonas2.html && JONLOGIN_OK=1 || JONLOGIN_OK=0
+          CODE_JONPROJ=$(curl -sS -L -o jonproj.html -w "%{http_code}" -b cookies9.txt -c cookies9.txt -d "csrf=$JONCSRF" -d "title=Jonas Eigenversuch" -d "type=code" -d "language=java" http://127.0.0.1:8080/werkstatt/code/projekt)
           JONPROJ=$(sqlite3 "$DB" "SELECT id FROM projects WHERE title = 'Jonas Eigenversuch' AND owner_id = $JONAS")
           [ -n "$JONPROJ" ] && JONPROJ_OK=1 || JONPROJ_OK=0
-          CODE_TAPROJSUB=$(curl -sS -L -o taprojsub.html -w "%{http_code}" -b cookies6.txt -c cookies6.txt -d "csrf=$JONCSRF" -d "project_id=$JONPROJ" http://127.0.0.1:8080/aufgaben/$TAID/abgeben)
+          CODE_TAPROJSUB=$(curl -sS -L -o taprojsub.html -w "%{http_code}" -b cookies9.txt -c cookies9.txt -d "csrf=$JONCSRF" -d "project_id=$JONPROJ" http://127.0.0.1:8080/aufgaben/$TAID/abgeben)
           grep -q "Abgabe gespeichert" taprojsub.html && TAPROJ_SUB_OK=1 || TAPROJ_SUB_OK=0
           TAPROJDB=$(sqlite3 "$DB" "SELECT project_id FROM task_submissions WHERE task_id = $TAID AND student_id = $JONAS")
           [ "$TAPROJDB" = "$JONPROJ" ] && TAPROJ_DB_OK=1 || TAPROJ_DB_OK=0
@@ -900,6 +902,7 @@ jobs:
           [ "$TAP_WIN_DENY_OK" = "1" ] || FAILED=1
           [ "$FORT_OK" = "1" ] || FAILED=1
           [ "$TAPROJ_SUB_OK" = "1" ] || FAILED=1
+          [ "$JONLOGIN_OK" = "1" ] || FAILED=1
           [ "$JONPROJ_OK" = "1" ] || FAILED=1
           [ "$TAPROJ_DB_OK" = "1" ] || FAILED=1
           [ "$TAPROJ_CORR_OK" = "1" ] || FAILED=1
