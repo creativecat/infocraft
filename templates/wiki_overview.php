@@ -1,14 +1,12 @@
-<section class="hero hero-compact">
+<section class="hero">
     <div class="hero-emoji">📚</div>
-    <div class="hero-text">
-        <h1>Wiki</h1>
-        <p>Nachschlagen und vertiefen: Fachbegriffe und Konzepte aus dem Informatik-Unterricht.</p>
-    </div>
+    <h1>Wiki</h1>
+    <p>Nachschlagen und vertiefen: Fachbegriffe und Konzepte aus dem Informatik-Unterricht.</p>
 </section>
 
 <?php if ($isTeacher): ?>
-<section class="panel panel-compact">
-    <h3>➕ Neue Wiki-Seite anlegen</h3>
+<section class="panel">
+    <h3>Neue Wiki-Seite anlegen</h3>
     <form method="post" action="<?= url('wiki/anlegen') ?>" class="form">
         <?= csrf_field() ?>
         <div class="form-row form">
@@ -34,31 +32,25 @@
     <p>Lege oben die erste Seite an, z. B. zu einem Fachbegriff wie Algorithmus, Variable oder Schleife.</p>
 </div>
 <?php else: ?>
-<div class="task-grid">
-    <?php foreach ($pages as $page): ?>
-    <?php $isOwner = $user !== null && ($user->role === 'admin' || $page->teacherId === $user->id); ?>
-    <div class="task-tile">
-        <div class="task-tile-head">
-            <a class="task-tile-main" href="<?= url('wiki/' . (int) $page->id) ?>" title="Seite lesen">
-                <strong>📖 <?= e($page->title) ?></strong>
-                <span class="task-tile-desc"><?= e(mb_substr(preg_replace('/[#*`]/', '', trim($page->content)), 0, 140)) ?><?= mb_strlen($page->content) > 140 ? ' …' : '' ?></span>
-            </a>
-        </div>
-        <div class="task-tile-pills">
-            <span class="pill">ab Jgst. <?= (int) $page->level ?></span>
-        </div>
-        <?php if ($isOwner): ?>
-        <div class="task-tile-actions">
-            <a class="icon-btn" href="<?= url('wiki/' . (int) $page->id . '/bearbeiten') ?>" title="Seite bearbeiten">✏️</a>
-            <form method="post" action="<?= url('wiki/' . (int) $page->id . '/loeschen') ?>" class="form-inline">
-                <?= csrf_field() ?>
-                <button class="icon-btn" type="submit" title="Seite löschen">🗑</button>
-            </form>
-        </div>
+<?php foreach ($pages as $page): ?>
+<section class="panel">
+    <div class="panel-head">
+        <h3>📖 <?= e($page->title) ?></h3>
+        <span class="pill">ab Jgst. <?= e($page->level) ?></span>
+    </div>
+    <p class="muted"><?= e(mb_substr(preg_replace('/[#*`]/', '', trim($page->content)), 0, 140)) ?><?= mb_strlen($page->content) > 140 ? ' …' : '' ?></p>
+    <div class="btn-row">
+        <a class="btn btn-primary" href="<?= url('wiki/' . (int) $page->id) ?>">Lesen</a>
+        <?php if ($user->role === 'admin' || $page->teacherId === $user->id): ?>
+        <a class="btn btn-ghost" href="<?= url('wiki/' . (int) $page->id . '/bearbeiten') ?>" title="Bearbeiten">✏️</a>
+        <form method="post" action="<?= url('wiki/' . (int) $page->id . '/loeschen') ?>" class="form-inline">
+            <?= csrf_field() ?>
+            <button class="btn btn-ghost" type="submit" title="Löschen">🗑</button>
+        </form>
         <?php endif; ?>
     </div>
-    <?php endforeach; ?>
-</div>
+</section>
+<?php endforeach; ?>
 <?php endif; ?>
 
 <?php else: ?>
@@ -68,20 +60,15 @@
     <p>Deine Lehrkraft hat noch keine Seiten angelegt.</p>
 </div>
 <?php else: ?>
-<div class="task-grid">
-    <?php foreach ($pages as $page): ?>
-    <div class="task-tile">
-        <div class="task-tile-head">
-            <a class="task-tile-main" href="<?= url('wiki/' . (int) $page->id) ?>" title="Seite lesen">
-                <strong>📖 <?= e($page->title) ?></strong>
-                <span class="task-tile-desc"><?= e(mb_substr(preg_replace('/[#*`]/', '', trim($page->content)), 0, 140)) ?><?= mb_strlen($page->content) > 140 ? ' …' : '' ?></span>
-            </a>
-        </div>
-        <div class="task-tile-pills">
-            <span class="pill">ab Jgst. <?= (int) $page->level ?></span>
-        </div>
+<?php foreach ($pages as $page): ?>
+<section class="panel">
+    <div class="panel-head">
+        <h3>📖 <?= e($page->title) ?></h3>
     </div>
-    <?php endforeach; ?>
-</div>
+    <p class="muted"><?= e(mb_substr(preg_replace('/[#*`]/', '', trim($page->content)), 0, 140)) ?><?= mb_strlen($page->content) > 140 ? ' …' : '' ?></p>
+    <div class="btn-row"><a class="btn btn-primary" href="<?= url('wiki/' . (int) $page->id) ?>">Lesen</a></div>
+</section>
+<?php endforeach; ?>
 <?php endif; ?>
 <?php endif; ?>
+

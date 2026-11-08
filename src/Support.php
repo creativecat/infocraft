@@ -18,10 +18,8 @@ function url(string $path = ''): string
 
 /**
  * Jahrgangsstufen mit Informatik am Gymnasium Bayern (LehrplanPLUS):
- * In der 6. und 7. Klasse Pluskurse (Arbeitsgemeinschaften), ab der 9. Klasse
- * das eigenständige Fach Informatik (NTG: 9 und 10, danach Oberstufe).
- * Eine 8. Jahrgangsstufe gibt es nicht, deshalb fehlt sie bewusst.
- * @return list<int>
+ * Informatik ist ein eigenstaendiges Fach erst ab Jahrgangsstufe 9,
+ * in der 8. Jahrgangsstufe gibt es keinen Informatikunterricht.
  */
 function valid_levels(): array
 {

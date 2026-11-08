@@ -1,29 +1,12 @@
-<?php
-/** @var list<\Infocraft\Models\Presentation> $items @var \Infocraft\Models\User|null $user */
-// Nach Jahrgangsstufe gruppieren, damit jede Stufe einen Abschnitt mit
-// Kachelraster bekommt (gleiches Muster wie der Aufgabenpool).
-$byLevel = [];
-foreach ($items as $presentation) {
-    $byLevel[(int) $presentation->level][] = $presentation;
-}
-ksort($byLevel);
-$canEdit = static function (\Infocraft\Models\Presentation $p) use ($user): bool {
-    return $user !== null && ($user->role === 'admin' || $p->teacherId === $user->id);
-};
-?>
-<section class="hero hero-compact">
+<section class="hero">
     <div class="hero-emoji">🎬</div>
-    <div class="hero-text">
-        <h1>Präsentationen</h1>
-        <p><?= $isTeacher
-            ? 'Folien für den Unterricht: Text und Code mit Syntax-Highlighting, Vollbild-Modus und live veränderbaren Code-Folien, gegliedert nach Jahrgangsstufe.'
-            : 'Folien deiner Lehrkraft, gegliedert nach Jahrgangsstufe.' ?></p>
-    </div>
+    <h1>Präsentationen</h1>
+    <p>Folien für den Unterricht: Text und Code mit Syntax-Highlighting, Vollbild-Modus und live veränderbaren Code-Folien.</p>
 </section>
 
 <?php if ($isTeacher): ?>
-<section class="panel panel-compact">
-    <h3>➕ Neue Präsentation anlegen</h3>
+<section class="panel">
+    <h3>Neue Präsentation anlegen</h3>
     <form method="post" action="<?= url('praesentationen/anlegen') ?>" class="form">
         <?= csrf_field() ?>
         <div class="form-row form">
@@ -35,8 +18,8 @@ $canEdit = static function (\Infocraft\Models\Presentation $p) use ($user): bool
                     <?php endforeach; ?>
                 </select>
             </label>
-            <button class="btn btn-primary" type="submit" title="Präsentation anlegen">➕</button>
         </div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Präsentation anlegen">➕</button></div>
     </form>
 </section>
 
@@ -46,34 +29,37 @@ $canEdit = static function (\Infocraft\Models\Presentation $p) use ($user): bool
     <p>Lege oben eine Präsentation an und füge Text- und Code-Folien hinzu. Im Präsentationsmodus lässt sich der Code direkt vorführen und verändern.</p>
 </div>
 <?php else: ?>
-<?php foreach ($byLevel as $level => $levelItems): ?>
-<h2 class="level-heading">Jahrgangsstufe <?= (int) $level ?> <span class="pill"><?= count($levelItems) ?> Präsentation<?= count($levelItems) === 1 ? '' : 'en' ?></span></h2>
-<div class="task-grid">
-    <?php foreach ($levelItems as $presentation): ?>
-    <div class="task-tile">
-        <div class="task-tile-head">
-            <a class="task-tile-main" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>" title="Präsentation starten">
-                <strong>🎬 <?= e($presentation->title) ?></strong>
-                <span class="task-tile-meta"><?= count($presentation->slides()) ?> Folie<?= count($presentation->slides()) === 1 ? '' : 'n' ?><?= $presentation->slug !== null ? ' · 🔗 Themen-Link' : '' ?></span>
-            </a>
+<?php
+$counts = [];
+foreach ($items as $presentation) {
+    $counts[$presentation->level] = ($counts[$presentation->level] ?? 0) + 1;
+}
+?>
+<?php $currentLevel = 0; ?>
+<?php foreach ($items as $presentation): ?>
+<?php if ($presentation->level !== $currentLevel): ?>
+<?php $currentLevel = $presentation->level; ?>
+<h2 class="level-heading">Jahrgangsstufe <?= (int) $currentLevel ?> <span class="pill"><?= (int) $counts[$currentLevel] ?> Präsentation<?= $counts[$currentLevel] === 1 ? '' : 'en' ?></span></h2>
+<?php endif; ?>
+<section class="panel praes-panel">
+    <div class="praes-row">
+        <div class="praes-info">
+            <a class="praes-title" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">🎬 <?= e($presentation->title) ?></a>
+            <span class="muted praes-meta"><?= count($presentation->slides()) ?> Folie<?= count($presentation->slides()) === 1 ? '' : 'n' ?><?php if ($presentation->slug !== null): ?> &middot; <a href="<?= url('praesentationen/thema/' . rawurlencode($presentation->slug)) ?>">Themen-Link</a><?php endif; ?></span>
         </div>
-        <div class="task-tile-pills">
-            <?php if ($presentation->slug !== null): ?><span class="pill" title="Permanenter Themen-Link, z. B. für den Stundenplan"><a href="<?= url('praesentationen/thema/' . rawurlencode($presentation->slug)) ?>">🔗 Thema</a></span><?php endif; ?>
-        </div>
-        <div class="task-tile-actions">
-            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>" title="Präsentieren">▶</a>
-            <a class="icon-btn" href="<?= url('praesentationen/' . (int) $presentation->id . '/moderator') ?>" title="Moderator: Steuerzentrale - aktuelle und nächste Folie, Timer - synchron zur Präsentationsansicht">🖥</a>
-            <?php if ($canEdit($presentation)): ?>
-            <a class="icon-btn" href="<?= url('praesentationen/' . (int) $presentation->id) ?>" title="Bearbeiten: Titel, Stufe, Folien">✏️</a>
+        <div class="praes-actions">
+            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">▶ Präsentieren</a>
+            <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id . '/moderator') ?>" title="Moderator: Steuerzentrale - aktuelle und nächste Folie, Timer - synchron zur Präsentationsansicht">🖥</a>
+            <?php if ($user->role === 'admin' || $presentation->teacherId === $user->id): ?>
+            <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id) ?>" title="Bearbeiten">✏️</a>
             <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/loeschen') ?>" class="form-inline">
                 <?= csrf_field() ?>
-                <button class="icon-btn" type="submit" title="Präsentation löschen">🗑</button>
+                <button class="btn btn-ghost" type="submit" title="Löschen">🗑</button>
             </form>
             <?php endif; ?>
         </div>
     </div>
-    <?php endforeach; ?>
-</div>
+</section>
 <?php endforeach; ?>
 <?php endif; ?>
 
@@ -84,23 +70,29 @@ $canEdit = static function (\Infocraft\Models\Presentation $p) use ($user): bool
     <p>Deine Lehrkraft hat noch keine Präsentationen für deine Klassenstufe freigegeben.</p>
 </div>
 <?php else: ?>
-<?php foreach ($byLevel as $level => $levelItems): ?>
-<h2 class="level-heading">Jahrgangsstufe <?= (int) $level ?> <span class="pill"><?= count($levelItems) ?> Präsentation<?= count($levelItems) === 1 ? '' : 'en' ?></span></h2>
-<div class="task-grid">
-    <?php foreach ($levelItems as $presentation): ?>
-    <div class="task-tile">
-        <div class="task-tile-head">
-            <a class="task-tile-main" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>" title="Präsentation ansehen">
-                <strong>🎬 <?= e($presentation->title) ?></strong>
-                <span class="task-tile-meta"><?= count($presentation->slides()) ?> Folie<?= count($presentation->slides()) === 1 ? '' : 'n' ?></span>
-            </a>
+<?php
+$counts = [];
+foreach ($items as $presentation) {
+    $counts[$presentation->level] = ($counts[$presentation->level] ?? 0) + 1;
+}
+?>
+<?php $currentLevel = 0; ?>
+<?php foreach ($items as $presentation): ?>
+<?php if ($presentation->level !== $currentLevel): ?>
+<?php $currentLevel = $presentation->level; ?>
+<h2 class="level-heading">Jahrgangsstufe <?= (int) $currentLevel ?> <span class="pill"><?= (int) $counts[$currentLevel] ?> Präsentation<?= $counts[$currentLevel] === 1 ? '' : 'en' ?></span></h2>
+<?php endif; ?>
+<section class="panel praes-panel">
+    <div class="praes-row">
+        <div class="praes-info">
+            <a class="praes-title" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">🎬 <?= e($presentation->title) ?></a>
+            <span class="muted praes-meta"><?= count($presentation->slides()) ?> Folie<?= count($presentation->slides()) === 1 ? '' : 'n' ?></span>
         </div>
-        <div class="task-tile-actions">
-            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>" title="Ansehen">▶</a>
+        <div class="praes-actions">
+            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">▶ Ansehen</a>
         </div>
     </div>
-    <?php endforeach; ?>
-</div>
+</section>
 <?php endforeach; ?>
 <?php endif; ?>
 <?php endif; ?>
