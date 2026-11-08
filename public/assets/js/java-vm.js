@@ -2456,6 +2456,7 @@
    * Datenbank wie bisher leer - der Programmablauf selbst bleibt unverändert.
    */
   var DB_SEED_SQL = '';
+  var DB_SEED_ERRORS = 0;
   /* Issue #45: Angehängte Datenbank nur mit Leserechten -> DB_RO. */
   var DB_RO = false;
   function dbSeedRead() {
@@ -2508,11 +2509,14 @@
   /* Datenbank für einen neuen Lauf aufbauen: gespeicherter Stand zuerst. */
   function dbResetToSeed() {
     RUN_DB = Object.create(null);
+    DB_SEED_ERRORS = 0;
     if (DB_SEED_SQL === '') { return; }
     var stmts = dbSplitSql(DB_SEED_SQL);
     var ctx = { file: 'DB-Start', line: 1, cls: null, thisVal: null, vm: RUN_VM };
     for (var si = 0; si < stmts.length; si++) {
-      try { dbExec(stmts[si], ctx, 1); } catch (e) { /* Seed-Fehler nicht werfen: Die Seite soll trotzdem laufen. */ }
+      /* Seed-Fehler nicht werfen: Die Seite soll trotzdem laufen. Aber mitzaehlen,
+       * damit die Werkstatt sichtbar warnt, statt stillschweigend leer zu bleiben. */
+      try { dbExec(stmts[si], ctx, 1); } catch (e) { DB_SEED_ERRORS++; }
     }
   }
   /* SQL-Text für einen Wert (einfache Anführungszeichen verdoppeln). */
@@ -6853,6 +6857,14 @@
       }
       all.sort(function (a, b) { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
       if (all.length === 0) {
+        if (DB_SEED_ERRORS > 0) {
+          var warn = document.createElement('div');
+          warn.className = 'notice';
+          warn.innerHTML = '';
+          warn.appendChild(document.createTextNode('Achtung: ' + DB_SEED_ERRORS + ' SQL-Befehl(e) der gespeicherten Beispieldatenbank konnten nicht geladen werden. Lade die Seite neu (Strg bzw. Cmd + Shift + R), falls gerade ein Update eingespielt wurde.'));
+          dbSchemaBox.appendChild(warn);
+          return;
+        }
         dbSchemaBox.appendChild(document.createTextNode('Noch keine Tabellen: Lege sie im Programm an, z. B. Database.execute("CREATE TABLE schueler (name TEXT, punkte INT)"); danach erscheinen sie hier nach jedem Ausführen.'));
         return;
       }

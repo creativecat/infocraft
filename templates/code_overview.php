@@ -1,4 +1,7 @@
 <?php $classNames = []; foreach ($classes as $class) { $classNames[$class->id] = $class->name; } ?>
+<?php /* Ordner mit Unterordnern: Diese zeigen keinen 'Noch keine Projekte'-Platzhalter,
+     * auch wenn sie selbst keine direkten Projekte enthalten (#45). */ $folderHasChildren = [];
+foreach ($folderRows as $row) { if (($row['folder']->parentId ?? 0) > 0) { $folderHasChildren[(int) ($row['folder']->parentId ?? 0)] = true; } } ?>
 <section class="hero">
     <div class="hero-emoji">💻</div>
     <h1>Code-Werkstatt</h1>
@@ -142,7 +145,7 @@
                     </form>
                 </details>
                 <div class="folder-children">
-                    <?php if (($projectsByFolder[$folder->id] ?? []) === []): ?>
+                    <?php if (($projectsByFolder[$folder->id] ?? []) === [] && ($folder->parentId ?? 0) === 0 && empty($folderHasChildren[$folder->id])): ?>
                     <p class="muted proj-empty">Noch keine Projekte.</p>
                     <?php endif; ?>
                     <?php foreach ($projectsByFolder[$folder->id] ?? [] as $project): ?>

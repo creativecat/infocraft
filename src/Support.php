@@ -17,6 +17,14 @@ function url(string $path = ''): string
 }
 
 /**
+ * Asset-Version: Bei jeder Änderung an den JS-/CSS-Dateien erhöhen. Zusammen mit
+ * der Datei-Zeitstempel sichert das das Cache-Busting, auch wenn Deployments die
+ * Zeitstempel erhalten (rsync --times, Docker-Layer): Browser laden dann garantiert
+ * die neue Datei statt einer alten Version aus dem Cache.
+ */
+const ASSET_VERSION = '45.2';
+
+/**
  * Asset-URL mit Cache-Busting: haengt die Aenderungszeit der Datei als
  * Versionsparameter an, damit Browser nach einem Update die neue Datei
  * laden und keine alte Version aus dem Cache zeigen.
@@ -25,7 +33,7 @@ function asset_url(string $path): string
 {
     $file = (defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__, 2)) . '/public/' . ltrim($path, '/');
     $v = is_file($file) ? (string) filemtime($file) : '0';
-    return url($path) . '?v=' . $v;
+    return url($path) . '?v=' . ASSET_VERSION . '.' . $v;
 }
 
 /**
