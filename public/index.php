@@ -63,6 +63,7 @@ $router->get('/werkstatt/code', [CodeController::class, 'index']);
 $router->post('/werkstatt/code/projekt', [CodeController::class, 'createProject']);
 $router->post('/werkstatt/code/ordner', [CodeController::class, 'createFolder']);
 $router->post('/werkstatt/code/move', [CodeController::class, 'move']);
+$router->post('/werkstatt/code/ordner/verschieben', [CodeController::class, 'moveFolder']);
 $router->post('/werkstatt/code/verteilen', [CodeController::class, 'distribute']);
 $router->post('/werkstatt/code/loeschen', [CodeController::class, 'delete']);
 // Schuelerprojekte (Lehrkraefte): vor dem Platzhalter {id} registrieren

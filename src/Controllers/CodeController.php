@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Infocraft\Controllers;
 
 use Infocraft\Auth;
+use Infocraft\Database;
 use Infocraft\Models\Folder;
 use Infocraft\Models\Project;
 use Infocraft\Models\ProjectState;
@@ -194,6 +195,51 @@ final class CodeController
             }
         }
         return $list;
+    }
+
+    /**
+     * Issue #45: Ordner per Drag & Drop in einen anderen Ordner (oder auf die
+     * Hauptebene) verschieben. Verhindert Zirkel: Ein Ordner kann nicht in
+     * sich selbst oder einen seiner Unterordner geschoben werden.
+     */
+    public static function moveFolder(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        header('Content-Type: application/json; charset=utf-8');
+        $folderId = (int) ($_POST['folder_id'] ?? 0);
+        if ($folderId <= 0 || !Folder::belongsTo($folderId, $user->id)) {
+            echo '{"ok":false,"error":"Ordner nicht gefunden."}';
+            exit;
+        }
+        $parentId = (int) ($_POST['parent_id'] ?? 0);
+        if ($parentId === $folderId) {
+            echo '{"ok":false,"error":"Ein Ordner kann nicht in sich selbst verschoben werden."}';
+            exit;
+        }
+        if ($parentId !== 0 && !Folder::belongsTo($parentId, $user->id)) {
+            echo '{"ok":false,"error":"Zielordner nicht gefunden."}';
+            exit;
+        }
+        $pdo = Database::pdo();
+        $current = $parentId;
+        $guard = 0;
+        while ($current > 0 && $guard++ < 100) {
+            if ($current === $folderId) {
+                echo '{"ok":false,"error":"Ein Ordner kann nicht in einen seiner Unterordner verschoben werden."}';
+                exit;
+            }
+            $stmt = $pdo->prepare('SELECT parent_id FROM folders WHERE id = ?');
+            $stmt->execute([$current]);
+            $up = $stmt->fetchColumn();
+            $current = ($up === false || $up === null) ? 0 : (int) $up;
+        }
+        $pdo->prepare('UPDATE folders SET parent_id = ? WHERE id = ?')->execute([$parentId, $folderId]);
+        echo '{"ok":true}';
+        exit;
     }
 
     /** Lehrkraft teilt ein eigenes Projekt als Kopie an Klasse oder Einzelperson aus. */

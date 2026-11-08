@@ -5,7 +5,7 @@
     <p>Deine Projekte, organisiert in einem Ordnerbaum mit Unterordnern. Zieh Projekte einfach per Drag &amp; Drop in einen Ordner.</p>
 </section>
 
-<div class="two-col" data-move-url="<?= url('werkstatt/code/move') ?>">
+<div class="two-col" data-move-url="<?= url('werkstatt/code/move') ?>" data-folder-move-url="<?= url('werkstatt/code/ordner/verschieben') ?>">
     <section class="panel">
         <h3>➕ Neues anlegen</h3>
         <form method="post" action="<?= url('werkstatt/code/projekt') ?>" class="form">
@@ -105,7 +105,7 @@
     </section>
     <section class="panel">
         <h3>🗂️ Ordner &amp; Projekte</h3>
-        <p class="muted">Ordner bilden einen Baum mit Unterordnern. Projekte per Drag &amp; Drop auf einen Ordner ziehen, um sie zu verschieben.</p>
+        <p class="muted">Ordner bilden einen Baum mit Unterordnern. Projekte und Ordner per Drag &amp; Drop auf einen anderen Ordner ziehen, um sie zu verschieben.</p>
         <ul class="folder-list">
             <li class="folder-item" data-folder="0">
                 <strong>📁 Ohne Ordner</strong> <span class="pill"><?= (int) ($counts[0] ?? 0) ?></span>
@@ -130,7 +130,7 @@
             </li>
             <?php foreach ($folderRows as $row): ?>
             <?php $folder = $row['folder']; ?>
-            <li class="folder-item" data-folder="<?= (int) $folder->id ?>" style="padding-left: <?= (int) $row['depth'] * 18 ?>px">
+            <li class="folder-item" draggable="true" data-folder="<?= (int) $folder->id ?>" data-folder-drag="<?= (int) $folder->id ?>" title="Ordner per Drag &amp; Drop in einen anderen Ordner ziehen" style="padding-left: <?= (int) $row['depth'] * 18 ?>px">
                 <strong>📁 <?= e($folder->name) ?></strong> <span class="pill"><?= (int) ($counts[$folder->id] ?? 0) ?></span>
                 <details class="folder-sub">
                     <summary class="muted" title="Unterordner anlegen">+</summary>

@@ -2483,6 +2483,17 @@
         continue;
       }
       if (c === "'") { inQ = true; cur += c; continue; }
+      /* Zeilenkommentare (--) und Blockkommentare aus Vorlagen uebergehen (#45). */
+      if (c === '-' && text.charAt(i + 1) === '-') {
+        while (i < text.length && text.charAt(i) !== String.fromCharCode(10)) { i++; }
+        continue;
+      }
+      if (c === '/' && text.charAt(i + 1) === '*') {
+        i += 2;
+        while (i + 1 < text.length && !(text.charAt(i) === '*' && text.charAt(i + 1) === '/')) { i++; }
+        i++;
+        continue;
+      }
       if (c === ';') { parts.push(cur); cur = ''; continue; }
       cur += c;
     }
@@ -2670,9 +2681,9 @@
     if (s.length >= 2 && s.charAt(0) === "'" && s.charAt(s.length - 1) === "'") {
       return { t: 'String', v: dbParseString(s) };
     }
-    if (s === 'true') { return { t: 'boolean', v: true }; }
-    if (s === 'false') { return { t: 'boolean', v: false }; }
-    if (s === 'null') { return { t: 'null', v: null }; }
+    if (s === 'true' || s === 'TRUE') { return { t: 'boolean', v: true }; }
+    if (s === 'false' || s === 'FALSE') { return { t: 'boolean', v: false }; }
+    if (s === 'null' || s === 'NULL') { return { t: 'null', v: null }; }
     var im = /^-?[0-9]+/.exec(s);
     if (im && im[0] === s) { return { t: 'int', v: parseInt(s, 10) }; }
     var dm = /^-?[0-9]+\.[0-9]+/.exec(s);
@@ -2813,9 +2824,24 @@
       var colParts = dbSplitTop(m[2]);
       var cols = [];
       for (i = 0; i < colParts.length; i++) {
-        var cm = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s+(TEXT|STRING|VARCHAR|CHAR|INT|INTEGER|DOUBLE|REAL|FLOAT|DECIMAL)\s*/i.exec(colParts[i]);
-        if (!cm || cm[0] !== colParts[i]) {
+        var cm = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s+(TEXT|STRING|VARCHAR|CHAR|INT|INTEGER|DOUBLE|REAL|FLOAT|DECIMAL)\b/i.exec(colParts[i]);
+        if (!cm) {
+          /* Tabellen-Constraints (PRIMARY KEY (...), FOREIGN KEY (...) REFERENCES ...,
+           * CHECK (...), UNIQUE (...), CONSTRAINT name ...) ignorieren (#45). */
+          if (/^\s*(PRIMARY\s+KEY|FOREIGN\s+KEY|UNIQUE|CHECK|CONSTRAINT)\b/i.test(colParts[i])) { continue; }
           throw rt(ctx, line, 'Die Spaltenangabe ' + colParts[i].trim() + ' verstehe ich nicht.', 'Form: spalte TYP mit TYP = TEXT, INT oder DOUBLE, z. B. name TEXT');
+        }
+        /* Spalten-Constraints wie NOT NULL, PRIMARY KEY, UNIQUE, DEFAULT wert und
+         * REFERENCES tabelle (spalte) akzeptieren und ignorieren (#45): Echte
+         * SQLite-Vorlagen (z. B. Schule, Schulbibliothek) verwenden sie. */
+        var cRest = colParts[i].slice(cm[0].length);
+        var cCtr = /^\s*(NOT\s+NULL|NULL|PRIMARY\s+KEY(\s+ASC|\s+DESC|\s+AUTOINCREMENT)?|UNIQUE|DEFAULT\s+('(?:[^']|'')*'|[A-Za-z0-9_.+-]+)|REFERENCES\s+[A-Za-z_][A-Za-z0-9_]*\s*(\([^)]*\))?)/i;
+        while (cRest.replace(/^\s+/, '').length > 0) {
+          var cM = cCtr.exec(cRest);
+          if (!cM) {
+            throw rt(ctx, line, 'Die Spaltenangabe ' + colParts[i].trim() + ' verstehe ich nicht.', 'Form: spalte TYP, z. B. name TEXT - Constraints wie NOT NULL, PRIMARY KEY oder REFERENCES sind erlaubt');
+          }
+          cRest = cRest.slice(cM[0].length);
         }
         var ty = cm[2].toUpperCase();
         var kind = (ty === 'TEXT' || ty === 'STRING' || ty === 'VARCHAR' || ty === 'CHAR') ? 'text' : ((ty === 'INT' || ty === 'INTEGER') ? 'int' : 'double');
@@ -6938,6 +6964,7 @@
 
   global.InfoCraftJavaVM = {
     lex: lex, JError: JError, Parser: Parser, run: run, openSession: openSession, NL: NL,
+    setDbSeed: function (sql) { DB_SEED_SQL = String(sql == null ? '' : sql); },
     gfxTick: gfxTick, gfxStopLoop: gfxStopLoop, gfxDispatchKey: gfxDispatchKey, gfxSnapshot: gfxSnapshot, formatJavaSource: formatJavaSource
   };
   if (typeof module !== 'undefined' && module.exports) { module.exports = global.InfoCraftJavaVM; }

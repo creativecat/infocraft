@@ -101,13 +101,22 @@
   var grid = document.querySelector('[data-move-url]');
   if (grid) {
     var moveUrl = grid.getAttribute('data-move-url');
+    var folderMoveUrl = grid.getAttribute('data-folder-move-url');
     var dragId = null;
+    var dragFolderId = null;
 
     document.addEventListener('dragstart', function (e) {
       var card = e.target && e.target.closest ? e.target.closest('.project-card') : null;
-      if (card) { dragId = card.getAttribute('data-id'); }
+      if (card) { dragId = card.getAttribute('data-id'); dragFolderId = null; return; }
+      /* Ordner verschieben (#45): Der Ordner-Eintrag selbst ist ziehbar. */
+      var li = e.target && e.target.closest ? e.target.closest('.folder-item[data-folder-drag]') : null;
+      if (li) {
+        dragFolderId = li.getAttribute('data-folder-drag');
+        dragId = null;
+        if (e.dataTransfer) { e.dataTransfer.setData('text/plain', 'folder:' + dragFolderId); }
+      }
     });
-    document.addEventListener('dragend', function () { dragId = null; });
+    document.addEventListener('dragend', function () { dragId = null; dragFolderId = null; });
 
     var folders = document.querySelectorAll('.folder-item');
     for (var i = 0; i < folders.length; i++) {
@@ -122,9 +131,29 @@
         item.addEventListener('drop', function (e) {
           e.preventDefault();
           item.classList.remove('drop-hover');
-          var id = dragId || (e.dataTransfer ? e.dataTransfer.getData('text/plain') : null);
-          if (!id) { return; }
           var csrf = body.getAttribute('data-csrf') || '';
+          /* Ordner auf Ordner (#45): Zielordner holen und Verschieben anfragen. */
+          if (dragFolderId) {
+            if (!folderMoveUrl || dragFolderId === item.getAttribute('data-folder')) { return; }
+            fetch(folderMoveUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: 'folder_id=' + encodeURIComponent(dragFolderId)
+                + '&parent_id=' + encodeURIComponent(item.getAttribute('data-folder'))
+                + '&csrf=' + encodeURIComponent(csrf)
+            }).then(function (response) { return response.json(); }).then(function (data) {
+              if (data && data.ok) {
+                window.location.reload();
+              } else {
+                alert((data && data.error) || 'Verschieben fehlgeschlagen.');
+              }
+            }).catch(function () {
+              alert('Verschieben fehlgeschlagen.');
+            });
+            return;
+          }
+          var id = dragId || (e.dataTransfer ? e.dataTransfer.getData('text/plain') : null);
+          if (!id || !/^[0-9]+$/.test(String(id))) { return; }
           fetch(moveUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

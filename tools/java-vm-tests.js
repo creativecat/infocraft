@@ -224,6 +224,35 @@ t('StringArgVerkettetMitZahl', { 'Main.java': mainOf('        double preis = 1.5
 });
 
 /* --- Mini-Datenbank (eingebaute Klasse Database) --- */
+
+/* Beispieldatenbank als Seed (#45): SQLite-Syntax mit PRIMARY KEY, NOT NULL,
+ * REFERENCES und Kommentaren muss die Mini-Datenbank laden koennen. */
+V.setDbSeed([
+  '-- Vorlage: Schule (SQL-Werkstatt)',
+  'CREATE TABLE lehrkraefte (',
+  '    id INTEGER PRIMARY KEY,',
+  '    name TEXT NOT NULL,',
+  '    fach TEXT NOT NULL',
+  ');',
+  'CREATE TABLE kursteilnahmen (',
+  '    id INTEGER PRIMARY KEY,',
+  '    kurs_id INTEGER NOT NULL REFERENCES kurse (id),',
+  '    note REAL',
+  ');',
+  '/* Kommentar */',
+  "INSERT INTO lehrkraefte (id, name, fach) VALUES (1, 'Frau Fischer', 'Informatik');",
+  'INSERT INTO kursteilnahmen (id, kurs_id, note) VALUES (1, 1, 1.7), (2, 1, NULL);'
+].join(NL));
+t('DbSeedSqliteConstraints', { 'Main.java': mainOf(
+  'System.out.println(Database.count("SELECT * FROM lehrkraefte"));' + NL +
+  'System.out.println(Database.count("SELECT * FROM kursteilnahmen"));' + NL +
+  'System.out.println(Database.tables());') }, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '1' + NL + '2' + NL + 'lehrkraefte, kursteilnahmen' + NL, 'seed mit constraints und kommentaren');
+});
+/* Seed wieder entfernen: Folgetests starten mit leerer Datenbank. */
+V.setDbSeed('');
+
 t('DbCreateInsertSelect', { 'Main.java': mainOf(
   '        Database.execute("CREATE TABLE schueler (name TEXT, punkte INT)");' + NL +
   "        Database.execute(\"INSERT INTO schueler VALUES ('Anna', 12), ('Ben', 8)\");" + NL +
