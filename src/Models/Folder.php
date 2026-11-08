@@ -65,7 +65,7 @@ final class Folder
         }
         $pdo = Database::pdo();
         $stmt = $pdo->prepare('INSERT INTO folders (owner_id, name, parent_id, position) VALUES (?, ?, ?, (SELECT COALESCE(MAX(position), 0) + 1 FROM folders WHERE owner_id = ?))');
-        $stmt->execute([$ownerId, $name, $parentId, $ownerId]);
+        $stmt->execute([$ownerId, $name, $parentId ?? 0, $ownerId]);
         return new self((int) $pdo->lastInsertId(), $ownerId, $name, 0, $parentId);
     }
 
