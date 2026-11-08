@@ -37,9 +37,9 @@ foreach ($classes as $class) {
                 </label>
                 <label class="field"><span>Jahrgangsstufe</span>
                     <select name="level" data-topic-level-source="1">
-                        <?php for ($level = 6; $level <= 13; $level++): ?>
+                        <?php foreach (valid_levels() as $level): ?>
                         <option value="<?= $level ?>"<?= (int) $task->level === $level ? ' selected' : '' ?>>Jahrgangsstufe <?= $level ?></option>
-                        <?php endfor; ?>
+                        <?php endforeach; ?>
                     </select>
                 </label>
             </div>

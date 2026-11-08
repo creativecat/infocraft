@@ -12,9 +12,9 @@
             <label class="field"><span>Titel</span><input type="text" name="title" required maxlength="200" value="<?= e($presentation->title) ?>"></label>
             <label class="field"><span>Ab Jahrgangsstufe</span>
                 <select name="level">
-                    <?php for ($i = 6; $i <= 13; $i++): ?>
+                    <?php foreach (valid_levels() as $i): ?>
                     <option value="<?= $i ?>"<?= $i === $presentation->level ? ' selected' : '' ?>><?= $i ?></option>
-                    <?php endfor; ?>
+                    <?php endforeach; ?>
                 </select>
             </label>
             <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>

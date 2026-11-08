@@ -27,7 +27,7 @@
             <?= csrf_field() ?>
             <input type="hidden" name="class_id" value="<?= (int) $entry['class']->id ?>">
             <input type="hidden" name="enabled" value="<?= $entry['class']->diagramAuto === 1 ? '0' : '1' ?>">
-            <button class="btn btn-ghost" type="submit"><?= $entry['class']->diagramAuto === 1 ? 'Für diese Klasse deaktivieren' : 'Wieder erlauben' ?></button>
+            <button class="btn btn-ghost" type="submit" title="Klassendiagramme automatisch erzeugen: <?= $entry['class']->diagramAuto === 1 ? 'derzeit erlaubt, klicken zum Deaktivieren' : 'derzeit deaktiviert, klicken zum Erlauben' ?>"> <?= $entry['class']->diagramAuto === 1 ? '🚫' : '✅' ?> </button>
         </form>
     </div>
     <p class="muted">Schülerinnen und Schüler zeichnen Klassendiagramme immer selbst. Hier stellst du nur ein, ob Diagramme automatisch aus Java-, Python- und SQL-Skripten erzeugt werden dürfen.</p>

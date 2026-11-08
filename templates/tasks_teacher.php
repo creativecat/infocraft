@@ -45,9 +45,9 @@ $viewLabels = ['meine' => '📋 Meine Aufgaben', 'katalog' => '📦 Aufgabenkata
             <label class="field"><span>Jahrgangsstufe</span>
                 <select name="level">
                     <option value="0"<?= $filterLevel === 0 ? ' selected' : '' ?>>alle</option>
-                    <?php for ($level = 6; $level <= 13; $level++): ?>
+                    <?php foreach (valid_levels() as $level): ?>
                     <option value="<?= $level ?>"<?= $filterLevel === $level ? ' selected' : '' ?>>Jgst. <?= $level ?></option>
-                    <?php endfor; ?>
+                    <?php endforeach; ?>
                 </select>
             </label>
             <label class="field"><span>Typ</span>

@@ -24,9 +24,9 @@ $typeLabels = ['allgemein' => 'Allgemein', 'sql' => 'SQL', 'html' => 'HTML', 'co
                 </label>
                 <label class="field"><span>Jahrgangsstufe</span>
                     <select name="level" id="task-create-level" data-topic-level-source="1">
-                        <?php for ($level = 6; $level <= 13; $level++): ?>
+                        <?php foreach (valid_levels() as $level): ?>
                         <option value="<?= $level ?>"<?= $level === 9 ? ' selected' : '' ?>>Jahrgangsstufe <?= $level ?></option>
-                        <?php endfor; ?>
+                        <?php endforeach; ?>
                     </select>
                 </label>
             </div>
