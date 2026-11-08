@@ -1,11 +1,9 @@
 <?php /** @var \Infocraft\Models\Exam $exam */ ?>
 <section class="panel">
     <div class="panel-head">
+        <a class="btn btn-ghost" href="<?= url('pruefungen/' . $exam->id) ?>" title="Verwaltung">←</a>
         <h3>Korrektur: <?= e($exam->title) ?> <span class="status status-<?= e($exam->phase === 'herausgegeben' ? 'fertig' : 'in-arbeit') ?>"><?= e($exam->phase) ?></span></h3>
         <span class="muted"><?= count($tasks) ?> Teilaufgaben · <?= count($summary) ?> Arbeiten</span>
-    </div>
-    <div class="btn-row">
-        <a class="btn btn-ghost" href="<?= url('pruefungen/' . $exam->id) ?>" title="Verwaltung">←</a>
     </div>
 </section>
 

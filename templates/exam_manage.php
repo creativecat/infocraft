@@ -1,11 +1,11 @@
 <?php /** @var \Infocraft\Models\Exam $exam */ ?>
 <section class="panel">
     <div class="panel-head">
+        <a class="btn btn-ghost" href="<?= url('pruefungen') ?>" title="Übersicht">←</a>
         <h3><?= e($exam->title) ?> <span class="pill"><?= $exam->kind === 'pruefung' ? '🔒 Prüfung' : '📄 Schularbeit' ?></span> <span class="status status-<?= e($exam->phase === 'vorbereitung' ? 'geplant' : ($exam->phase === 'herausgegeben' ? 'fertig' : 'in-arbeit')) ?>"><?= e($exam->phase) ?></span></h3>
         <span class="muted">ab Jahrgangsstufe <?= e($exam->level) ?><?= $exam->description !== '' ? ' · ' . e($exam->description) : '' ?></span>
     </div>
     <div class="btn-row">
-        <a class="btn btn-ghost" href="<?= url('pruefungen') ?>" title="Übersicht">←</a>
         <?php if ($exam->phase === 'korrektur' || $exam->phase === 'herausgegeben'): ?>
         <a class="btn btn-primary" href="<?= url('pruefungen/' . $exam->id . '/korrektur') ?>">Korrektur &amp; Ergebnisse</a>
         <?php endif; ?>

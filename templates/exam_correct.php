@@ -1,8 +1,8 @@
 <?php /** @var \Infocraft\Models\User $student */ ?>
 <section class="panel">
     <div class="panel-head">
-        <h3>Arbeit von <?= e($student->fullName()) ?> <span class="pill"><?= e($exam->title) ?></span></h3>
         <a class="btn btn-ghost" href="<?= url('pruefungen/' . $exam->id . '/korrektur') ?>" title="Alle Arbeiten">←</a>
+        <h3>Arbeit von <?= e($student->fullName()) ?> <span class="pill"><?= e($exam->title) ?></span></h3>
     </div>
     <?php if ($work !== null): ?>
     <p class="muted">Begonnen: <?= e($work['started_at'] ?? '-') ?><?= $work['submitted_at'] !== null ? ' · Abgegeben: ' . e($work['submitted_at']) : ' · nicht abgegeben' ?></p>

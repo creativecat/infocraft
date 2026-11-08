@@ -2,10 +2,10 @@
 <section class="hero">
     <div class="hero-emoji">💻</div>
     <h1>Code-Werkstatt</h1>
-    <p>Deine Projekte, organisiert in Ordnern. Zieh Projekte einfach per Drag &amp; Drop in einen Ordner.</p>
+    <p>Deine Projekte, organisiert in einem Ordnerbaum mit Unterordnern. Zieh Projekte einfach per Drag &amp; Drop in einen Ordner.</p>
 </section>
 
-<div class="two-col">
+<div class="two-col" data-move-url="<?= url('werkstatt/code/move') ?>">
     <section class="panel">
         <h3>➕ Neues anlegen</h3>
         <form method="post" action="<?= url('werkstatt/code/projekt') ?>" class="form">
@@ -26,9 +26,8 @@
             </label>
             <label class="field"><span>Ordner</span>
                 <select name="folder_id">
-                    <option value="0">Ohne Ordner</option>
-                    <?php foreach ($folders as $folder): ?>
-                    <option value="<?= (int) $folder->id ?>"><?= e($folder->name) ?></option>
+                    <?php foreach ($folderNames as $folderId => $folderName): ?>
+                    <option value="<?= (int) $folderId ?>"><?= e($folderName) ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
@@ -44,6 +43,15 @@
         <form method="post" action="<?= url('werkstatt/code/ordner') ?>" class="form">
             <?= csrf_field() ?>
             <label class="field"><span>Neuer Ordner</span><input type="text" name="name" required placeholder="z. B. Hausaufgaben"></label>
+            <label class="field"><span>Übergeordneter Ordner</span>
+                <select name="parent_id">
+                    <option value="0">- Hauptebene -</option>
+                    <?php foreach ($folderNames as $folderId => $folderName): ?>
+                    <?php if ($folderId === 0) { continue; } ?>
+                    <option value="<?= (int) $folderId ?>"><?= e($folderName) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
             <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Ordner anlegen">📁</button></div>
         </form>
         <?php if ($isTeacher && $projects !== []): ?>
@@ -96,51 +104,65 @@
         <?php endif; ?>
     </section>
     <section class="panel">
-        <h3>🗂️ Ordner</h3>
-        <p class="muted">Projekte per Drag &amp; Drop hierher ziehen.</p>
+        <h3>🗂️ Ordner &amp; Projekte</h3>
+        <p class="muted">Ordner bilden einen Baum mit Unterordnern. Projekte per Drag &amp; Drop auf einen Ordner ziehen, um sie zu verschieben.</p>
         <ul class="folder-list">
-            <li class="folder-item" data-folder="0">📁 <strong>Ohne Ordner</strong> <span class="pill"><?= (int) ($counts[0] ?? 0) ?></span></li>
-            <?php foreach ($folders as $folder): ?>
-            <li class="folder-item" data-folder="<?= (int) $folder->id ?>">📁 <strong><?= e($folder->name) ?></strong> <span class="pill"><?= (int) ($counts[$folder->id] ?? 0) ?></span></li>
+            <li class="folder-item" data-folder="0">
+                <strong>📁 Ohne Ordner</strong> <span class="pill"><?= (int) ($counts[0] ?? 0) ?></span>
+                <div class="folder-children">
+                    <?php if (($projectsByFolder[0] ?? []) === []): ?>
+                    <p class="muted proj-empty">Noch keine Projekte.</p>
+                    <?php endif; ?>
+                    <?php foreach ($projectsByFolder[0] ?? [] as $project): ?>
+                    <div class="proj-row project-card" draggable="true" data-id="<?= (int) $project->id ?>" title="Zum Verschieben in einen Ordner ziehen">
+                        <span class="proj-icon"><?= $project->type === 'html' ? '🌐' : ($project->language === 'java' ? '☕' : ($project->language === 'asm' ? '⚙️' : '🐍')) ?></span>
+                        <a class="proj-title" href="<?= url('werkstatt/code/' . (int) $project->id) ?>"><?= e($project->title) ?></a>
+                        <span class="pill proj-kind"><?= $project->type === 'html' ? 'HTML' : ($project->language === 'java' ? 'Java' : ($project->language === 'asm' ? 'Assembler' : 'Python')) ?></span>
+                        <a class="btn btn-primary proj-open" href="<?= url('werkstatt/code/' . (int) $project->id) ?>">Öffnen</a>
+                        <form method="post" action="<?= url('werkstatt/code/loeschen') ?>" class="form-inline" onsubmit="return confirm('Projekt wirklich löschen?');">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="project_id" value="<?= (int) $project->id ?>">
+                            <button class="btn btn-ghost" type="submit" title="Löschen">🗑️</button>
+                        </form>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </li>
+            <?php foreach ($folderRows as $row): ?>
+            <?php $folder = $row['folder']; ?>
+            <li class="folder-item" data-folder="<?= (int) $folder->id ?>" style="padding-left: <?= (int) $row['depth'] * 18 ?>px">
+                <strong>📁 <?= e($folder->name) ?></strong> <span class="pill"><?= (int) ($counts[$folder->id] ?? 0) ?></span>
+                <details class="folder-sub">
+                    <summary class="muted" title="Unterordner anlegen">+</summary>
+                    <form method="post" action="<?= url('werkstatt/code/ordner') ?>" class="form form-inline">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="parent_id" value="<?= (int) $folder->id ?>">
+                        <input type="text" name="name" required placeholder="Unterordner">
+                        <button class="btn btn-ghost" type="submit" title="Unterordner anlegen">📁</button>
+                    </form>
+                </details>
+                <div class="folder-children">
+                    <?php if (($projectsByFolder[$folder->id] ?? []) === []): ?>
+                    <p class="muted proj-empty">Noch keine Projekte.</p>
+                    <?php endif; ?>
+                    <?php foreach ($projectsByFolder[$folder->id] ?? [] as $project): ?>
+                    <div class="proj-row project-card" draggable="true" data-id="<?= (int) $project->id ?>" title="Zum Verschieben in einen Ordner ziehen">
+                        <span class="proj-icon"><?= $project->type === 'html' ? '🌐' : ($project->language === 'java' ? '☕' : ($project->language === 'asm' ? '⚙️' : '🐍')) ?></span>
+                        <a class="proj-title" href="<?= url('werkstatt/code/' . (int) $project->id) ?>"><?= e($project->title) ?></a>
+                        <span class="pill proj-kind"><?= $project->type === 'html' ? 'HTML' : ($project->language === 'java' ? 'Java' : ($project->language === 'asm' ? 'Assembler' : 'Python')) ?></span>
+                        <a class="btn btn-primary proj-open" href="<?= url('werkstatt/code/' . (int) $project->id) ?>">Öffnen</a>
+                        <form method="post" action="<?= url('werkstatt/code/loeschen') ?>" class="form-inline" onsubmit="return confirm('Projekt wirklich löschen?');">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="project_id" value="<?= (int) $project->id ?>">
+                            <button class="btn btn-ghost" type="submit" title="Löschen">🗑️</button>
+                        </form>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </li>
             <?php endforeach; ?>
         </ul>
     </section>
-</div>
-
-<div class="proj-groups" data-move-url="<?= url('werkstatt/code/move') ?>">
-    <?php
-    $groupedProjects = [];
-    foreach ($projects as $project) {
-        $groupedProjects[(int) ($project->folderId ?? 0)][] = $project;
-    }
-    $groups = [];
-    foreach ($folders as $folder) { $groups[] = ['id' => (int) $folder->id, 'name' => $folder->name]; }
-    $groups[] = ['id' => 0, 'name' => 'Ohne Ordner'];
-    ?>
-    <?php foreach ($groups as $group): ?>
-    <div class="proj-group">
-        <h3 class="proj-group-title">📁 <?= e($group['name']) ?> <span class="pill"><?= count($groupedProjects[$group['id']] ?? []) ?></span></h3>
-        <?php if (($groupedProjects[$group['id']] ?? []) === []): ?>
-        <p class="muted proj-empty">Noch keine Projekte in diesem Ordner.</p>
-        <?php else: ?>
-        <div class="proj-list">
-            <?php foreach ($groupedProjects[$group['id']] as $project): ?>
-            <div class="proj-row project-card" draggable="true" data-id="<?= (int) $project->id ?>" title="Zum Verschieben in einen Ordner ziehen">
-                <span class="proj-icon"><?= $project->type === 'html' ? '🌐' : ($project->language === 'java' ? '☕' : ($project->language === 'asm' ? '⚙️' : '🐍')) ?></span>
-                <a class="proj-title" href="<?= url('werkstatt/code/' . (int) $project->id) ?>"><?= e($project->title) ?></a>
-                <span class="pill proj-kind"><?= $project->type === 'html' ? 'HTML' : ($project->language === 'java' ? 'Java' : ($project->language === 'asm' ? 'Assembler' : 'Python')) ?></span>
-                <a class="btn btn-primary proj-open" href="<?= url('werkstatt/code/' . (int) $project->id) ?>">Öffnen</a>
-                <form method="post" action="<?= url('werkstatt/code/loeschen') ?>" class="form-inline" onsubmit="return confirm('Projekt wirklich löschen?');">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="project_id" value="<?= (int) $project->id ?>">
-                    <button class="btn btn-ghost" type="submit" title="Löschen">🗑️</button>
-                </form>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
-    </div>
-    <?php endforeach; ?>
 </div>
 
 

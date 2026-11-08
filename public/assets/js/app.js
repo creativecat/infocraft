@@ -662,13 +662,13 @@
     }
     if (item.type === 'if') {
       return '<div class="nassi-if"><div class="nassi-cond"><span class="nassi-tri"></span>' + escapeText(item.cond) + '</div><div class="nassi-branches">'
-        + '<div class="nassi-branch"><div class="nassi-branch-title">wahr</div>' + renderNassiSeq(item.true) + '</div>'
-        + '<div class="nassi-branch"><div class="nassi-branch-title">falsch</div>' + renderNassiSeq(item.false) + '</div></div></div>';
+        + '<div class="nassi-branch"><span class="nassi-branch-label">wahr</span>' + renderNassiSeq(item.true) + '</div>'
+        + '<div class="nassi-branch"><span class="nassi-branch-label">falsch</span>' + renderNassiSeq(item.false) + '</div></div></div>';
     }
     if (item.type === 'while') {
-      return '<div class="nassi-loop nassi-while"><div class="nassi-loop-head">solange ' + escapeText(item.cond) + '</div><div class="nassi-loop-body">' + renderNassiSeq(item.body) + '</div></div>';
+      return '<div class="nassi-loop nassi-while"><div class="nassi-loop-head">' + escapeText(item.cond) + '</div><div class="nassi-loop-body">' + renderNassiSeq(item.body) + '</div></div>';
     }
-    return '<div class="nassi-loop nassi-until"><div class="nassi-loop-body">' + renderNassiSeq(item.body) + '</div><div class="nassi-loop-head">bis ' + escapeText(item.cond) + '</div></div>';
+    return '<div class="nassi-loop nassi-until"><div class="nassi-loop-body">' + renderNassiSeq(item.body) + '</div><div class="nassi-loop-head">' + escapeText(item.cond) + '</div></div>';
   }
 
   function renderNassi(root) {

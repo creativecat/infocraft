@@ -21,8 +21,8 @@ if ($isKlassendiagramm && stripos(ltrim($exportSource), 'classDiagram') !== 0) {
 ?>
 <section class="panel">
     <div class="panel-head">
-        <h3>📐 <?= e($diagram->title) ?> <span class="pill" id="diagram-kind-pill"><?= e($diagram->kindLabel()) ?></span></h3>
         <a class="btn btn-ghost" href="<?= url('diagramme') ?>" title="Zurück">←</a>
+        <h3>📐 <?= e($diagram->title) ?> <span class="pill" id="diagram-kind-pill"><?= e($diagram->kindLabel()) ?></span></h3>
     </div>
 </section>
 

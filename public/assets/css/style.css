@@ -227,8 +227,11 @@ body.sidebar-mini .nav-item { justify-content: center; padding: 10px 8px; }
 
 /* Code-Werkstatt: Ordner und Drag & Drop */
 .folder-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
-.folder-item { border: 1px dashed var(--border); border-radius: 8px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; transition: border-color 0.1s ease, background 0.1s ease; }
+.folder-item { border: 1px dashed var(--border); border-radius: 8px; padding: 6px 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; transition: border-color 0.1s ease, background 0.1s ease; }
 .folder-item:hover, .folder-item.drop-hover { border-color: var(--primary); background: #eef2ff; }
+.folder-sub summary { cursor: pointer; font-size: 0.8rem; }
+.folder-sub form { display: flex; gap: 6px; margin-top: 6px; }
+.folder-children { flex-basis: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding-left: 10px; border-left: 2px dashed var(--border); }
 .project-card { cursor: grab; }
 .project-card:active { cursor: grabbing; }
 
@@ -416,10 +419,13 @@ body.sidebar-mini .nav-item { justify-content: center; padding: 10px 8px; }
 .nassi-stmt { padding: 0.45rem 0.7rem; min-height: 1.7rem; }
 .nassi-cond { position: relative; padding: 0.45rem 0.7rem 0.45rem 2.7rem; background: #eef0fd; min-height: 2.1rem; }
 .nassi-tri { position: absolute; left: 0; top: 0; bottom: 0; width: 2.2rem; background: var(--surface); clip-path: polygon(0 0, 100% 50%, 0 100%); }
-.nassi-branches { display: flex; align-items: stretch; }
-.nassi-branch { flex: 1 1 50%; min-width: 0; }
+.nassi-branches { display: flex; align-items: stretch; border-top: 1px solid var(--text); }
+.nassi-branch { flex: 1 1 50%; min-width: 0; position: relative; }
 .nassi-branch + .nassi-branch { border-left: 2px solid var(--text); }
-.nassi-branch-title { text-align: center; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; padding: 0.12rem; background: #e3e7fc; border-bottom: 1px solid var(--text); }
+/* Klassische Nassi-Shneiderman-Optik (#45): wahr/falsch als kleines Etikett
+ * auf der Kante zwischen Bedingungskopf und Zweigen, ohne eigene Balken. */
+.nassi-branch-label { position: absolute; top: -0.66em; left: 50%; transform: translateX(-50%); z-index: 1; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; line-height: 1.15; background: var(--surface); border: 1px solid var(--text); border-radius: 999px; padding: 0 0.32rem; }
+.nassi-branch-label:first-child + .nassi-seq { margin-top: 0; }
 .nassi-empty { min-height: 2.2rem; background: repeating-linear-gradient(45deg, transparent, transparent 7px, rgba(22, 32, 47, 0.16) 7px, rgba(22, 32, 47, 0.16) 14px); }
 .nassi-loop { position: relative; padding-right: 0.9rem; }
 .nassi-loop::after { content: ""; position: absolute; top: 0; bottom: 0; right: 0; width: 0.9rem; border-right: 2px solid var(--text); }
