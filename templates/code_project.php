@@ -770,6 +770,13 @@ String beste = Database.value("SELECT name FROM schueler ORDER BY punkte DESC");
 System.out.println(Database.tables());                     // alle Tabellen</pre>
     <p class="muted">Verfügbar: <code>execute</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>query</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>count</code> die Zeilenanzahl, <code>value</code> den ersten Wert, <code>tables</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank bleibt mit deinem Projekt gespeichert: Bei jedem ▶ Ausführen startet sie mit den Tabellen und Daten aus deinem letzten Stand (und der Beispieldatenbank deiner Aufgabe, falls die Lehrkraft eine .sql-Datei als Material angehängt hat).</p>
 
+    <form method="post" enctype="multipart/form-data" action="<?= url('werkstatt/code/' . $project->id . '/datenbank/datei') ?>" class="form-inline db-load-form">
+        <?= csrf_field() ?>
+        <label for="db-sql-file"><strong>Eigene SQL-Datei:</strong></label>
+        <input type="file" name="sql_file" id="db-sql-file" accept=".sql" required>
+        <button class="btn btn-ghost" type="submit" title="Lädt eine eigene .sql-Datei mit CREATE TABLE- und INSERT-Befehlen als Mini-Datenbank deines Projekts.">📤 SQL-Datei hochladen</button>
+    </form>
+
     <?php if (!empty($dbTemplates)): ?>
     <form method="post" action="<?= url('werkstatt/code/' . $project->id . '/datenbank') ?>" class="form-inline db-load-form">
         <?= csrf_field() ?>
@@ -789,17 +796,33 @@ System.out.println(Database.tables());                     // alle Tabellen</pre
         <div class="db-block">
             <h4 class="diag-head">🗄 Vorhandene Tabellen</h4>
             <p class="muted">Alle Tabellen und Spalten deiner Datenbank, live nach jedem ▶ Ausführen: Hier siehst du, worauf dein Programm zugreifen kann (<code>Database.execute(...)</code> und <code>Database.query(...)</code>).</p>
+            <div id="java-dbschema-static" class="umldiag">
+                <?php if (empty($seedTables)): ?>
+                <p class="muted">Noch keine Tabellen: Lade oben eine Beispieldatenbank oder lade eine eigene SQL-Datei hoch - die Tabellen erscheinen dann sofort hier (und bleiben mit jedem ▶ Ausführen erhalten).</p>
+                <?php else: ?>
+                <?php foreach ($seedTables as $seedTable): ?>
+                <div class="uml-class db-table">
+                    <div class="uml-name"><?= e($seedTable['name']) ?></div>
+                    <?php foreach ($seedTable['cols'] as $seedCol): ?>
+                    <div class="uml-row"><?= e($seedCol['name']) ?> : <?= e($seedCol['type']) ?></div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
             <div id="java-dbschema" class="umldiag"></div>
         </div>
 
         <div class="db-block">
-            <h4 class="diag-head">🗄 DB-Konsole: Abfragen testen und Daten anlegen</h4>
+            <details class="db-console-details">
+            <summary class="diag-head">🧪 DB-Konsole: eigene Abfragen und Tabellen ausprobieren (aufklappen)</summary>
                         <p class="muted"><?php if (empty($dbReadOnly)): ?>Schicke Abfragen direkt an die Datenbank, ohne dein Programm zu ändern: <code>SELECT</code> zeigt das Ergebnis an, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>CREATE TABLE</code> und <code>DROP TABLE</code> ändern die Datenbank dauerhaft (sie wird automatisch mit deinem Projekt gespeichert). Damit legst du hier auch neue Daten an und prüfst sofort, was dein Programm daraus liest.<?php else: ?>Schicke Abfragen an die angehängte Datenbank: <code>SELECT</code> zeigt das Ergebnis an. Schreibende Befehle sind gesperrt, weil deine Lehrkraft nur Leserechte vergeben hat - alle arbeiten mit denselben Daten.<?php endif; ?></p>
             <textarea id="java-db-in" class="mono db-console-in" rows="3" autocomplete="off" spellcheck="false"></textarea>
             <div class="repl-actions">
                 <button class="btn btn-primary" id="java-db-run" type="button" title="Abfrage ausführen (Strg + Enter): schickt den SQL-Befehl an die Datenbank und zeigt das Ergebnis.">▶ Abfrage ausführen</button>
             </div>
             <pre id="java-db-out" class="code ide-console-out db-console-out"></pre>
+            </details>
         </div>
     </div>
 </section>

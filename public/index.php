@@ -72,6 +72,7 @@ $router->get('/werkstatt/code/{id}', [CodeController::class, 'open']);
 $router->post('/werkstatt/code/{id}', [CodeController::class, 'save']);
 $router->post('/werkstatt/code/{id}/datei', [CodeController::class, 'addFile']);
 $router->post('/werkstatt/code/{id}/datenbank', [CodeController::class, 'loadDatabase']);
+$router->post('/werkstatt/code/{id}/datenbank/datei', [CodeController::class, 'uploadDatabase']);
 $router->post('/werkstatt/code/{id}/datei/{fileId}/loeschen', [CodeController::class, 'deleteFile']);
 $router->post('/werkstatt/code/{id}/bild', [CodeController::class, 'uploadImage']);
 $router->get('/werkstatt/code/{id}/bild/{name}', [CodeController::class, 'serveImage']);

@@ -242,6 +242,117 @@ final class CodeController
         exit;
     }
 
+    /**
+     * Issue #45: Eigene SQL-Datei (.sql) als Mini-Datenbank des Java-Projekts
+     * hochladen. Ersetzt wie das Laden einer Vorlage den bisherigen Stand.
+     */
+    public static function uploadDatabase(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $project = Project::find((int) ($params['id'] ?? 0));
+        if ($project === null || $project->type !== 'code' || $project->language !== 'java' || !self::canOpen($user, $project)) {
+            flash('error', 'Projekt nicht gefunden.');
+            redirect('/werkstatt/code');
+        }
+        $file = $_FILES['sql_file'] ?? null;
+        if (!is_array($file) || (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            flash('error', 'Bitte eine .sql-Datei auswählen.');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        $name = (string) ($file['name'] ?? '');
+        if (!preg_match('/\.sql$/i', $name)) {
+            flash('error', 'Nur .sql-Dateien sind erlaubt.');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        if ((int) ($file['size'] ?? 0) > 1000000) {
+            flash('error', 'Die Datei ist zu groß (maximal 1 MB).');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        $sql = trim((string) file_get_contents((string) $file['tmp_name']));
+        if ($sql === '') {
+            flash('error', 'Die Datei enthält keine SQL-Befehle.');
+            redirect('/werkstatt/code/' . $project->id);
+        }
+        $state = ProjectState::find($project->id);
+        ProjectState::save($project->id, $state['replText'] ?? '', $sql);
+        flash('success', 'Datenbank aus ' . $name . ' geladen: Bei jedem ▶ Ausführen startet die Mini-Datenbank mit diesen Tabellen.');
+        redirect('/werkstatt/code/' . $project->id);
+    }
+
+    /**
+     * Issue #45: Tabellen und Spalten aus dem gespeicherten SQL-Seed lesen,
+     * damit die Werkstatt das Schema wie in der SQL-Werkstatt sofort anzeigt,
+     * komplett serverseitig und unabhängig vom Java-Editor. Constraints
+     * (PRIMARY KEY, NOT NULL, REFERENCES, ...) werden wie in der Mini-Datenbank
+     * akzeptiert und ignoriert, Tabellen-Constraints übersprungen.
+     *
+     * @return list<array{name: string, cols: list<array{name: string, type: string}>}>
+     */
+    private static function seedTablesFromSql(string $seedSql): array
+    {
+        $tables = [];
+        if (!preg_match_all('/CREATE\s+TABLE\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([\s\S]*?)\)\s*;/i', $seedSql, $matches, PREG_SET_ORDER)) {
+            return $tables;
+        }
+        foreach ($matches as $match) {
+            $cols = [];
+            $parts = [];
+            $current = '';
+            $depth = 0;
+            $inQuote = false;
+            $len = strlen($match[2]);
+            for ($i = 0; $i < $len; $i++) {
+                $ch = $match[2][$i];
+                if ($inQuote) {
+                    $current .= $ch;
+                    if ($ch === "'") {
+                        $inQuote = false;
+                    }
+                    continue;
+                }
+                if ($ch === "'") {
+                    $inQuote = true;
+                    $current .= $ch;
+                    continue;
+                }
+                if ($ch === '(') {
+                    $depth++;
+                } elseif ($ch === ')') {
+                    $depth--;
+                }
+                if ($ch === ',' && $depth === 0) {
+                    $parts[] = $current;
+                    $current = '';
+                    continue;
+                }
+                $current .= $ch;
+            }
+            if (trim($current) !== '') {
+                $parts[] = $current;
+            }
+            foreach ($parts as $part) {
+                $part = trim($part);
+                if ($part === '' || preg_match('/^(PRIMARY\s+KEY|FOREIGN\s+KEY|UNIQUE|CHECK|CONSTRAINT)\b/i', $part) === 1) {
+                    continue;
+                }
+                if (preg_match('/^([A-Za-z_][A-Za-z0-9_]*)\s+(TEXT|STRING|VARCHAR|CHAR|INT|INTEGER|DOUBLE|REAL|FLOAT|DECIMAL)\b/i', $part, $cm) !== 1) {
+                    continue;
+                }
+                $ty = strtoupper($cm[2]);
+                $type = in_array($ty, ['TEXT', 'STRING', 'VARCHAR', 'CHAR'], true) ? 'TEXT' : (in_array($ty, ['INT', 'INTEGER'], true) ? 'INT' : 'DOUBLE');
+                $cols[] = ['name' => $cm[1], 'type' => $type];
+            }
+            if ($cols !== []) {
+                $tables[] = ['name' => $match[1], 'cols' => $cols];
+            }
+        }
+        return $tables;
+    }
+
     /** Lehrkraft teilt ein eigenes Projekt als Kopie an Klasse oder Einzelperson aus. */
     public static function distribute(): void
     {
@@ -409,6 +520,7 @@ final class CodeController
             'workingSubmitted' => $workingSubmitted,
             'replText' => $state['replText'] ?? '',
             'dbSql' => $state['dbSql'] ?? '',
+            'seedTables' => self::seedTablesFromSql($state['dbSql'] ?? ''),
             'dbReadOnly' => $dbReadOnly,
             'ownerName' => $owner !== null ? $owner->fullName() : '',
             'isForeign' => $project->ownerId !== $user->id,
