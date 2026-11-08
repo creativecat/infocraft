@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Infocraft\Controllers;
 
 use Infocraft\Auth;
+use Infocraft\Models\Poll;
 use Infocraft\Models\Presentation;
 use Infocraft\Models\User;
 
@@ -276,6 +277,114 @@ final class PresentationController
             flash('success', 'Reihenfolge geändert.');
         }
         redirect('/praesentationen/' . $presentation->id);
+    }
+
+    /**
+     * Live-Abstimmung (Issue #3, Kahoot-Stil): Die Lehrkraft startet eine
+     * Abstimmung im Moderatorenbildschirm (Frage mit 2-4 Antworten). Läuft
+     * schon eine, wird diese unverändert zurückgegeben.
+     */
+    public static function pollStart(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $presentation = self::editable($user, (int) ($params['id'] ?? 0));
+        $question = trim((string) ($_POST['question'] ?? ''));
+        $answers = [];
+        if (isset($_POST['answers']) && is_array($_POST['answers'])) {
+            foreach ($_POST['answers'] as $answer) {
+                $answer = trim((string) $answer);
+                if ($answer !== '' && count($answers) < 4) {
+                    $answers[] = mb_substr($answer, 0, 100);
+                }
+            }
+        }
+        if ($question === '' || count($answers) < 2) {
+            flash('error', 'Bitte eine Frage und mindestens zwei Antworten angeben.');
+            redirect('/praesentationen/' . $presentation->id . '/moderator');
+        }
+        Poll::start($presentation->id, $user->id, $question, $answers);
+        flash('success', 'Abstimmung gestartet. Die Schülerinnen und Schüler sehen sie gleich in der Präsentationsansicht.');
+        redirect('/praesentationen/' . $presentation->id . '/moderator');
+    }
+
+    /** Abstimmung schließen: Ergebnis bleibt zum Besprechen sichtbar. */
+    public static function pollEnd(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $presentation = self::editable($user, (int) ($params['id'] ?? 0));
+        $poll = Poll::openFor($presentation->id);
+        if ($poll !== null) {
+            $poll->close();
+            flash('success', 'Abstimmung geschlossen. Das Ergebnis bleibt sichtbar.');
+        }
+        redirect('/praesentationen/' . $presentation->id . '/moderator');
+    }
+
+    /** Abstimmungsstatus als JSON (Moderator: Ergebnisbalken, Schüler: Knöpfe). */
+    public static function pollStatus(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            http_response_code(401);
+            echo '{"ok":false,"error":"Anmeldung nötig"}';
+            exit;
+        }
+        $presentation = Presentation::find((int) ($params['id'] ?? 0));
+        if ($presentation === null || (!Auth::isTeacher() && $presentation->level > (Auth::levelOf($user) ?? 0))) {
+            http_response_code(404);
+            echo '{"ok":false,"error":"Präsentation nicht gefunden"}';
+            exit;
+        }
+        header('Content-Type: application/json; charset=utf-8');
+        $poll = Poll::openFor($presentation->id);
+        if ($poll === null) {
+            // Nach dem Schließen zeigt die Ansicht das letzte Ergebnis noch kurz.
+            $closed = Poll::lastClosedFor($presentation->id);
+            $payload = $closed === null
+                ? ['ok' => true, 'active' => false, 'poll' => null]
+                : ['ok' => true, 'active' => false, 'poll' => $closed->statusFor($user->id)];
+        } else {
+            $payload = ['ok' => true, 'active' => true, 'poll' => $poll->statusFor($user->id)];
+        }
+        // Zählen der eigenen Stimme nur bei offener Abstimmung ausgeben, damit
+        // die Schülerinnen und Schüler nicht aus dem Balken ablesen.
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    /** Stimme abgeben (überschreibbar bis zum Schließen). */
+    public static function pollVote(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $presentation = Presentation::find((int) ($params['id'] ?? 0));
+        if ($presentation === null || (!Auth::isTeacher() && $presentation->level > (Auth::levelOf($user) ?? 0))) {
+            flash('error', 'Präsentation nicht gefunden.');
+            redirect('/praesentationen');
+        }
+        $poll = Poll::openFor($presentation->id);
+        if ($poll === null) {
+            flash('error', 'Gerade läuft keine Abstimmung.');
+            redirect('/praesentationen/' . $presentation->id . '/zeigen');
+        }
+        $choice = (int) ($_POST['choice'] ?? -1);
+        if (!$poll->vote($user->id, $choice)) {
+            flash('error', 'Diese Antwort gibt es bei dieser Abstimmung nicht.');
+        } else {
+            flash('success', 'Deine Stimme zählt. Du kannst sie bis zum Schließen ändern.');
+        }
+        redirect('/praesentationen/' . $presentation->id . '/zeigen');
     }
 
     public static function delete(array $params): void

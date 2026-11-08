@@ -43,6 +43,10 @@ final class Migrator
         self::ensureTaskOrganizationTables($pdo, $driver);
         self::ensureSiteSettingsTable($pdo, $driver);
         self::ensureUserPrefsTable($pdo, $driver);
+
+        // Live-Abstimmung während der Präsentation (Issue #3): Tabellen
+        // fehlen evtl. noch in Bestehensinstallationen, idempotent anlegen.
+        self::ensurePollTables($pdo, $driver);
         self::seedSiteSettings($pdo);
         self::seedTaskTopics($pdo);
         self::removeLevel8Topics($pdo);
@@ -621,6 +625,54 @@ final class Migrator
      * Wiki-Startseiten: Anleitung für Lehrkräfte plus ein paar Beispiel-Fachbegriffe,
      * die den Stufen-Filter zeigen. Idempotent: nur fehlende Titel werden ergänzt.
      */
+    /** Bestehende Installationen: Tabellen polls/poll_votes (Live-Abstimmung, Issue #3). */
+    private static function ensurePollTables(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS polls (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                presentation_id INT UNSIGNED NOT NULL,
+                teacher_id INT UNSIGNED NOT NULL,
+                question VARCHAR(300) NOT NULL,
+                answers TEXT NOT NULL,
+                state VARCHAR(10) NOT NULL DEFAULT \'open\',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                closed_at TIMESTAMP NULL,
+                PRIMARY KEY (id),
+                KEY idx_polls_pres (presentation_id),
+                CONSTRAINT fk_polls_pres FOREIGN KEY (presentation_id) REFERENCES presentations (id) ON DELETE CASCADE,
+                CONSTRAINT fk_polls_teacher FOREIGN KEY (teacher_id) REFERENCES users (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+            $pdo->exec('CREATE TABLE IF NOT EXISTS poll_votes (
+                poll_id INT UNSIGNED NOT NULL,
+                user_id INT UNSIGNED NOT NULL,
+                choice INT UNSIGNED NOT NULL,
+                voted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (poll_id, user_id),
+                CONSTRAINT fk_pvotes_poll FOREIGN KEY (poll_id) REFERENCES polls (id) ON DELETE CASCADE,
+                CONSTRAINT fk_pvotes_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+            return;
+        }
+        $pdo->exec('CREATE TABLE IF NOT EXISTS polls (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            presentation_id INTEGER NOT NULL REFERENCES presentations (id) ON DELETE CASCADE,
+            teacher_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+            question TEXT NOT NULL,
+            answers TEXT NOT NULL DEFAULT \'[]\',
+            state TEXT NOT NULL DEFAULT \'open\',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            closed_at TEXT NULL
+        )');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS poll_votes (
+            poll_id INTEGER NOT NULL REFERENCES polls (id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+            choice INTEGER NOT NULL,
+            voted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (poll_id, user_id)
+        )');
+    }
+
     private static function seedWikiPages(PDO $pdo): void
     {
         $idFor = static function (PDO $pdo, string $login): int {

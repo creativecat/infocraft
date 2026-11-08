@@ -180,6 +180,10 @@ $router->post('/praesentationen/{id}/folie/{pos}', [PresentationController::clas
 $router->post('/praesentationen/{id}/folie/{pos}/loeschen', [PresentationController::class, 'deleteSlide']);
 $router->post('/praesentationen/{id}/folie/{pos}/{dir}', [PresentationController::class, 'moveSlide']);
 $router->post('/praesentationen/{id}/loeschen', [PresentationController::class, 'delete']);
+$router->post('/praesentationen/{id}/abstimmung/start', [PresentationController::class, 'pollStart']);
+$router->post('/praesentationen/{id}/abstimmung/ende', [PresentationController::class, 'pollEnd']);
+$router->get('/praesentationen/{id}/abstimmung/status', [PresentationController::class, 'pollStatus']);
+$router->post('/praesentationen/{id}/abstimmung/stimme', [PresentationController::class, 'pollVote']);
 
 // Verwaltung
 $router->get('/admin/users', [AdminController::class, 'users']);

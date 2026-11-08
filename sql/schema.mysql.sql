@@ -485,3 +485,29 @@ CREATE TABLE IF NOT EXISTS presentations (
     KEY idx_pres_level (level),
     CONSTRAINT fk_pres_teacher FOREIGN KEY (teacher_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Live-Abstimmung während der Präsentation (Issue #3)
+CREATE TABLE IF NOT EXISTS polls (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    presentation_id INT UNSIGNED NOT NULL,
+    teacher_id INT UNSIGNED NOT NULL,
+    question VARCHAR(300) NOT NULL,
+    answers TEXT NOT NULL,
+    state VARCHAR(10) NOT NULL DEFAULT 'open',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    closed_at TIMESTAMP NULL,
+    PRIMARY KEY (id),
+    KEY idx_polls_pres (presentation_id),
+    KEY idx_polls_state (state),
+    CONSTRAINT fk_polls_pres FOREIGN KEY (presentation_id) REFERENCES presentations (id) ON DELETE CASCADE,
+    CONSTRAINT fk_polls_teacher FOREIGN KEY (teacher_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS poll_votes (
+    poll_id INT UNSIGNED NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    choice INT UNSIGNED NOT NULL,
+    voted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (poll_id, user_id),
+    CONSTRAINT fk_pvotes_poll FOREIGN KEY (poll_id) REFERENCES polls (id) ON DELETE CASCADE,
+    CONSTRAINT fk_pvotes_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

@@ -378,3 +378,22 @@ CREATE TABLE IF NOT EXISTS presentations (
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_pres_slug ON presentations (slug);
+
+-- Live-Abstimmung während der Präsentation (Issue #3)
+CREATE TABLE IF NOT EXISTS polls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    presentation_id INTEGER NOT NULL REFERENCES presentations (id) ON DELETE CASCADE,
+    teacher_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    question TEXT NOT NULL,
+    answers TEXT NOT NULL DEFAULT '[]',
+    state TEXT NOT NULL DEFAULT 'open',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    closed_at TEXT NULL
+);
+CREATE TABLE IF NOT EXISTS poll_votes (
+    poll_id INTEGER NOT NULL REFERENCES polls (id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    choice INTEGER NOT NULL,
+    voted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (poll_id, user_id)
+);

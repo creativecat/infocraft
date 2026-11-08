@@ -48,6 +48,10 @@
     </section>
     <?php endforeach; ?>
     <?php endif; ?>
+
+    <!-- Live-Abstimmung (Issue #3): erscheint nur, wenn die Lehrkraft im
+         Moderatorenbildschirm eine Abstimmung gestartet hat. -->
+    <div class="poll-box" id="poll-box" data-status="<?= url('praesentationen/' . (int) $presentation->id . '/abstimmung/status') ?>" data-vote="<?= url('praesentationen/' . (int) $presentation->id . '/abstimmung/stimme') ?>" data-csrf="<?= e(csrf_token()) ?>" hidden></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
@@ -164,5 +168,90 @@
     start = fit(parseInt(hash.slice(2), 10) || 0);
   }
   show(start);
+})();
+// Live-Abstimmung (Issue #3): Antwortknöpfe für Schülerinnen und Schüler,
+// Ergebnisbalken erst nach dem Schließen. Status per Polling alle 3 Sekunden.
+(function () {
+  'use strict';
+  var box = document.getElementById('poll-box');
+  if (!box) { return; }
+  var statusUrl = box.getAttribute('data-status');
+  var voteUrl = box.getAttribute('data-vote');
+  var csrf = box.getAttribute('data-csrf');
+
+  function clearBox() {
+    while (box.firstChild) { box.removeChild(box.firstChild); }
+  }
+  function addText(tag, text) {
+    var el = document.createElement(tag);
+    el.appendChild(document.createTextNode(text));
+    box.appendChild(el);
+    return el;
+  }
+  function renderClosed(poll) {
+    clearBox();
+    box.hidden = false;
+    addText('h3', '📊 Ergebnis: ' + poll.question);
+    var maxCount = 1;
+    for (var ci = 0; ci < poll.counts.length; ci++) { if (poll.counts[ci] > maxCount) { maxCount = poll.counts[ci]; } }
+    for (var ai = 0; ai < poll.answers.length; ai++) {
+      var row = document.createElement('div');
+      row.className = 'poll-bar-row';
+      var label = document.createElement('span');
+      label.appendChild(document.createTextNode(poll.answers[ai]));
+      row.appendChild(label);
+      var barBox = document.createElement('div');
+      barBox.className = 'poll-bar-box';
+      var bar = document.createElement('div');
+      bar.className = 'poll-bar';
+      bar.style.width = Math.round((poll.counts[ai] / maxCount) * 100) + '%';
+      barBox.appendChild(bar);
+      row.appendChild(barBox);
+      var count = document.createElement('span');
+      count.appendChild(document.createTextNode(String(poll.counts[ai])));
+      row.appendChild(count);
+      box.appendChild(row);
+    }
+    addText('p', poll.total + ' Stimme(n)');
+  }
+  function renderOpen(poll) {
+    clearBox();
+    box.hidden = false;
+    addText('h3', '🙋 ' + poll.question);
+    var form = document.createElement('form');
+    form.method = 'post';
+    form.action = voteUrl;
+    var csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf';
+    csrfInput.value = csrf;
+    form.appendChild(csrfInput);
+    var btnRow = document.createElement('div');
+    btnRow.className = 'btn-row poll-answer-row';
+    for (var ai = 0; ai < poll.answers.length; ai++) {
+      var btn = document.createElement('button');
+      btn.type = 'submit';
+      btn.className = 'btn ' + (poll.voted === ai ? 'btn-primary' : 'btn-ghost');
+      btn.name = 'choice';
+      btn.value = String(ai);
+      btn.appendChild(document.createTextNode(poll.answers[ai]));
+      btnRow.appendChild(btn);
+    }
+    form.appendChild(btnRow);
+    box.appendChild(form);
+    if (poll.voted !== null) {
+      addText('p', 'Deine Stimme ist gezählt. Du kannst sie ändern, bis die Abstimmung geschlossen wird.');
+    }
+  }
+  function refresh() {
+    fetch(statusUrl, { credentials: 'same-origin' }).then(function (res) { return res.json(); }).then(function (data) {
+      if (!data || !data.ok) { return; }
+      if (data.active && data.poll) { renderOpen(data.poll); }
+      else if (!data.active && data.poll) { renderClosed(data.poll); }
+      else { clearBox(); box.hidden = true; }
+    }).catch(function () { /* nächster Ticker versucht es wieder */ });
+  }
+  refresh();
+  window.setInterval(refresh, 3000);
 })();
 </script>
