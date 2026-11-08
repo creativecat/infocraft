@@ -400,7 +400,7 @@ jobs:
           TAID=$(sqlite3 "$DB" "SELECT id FROM tasks WHERE teacher_id = $STEFAN AND title = 'CI Aufgabe Termin'")
           CODE_TAEDIT=$(curl -sS -L -o taedit.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Aufgabe Termin" --data-urlencode "description=Geaenderte Beschreibung" -d "type=code" -d "level=6" --data-urlencode "sample_solution=Muster Neu" http://127.0.0.1:8080/aufgaben/$TAID/bearbeiten)
           grep -q "gespeichert" taedit.html && TAEDIT_OK=1 || TAEDIT_OK=0
-          EDITARROW=$(awk '/←/{if(!a)a=NR} /Verteilen/{if(!h)h=NR} END{print (a && h && a<h) ? 1 : 0}' taedit.html)
+          EDITARROW=$(awk '/←/{if(!a)a=NR} /Verteilen &amp;/{if(!h)h=NR} END{print (a && h && a<h) ? 1 : 0}' taedit.html)
           [ "$EDITARROW" = "1" ] && EDIT_ARROW_OK=1 || EDIT_ARROW_OK=0
           TASOL=$(sqlite3 "$DB" "SELECT sample_solution FROM tasks WHERE id = $TAID")
           [ "$TASOL" = "Muster Neu" ] && TAEDIT_DB_OK=1 || TAEDIT_DB_OK=0
