@@ -7,6 +7,8 @@ use Infocraft\Auth;
 use Infocraft\Models\Folder;
 use Infocraft\Models\Project;
 use Infocraft\Models\Task;
+use Infocraft\Models\TaskMaterial;
+use Infocraft\Models\TaskTodo;
 use Infocraft\Models\User;
 
 /**

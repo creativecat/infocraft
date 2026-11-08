@@ -11,6 +11,8 @@ use Infocraft\Models\ProjectImage;
 use Infocraft\Models\SchoolClass;
 use Infocraft\Models\SiteSetting;
 use Infocraft\Models\Task;
+use Infocraft\Models\TaskMaterial;
+use Infocraft\Models\TaskTodo;
 use Infocraft\Models\User;
 
 /**
