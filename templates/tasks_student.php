@@ -105,6 +105,17 @@ $currentRating = $entry['submission'] !== null ? (int) ($entry['submission']['se
     <div class="task-desc" id="desc-<?= (int) $task->id ?>"><?= $task->descriptionHtml() ?></div>
     <?php endif; ?>
 
+    <div class="btn-row">
+        <?php if (in_array($task->type, ['code', 'html'], true)): ?>
+        <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/oeffnen') ?>" class="form-inline">
+            <?= csrf_field() ?>
+            <button class="btn btn-primary" type="submit" title="Deine Arbeitskopie aus den Materialien dieser Aufgabe anlegen (oder wieder öffnen) und direkt in der Werkstatt bearbeiten">🔨 In der <?= $task->type === 'html' ? 'HTML-Werkstatt' : 'Code-Werkstatt' ?> öffnen</button>
+        </form>
+        <?php elseif ($task->type === 'sql'): ?>
+        <a class="btn btn-primary" href="<?= url('werkstatt/sql') ?>" title="Diese Aufgabe wird in der SQL-Werkstatt bearbeitet">🗄 In der SQL-Werkstatt arbeiten</a>
+        <?php endif; ?>
+    </div>
+
     <?php if ($taskMaterials !== []): ?>
     <p class="muted">📎 Materialien zum Herunterladen:</p>
     <ul class="material-list">

@@ -145,6 +145,7 @@ $router->get('/aufgaben/{id}/korrektur', [TaskController::class, 'correction']);
 $router->post('/aufgaben/{id}/korrigieren', [TaskController::class, 'grade']);
 $router->post('/aufgaben/{id}/ki', [TaskController::class, 'aiGrade']);
 $router->post('/aufgaben/{id}/abgeben', [TaskController::class, 'submit']);
+$router->post('/aufgaben/{id}/oeffnen', [TaskController::class, 'openInWorkshop']);
 $router->post('/aufgaben/{id}/praesentation/start', [TaskController::class, 'presentationStart']);
 $router->post('/aufgaben/{id}/praesentation/ende', [TaskController::class, 'presentationEnd']);
 $router->get('/aufgaben/{id}/praesentation/download', [TaskController::class, 'presentationDownload']);

@@ -59,6 +59,63 @@
         </div>
     </div>
     <?php endif; ?>
+    <?php if (($workingTask ?? null) !== null): ?>
+    <div class="two-col pres-task-info task-work-info">
+        <div>
+            <h4 class="diag-head">📌 Aufgabe: <?= e($workingTask->title) ?></h4>
+            <?php if ($workingTask->description !== ''): ?>
+            <div class="task-desc"><?= $workingTask->descriptionHtml() ?></div>
+            <?php else: ?>
+            <p class="muted">Für diese Aufgabe ist keine Beschreibung hinterlegt.</p>
+            <?php endif; ?>
+        </div>
+        <div>
+            <h4 class="diag-head">📋 ToDos (zum Abhaken)</h4>
+            <form method="post" action="<?= url('aufgaben/' . (int) $workingTask->id . '/todos/schueler') ?>" class="form">
+                <?= csrf_field() ?>
+                <input type="hidden" name="back" value="<?= url('werkstatt/code/' . (int) $project->id) ?>">
+                <ul class="todo-list">
+                    <?php foreach (($workingTodos ?? []) as $wtodo): ?>
+                    <li class="todo-item">
+                        <label style="display:flex;gap:8px;align-items:center;font-weight:normal;">
+                            <input type="checkbox" onchange="this.form.submit()" name="toggle_template_id" value="<?= (int) $wtodo->id ?>"<?= ($workingDone[(int) $wtodo->id] ?? false) ? ' checked' : '' ?>>
+                            <span<?= ($workingDone[(int) $wtodo->id] ?? false) ? ' style="text-decoration:line-through;"' : '' ?>><?= e($wtodo->title) ?></span>
+                        </label>
+                    </li>
+                    <?php endforeach; ?>
+                    <?php foreach (($workingOwnTodos ?? []) as $wown): ?>
+                    <li class="todo-item">
+                        <label style="display:flex;gap:8px;align-items:center;font-weight:normal;">
+                            <input type="checkbox" onchange="this.form.submit()" name="toggle_todo_id" value="<?= (int) $wown->id ?>"<?= $wown->done === 1 ? ' checked' : '' ?>>
+                            <span<?= $wown->done === 1 ? ' style="text-decoration:line-through;"' : '' ?>><?= e($wown->title) ?></span>
+                        </label>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </form>
+            <?php if (($workingOwnTodos ?? []) === []): ?>
+            <p class="muted">Eigene ToDos ergänzt du in der Aufgaben-Sicht unter „Meine Aufgaben“.</p>
+            <?php endif; ?>
+            <?php if (($workingMaterials ?? []) !== []): ?>
+            <h4 class="diag-head">📎 Materialien der Aufgabe</h4>
+            <ul class="material-list">
+                <?php foreach ($workingMaterials as $wmat): ?>
+                <li class="material-item"><a href="<?= url('aufgaben/' . (int) $workingTask->id . '/material/' . (int) $wmat->id) ?>">📄 <?= e($wmat->filename) ?></a></li>
+                <?php endforeach; ?>
+            </ul>
+            <?php endif; ?>
+            <form method="post" action="<?= url('aufgaben/' . (int) $workingTask->id . '/abgeben') ?>" class="form">
+                <?= csrf_field() ?>
+                <input type="hidden" name="project_id" value="<?= (int) $project->id ?>">
+                <input type="hidden" name="back" value="<?= url('werkstatt/code/' . (int) $project->id) ?>">
+                <div class="btn-row">
+                    <button class="btn btn-primary" type="submit" title="Dieses Projekt als Lösung der Aufgabe einreichen"><?= $workingSubmitted ? 'Neue Version abgeben' : '✅ Abgeben' ?></button>
+                </div>
+            </form>
+            <?php if ($workingSubmitted): ?><p class="muted">Dieses Projekt ist als Lösung abgegeben. Du kannst es verbessern und erneut abgeben.</p><?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
     <?php if ($project->type === 'code' && $project->language === 'java'): ?>
     <!-- Java-IDE über die volle Breite: Dateien im eigenen Fenster, Editor und Konsole in einem gemeinsamen Fenster -->
     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="ide-savebar" id="code-save-form" aria-hidden="true">

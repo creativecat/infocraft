@@ -8,7 +8,9 @@ use Infocraft\Models\Folder;
 use Infocraft\Models\Project;
 use Infocraft\Models\Task;
 use Infocraft\Models\TaskMaterial;
+use Infocraft\Models\TaskSubmission;
 use Infocraft\Models\TaskTodo;
+use Infocraft\Models\TaskWorking;
 use Infocraft\Models\User;
 
 /**
@@ -73,6 +75,32 @@ final class HtmlController
             $presentationTodos = TaskTodo::templatesForTask($presentationTask->id);
             $presentationMaterials = TaskMaterial::forTask($presentationTask->id);
         }
+        $workingTask = null;
+        $workingTodos = [];
+        $workingDone = [];
+        $workingOwnTodos = [];
+        $workingMaterials = [];
+        $workingSubmitted = false;
+        if ($presentationTask === null) {
+            $working = TaskWorking::forProject($project->id);
+            if ($working !== null && $working->studentId === $user->id) {
+                $workingTask = Task::find($working->taskId);
+            }
+        }
+        if ($workingTask !== null) {
+            $workingTodos = TaskTodo::templatesForTask($workingTask->id);
+            $studentTodos = TaskTodo::forStudentTasks($user->id, [$workingTask->id])[$workingTask->id] ?? [];
+            foreach ($studentTodos as $studentTodo) {
+                if ($studentTodo->templateId !== null) {
+                    $workingDone[$studentTodo->templateId] = $studentTodo->done === 1;
+                } else {
+                    $workingOwnTodos[] = $studentTodo;
+                }
+            }
+            $workingMaterials = TaskMaterial::forTask($workingTask->id);
+            $submission = TaskSubmission::find($workingTask->id, $user->id);
+            $workingSubmitted = $submission !== null && $submission['projectId'] === $project->id;
+        }
         render('html_editor', [
             'title' => $project->title,
             'active' => 'module-html',
@@ -83,6 +111,12 @@ final class HtmlController
             'presentationTask' => $presentationTask,
             'presentationTodos' => $presentationTodos,
             'presentationMaterials' => $presentationMaterials,
+            'workingTask' => $workingTask,
+            'workingTodos' => $workingTodos,
+            'workingDone' => $workingDone,
+            'workingOwnTodos' => $workingOwnTodos,
+            'workingMaterials' => $workingMaterials,
+            'workingSubmitted' => $workingSubmitted,
         ]);
     }
 

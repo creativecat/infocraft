@@ -949,6 +949,17 @@ final class Migrator
     private static function ensureTaskOrganizationTables(PDO $pdo, string $driver): void
     {
         if ($driver === 'mysql') {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS task_working (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                task_id INT UNSIGNED NOT NULL,
+                student_id INT UNSIGNED NOT NULL,
+                project_id INT UNSIGNED NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_working (task_id, student_id),
+                CONSTRAINT fk_working_task FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE,
+                CONSTRAINT fk_working_student FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
             $pdo->exec('CREATE TABLE IF NOT EXISTS task_topics (
                 id INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 name VARCHAR(120) NOT NULL,
@@ -983,6 +994,14 @@ final class Migrator
                 CONSTRAINT fk_todos_student FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
         } else {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS task_working (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id INTEGER NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+                student_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                project_id INTEGER NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )');
+            $pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_task_working_unique ON task_working (task_id, student_id)');
             $pdo->exec('CREATE TABLE IF NOT EXISTS task_topics (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,

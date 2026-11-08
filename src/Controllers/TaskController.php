@@ -16,6 +16,7 @@ use Infocraft\Models\TaskMaterial;
 use Infocraft\Models\TaskSubmission;
 use Infocraft\Models\TaskTodo;
 use Infocraft\Models\TaskTopic;
+use Infocraft\Models\TaskWorking;
 use Infocraft\Models\SiteSetting;
 use Infocraft\Models\User;
 use RuntimeException;
@@ -867,28 +868,34 @@ final class TaskController
             flash('error', 'Diese Aufgabe ist nicht für dich ausgeteilt.');
             redirect('/aufgaben');
         }
+        // Aus der Werkstatt gekommen? Dann nach dem Abhaken dorthin zurück.
+        $back = (string) ($_POST['back'] ?? '');
+        if ($back !== '' && str_starts_with($back, '/werkstatt/') === false) {
+            $back = '';
+        }
+        $target = $back !== '' ? $back : '/aufgaben';
         $deleteId = (int) ($_POST['delete_todo_id'] ?? 0);
         if ($deleteId > 0) {
             TaskTodo::deleteStudent($deleteId, $user->id);
             flash('success', 'Eigenes ToDo entfernt.');
-            redirect('/aufgaben');
+            redirect($target);
         }
         $toggleId = (int) ($_POST['toggle_todo_id'] ?? 0);
         if ($toggleId > 0) {
             TaskTodo::toggleStudent($toggleId, $user->id);
-            redirect('/aufgaben');
+            redirect($target);
         }
         $templateId = (int) ($_POST['toggle_template_id'] ?? 0);
         if ($templateId > 0) {
             TaskTodo::toggleTemplate($task->id, $user->id, $templateId);
-            redirect('/aufgaben');
+            redirect($target);
         }
         $title = trim((string) ($_POST['todo_title'] ?? ''));
         if ($title !== '') {
             TaskTodo::addStudent($task->id, $user->id, $title);
             flash('success', 'Eigenes ToDo hinzugefügt.');
         }
-        redirect('/aufgaben');
+        redirect($target);
     }
 
     /** Material (Datei oder Textvorlage) an einer Aufgabe speichern oder löschen. */
@@ -998,9 +1005,29 @@ final class TaskController
         // Startinhalt: erstes Code-Material (Java/Python/Assembler/HTML),
         // sonst die Musterlösung. Weitere Code-Materialien werden als Dateien
         // in die temporäre Kopie übernommen. Ohne Vorlage startet der Editor leer.
+        $type = $task->type === 'html' ? 'html' : 'code';
+        [$content, $language, $extraFiles] = self::workingContent($task);
+        $project = Project::create($user->id, null, '🎬 Präsentation: ' . $task->title, $type, $language, $content);
+        foreach ($extraFiles as $extra) {
+            ProjectFile::create($project->id, $extra['name'], $extra['content']);
+        }
+        Task::setPresentationProject($task->id, $project->id);
+        flash('success', 'Präsentationsmodus gestartet. Deine Änderungen bleiben in der temporären Kopie.');
+        redirect('/werkstatt/' . ($type === 'html' ? 'html' : 'code') . '/' . $project->id);
+    }
+
+    /**
+     * Startinhalt für eine Arbeitskopie (Präsentation oder Schüler): erstes
+     * Code-Material als Inhalt, weitere Code-Materialien als Dateien, sonst
+     * die Musterlösung. Code-Aufgaben bekommen immer eine Sprache, damit die
+     * volle IDE-Optik der Code-Werkstatt erscheint.
+     * @return array{0: string, 1: ?string, 2: list<array{name: string, content: string}>}
+     */
+    private static function workingContent(Task $task): array
+    {
+        $type = $task->type === 'html' ? 'html' : 'code';
         $content = '';
         $language = null;
-        $type = $task->type === 'html' ? 'html' : 'code';
         $extraFiles = [];
         foreach (TaskMaterial::forTask($task->id) as $material) {
             $lower = mb_strtolower($material->filename);
@@ -1017,12 +1044,56 @@ final class TaskController
             $content = $task->sampleSolution;
             $language = $language ?? ($type === 'code' ? 'java' : null);
         }
-        $project = Project::create($user->id, null, '🎬 Präsentation: ' . $task->title, $type, $language, $content);
+        if ($type === 'code' && $language === null) {
+            $language = SiteSetting::defaultLanguage();
+        }
+        return [$content, $language, $extraFiles];
+    }
+
+    /**
+     * Aufgabe „In der Werkstatt öffnen“ (Schüler-Sicht): legt genau eine
+     * Arbeitskopie pro Aufgabe und Schüler an (oder öffnet die vorhandene
+     * wieder) und zeigt Beschreibung, ToDos und Abgeben direkt in der
+     * Code- bzw. HTML-Werkstatt. SQL-Aufgaben führen in die SQL-Werkstatt.
+     */
+    public static function openInWorkshop(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (Auth::isTeacher()) {
+            flash('error', 'Für Lehrkräfte gibt es den Präsentationsmodus, Schülerinnen und Schüler arbeiten hier an ihrer eigenen Kopie.');
+            redirect('/aufgaben');
+        }
+        csrf_validate();
+        $task = Task::find((int) ($params['id'] ?? 0));
+        if ($task === null || !self::taskReachesStudent($task, $user)) {
+            flash('error', 'Diese Aufgabe ist nicht für dich ausgeteilt.');
+            redirect('/aufgaben');
+        }
+        if ($task->type === 'sql') {
+            redirect('/werkstatt/sql');
+        }
+        if (!in_array($task->type, ['code', 'html'], true)) {
+            flash('error', 'Dieser Aufgabentyp wird direkt in der Aufgaben-Sicht bearbeitet.');
+            redirect('/aufgaben');
+        }
+        $existing = TaskWorking::find($task->id, $user->id);
+        if ($existing !== null) {
+            $project = Project::find($existing->projectId);
+            if ($project !== null && $project->ownerId === $user->id) {
+                redirect('/werkstatt/' . ($project->type === 'html' ? 'html' : 'code') . '/' . $project->id);
+            }
+        }
+        $type = $task->type === 'html' ? 'html' : 'code';
+        [$content, $language, $extraFiles] = self::workingContent($task);
+        $project = Project::create($user->id, null, '📌 Aufgabe: ' . $task->title, $type, $language, $content);
         foreach ($extraFiles as $extra) {
             ProjectFile::create($project->id, $extra['name'], $extra['content']);
         }
-        Task::setPresentationProject($task->id, $project->id);
-        flash('success', 'Präsentationsmodus gestartet. Deine Änderungen bleiben in der temporären Kopie.');
+        TaskWorking::create($task->id, $user->id, $project->id);
+        flash('success', 'Aufgabe in der Werkstatt geöffnet. Dein Stand wird automatisch gespeichert, mit „Abgeben“ reicht du dieses Projekt als Lösung ein.');
         redirect('/werkstatt/' . ($type === 'html' ? 'html' : 'code') . '/' . $project->id);
     }
 
@@ -1278,12 +1349,17 @@ final class TaskController
             redirect('/aufgaben');
         }
         TaskSubmission::upsert($task->id, $user->id, $content, $selfRating, $project !== null ? $project->id : null);
+        // Aus der Werkstatt gekommen? Dann nach der Abgabe dorthin zurück.
+        $back = (string) ($_POST['back'] ?? '');
+        if ($back !== '' && str_starts_with($back, '/werkstatt/') === false) {
+            $back = '';
+        }
         if ($dueAt !== null && date('Y-m-d H:i') > $dueAt) {
             flash('success', 'Abgabe gespeichert, aber verspätet (Abgabetermin war ' . $dueAt . ' Uhr).');
         } else {
             flash('success', 'Abgabe gespeichert. Du kannst sie bis zum Abgabetermin überschreiben.');
         }
-        redirect('/aufgaben');
+        redirect($back !== '' ? $back : '/aufgaben');
     }
 
     /**

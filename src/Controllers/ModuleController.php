@@ -55,23 +55,6 @@ final class ModuleController
                 ],
                 'lehrplan' => 'Algorithmen und Programmieren: Grundlagen, Kontrollstrukturen, Methoden.',
             ],
-            'python' => [
-                'slug' => 'python',
-                'title' => 'Python',
-                'icon' => '🐍',
-                'phase' => 'Phase 4',
-                'status' => 'fertig',
-                'level' => 6,
-                'route' => null,
-                'description' => 'Python innerhalb der Code-Werkstatt: weniger Tipparbeit als Java, sofortige Erfolgserlebnisse, Ausführung im Browser (Pyodide).',
-                'features' => [
-                    'Python-Projekte direkt neben Java-Projekten in der Code-Werkstatt',
-                    'Ausführung vollständig im Browser (Pyodide), kein Server nötig',
-                    'Startpakete für den Einstieg (Zählen, Zeichnen mit Zeichen)',
-                    'Lehrkräfte geben Python pro Klasse frei oder sperren es',
-                ],
-                'lehrplan' => 'Algorithmen und Programmieren: Grundlagen, Kontrollstrukturen, Funktionen. Sprachvergleich Java/Python fördert das Konzeptverständnis.',
-            ],
             'diagramme' => [
                 'slug' => 'diagramme',
                 'title' => 'Diagramme',
@@ -216,11 +199,6 @@ final class ModuleController
         $modes = $user->classId === null ? [] : self::modesFor($user->classId);
         $visible = [];
         foreach ($modules as $key => $module) {
-            // 'python' ist keine eigene Seite, sondern eine Freigabe innerhalb
-            // der Code-Werkstatt (siehe CodeController::pythonAllowed).
-            if ($key === 'python') {
-                continue;
-            }
             $mode = $modes[$key] ?? '';
             if ($mode === 'sperren') {
                 continue;
