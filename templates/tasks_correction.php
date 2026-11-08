@@ -12,8 +12,8 @@ $topic = $task->topicId > 0 ? \Infocraft\Models\TaskTopic::find($task->topicId) 
 
 <section class="panel">
     <div class="panel-head">
-        <h3><span class="pill"><?= e($task->type) ?> · Jgst. <?= (int) $task->level ?><?= $topic !== null ? ' · 📁 ' . e($topic->name) : '' ?><?= $task->maxPoints > 0 ? ' · max. ' . (int) $task->maxPoints . ' Punkte' : '' ?><?= $task->lateLock === 1 ? ' · 🔒 Frist-Sperre' : '' ?></span> <?= e($task->title) ?></h3>
         <a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool">←</a>
+        <h3><span class="pill"><?= e($task->type) ?> · Jgst. <?= (int) $task->level ?><?= $topic !== null ? ' · 📁 ' . e($topic->name) : '' ?><?= $task->maxPoints > 0 ? ' · max. ' . (int) $task->maxPoints . ' Punkte' : '' ?><?= $task->lateLock === 1 ? ' · 🔒 Frist-Sperre' : '' ?></span> <?= e($task->title) ?></h3>
     </div>
     <?php if ($task->description !== ''): ?><div class="task-desc"><?= $task->descriptionHtml() ?></div><?php endif; ?>
     <div class="btn-row">

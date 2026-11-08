@@ -5,6 +5,8 @@
     <p>Hinterlege einen KI-Zugang für die Korrekturhilfe: Die KI bewertet abgegebene Aufgaben vor und schlägt Note und Feedback vor. Es sieht nur anonymisierte Arbeiten (Pseudonyme statt Namen). Deine Zugangsdaten bleiben auf deinem Server.</p>
 </section>
 
+<p><a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool">←</a></p>
+
 <section class="panel">
     <h3>Meine KI-Zugangsdaten</h3>
     <p class="muted">Gilt für deine eigenen Korrekturen. Ohne eigene Angaben gelten schulweite Zugangsdaten der Administration (falls hinterlegt).</p>
@@ -29,7 +31,6 @@
         </div>
         <div class="btn-row">
             <button class="btn btn-primary" type="submit" title="Speichern">💾</button>
-            <a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool">←</a>
         </div>
     </form>
     <p class="muted">Alle Felder leeren und speichern = eigene Angaben entfernen.</p>

@@ -2,8 +2,8 @@
     <div class="panel-head">
         <h3>🎬 Präsentation bearbeiten</h3>
         <div class="btn-row">
-            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">▶ Präsentieren</a>
             <a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen">←</a>
+            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">▶ Präsentieren</a>
         </div>
     </div>
     <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id) ?>" class="form">

@@ -9,8 +9,8 @@
 ?>
 <section class="panel">
     <div class="panel-head">
-        <h3>📊 Fortschritt: Klasse <?= e($class->name) ?></h3>
         <a class="btn btn-ghost" href="<?= url('unterricht/klassen') ?>" title="Zurück zu meinen Klassen">←</a>
+        <h3>📊 Fortschritt: Klasse <?= e($class->name) ?></h3>
     </div>
     <p class="muted">Eine Zeile je Schülerin und Schüler: Quiz-Bestwerte, erledigte Aufgaben und die zuletzt bearbeiteten Projekte aus der Werkstatt.</p>
     <?php if ($rows === []): ?>

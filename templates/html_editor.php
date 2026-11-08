@@ -1,10 +1,10 @@
 <section class="panel">
     <div class="panel-head">
         <h3>🌐 <?= e($project->title) ?></h3>
+        <a class="btn btn-ghost" href="<?= url('werkstatt/html') ?>" title="Zurück">←</a>
         <?php if (($presentationTask ?? null) !== null): ?>
         <span class="pill" title="Präsentationsmodus: Du arbeitest in einer temporären Kopie dieser Aufgabe. Die Aufgabenvorlage und die Materialien bleiben unangetastet, dein Code wird nur hier gespeichert. Mit „Präsentation beenden“ wird die Kopie gelöscht.">🎬 Präsentationsmodus ℹ️</span>
         <?php endif; ?>
-        <a class="btn btn-ghost" href="<?= url('werkstatt/html') ?>" title="Zurück">←</a>
     </div>
     <?php if ($isForeign): ?>
     <div class="notice">

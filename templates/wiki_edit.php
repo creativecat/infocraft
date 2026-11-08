@@ -1,7 +1,7 @@
 <section class="panel">
     <div class="panel-head">
-        <h3>📖 Seite bearbeiten</h3>
         <a class="btn btn-ghost" href="<?= url('wiki/' . (int) $page->id) ?>" title="Abbrechen">←</a>
+        <h3>📖 Seite bearbeiten</h3>
     </div>
     <form method="post" action="<?= url('wiki/' . (int) $page->id) ?>" class="form">
         <?= csrf_field() ?>

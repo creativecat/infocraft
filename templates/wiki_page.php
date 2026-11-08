@@ -1,7 +1,7 @@
 <section class="panel">
     <div class="panel-head">
-        <h3>📖 <?= e($page->title) ?> <span class="pill">ab Jgst. <?= e($page->level) ?></span></h3>
         <a class="btn btn-ghost" href="<?= url('wiki') ?>" title="Alle Seiten">←</a>
+        <h3>📖 <?= e($page->title) ?> <span class="pill">ab Jgst. <?= e($page->level) ?></span></h3>
     </div>
     <div class="wiki-content"><?= $html /* bereits escapet und aus Markup erzeugt */ ?></div>
     <?php if ($mayEdit): ?>
