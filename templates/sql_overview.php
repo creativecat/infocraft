@@ -2,7 +2,7 @@
 <section class="hero">
     <div class="hero-emoji">🗄️</div>
     <h1>SQL-Werkstatt</h1>
-    <p><?= $isTeacher ? 'Verteile Datenbanken an deine Klassen, mit passenden Rechten: nur lesen, lesen und schreiben oder Tabellen selbst anlegen lassen.' : 'Hier findest du die Datenbanken, die deine Lehrkraft für dich freigeschaltet hat.' ?></p>
+    <p><?= $isTeacher ? 'Öffne die Beispieldatenbanken direkt oder verteile sie an deine Klassen, mit passenden Rechten: nur lesen, lesen und schreiben oder Tabellen selbst anlegen lassen.' : 'Hier findest du die Datenbanken, die deine Lehrkraft für dich freigeschaltet hat.' ?></p>
 </section>
 
 <?php if (!$isTeacher): ?>
@@ -24,6 +24,16 @@
 </div>
 <?php endif; ?>
 <?php else: ?>
+<div class="cards">
+    <?php foreach ($templates as $template): ?>
+    <a class="card" href="<?= url('werkstatt/sql/' . $template->slug) ?>">
+        <div class="card-icon"><?= $template->isAdventure ? '🏝️' : '🗄️' ?></div>
+        <h2><?= e($template->title) ?></h2>
+        <p class="card-desc"><?= e($template->description) ?></p>
+        <div class="card-meta"><span class="pill">Vollzugriff</span></div>
+    </a>
+    <?php endforeach; ?>
+</div>
 <div class="two-col">
     <section class="panel">
         <h3>📤 Datenbank austeilen</h3>
@@ -73,22 +83,6 @@
             <div class="btn-row"><button class="btn btn-primary" type="submit" title="Austeilen">📤</button></div>
         </form>
         <p class="muted">Wird beides angegeben, gilt die ganze Klasse.</p>
-    </section>
-    <section class="panel">
-        <h3>🗃️ Vorlagen</h3>
-        <?php foreach ($templates as $template): ?>
-        <div class="panel-head">
-            <div>
-                <strong><?= e($template->title) ?></strong>
-                <p class="muted"><?= e($template->description) ?></p>
-            </div>
-            <form method="post" action="<?= url('werkstatt/sql/kopie') ?>" class="form-inline">
-                <?= csrf_field() ?>
-                <input type="hidden" name="template_id" value="<?= (int) $template->id ?>">
-                <button class="btn btn-ghost" type="submit" title="Eigene Übungskopie">📄</button>
-            </form>
-        </div>
-        <?php endforeach; ?>
     </section>
 </div>
 
