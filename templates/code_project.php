@@ -13,7 +13,7 @@
     <!-- Java-IDE über die volle Breite: Dateien im eigenen Fenster, Editor und Konsole in einem gemeinsamen Fenster -->
     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="ide-savebar" id="code-save-form">
         <?= csrf_field() ?>
-        <button class="btn btn-ghost" type="button" id="java-format" title="Rückt deinen Java-Code automatisch ein: 4 Leerzeichen pro Ebene, sauber eingerückt und ausgerückt.">🧹</button>
+        <button class="btn btn-ghost" type="button" id="java-format" title="Formatieren: rückt deinen Java-Code automatisch ein, 4 Leerzeichen pro Ebene, sauber eingerückt und ausgerückt.">🧹</button>
         <span class="save-status" id="java-save-info" title="Dein Code wird bei jeder Änderung automatisch gespeichert – auch ohne Speichern-Klick."></span>
     </form>
     <div class="ide">
