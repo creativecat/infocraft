@@ -46,6 +46,11 @@
                 <?php endforeach; ?>
             </ul>
             <?php endif; ?>
+            <?php if (trim($presentationTask->sampleSolution) !== ''): ?>
+            <div class="btn-row">
+                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/loesung/fenster') ?>" target="_blank" title="Musterlösung der Aufgabe in einem eigenen Fenster anzeigen (bleibt unabhängig vom Präsentationsfenster offen, inkl. Erwartungshorizont)">📄 Musterlösung anzeigen</a>
+            </div>
+            <?php endif; ?>
             <div class="btn-row">
                 <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen">⬇️ als Musterlösung herunterladen</a>
                 <form method="post" action="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/ende') ?>" class="form-inline">

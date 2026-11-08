@@ -850,7 +850,7 @@
     if (!comp.ok) { return finish(null, false); }
 
     RUN_CLASS_MAP = comp.classMap;
-    RUN_DB = Object.create(null);
+    dbResetToSeed();
     var vm = {
       out: out,
       errCards: errCards,
@@ -963,7 +963,7 @@
     var out = [];
     var errCards = [];
     RUN_CLASS_MAP = comp.classMap;
-    RUN_DB = Object.create(null);
+    dbResetToSeed();
     var vm = { out: out, errCards: errCards, statics: Object.create(null), steps: 0, depth: 0, objects: [], gfx: gfxNewState(), stepLimit: null, leafSteps: 0 };
     RUN_VM = vm;
     gfxResetRun();
@@ -2447,6 +2447,94 @@
   function dbTables() {
     if (!RUN_DB) { RUN_DB = Object.create(null); }
     return RUN_DB;
+  }
+
+  /* ===== Gespeicherte Mini-Datenbank (Issue #44) =====
+   * Der SQL-Text im versteckten Feld java-db-seed baut die Datenbank bei
+   * jedem Ausführen neu auf: Tabellen und Daten bleiben damit dauerhaft mit
+   * dem Projekt (und der Aufgabe) gespeichert. Ohne Seed startet die
+   * Datenbank wie bisher leer - der Programmablauf selbst bleibt unverändert.
+   */
+  var DB_SEED_SQL = '';
+  function dbSeedRead() {
+    if (typeof document === 'undefined') { return; }
+    var el = document.getElementById('java-db-seed');
+    DB_SEED_SQL = el && el.value ? String(el.value) : '';
+  }
+  /* SQL-Text in Einzelbefehle zerlegen (Semikolon außerhalb von 'Texten'). */
+  function dbSplitSql(text) {
+    var parts = [];
+    var cur = '';
+    var inQ = false;
+    var i;
+    var c;
+    for (i = 0; i < text.length; i++) {
+      c = text.charAt(i);
+      if (inQ) {
+        cur += c;
+        if (c === "'") {
+          if (text.charAt(i + 1) === "'") { cur += text.charAt(i + 1); i++; }
+          else { inQ = false; }
+        }
+        continue;
+      }
+      if (c === "'") { inQ = true; cur += c; continue; }
+      if (c === ';') { parts.push(cur); cur = ''; continue; }
+      cur += c;
+    }
+    parts.push(cur);
+    var out = [];
+    for (i = 0; i < parts.length; i++) {
+      var t = parts[i].replace(/^\s+/, '').replace(/\s+$/, '');
+      if (t !== '') { out.push(t); }
+    }
+    return out;
+  }
+  /* Datenbank für einen neuen Lauf aufbauen: gespeicherter Stand zuerst. */
+  function dbResetToSeed() {
+    RUN_DB = Object.create(null);
+    if (DB_SEED_SQL === '') { return; }
+    var stmts = dbSplitSql(DB_SEED_SQL);
+    var ctx = { file: 'DB-Start', line: 1, cls: null, thisVal: null, vm: RUN_VM };
+    for (var si = 0; si < stmts.length; si++) {
+      try { dbExec(stmts[si], ctx, 1); } catch (e) { /* Seed-Fehler nicht werfen: Die Seite soll trotzdem laufen. */ }
+    }
+  }
+  /* SQL-Text für einen Wert (einfache Anführungszeichen verdoppeln). */
+  function dbSqlValue(val) {
+    if (val === null || val.t === 'null') { return 'NULL'; }
+    if (val.t === 'String') { return "'" + String(val.v).replace(/'/g, "''") + "'"; }
+    if (val.t === 'double') { return fmtDouble(val.v); }
+    return String(val.v);
+  }
+  /* Gesamte Datenbank als SQL-Text serialisieren (CREATE TABLE + INSERT). */
+  function dbSqlFromTables() {
+    var tables = dbTables();
+    var lines = [];
+    var k;
+    var t;
+    var i;
+    var j;
+    for (k in tables) {
+      if (!Object.prototype.hasOwnProperty.call(tables, k)) { continue; }
+      t = tables[k];
+      var colDefs = [];
+      for (i = 0; i < t.cols.length; i++) {
+        colDefs.push(t.cols[i].name + ' ' + ({ text: 'TEXT', int: 'INT', double: 'DOUBLE' })[t.cols[i].kind]);
+      }
+      lines.push('CREATE TABLE ' + t.name + ' (' + colDefs.join(', ') + ')');
+      for (i = 0; i < t.rows.length; i++) {
+        var vals = [];
+        for (j = 0; j < t.rows[i].length; j++) { vals.push(dbSqlValue(t.rows[i][j])); }
+        lines.push('INSERT INTO ' + t.name + ' VALUES (' + vals.join(', ') + ')');
+      }
+    }
+    return lines.join(';\n') + (lines.length > 0 ? ';' : '');
+  }
+  /* Aktueller DB-Stand fürs Autospeichern: vor dem ersten Ausführen bleibt
+   * der gespeicherte Seed unverändert erhalten. */
+  function dbStateSql() {
+    return RUN_DB === null ? DB_SEED_SQL : dbSqlFromTables();
   }
 
   function dbText(v) {
@@ -5774,6 +5862,9 @@
       if (b) { b.textContent = res.errors.length === 0 ? '0' : String(res.errors.length); }
       renderObjects(res.paused ? res.objects : null);
       renderDbSchema();
+      /* Mini-Datenbank und Objektkonsole gehören zum Projektstand (#44):
+       * Nach jedem Lauf wird der neue DB-Stand automatisch mitgespeichert. */
+      if (typeof autoSaveSoon === 'function' && (RUN_DB !== null || dbStateSql() !== '')) { autoSaveSoon(); }
       updateReplHint();
       markErrLines(res.errors);
       /* Einzelschritt: Datei der Pause in der Liste gelb unterlegen und im
@@ -6255,6 +6346,10 @@
         var ta4 = panes5[k3].querySelector('textarea');
         if (fid && ta4) { params.append('files[' + fid + ']', ta4.value); }
       }
+      /* Objektkonsole (Anweisungsfeld) und Mini-Datenbank mit speichern (#44). */
+      var replEl = document.getElementById('java-repl-in');
+      if (replEl) { params.append('repl', replEl.value); }
+      if (document.getElementById('db-panel')) { params.append('db', dbStateSql()); }
       return params.toString();
     }
     /* Dezenter Speicher-Status: nur sichtbar, wenn gerade etwas passiert -
@@ -6288,6 +6383,8 @@
       savedSnap = collectSaveSnap();
       var pe3;
       for (pe3 = 0; pe3 < paneAreas.length; pe3++) { paneAreas[pe3].addEventListener('input', autoSaveSoon); }
+      var replSaveEl = document.getElementById('java-repl-in');
+      if (replSaveEl) { replSaveEl.addEventListener('input', autoSaveSoon); }
       var guardForms = [];
       var selList = ['form.ide-side-new', 'form.ide-file-del'];
       var si;
@@ -6769,7 +6866,7 @@
           dbOut.textContent = dbFormat(dbSelect(sql, ctx2, 1));
         } else {
           dbExec(sql, ctx2, 1);
-          dbOut.textContent = 'Befehl ausgeführt (' + kw + '). Die Datenbank gilt bis zum nächsten ▶ Ausführen; INSERT, UPDATE und DELETE siehst du mit SELECT, neue Tabellen erscheinen oben.';
+          dbOut.textContent = 'Befehl ausgeführt (' + kw + '). Die Datenbank wird automatisch mit deinem Projekt gespeichert: INSERT, UPDATE und DELETE siehst du mit SELECT, neue Tabellen erscheinen oben.';
         }
       } catch (e) {
         if (e && e.jerr) {
@@ -6778,6 +6875,8 @@
         else { throw e; }
       }
       renderDbSchema();
+      /* Änderungen aus der DB-Konsole automatisch mitspeichern (#44). */
+      if (typeof autoSaveSoon === 'function') { autoSaveSoon(); }
     }
     if (dbRunBtn) { dbRunBtn.addEventListener('click', dbConsoleRun); }
     if (dbIn) {
@@ -6802,6 +6901,10 @@
     renderObjects();
     updateReplHint();
     replGutterSync();
+    /* Gespeicherte Mini-Datenbank laden (#44): Schema ist sofort sichtbar,
+     * auch bevor das Programm zum ersten Mal gelaufen ist. */
+    dbSeedRead();
+    if (DB_SEED_SQL !== '') { dbResetToSeed(); }
     renderDbSchema();
 
     /* ---------- Dateifenster links: nur so hoch wie das Codefenster ----------

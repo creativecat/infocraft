@@ -47,6 +47,11 @@
                 <?php endforeach; ?>
             </ul>
             <?php endif; ?>
+            <?php if (trim($presentationTask->sampleSolution) !== ''): ?>
+            <div class="btn-row">
+                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/loesung/fenster') ?>" target="_blank" title="Musterlösung der Aufgabe in einem eigenen Fenster anzeigen (bleibt unabhängig vom Präsentationsfenster offen, inkl. Erwartungshorizont)">📄 Musterlösung anzeigen</a>
+            </div>
+            <?php endif; ?>
             <?php if ($project->type === 'code' && $project->language === 'python'): ?>
             <div class="btn-row">
                 <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen">⬇️ als Musterlösung herunterladen</a>
@@ -192,11 +197,11 @@
                 <p class="muted" id="java-repl-hint">Erst ▶ Ausführen klicken. Dann schreibst du hier auf mehrere Zeilen, was dein Programm tun soll: Objekte erzeugen und Methoden aufrufen, getrennt vom Entwurf deiner Klassen im Codefenster.</p>
                 <div class="repl-edit">
                     <div class="repl-gutter mono" id="java-repl-gutter">1</div>
-                    <textarea id="java-repl-in" class="mono" rows="4" autocomplete="off" spellcheck="false"></textarea>
+                    <textarea id="java-repl-in" class="mono" rows="4" autocomplete="off" spellcheck="false"><?= e($replText ?? '') ?></textarea>
                 </div>
                 <div class="repl-actions">
                     <button class="btn btn-primary" id="java-repl-run" type="button" title="Anweisungen ausführen (Strg + Enter): erzeugt die Objekte und ruft die Methoden auf, je Zeile eine Anweisung.">▶ Anweisungen ausführen</button>
-                    <span class="muted">Die Anweisungen bleiben stehen, du kannst sie ändern und erneut ausführen.</span>
+                    <span class="muted">Die Anweisungen bleiben stehen, du kannst sie ändern und erneut ausführen. Sie werden automatisch mit deinem Projekt gespeichert, auch über das Neuladen hinaus.</span>
                 </div>
                 <div id="java-repl-log" class="repl-log"></div>
                 <div id="java-repl-ac" class="ac-box" hidden></div>
@@ -745,6 +750,7 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
 
 <?php if ($project->type === 'code' && $project->language === 'java' && $dbPanel): ?>
 <section class="panel" id="db-panel">
+    <input type="hidden" id="java-db-seed" value="<?= e($dbSql ?? '') ?>">
     <div class="panel-head">
         <h3>💾 Mini-Datenbank: SQL direkt in Java</h3>
     </div>
@@ -756,7 +762,7 @@ System.out.println(Database.query("SELECT * FROM schueler WHERE punkte > 10"));
 int anzahl = Database.count("SELECT * FROM schueler");   // Zeilen einer Abfrage
 String beste = Database.value("SELECT name FROM schueler ORDER BY punkte DESC");
 System.out.println(Database.tables());                     // alle Tabellen</pre>
-    <p class="muted">Verfügbar: <code>execute</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>query</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>count</code> die Zeilenanzahl, <code>value</code> den ersten Wert, <code>tables</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank startet bei jedem Ausführen neu und leer.</p>
+    <p class="muted">Verfügbar: <code>execute</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>query</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>count</code> die Zeilenanzahl, <code>value</code> den ersten Wert, <code>tables</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank bleibt mit deinem Projekt gespeichert: Bei jedem ▶ Ausführen startet sie mit den Tabellen und Daten aus deinem letzten Stand (und der Beispieldatenbank deiner Aufgabe, falls die Lehrkraft eine .sql-Datei als Material angehängt hat).</p>
 
     <div class="db-two-col">
         <div class="db-block">
@@ -767,7 +773,7 @@ System.out.println(Database.tables());                     // alle Tabellen</pre
 
         <div class="db-block">
             <h4 class="diag-head">🗄 DB-Konsole: Abfragen testen und Daten anlegen</h4>
-            <p class="muted">Schicke Abfragen direkt an die Datenbank, ohne dein Programm zu ändern: <code>SELECT</code> zeigt das Ergebnis an, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>CREATE TABLE</code> und <code>DROP TABLE</code> ändern die Datenbank testweise (bis zum nächsten ▶ Ausführen). Damit legst du hier auch neue Daten an und prüfst sofort, was dein Programm daraus liest.</p>
+            <p class="muted">Schicke Abfragen direkt an die Datenbank, ohne dein Programm zu ändern: <code>SELECT</code> zeigt das Ergebnis an, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>CREATE TABLE</code> und <code>DROP TABLE</code> ändern die Datenbank dauerhaft (sie wird automatisch mit deinem Projekt gespeichert). Damit legst du hier auch neue Daten an und prüfst sofort, was dein Programm daraus liest.</p>
             <textarea id="java-db-in" class="mono db-console-in" rows="3" autocomplete="off" spellcheck="false"></textarea>
             <div class="repl-actions">
                 <button class="btn btn-primary" id="java-db-run" type="button" title="Abfrage ausführen (Strg + Enter): schickt den SQL-Befehl an die Datenbank und zeigt das Ergebnis.">▶ Abfrage ausführen</button>
