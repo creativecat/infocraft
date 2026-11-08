@@ -598,6 +598,7 @@ jobs:
           grep -q "In der Code-Werkstatt öffnen" tastu4.html && TAORG_OPEN_BTN_OK=1 || TAORG_OPEN_BTN_OK=0
           CODE_TAOPEN=$(curl -sS -L -o taopen.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF10" http://127.0.0.1:8080/aufgaben/$TAORG/oeffnen)
           grep -q "task-work-info" taopen.html && TAORG_OPEN_OK=1 || TAORG_OPEN_OK=0
+          if [ "$TAORG_OPEN_OK" != "1" ]; then echo "::error::DBG-TAOPEN http=$CODE_TAOPEN ui=$TAORG_OPEN_UI_OK code=$TAORG_OPEN_CODE_OK proj=$TAOPENPROJ classes=$(grep -o 'class="two-col[^"]*"' taopen.html | head -n 5 | tr '\n' ' ') tw=$(sqlite3 "$DB" "SELECT task_id || '/' || student_id || '/' || project_id FROM task_working") projrow=$(sqlite3 "$DB" "SELECT owner_id || '/' || type || '/' || language FROM projects WHERE id = $TAOPENPROJ") presrow=$(sqlite3 "$DB" "SELECT id || '/' || presentation_project_id FROM tasks WHERE presentation_project_id IS NOT NULL") head=$(head -c 300 taopen.html | tr '\n' ' ')"; fi
           grep -q "ToDos (zum Abhaken)" taopen.html && TAORG_OPEN_UI_OK=1 || TAORG_OPEN_UI_OK=0
           grep -q "public class Auto" taopen.html && TAORG_OPEN_CODE_OK=1 || TAORG_OPEN_CODE_OK=0
           TAOPENPROJ=$(sqlite3 "$DB" "SELECT project_id FROM task_working WHERE task_id = $TAORG AND student_id = $LENA")
