@@ -240,9 +240,12 @@ jobs:
           { echo 'public class Garage {'; echo '    private int plaetze;'; echo '    public int getPlaetze() { return plaetze; }'; echo '}'; } > jgarage.txt
           CODE_JFILESAVE=$(curl -sS -L -o jfilesave.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" -d "title=Diagramm Quelle Java" --data-urlencode "files[$JGID]@jgarage.txt" http://127.0.0.1:8080/werkstatt/code/$JPROJ)
           grep -q "Gespeichert" jfilesave.html && J_FILE_SAVE_OK=1 || J_FILE_SAVE_OK=0
-          JSYNC=$(sqlite3 "$DB" "SELECT content FROM projects WHERE id = $JPROJ")
-          grep -q "class Garage" <<<"$JSYNC" && J_SYNC_OK=1 || J_SYNC_OK=0
-          echo "::error::DEBUGSYNC | JGID=[$JGID] PROJID=[$JPROJ] | FILES: $(sqlite3 "$DB" "SELECT group_concat(id || '=' || name || ':' || length(content), ', ') FROM project_files WHERE project_id = $JPROJ") | PROJ: $(sqlite3 "$DB" "SELECT replace(substr(content, 1, 250), char(10), ' ') FROM projects WHERE id = $JPROJ")"
+          J_SYNC_OK=0
+          for sync_try in 1 2 3 4 5; do
+            JSYNC=$(sqlite3 "$DB" "SELECT content FROM projects WHERE id = $JPROJ")
+            if grep -q "class Garage" <<<"$JSYNC"; then J_SYNC_OK=1; break; fi
+            sleep 1
+          done
           CODE_JFDEL=$(curl -sS -L -o jfdel.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" http://127.0.0.1:8080/werkstatt/code/$JPROJ/datei/$JGID/loeschen)
           grep -q "gelöscht" jfdel.html && J_FDEL_OK=1 || J_FDEL_OK=0
           # Wiki: Seite anlegen, Schueleransicht, Stufen-Filter, Bearbeiten, Loeschen
