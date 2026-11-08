@@ -8,6 +8,7 @@ use Infocraft\Models\Folder;
 use Infocraft\Models\Project;
 use Infocraft\Models\ProjectFile;
 use Infocraft\Models\SchoolClass;
+use Infocraft\Models\SiteSetting;
 use Infocraft\Models\User;
 
 /**
@@ -38,6 +39,7 @@ final class CodeController
             'folderNames' => self::folderNames($folders),
             'counts' => $counts,
             'isTeacher' => $isTeacher,
+            'defaultLanguage' => SiteSetting::defaultLanguage(),
             'classes' => $isTeacher ? SchoolClass::forTeacher($user->id, $user->role === 'admin') : [],
             'studentsByClass' => $isTeacher ? self::studentsByClass($user) : [],
             'user' => $user,
@@ -59,7 +61,7 @@ final class CodeController
         $type = ($_POST['type'] ?? 'code') === 'html' ? 'html' : 'code';
         $language = match ($type) {
             'html' => 'html',
-            default => in_array($_POST['language'] ?? '', ['python', 'java'], true) ? (string) $_POST['language'] : 'python',
+            default => in_array($_POST['language'] ?? '', ['python', 'java'], true) ? (string) $_POST['language'] : SiteSetting::defaultLanguage(),
         };
         $folderId = (int) ($_POST['folder_id'] ?? 0);
         $folderId = $folderId > 0 && Folder::belongsTo($folderId, $user->id) ? $folderId : null;

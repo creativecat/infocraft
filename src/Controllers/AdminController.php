@@ -7,6 +7,7 @@ use Infocraft\Auth;
 use Infocraft\Config;
 use Infocraft\CsvImporter;
 use Infocraft\Models\SchoolClass;
+use Infocraft\Models\SiteSetting;
 use Infocraft\Models\User;
 
 final class AdminController
@@ -64,5 +65,38 @@ final class AdminController
             redirect('/unterricht/passwort/ergebnis');
         }
         redirect('/admin/import');
+    }
+
+    /**
+     * Schulweite Einstellungen (nur Admin): Standard-Programmiersprache
+     * für die Code-Werkstatt, Aufgaben-Varianten und neue Projekte.
+     */
+    public static function settings(): void
+    {
+        $user = Auth::user();
+        if ($user === null || !Auth::isAdmin()) {
+            flash('error', 'Dieser Bereich ist nur für Admins zugänglich.');
+            redirect('/');
+        }
+        render('admin_settings', [
+            'title' => 'Admin-Einstellungen',
+            'active' => 'admin',
+            'defaultLanguage' => SiteSetting::defaultLanguage(),
+            'user' => $user,
+        ]);
+    }
+
+    public static function settingsSave(): void
+    {
+        $user = Auth::user();
+        if ($user === null || !Auth::isAdmin()) {
+            flash('error', 'Dieser Bereich ist nur für Admins zugänglich.');
+            redirect('/');
+        }
+        csrf_validate();
+        $language = (string) ($_POST['default_language'] ?? 'java');
+        SiteSetting::set('default_language', $language === 'python' ? 'python' : 'java');
+        flash('success', 'Einstellungen gespeichert. Die Standard-Programmiersprache ist jetzt ' . ($language === 'python' ? 'Python' : 'Java') . '.');
+        redirect('/admin/einstellungen');
     }
 }

@@ -60,15 +60,28 @@
 
   var body = document.body;
 
-  // Sidebar: Klick oben links schaltet voll -> mini -> ausgeblendet (bleibt pro Endgerät gespeichert).
+  // Sidebar: Klick oben links schaltet zwischen Icons mit Schrift und nur Icons
+  // um. Die Wahl wird sofort lokal angewandt (ohne Flackern) und für das
+  // Nutzerkonto auf dem Server gespeichert.
   var sidebarBtn = document.getElementById('sidebar-toggle');
   var sidebarKey = 'infocraft.sidebar';
-  var sidebarStates = ['full', 'mini', 'hidden'];
+  var sidebarStates = ['full', 'mini'];
 
   function applySidebar(state) {
-    body.classList.remove('sidebar-mini', 'sidebar-hidden');
+    body.classList.remove('sidebar-mini');
     if (state === 'mini') { body.classList.add('sidebar-mini'); }
-    if (state === 'hidden') { body.classList.add('sidebar-hidden'); }
+  }
+
+  function persistSidebar(state) {
+    localStorage.setItem(sidebarKey, state);
+    var csrf = body.getAttribute('data-csrf');
+    if (!csrf || !body.classList) { return; }
+    try {
+      var data = new FormData();
+      data.append('csrf', csrf);
+      data.append('view', state);
+      fetch('/einstellungen/navigation', { method: 'POST', body: data, credentials: 'same-origin' });
+    } catch (e) { /* Speichern ist optional, die Ansicht gilt trotzdem. */ }
   }
 
   var sidebarState = localStorage.getItem(sidebarKey) || 'full';
@@ -79,7 +92,7 @@
     sidebarBtn.addEventListener('click', function () {
       var index = (sidebarStates.indexOf(sidebarState) + 1) % sidebarStates.length;
       sidebarState = sidebarStates[index];
-      localStorage.setItem(sidebarKey, sidebarState);
+      persistSidebar(sidebarState);
       applySidebar(sidebarState);
     });
   }

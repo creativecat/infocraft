@@ -27,8 +27,11 @@
 <?php
 $navModules = Infocraft\Controllers\ModuleController::visible($user);
 $isTeacher = $user !== null && ($user->role === 'teacher' || $user->role === 'admin');
+$isAdmin = $user !== null && $user->role === 'admin';
 // Prüfungsmodus: laufende Prüfung dieser Schülerin/dieses Schülers (sonst null)
 $examLock = $user !== null && $user->role === 'student' ? \Infocraft\Models\Exam::lockForUser($user->id) : null;
+// Gespeicherte Navigationsansicht (nur Icons oder Icons mit Schrift), je Nutzerkonto.
+$navView = $user !== null ? \Infocraft\Models\UserPref::navView($user->id) : 'full';
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -39,7 +42,7 @@ $examLock = $user !== null && $user->role === 'student' ? \Infocraft\Models\Exam
     <link rel="stylesheet" href="<?= url('assets/css/style.css') ?>">
     <link rel="icon" href="<?= url('assets/img/favicon.svg') ?>" type="image/svg+xml">
 </head>
-<body data-csrf="<?= e(csrf_token()) ?>"<?= $examLock !== null ? ' data-exam-lock="1"' : '' ?>>
+<body data-csrf="<?= e(csrf_token()) ?>"<?= $examLock !== null ? ' data-exam-lock="1"' : '' ?><?= $navView === 'mini' ? ' class="sidebar-mini"' : '' ?>>
 <div class="app">
     <aside class="sidebar" id="sidebar">
         <a class="brand" href="<?= url('/') ?>" title="InfoCraft">
@@ -64,6 +67,9 @@ $examLock = $user !== null && $user->role === 'student' ? \Infocraft\Models\Exam
             <a href="<?= url('aufgaben') ?>" class="nav-item<?= $active === 'tasks' ? ' active' : '' ?>" title="Aufgabenpool"><span class="nav-icon">📝</span><span class="nav-label">Aufgabenpool</span></a>
             <a href="<?= url('admin/users') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="Nutzer"><span class="nav-icon">👥</span><span class="nav-label">Nutzer</span></a>
             <a href="<?= url('admin/import') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="CSV-Import"><span class="nav-icon">📥</span><span class="nav-label">CSV-Import</span></a>
+            <?php if ($isAdmin): ?>
+            <a href="<?= url('admin/einstellungen') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="Admin-Einstellungen (Standard-Programmiersprache)"><span class="nav-icon">⚙️</span><span class="nav-label">Einstellungen</span></a>
+            <?php endif; ?>
             <?php endif; ?>
             <?php endif; ?>
         </nav>
@@ -72,7 +78,7 @@ $examLock = $user !== null && $user->role === 'student' ? \Infocraft\Models\Exam
     <div class="main">
         <header class="topbar">
             <div class="topbar-left">
-                <button id="sidebar-toggle" class="icon-btn" type="button" title="Navigation verkleinern oder ausblenden" aria-label="Navigation umschalten">☰</button>
+                <button id="sidebar-toggle" class="icon-btn" type="button" title="Navigation: Beschriftung ein/aus" aria-label="Navigation umschalten">☰</button>
                 <h1 class="topbar-title"><?= e($title) ?></h1>
             </div>
             <div class="topbar-actions">

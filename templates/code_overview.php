@@ -11,7 +11,12 @@
         <form method="post" action="<?= url('werkstatt/code/projekt') ?>" class="form">
             <?= csrf_field() ?>
             <label class="field"><span>Projekttitel</span><input type="text" name="title" required placeholder="z. B. Mein erstes Programm"></label>
-            <input type="hidden" name="language" value="java">
+            <label class="field"><span>Programmiersprache</span>
+                <select name="language">
+                    <option value="java"<?= (($defaultLanguage ?? 'java') === 'java') ? ' selected' : '' ?>>☕ Java</option>
+                    <option value="python"<?= (($defaultLanguage ?? 'java') === 'python') ? ' selected' : '' ?>>🐍 Python</option>
+                </select>
+            </label>
             <label class="field"><span>Art</span>
                 <select name="type">
                     <option value="code" selected>☕ Java-Programm</option>

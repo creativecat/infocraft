@@ -121,6 +121,7 @@ $router->get('/pruefungen/{id}/ergebnis', [ExamController::class, 'result']);
 
 // Aufgabenpool (Lehrkräfte) bzw. Meine Aufgaben (Schülerinnen und Schüler)
 $router->get('/aufgaben', [TaskController::class, 'index']);
+$router->get('/aufgaben/neu', [TaskController::class, 'createPage']);
 $router->post('/aufgaben/anlegen', [TaskController::class, 'create']);
 $router->post('/aufgaben/austeilen', [TaskController::class, 'assign']);
 $router->post('/aufgaben/termin', [TaskController::class, 'dueDate']);
@@ -175,6 +176,11 @@ $router->post('/praesentationen/{id}/loeschen', [PresentationController::class, 
 $router->get('/admin/users', [AdminController::class, 'users']);
 $router->get('/admin/import', [AdminController::class, 'importForm']);
 $router->post('/admin/import', [AdminController::class, 'import']);
+$router->get('/admin/einstellungen', [AdminController::class, 'settings']);
+$router->post('/admin/einstellungen', [AdminController::class, 'settingsSave']);
+
+// Persönliche Ansichten (je Nutzerkonto gespeichert)
+$router->post('/einstellungen/navigation', [AuthController::class, 'saveNavView']);
 
 // Module (Platzhalter und Weiterleitungen)
 $router->get('/modul/{slug}', [ModuleController::class, 'show']);

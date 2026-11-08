@@ -14,6 +14,7 @@ use Infocraft\Models\TaskMaterial;
 use Infocraft\Models\TaskSubmission;
 use Infocraft\Models\TaskTodo;
 use Infocraft\Models\TaskTopic;
+use Infocraft\Models\SiteSetting;
 use Infocraft\Models\User;
 use RuntimeException;
 
@@ -27,6 +28,12 @@ final class TaskController
         }
         if (Auth::isTeacher()) {
             $classes = SchoolClass::forTeacher($user->id, $user->role === 'admin');
+            // Unter-Navigation des Aufgabenpools: Meine Aufgaben (Kacheln),
+            // Aufgabenkatalog (fertige Aufgaben) und gemeinsamer Pool.
+            $view = (string) ($_GET['view'] ?? 'meine');
+            if (!in_array($view, ['meine', 'katalog', 'pool'], true)) {
+                $view = 'meine';
+            }
             // Filter: Klasse (kaskadiert auf deren Jahrgangsstufe), Themengebiet,
             // Jahrgangsstufe und Typ. Alle Filter sind optional und kombinierbar.
             $filterClassId = max(0, (int) ($_GET['class'] ?? 0));
@@ -108,6 +115,7 @@ final class TaskController
             // Abgabe-Fortschritt je Zuweisung (x von y abgegeben) vorbereiten.
             $progressByTask = [];
             $openGradings = [];
+            $totalsByTask = [];
             $classSizeCache = [];
             foreach ($tasks as $task) {
                 $submissions = TaskSubmission::forTask($task->id);
@@ -121,6 +129,7 @@ final class TaskController
                 }
                 $openGradings[$task->id] = $open;
                 $progressByTask[$task->id] = [];
+                $totalsByTask[$task->id] = ['total' => 0, 'submitted' => 0];
                 foreach ($targets[$task->id] as $target) {
                     $total = 0;
                     $submitted = 0;
@@ -139,8 +148,21 @@ final class TaskController
                         $submitted = isset($submissions[$target['userId']]) ? 1 : 0;
                     }
                     $progressByTask[$task->id][$target['id']] = ['total' => $total, 'submitted' => $submitted];
+                    $totalsByTask[$task->id]['total'] += $total;
+                    $totalsByTask[$task->id]['submitted'] += $submitted;
                 }
             }
+
+            // Meine Aufgaben didaktisch gruppieren: Abschnitte je Jahrgangsstufe,
+            // darunter je Themengebiet - so bleibt der Pool auch bei vielen
+            // Aufgaben übersichtlich.
+            $groupedTasks = [];
+            foreach ($tasks as $task) {
+                $level = (int) $task->level;
+                $topicKey = $task->topicId > 0 ? (int) $task->topicId : 0;
+                $groupedTasks[$level][$topicKey][] = $task;
+            }
+            ksort($groupedTasks);
 
             $catalog = TaskCatalog::all();
             if ($filterLevel > 0) {
@@ -148,6 +170,15 @@ final class TaskController
             }
             if ($filterType !== '') {
                 $catalog = array_values(array_filter($catalog, static fn (array $entry): bool => $entry['type'] === $filterType));
+            }
+            if ($filterTopicId > 0) {
+                $catalogTopic = TaskTopic::find($filterTopicId);
+                $catalog = array_values(array_filter($catalog, static fn (array $entry): bool => ($entry['topic'] ?? '') === ($catalogTopic !== null ? $catalogTopic->name : '~')));
+            }
+            // Katalog ebenfalls nach Jahrgangsstufe und Themengebiet gliedern.
+            $groupedCatalog = [];
+            foreach ($catalog as $entry) {
+                $groupedCatalog[(int) $entry['level']][$entry['topic'] ?? 'ohne Themengebiet'][] = $entry;
             }
             $pool = Task::pool($user->id);
             if ($filterTopicId > 0) {
@@ -167,7 +198,10 @@ final class TaskController
             render('tasks_teacher', [
                 'title' => 'Aufgabenpool',
                 'active' => 'tasks',
+                'view' => $view,
                 'tasks' => $tasks,
+                'groupedTasks' => $groupedTasks,
+                'groupedCatalog' => $groupedCatalog,
                 'targets' => $targets,
                 'classes' => $classes,
                 'studentsByClass' => self::studentsByClass($user),
@@ -180,6 +214,7 @@ final class TaskController
                 'filterLevel' => $filterLevel,
                 'filterType' => $filterType,
                 'progress' => $progressByTask,
+                'totals' => $totalsByTask,
                 'openGradings' => $openGradings,
                 'upcoming' => $upcoming,
                 'todoCounts' => TaskTodo::templatesForTasks($taskIds),
@@ -268,6 +303,26 @@ final class TaskController
         ]);
     }
 
+    /** Eigene Seite: neue Aufgabe anlegen (das Formular hat hier Platz). */
+    public static function createPage(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Nur Lehrkräfte können Aufgaben anlegen.');
+            redirect('/');
+        }
+        render('tasks_new', [
+            'title' => 'Neue Aufgabe',
+            'active' => 'tasks',
+            'allTopics' => TaskTopic::all(),
+            'aiConfigured' => AiSettings::resolve($user->id) !== null,
+            'user' => $user,
+        ]);
+    }
+
     public static function create(): void
     {
         $user = Auth::user();
@@ -282,7 +337,7 @@ final class TaskController
         $title = trim((string) ($_POST['title'] ?? ''));
         if ($title === '') {
             flash('error', 'Bitte einen Titel angeben.');
-            redirect('/aufgaben');
+            redirect('/aufgaben/neu');
         }
         $type = (string) ($_POST['type'] ?? 'allgemein');
         if (!in_array($type, ['allgemein', 'sql', 'html', 'code', 'quiz'], true)) {
@@ -293,9 +348,9 @@ final class TaskController
         $maxPoints = max(0, min(1000, (int) ($_POST['max_points'] ?? 0)));
         [$topicId, $description, $descriptionFormat] = self::readTaskForm();
         $solutionVisible = ($_POST['solution_visible'] ?? '') === '1' ? 1 : 0;
-        Task::createFull($user->id, $title, $description, $type, $level, 0, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''), $topicId, $descriptionFormat, 0, $solutionVisible);
-        flash('success', 'Aufgabe angelegt.');
-        redirect('/aufgaben');
+        $task = Task::createFull($user->id, $title, $description, $type, $level, 0, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''), $topicId, $descriptionFormat, 0, $solutionVisible);
+        flash('success', 'Aufgabe angelegt. Jetzt ToDos und Vorlagen ergänzen oder direkt verteilen.');
+        redirect('/aufgaben/' . $task->id . '/bearbeiten');
     }
 
     /** Formular zum Bearbeiten einer eigenen Aufgabe. */
@@ -329,6 +384,40 @@ final class TaskController
                 }
             }
         }
+        // Verteilen & Termine leben jetzt hier: Fortschritt und offene
+        // Korrekturen je Zuweisung mitliefern.
+        $targets = Task::targets($task->id);
+        $submissions = TaskSubmission::forTask($task->id);
+        $gradings = TaskGrading::forTask($task->id);
+        $open = 0;
+        foreach ($submissions as $studentId => $submission) {
+            $grading = $gradings[$studentId] ?? null;
+            if ($grading === null || ($grading['source'] === 'api' && !$grading['checked'])) {
+                $open++;
+            }
+        }
+        $classes = SchoolClass::forTeacher($user->id, $user->role === 'admin');
+        $progressByTarget = [];
+        $classSizeCache = [];
+        foreach ($targets as $target) {
+            $total = 0;
+            $submitted = 0;
+            if ($target['classId'] !== null) {
+                if (!isset($classSizeCache[$target['classId']])) {
+                    $classSizeCache[$target['classId']] = User::byClass($target['classId']);
+                }
+                foreach ($classSizeCache[$target['classId']] as $student) {
+                    $total++;
+                    if (isset($submissions[$student->id])) {
+                        $submitted++;
+                    }
+                }
+            } else {
+                $total = 1;
+                $submitted = isset($submissions[$target['userId']]) ? 1 : 0;
+            }
+            $progressByTarget[$target['id']] = ['total' => $total, 'submitted' => $submitted];
+        }
         render('tasks_edit', [
             'title' => 'Aufgabe bearbeiten',
             'active' => 'tasks',
@@ -336,6 +425,12 @@ final class TaskController
             'topics' => $topics,
             'materials' => TaskMaterial::forTask($task->id),
             'todos' => TaskTodo::templatesForTask($task->id),
+            'targets' => $targets,
+            'progress' => $progressByTarget,
+            'openGradings' => $open,
+            'classes' => $classes,
+            'studentsByClass' => self::studentsByClass($user),
+            'defaultLanguage' => SiteSetting::defaultLanguage(),
             'user' => $user,
         ]);
     }
@@ -373,7 +468,7 @@ final class TaskController
         $solutionVisible = ($_POST['solution_visible'] ?? '') === '1' ? 1 : 0;
         Task::update($task->id, $title, $description, $type, $level, (string) ($_POST['sample_solution'] ?? ''), $lateLock, $maxPoints, (string) ($_POST['rubric'] ?? ''), $topicId, $descriptionFormat, $solutionVisible);
         flash('success', 'Aufgabe gespeichert.');
-        redirect('/aufgaben');
+        redirect('/aufgaben/' . $task->id . '/bearbeiten');
     }
 
     /**
@@ -419,14 +514,14 @@ final class TaskController
         $task = Task::find((int) ($params['id'] ?? 0));
         if ($task === null || !Task::ownedBy($task, $user)) {
             flash('error', 'Aufgabe nicht gefunden.');
-            redirect('/aufgaben');
+            redirect('/aufgaben/' . $task->id . '/bearbeiten');
         }
         $share = ($_POST['shared'] ?? '') === '1';
         Task::setShared($task->id, $share);
         flash('success', $share
             ? 'Aufgabe ist jetzt im gemeinsamen Pool aller Lehrkräfte sichtbar.'
             : 'Aufgabe ist nicht mehr im gemeinsamen Pool geteilt.');
-        redirect('/aufgaben');
+        redirect('/aufgaben/' . $task->id . '/bearbeiten');
     }
 
     /** Aufgabe aus dem gemeinsamen Pool als eigene Kopie übernehmen. */
@@ -473,18 +568,19 @@ final class TaskController
         $entry = TaskCatalog::find((int) ($_POST['template_id'] ?? 0));
         if ($entry === null) {
             flash('error', 'Diese Katalog-Aufgabe gibt es nicht.');
-            redirect('/aufgaben');
+            redirect('/aufgaben?view=katalog');
         }
         if (Task::hasTitle($user->id, $entry['title'])) {
             flash('error', 'Diese Aufgabe hast du schon im Pool.');
-            redirect('/aufgaben');
+            redirect('/aufgaben?view=katalog');
         }
         $topic = ($entry['topic'] ?? '') !== ''
             ? TaskTopic::findOrCreate($entry['topic'], (int) $entry['level'])
             : null;
-        Task::createFull($user->id, $entry['title'], $entry['description'], $entry['type'], $entry['level'], 0, '', 0, 0, '', $topic !== null ? $topic->id : 0, 'text');
+        $task = Task::createFull($user->id, $entry['title'], $entry['description'], $entry['type'], $entry['level'], 0, (string) ($entry['solution'] ?? ''), 0, 0, (string) ($entry['rubric'] ?? ''), $topic !== null ? $topic->id : 0, 'text');
+        self::seedCatalogExtras($task->id, $entry);
         flash('success', 'Aufgabe aus dem Katalog übernommen.');
-        redirect('/aufgaben');
+        redirect('/aufgaben/' . $task->id . '/bearbeiten');
     }
 
     /**
@@ -505,7 +601,7 @@ final class TaskController
         $level = (int) ($_POST['level'] ?? 0);
         if ($level < 6 || $level > 13) {
             flash('error', 'Bitte eine Jahrgangsstufe zwischen 6 und 13 angeben.');
-            redirect('/aufgaben');
+            redirect('/aufgaben?view=katalog');
         }
         $count = 0;
         foreach (TaskCatalog::forLevel($level) as $entry) {
@@ -513,7 +609,8 @@ final class TaskController
                 $topic = ($entry['topic'] ?? '') !== ''
                     ? TaskTopic::findOrCreate($entry['topic'], (int) $entry['level'])
                     : null;
-                Task::createFull($user->id, $entry['title'], $entry['description'], $entry['type'], $entry['level'], 0, '', 0, 0, '', $topic !== null ? $topic->id : 0, 'text');
+                $task = Task::createFull($user->id, $entry['title'], $entry['description'], $entry['type'], $entry['level'], 0, (string) ($entry['solution'] ?? ''), 0, 0, (string) ($entry['rubric'] ?? ''), $topic !== null ? $topic->id : 0, 'text');
+                self::seedCatalogExtras($task->id, $entry);
                 $count++;
             }
         }
@@ -522,7 +619,23 @@ final class TaskController
         } else {
             flash('success', $count . ' Aufgabe' . ($count === 1 ? '' : 'n') . ' der Jahrgangsstufe ' . $level . ' übernommen.');
         }
-        redirect('/aufgaben?level=' . $level);
+        redirect('/aufgaben?view=katalog&level=' . $level);
+    }
+
+    /**
+     * Katalog-Aufgaben bringen didaktisches Material mit: abhakbare ToDos,
+     * Vorlagen (z. B. eine Beispieldatenbank als .sql) und eine Musterlösung.
+     * Alles wird beim Übernehmen als Kopie mitgegeben.
+     * @param array{id: int, title: string, description: string, type: string, level: int, topic: string, todos?: list<string>, files?: list<array{name: string, content: string}>, solution?: string, rubric?: string} $entry
+     */
+    private static function seedCatalogExtras(int $taskId, array $entry): void
+    {
+        foreach ((array) ($entry['todos'] ?? []) as $todoTitle) {
+            TaskTodo::addTemplate($taskId, (string) $todoTitle);
+        }
+        foreach ((array) ($entry['files'] ?? []) as $file) {
+            TaskMaterial::add($taskId, (string) ($file['name'] ?? ''), (string) ($file['content'] ?? ''));
+        }
     }
 
     public static function delete(array $params): void
@@ -567,12 +680,12 @@ final class TaskController
         $dueAt = self::parseAt((string) ($_POST['due_at'] ?? ''));
         if ($dueAt === false) {
             flash('error', 'Bitte den Abgabetermin als Datum mit Uhrzeit angeben (z. B. 2026-11-20 14:30).');
-            redirect('/aufgaben');
+            redirect('/aufgaben/' . $task->id . '/bearbeiten');
         }
         $visibleFrom = self::parseAt((string) ($_POST['visible_from'] ?? ''));
         if ($visibleFrom === false) {
             flash('error', 'Bitte den Starttermin als Datum mit Uhrzeit angeben (z. B. 2026-11-20 14:30) oder leer lassen.');
-            redirect('/aufgaben');
+            redirect('/aufgaben/' . $task->id . '/bearbeiten');
         }
         $classId = (int) ($_POST['class_id'] ?? 0);
         // Einzelne Personen: Auswahl im Verteilen-Panel (Mehrfachauswahl)
@@ -593,13 +706,13 @@ final class TaskController
         if ($classId > 0) {
             if (!$isAdmin && !SchoolClass::hasTeacher($classId, $user->id)) {
                 flash('error', 'Du unterrichtest diese Klasse nicht.');
-                redirect('/aufgaben');
+                redirect('/aufgaben/' . $task->id . '/bearbeiten');
             }
             Task::assign($task->id, $classId, null, $dueAt, $visibleFrom);
             flash('success', $visibleFrom === null
                 ? 'Aufgabe an die Klasse ausgeteilt.'
                 : 'Aufgabe an die Klasse ausgeteilt. Sie erscheint am ' . $visibleFrom . ' Uhr.');
-            redirect('/aufgaben');
+            redirect('/aufgaben/' . $task->id . '/bearbeiten');
         }
         if ($userIds !== []) {
             $count = 0;
@@ -617,17 +730,17 @@ final class TaskController
             }
             if ($count === 0 && $skipped === 0) {
                 flash('error', 'Diese Personen sind nicht in einer deiner Klassen.');
-                redirect('/aufgaben');
+                redirect('/aufgaben/' . $task->id . '/bearbeiten');
             }
             flash($count > 0 ? 'success' : 'error', ($count > 0
                 ? 'Aufgabe an ' . $count . ' Person(en) ausgeteilt.'
                 : 'Es gab keine neue Zuweisung.')
                 . ($skipped > 0 ? ' Bereits zugewiesen: ' . $skipped . '.' : '')
                 . ($visibleFrom !== null ? ' Sie erscheint am ' . $visibleFrom . ' Uhr.' : ''));
-            redirect('/aufgaben');
+            redirect('/aufgaben/' . $task->id . '/bearbeiten');
         }
         flash('error', 'Kein Ziel angegeben.');
-        redirect('/aufgaben');
+        redirect('/aufgaben/' . $task->id . '/bearbeiten');
     }
 
     /** Starttermin (Sichtbarkeit) einer bestehenden Zuweisung ändern oder streichen (= sofort sichtbar). */
@@ -655,13 +768,13 @@ final class TaskController
         $visibleFrom = self::parseAt((string) ($_POST['visible_from'] ?? ''));
         if ($visibleFrom === false) {
             flash('error', 'Bitte den Starttermin als Datum mit Uhrzeit angeben (z. B. 2026-11-20 14:30) oder leer lassen.');
-            redirect('/aufgaben');
+            redirect('/aufgaben/' . $task->id . '/bearbeiten');
         }
         Task::setTargetVisibleFrom((int) $target['id'], $visibleFrom);
         flash('success', $visibleFrom === null
             ? 'Starttermin gestrichen, die Aufgabe ist sofort sichtbar.'
             : 'Starttermin gespeichert. Die Aufgabe erscheint für die Klasse bzw. Person zum angegebenen Zeitpunkt.');
-        redirect('/aufgaben');
+        redirect('/aufgaben/' . $task->id . '/bearbeiten');
     }
 
     /** Zuweisung zurücknehmen: die Aufgabe ist für die Klasse bzw. Person nicht mehr sichtbar. */
@@ -688,7 +801,7 @@ final class TaskController
         }
         Task::deleteTarget((int) $target['id']);
         flash('success', 'Zuweisung eingezogen. Die Aufgabe ist für die Klasse bzw. Person nicht mehr sichtbar (bereits abgegebene Lösungen bleiben erhalten).');
-        redirect('/aufgaben');
+        redirect('/aufgaben/' . $task->id . '/bearbeiten');
     }
 
     /** ToDos der Lehrkraft an einer Aufgabe pflegen (Vorlage für alle Empfänger). */
@@ -862,9 +975,10 @@ final class TaskController
             flash('error', 'Aufgabe nicht gefunden.');
             redirect('/aufgaben');
         }
-        $target = (string) ($_POST['target'] ?? 'python');
+        // Standard-Zielsprache kommt aus den Admin-Einstellungen (Standard: Java).
+        $target = (string) ($_POST['target'] ?? SiteSetting::defaultLanguage());
         if (!in_array($target, ['java', 'python'], true)) {
-            $target = 'python';
+            $target = SiteSetting::defaultLanguage();
         }
         $label = $target === 'java' ? 'Java-Variante' : 'Python-Variante';
         $title = $task->title;
@@ -910,8 +1024,8 @@ final class TaskController
         }
         flash('success', $label . ' angelegt'
             . ($converted ? ', die Musterlösung wurde von der KI konvertiert. Bitte prüfen!' : '. Materialien und ToDos wurden mitkopiert, die Musterlösung bitte anpassen.')
-            . ' Bearbeite sie unter „Bearbeiten".');
-        redirect('/aufgaben');
+);
+        redirect('/aufgaben/' . $copy->id . '/bearbeiten');
     }
 
     /** Abgabetermin einer bestehenden Zuweisung ändern oder streichen. */
@@ -939,11 +1053,11 @@ final class TaskController
         $dueAt = self::parseAt((string) ($_POST['due_at'] ?? ''));
         if ($dueAt === false) {
             flash('error', 'Bitte den Abgabetermin als Datum mit Uhrzeit angeben (z. B. 2026-11-20 14:30).');
-            redirect('/aufgaben');
+            redirect('/aufgaben/' . $task->id . '/bearbeiten');
         }
         Task::setTargetDueAt((int) $target['id'], $dueAt);
         flash('success', $dueAt === null ? 'Abgabetermin gestrichen.' : 'Abgabetermin gespeichert.');
-        redirect('/aufgaben');
+        redirect('/aufgaben/' . $task->id . '/bearbeiten');
     }
 
     /** Schülerin oder Schüler gibt eine Lösung ab (überschreibt die bisherige). */
@@ -1115,7 +1229,7 @@ final class TaskController
                 TaskMaterial::add($task->id, (string) $material['filename'], $rawContent);
             }
         }
-        flash('success', 'Aufgabe "' . $title . '" importiert. Materialien und ToDo-Vorlagen sind mitgekommen.');
+        flash('success', 'Aufgabe "' . $title . '" importiertien und ToDo-Vorlagen sind mitgekommen.');
         redirect('/aufgaben/' . $task->id . '/bearbeiten');
     }
 

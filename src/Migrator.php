@@ -39,6 +39,9 @@ final class Migrator
         self::ensureTaskTargetDueAtColumn($pdo, $driver);
         self::ensureTaskTimingAndGradingColumns($pdo, $driver);
         self::ensureTaskOrganizationTables($pdo, $driver);
+        self::ensureSiteSettingsTable($pdo, $driver);
+        self::ensureUserPrefsTable($pdo, $driver);
+        self::seedSiteSettings($pdo);
         self::seedTaskTopics($pdo);
 
         $classes = 0;
@@ -845,6 +848,67 @@ final class Migrator
                 $pdo->exec('ALTER TABLE task_submissions ADD COLUMN self_rating INTEGER NOT NULL DEFAULT 0');
             }
         }
+    }
+
+    /**
+     * Schulweite Einstellungen (Admin-Bereich), z. B. die Standard-
+     * Programmiersprache. Tabelle idempotent anlegen.
+     */
+    private static function ensureSiteSettingsTable(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS site_settings (
+                setting_key VARCHAR(100) NOT NULL,
+                setting_value TEXT NOT NULL,
+                PRIMARY KEY (setting_key)
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+        } else {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS site_settings (
+                setting_key TEXT NOT NULL,
+                setting_value TEXT NOT NULL,
+                PRIMARY KEY (setting_key)
+            )');
+        }
+    }
+
+    /**
+     * Persönliche Einstellungen je Nutzerkonto, z. B. die gewählte Ansicht
+     * der Seitennavigation (volle Beschriftung oder nur Icons).
+     */
+    private static function ensureUserPrefsTable(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS user_prefs (
+                user_id INT UNSIGNED NOT NULL,
+                pref_key VARCHAR(100) NOT NULL,
+                pref_value TEXT NOT NULL,
+                PRIMARY KEY (user_id, pref_key),
+                CONSTRAINT fk_prefs_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+        } else {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS user_prefs (
+                user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                pref_key TEXT NOT NULL,
+                pref_value TEXT NOT NULL,
+                PRIMARY KEY (user_id, pref_key)
+            )');
+        }
+    }
+
+    /**
+     * Schulweite Einstellungen setzen (nur wenn noch nicht vorhanden):
+     * Standard-Programmiersprache ist Java, bleibt im Admin-Bereich
+     * umschaltbar.
+     */
+    private static function seedSiteSettings(PDO $pdo): void
+    {
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM site_settings WHERE setting_key = ?');
+        $stmt->execute(['default_language']);
+        if ((int) $stmt->fetchColumn() > 0) {
+            return;
+        }
+        $insert = $pdo->prepare('INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?)');
+        $insert->execute(['default_language', 'java']);
     }
 
     /**

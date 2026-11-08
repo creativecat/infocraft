@@ -6,6 +6,7 @@ namespace Infocraft\Controllers;
 use Infocraft\Auth;
 use Infocraft\Config;
 use Infocraft\Models\User;
+use Infocraft\Models\UserPref;
 use Infocraft\SsoM365;
 
 final class AuthController
@@ -61,6 +62,24 @@ final class AuthController
     {
         Auth::logout();
         redirect('/login');
+    }
+
+    /**
+     * Ansicht der Seitennavigation dauerhaft speichern (voller Text oder nur
+     * Icons), je Nutzerkonto. Wird vom Umschalter oben links aufgerufen.
+     */
+    public static function saveNavView(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $view = (string) ($_POST['view'] ?? 'full');
+        UserPref::set($user->id, 'nav_view', $view === 'mini' ? 'mini' : 'full');
+        header('Content-Type: application/json; charset=utf-8');
+        echo '{"ok":true}';
+        exit;
     }
 
     public static function ssoStart(): void
