@@ -595,18 +595,6 @@ jobs:
           TAMID=$(sqlite3 "$DB" "SELECT id FROM task_materials WHERE task_id = $TAORG LIMIT 1")
           CODE_TADL=$(curl -sS -L -o tadl.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/aufgaben/$TAORG/material/$TAMID)
           grep -q "public class Auto" tadl.html && TAORG_DL_OK=1 || TAORG_DL_OK=0
-          grep -q "In der Code-Werkstatt öffnen" tastu4.html && TAORG_OPEN_BTN_OK=1 || TAORG_OPEN_BTN_OK=0
-          CODE_TAOPEN=$(curl -sS -L -o taopen.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF10" http://127.0.0.1:8080/aufgaben/$TAORG/oeffnen)
-          grep -q "task-work-info" taopen.html && TAORG_OPEN_OK=1 || TAORG_OPEN_OK=0
-          if [ "$TAORG_OPEN_OK" != "1" ]; then echo "::error::DBG-TAOPEN http=$CODE_TAOPEN ui=$TAORG_OPEN_UI_OK code=$TAORG_OPEN_CODE_OK proj=$TAOPENPROJ classes=$(grep -o 'class="two-col[^"]*"' taopen.html | head -n 5 | tr '\n' ' ') tw=$(sqlite3 "$DB" "SELECT task_id || '/' || student_id || '/' || project_id FROM task_working") projrow=$(sqlite3 "$DB" "SELECT owner_id || '/' || type || '/' || language FROM projects WHERE id = $TAOPENPROJ") presrow=$(sqlite3 "$DB" "SELECT id || '/' || presentation_project_id FROM tasks WHERE presentation_project_id IS NOT NULL") head=$(head -c 300 taopen.html | tr '\n' ' ')"; fi
-          grep -q "ToDos (zum Abhaken)" taopen.html && TAORG_OPEN_UI_OK=1 || TAORG_OPEN_UI_OK=0
-          grep -q "public class Auto" taopen.html && TAORG_OPEN_CODE_OK=1 || TAORG_OPEN_CODE_OK=0
-          TAOPENPROJ=$(sqlite3 "$DB" "SELECT project_id FROM task_working WHERE task_id = $TAORG AND student_id = $LENA")
-          [ -n "$TAOPENPROJ" ] && TAORG_OPEN_DB_OK=1 || TAORG_OPEN_DB_OK=0
-          CODE_TASUBMITW2=$(curl -sS -L -o tasubmitw2.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF10" -d "project_id=$TAOPENPROJ" --data-urlencode "back=/werkstatt/code/$TAOPENPROJ" http://127.0.0.1:8080/aufgaben/$TAORG/abgeben)
-          grep -q "Abgabe gespeichert" tasubmitw2.html && TAORG_OPEN_SUBMIT_OK=1 || TAORG_OPEN_SUBMIT_OK=0
-          TASUBW2=$(sqlite3 "$DB" "SELECT project_id FROM task_submissions WHERE task_id = $TAORG AND student_id = $LENA")
-          [ "$TASUBW2" = "$TAOPENPROJ" ] && TAORG_OPEN_SUBMIT_DB_OK=1 || TAORG_OPEN_SUBMIT_DB_OK=0
           CODE_TAFT6=$(curl -sS -L -o taft6.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/aufgaben?topic=$TOPIC6")
           grep -q "CI Aufgabe Org" taft6.html && TAORG_FTOPIC_OK=1 || TAORG_FTOPIC_OK=0
           CODE_TAFT9=$(curl -sS -L -o taft9.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/aufgaben?topic=$TOPIC9")
@@ -617,6 +605,17 @@ jobs:
           grep -q "CI Aufgabe Org" tafsto.html && TAORG_FSTAT_OK=1 || TAORG_FSTAT_OK=0
           CODE_TAFSTA=$(curl -sS -L -o tafsta.html -w "%{http_code}" -b cookies3.txt "http://127.0.0.1:8080/aufgaben?status=abgegeben")
           grep -q "CI Aufgabe Org" tafsta.html && TAORG_FSTAT2_OK=0 || TAORG_FSTAT2_OK=1
+          grep -q "In der Code-Werkstatt öffnen" tastu4.html && TAORG_OPEN_BTN_OK=1 || TAORG_OPEN_BTN_OK=0
+          CODE_TAOPEN=$(curl -sS -L -o taopen.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF10" http://127.0.0.1:8080/aufgaben/$TAORG/oeffnen)
+          grep -q "task-work-info" taopen.html && TAORG_OPEN_OK=1 || TAORG_OPEN_OK=0
+          grep -q "ToDos (zum Abhaken)" taopen.html && TAORG_OPEN_UI_OK=1 || TAORG_OPEN_UI_OK=0
+          grep -q "public class Auto" taopen.html && TAORG_OPEN_CODE_OK=1 || TAORG_OPEN_CODE_OK=0
+          TAOPENPROJ=$(sqlite3 "$DB" "SELECT project_id FROM task_working WHERE task_id = $TAORG AND student_id = $LENA")
+          [ -n "$TAOPENPROJ" ] && TAORG_OPEN_DB_OK=1 || TAORG_OPEN_DB_OK=0
+          CODE_TASUBMITW2=$(curl -sS -L -o tasubmitw2.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF10" -d "project_id=$TAOPENPROJ" --data-urlencode "back=/werkstatt/code/$TAOPENPROJ" http://127.0.0.1:8080/aufgaben/$TAORG/abgeben)
+          grep -q "Abgabe gespeichert" tasubmitw2.html && TAORG_OPEN_SUBMIT_OK=1 || TAORG_OPEN_SUBMIT_OK=0
+          TASUBW2=$(sqlite3 "$DB" "SELECT project_id FROM task_submissions WHERE task_id = $TAORG AND student_id = $LENA")
+          [ "$TASUBW2" = "$TAOPENPROJ" ] && TAORG_OPEN_SUBMIT_DB_OK=1 || TAORG_OPEN_SUBMIT_DB_OK=0
           CODE_TAVAR=$(curl -sS -L -o tavar.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "target=python" http://127.0.0.1:8080/aufgaben/$TAORG/variante)
           grep -q "Python-Variante angelegt" tavar.html && TAORG_VAR_OK=1 || TAORG_VAR_OK=0
           TAORGVAR=$(sqlite3 "$DB" "SELECT id FROM tasks WHERE teacher_id = $STEFAN AND title = 'CI Aufgabe Org (Python-Variante)'")
