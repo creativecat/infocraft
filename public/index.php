@@ -43,6 +43,7 @@ $router->get('/auth/sso/callback', [AuthController::class, 'ssoCallback']);
 
 // Unterricht (Lehrkräfte): eigene Klassen, OTP-Passwörter
 $router->get('/unterricht/klassen', [TeacherController::class, 'classes']);
+$router->get('/unterricht/klassen/{id}/fortschritt', [TeacherController::class, 'progress']);
 $router->get('/unterricht/passwort/ergebnis', [TeacherController::class, 'otpResults']);
 $router->post('/unterricht/passwort', [TeacherController::class, 'resetPassword']);
 $router->post('/unterricht/klasse/zuordnen', [TeacherController::class, 'assignTeacher']);

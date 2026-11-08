@@ -32,6 +32,13 @@
                     <?php endforeach; ?>
                 </select>
             </label>
+            <label class="field"><span>Startpaket (nur Python)</span>
+                <select name="starter">
+                    <option value="">- leeres Blatt -</option>
+                    <option value="zaehlen">🔢 Zählen mit Python (Schleifen)</option>
+                    <option value="zeichnen">🎨 Zeichnen mit Zeichen (Turtle-Bild)</option>
+                </select>
+            </label>
             <div class="btn-row"><button class="btn btn-primary" type="submit" title="Projekt anlegen">➕</button></div>
         </form>
         <form method="post" action="<?= url('werkstatt/code/ordner') ?>" class="form">

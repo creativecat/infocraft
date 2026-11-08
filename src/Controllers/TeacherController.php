@@ -44,6 +44,121 @@ final class TeacherController
         ]);
     }
 
+    /**
+     * Fortschrittsübersicht einer Klasse (Issue #8): eine Zeile je Schülerin
+     * bzw. Schüler mit Quiz-Bestwerten, erledigten Aufgaben und zuletzt
+     * bearbeiteten Projekten aus der Werkstatt.
+     */
+    public static function progress(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Dieser Bereich ist nur für Lehrkräfte zugänglich.');
+            redirect('/');
+        }
+        $isAdmin = $user->role === 'admin';
+        $classId = (int) ($params['id'] ?? 0);
+        $class = null;
+        foreach (SchoolClass::forTeacher($user->id, $isAdmin) as $candidate) {
+            if ($candidate->id === $classId) {
+                $class = $candidate;
+                break;
+            }
+        }
+        if ($class === null) {
+            flash('error', 'Klasse nicht gefunden oder du unterrichtest sie nicht.');
+            redirect('/unterricht/klassen');
+        }
+        $pdo = \Infocraft\Database::pdo();
+        $rows = [];
+        foreach (User::byClass($class->id) as $student) {
+            // Quiz-Bestwerte: alle Quizze, die dieser Klasse oder der Person
+            // ausgeteilt wurden, mit jeweils bester Punktzahl.
+            $quizStmt = $pdo->prepare(
+                'SELECT q.id, q.title, q.level,
+                        (SELECT COUNT(*) FROM quiz_questions WHERE quiz_id = q.id) AS question_count,
+                        (SELECT MAX(a.score) FROM quiz_attempts a WHERE a.quiz_id = q.id AND a.user_id = :uid) AS best_score,
+                        (SELECT MIN(a.total) FROM quiz_attempts a WHERE a.quiz_id = q.id AND a.user_id = :uid) AS best_total,
+                        (SELECT COUNT(*) FROM quiz_attempts a WHERE a.quiz_id = q.id AND a.user_id = :uid) AS tries
+                 FROM quizzes q
+                 JOIN quiz_targets tt ON tt.quiz_id = q.id
+                 WHERE tt.class_id = :cid OR tt.user_id = :uid
+                 GROUP BY q.id ORDER BY q.id DESC'
+            );
+            $quizStmt->execute([':uid' => $student->id, ':cid' => $class->id]);
+            $quizRows = [];
+            $quizDone = 0;
+            foreach ($quizStmt->fetchAll() as $q) {
+                $played = $q['best_score'] !== null;
+                if ($played) {
+                    $quizDone++;
+                }
+                $quizRows[] = [
+                    'title' => (string) $q['title'],
+                    'best' => $played ? (int) $q['best_score'] . '/' . (int) $q['best_total'] : null,
+                    'tries' => (int) $q['tries'],
+                ];
+            }
+            // Aufgaben: ausgeteilt an die Klasse oder die Person, mit und
+            // ohne Abgabe.
+            $taskStmt = $pdo->prepare(
+                'SELECT t.id, t.title, t.type,
+                        (SELECT COUNT(*) FROM task_submissions ts WHERE ts.task_id = t.id AND ts.student_id = :uid) AS submitted,
+                        (SELECT ts2.submitted_at FROM task_submissions ts2 WHERE ts2.task_id = t.id AND ts2.student_id = :uid LIMIT 1) AS submitted_at
+                 FROM tasks t
+                 JOIN task_targets tt ON tt.task_id = t.id
+                 WHERE tt.class_id = :cid OR tt.user_id = :uid
+                 GROUP BY t.id ORDER BY t.id DESC'
+            );
+            $taskStmt->execute([':uid' => $student->id, ':cid' => $class->id]);
+            $taskRows = [];
+            $tasksDone = 0;
+            foreach ($taskStmt->fetchAll() as $t) {
+                $done = (int) $t['submitted'] > 0;
+                if ($done) {
+                    $tasksDone++;
+                }
+                $taskRows[] = [
+                    'title' => (string) $t['title'],
+                    'type' => (string) $t['type'],
+                    'done' => $done,
+                    'submittedAt' => $t['submitted_at'] !== null ? (string) $t['submitted_at'] : null,
+                ];
+            }
+            // Zuletzt bearbeitete Projekte aus der Werkstatt.
+            $projStmt = $pdo->prepare(
+                'SELECT title, type, language, updated_at FROM projects WHERE owner_id = ? ORDER BY updated_at DESC, id DESC LIMIT 3'
+            );
+            $projStmt->execute([$student->id]);
+            $projectRows = [];
+            foreach ($projStmt->fetchAll() as $p) {
+                $projectRows[] = [
+                    'title' => (string) $p['title'],
+                    'type' => (string) $p['type'],
+                    'language' => $p['language'] !== null ? (string) $p['language'] : '',
+                    'updatedAt' => (string) $p['updated_at'],
+                ];
+            }
+            $rows[] = [
+                'student' => $student,
+                'quizzes' => $quizRows,
+                'quizDone' => $quizDone,
+                'tasks' => $taskRows,
+                'tasksDone' => $tasksDone,
+                'projects' => $projectRows,
+            ];
+        }
+        render('teacher_class_progress', [
+            'title' => 'Fortschritt: Klasse ' . $class->name,
+            'active' => 'unterricht',
+            'class' => $class,
+            'rows' => $rows,
+        ]);
+    }
+
     /** OTP für eine einzelne Schülerin/einen Schüler oder eine ganze Klasse erzeugen. */
     public static function resetPassword(): void
     {

@@ -15,11 +15,14 @@
 <section class="panel">
     <div class="panel-head">
         <h3>Klasse <?= e($entry['class']->name) ?> <span class="pill">Jahrgangsstufe <?= (int) $entry['class']->level() ?></span></h3>
-        <form method="post" action="<?= url('unterricht/passwort') ?>" class="form-inline">
-            <?= csrf_field() ?>
-            <input type="hidden" name="class_id" value="<?= (int) $entry['class']->id ?>">
-            <button class="btn btn-primary" type="submit" title="OTP für die ganze Klasse">🔑</button>
-        </form>
+        <div class="btn-row" style="display:flex;gap:6px;">
+            <a class="btn btn-ghost" href="<?= url('unterricht/klassen/' . (int) $entry['class']->id . '/fortschritt') ?>" title="Fortschritt der Klasse: Quiz-Bestwerte, erledigte Aufgaben, zuletzt bearbeitete Projekte">📊 Fortschritt</a>
+            <form method="post" action="<?= url('unterricht/passwort') ?>" class="form-inline">
+                <?= csrf_field() ?>
+                <input type="hidden" name="class_id" value="<?= (int) $entry['class']->id ?>">
+                <button class="btn btn-primary" type="submit" title="OTP für die ganze Klasse">🔑</button>
+            </form>
+        </div>
     </div>
     <div class="diagram-toggle-row">
         <span>📐 Klassendiagramme automatisch erzeugen: <strong><?= $entry['class']->diagramAuto === 1 ? 'erlaubt' : 'deaktiviert' ?></strong></span>

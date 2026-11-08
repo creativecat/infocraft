@@ -65,9 +65,14 @@ final class CodeController
             'html' => 'html',
             default => in_array($_POST['language'] ?? '', ['python', 'java', 'asm'], true) ? (string) $_POST['language'] : SiteSetting::defaultLanguage(),
         };
+        if ($language === 'python' && !self::pythonAllowed($user)) {
+            flash('error', 'Python ist für deine Klasse (noch) nicht freigegeben.');
+            redirect('/werkstatt/code');
+        }
         $folderId = (int) ($_POST['folder_id'] ?? 0);
         $folderId = $folderId > 0 && Folder::belongsTo($folderId, $user->id) ? $folderId : null;
-        Project::create($user->id, $folderId, $title, $type, $language, self::starterContent($type, $language, $title));
+        $starter = (string) ($_POST['starter'] ?? '');
+        Project::create($user->id, $folderId, $title, $type, $language, self::starterContent($type, $language, $title, $starter));
         flash('success', 'Projekt angelegt.');
         redirect('/werkstatt/code');
     }
@@ -192,6 +197,10 @@ final class CodeController
             http_response_code(404);
             render('error', ['title' => 'Projekt nicht gefunden', 'message' => 'Dieses Projekt gibt es nicht oder gehört dir nicht.']);
             return;
+        }
+        if ($project->language === 'python' && !self::pythonAllowed($user)) {
+            flash('error', 'Python ist für deine Klasse (noch) nicht freigegeben.');
+            redirect('/werkstatt/code');
         }
         $files = ProjectFile::allForProject($project->id);
         $isMultiFile = $project->type === 'code' && ($project->language === 'java' || $project->language === 'asm');
@@ -473,7 +482,32 @@ final class CodeController
         return ($clean === '' ? 'programm' : $clean) . '.asm';
     }
 
-    private static function starterContent(string $type, string $language, string $title): string
+    /**
+     * Python pro Klasse freigeben oder sperren (Issue #6): Lehrkräfte und
+     * Admins dürfen immer; Schülerinnen und Schüler nur, wenn die Klasse
+     * Python nicht gesperrt hat (Freigabe vorzeitig, sonst Standard ab
+     * Jahrgangsstufe 6).
+     */
+    private static function pythonAllowed(User $user): bool
+    {
+        if ($user->role !== 'student') {
+            return true;
+        }
+        if ($user->classId === null) {
+            return true;
+        }
+        $mode = \Infocraft\Controllers\ModuleController::modesFor((int) $user->classId)['python'] ?? '';
+        if ($mode === 'sperren') {
+            return false;
+        }
+        if ($mode === 'freigeben') {
+            return true;
+        }
+        // Standard: Python ab Jahrgangsstufe 6 (wie das Code-Werkstatt-Modul).
+        return 6 <= (Auth::levelOf($user) ?? 0);
+    }
+
+    private static function starterContent(string $type, string $language, string $title, string $starter = ''): string
     {
         if ($type === 'html') {
             return "<!DOCTYPE html>\n<html lang=\"de\">\n<head>\n  <title>" . $title . "</title>\n</head>\n<body>\n  <h1>" . $title . "</h1>\n  <p>Hier entsteht deine Seite.</p>\n</body>\n</html>\n";
@@ -493,6 +527,18 @@ final class CodeController
             /* Einstiegsbeispiel: zwei Zahlen addieren und ausgeben,
              * mit Textausgabe zum Ausprobieren. */
             return "; " . $title . "\n; Zwei Zahlen addieren und ausgeben\nLOAD R1, 5\nLOAD R2, 7\nADD R1, R2\nOUT R1\n\n; Text ausgeben (Anfuehrungszeichen noetig)\nOUTS \"Fertig!\"\nHALT\n";
+        }
+        if ($language === 'python') {
+            // Startpakete für die Unterstufe (Issue #6): weniger Tipparbeit,
+            // sofort ein sichtbares Ergebnis. Pyodide kennt keine echte
+            // Turtle-Grafik, daher zeichnen wir mit Zeichenketten.
+            if ($starter === 'zaehlen') {
+                return "# " . $title . "\n# Zählen mit Python: eine Schleife mit Ausgabe\nfor zahl in range(1, 11):\n    print(\"Zahl:\", zahl)\n\n# Und rückwärts:\nfor zahl in range(10, 0, -1):\n    print(\"Rückwärts:\", zahl)\n";
+            }
+            if ($starter === 'zeichnen') {
+                return "# " . $title . "\n# Zeichnen mit Zeichen: mit Zeichenketten ein Bild ausgeben\n# Pyodide hat keine Turtle-Grafik, aber mit print() zeichnen wir genauso.\n\nstern = \"\"\"\n    *\n   ***\n  *****\n   ***\n    *\n\"\"\"\nprint(stern)\n\n# Eigene Figur: unten eine Linie mit Wiederholung\nprint(\"-\" * 20)\n";
+            }
+            return "# " . $title . "\nprint(\"Hallo InfoCraft!\")\n";
         }
         return "# " . $title . "\nprint(\"Hallo InfoCraft!\")\n";
     }
