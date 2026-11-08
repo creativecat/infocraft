@@ -258,6 +258,16 @@ final class CodeController
             flash('error', 'Projekt nicht gefunden.');
             redirect('/werkstatt/code');
         }
+        // Issue #45: Bei Nur-Lese-Rechten an einer Aufgaben-Datenbank keine
+        // eigene Datei: alle arbeiten mit denselben Daten der Lehrkraft.
+        $working = TaskWorking::forProject($project->id);
+        if ($working !== null && $working->studentId === $user->id) {
+            $workingTask = Task::find($working->taskId);
+            if ($workingTask !== null && $workingTask->dbTemplateId > 0 && $workingTask->dbWrite !== 1) {
+                flash('error', 'Für diese Aufgabe ist die Datenbank deiner Lehrkraft nur mit Leserechten freigegeben.');
+                redirect('/werkstatt/code/' . $project->id);
+            }
+        }
         $file = $_FILES['sql_file'] ?? null;
         if (!is_array($file) || (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
             flash('error', 'Bitte eine .sql-Datei auswählen.');

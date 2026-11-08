@@ -770,14 +770,13 @@ String beste = Database.value("SELECT name FROM schueler ORDER BY punkte DESC");
 System.out.println(Database.tables());                     // alle Tabellen</pre>
     <p class="muted">Verfügbar: <code>execute</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>query</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>count</code> die Zeilenanzahl, <code>value</code> den ersten Wert, <code>tables</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank bleibt mit deinem Projekt gespeichert: Bei jedem ▶ Ausführen startet sie mit den Tabellen und Daten aus deinem letzten Stand (und der Beispieldatenbank deiner Aufgabe, falls die Lehrkraft eine .sql-Datei als Material angehängt hat).</p>
 
+    <?php if (!empty($dbTemplates)): ?>
     <form method="post" enctype="multipart/form-data" action="<?= url('werkstatt/code/' . $project->id . '/datenbank/datei') ?>" class="form-inline db-load-form">
         <?= csrf_field() ?>
         <label for="db-sql-file"><strong>Eigene SQL-Datei:</strong></label>
         <input type="file" name="sql_file" id="db-sql-file" accept=".sql" required>
         <button class="btn btn-ghost" type="submit" title="Lädt eine eigene .sql-Datei mit CREATE TABLE- und INSERT-Befehlen als Mini-Datenbank deines Projekts.">📤 SQL-Datei hochladen</button>
     </form>
-
-    <?php if (!empty($dbTemplates)): ?>
     <form method="post" action="<?= url('werkstatt/code/' . $project->id . '/datenbank') ?>" class="form-inline db-load-form">
         <?= csrf_field() ?>
         <label for="db-template-select"><strong>Beispieldatenbank laden:</strong></label>
