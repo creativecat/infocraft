@@ -544,6 +544,30 @@ JLT marke</pre></td><td>Springt, wenn <strong>größer</strong> (JGT) bzw. <stro
                         <tr><td><pre class="code">HALT</pre></td><td>Beendet das Programm. Fehlt HALT, meckert die Fehlerkonsole.</td></tr>
                         <tr><td><pre class="code">; ein Kommentar</pre></td><td>Alles hinter <code>;</code> bis zum Zeilenende wird ignoriert.</td></tr>
                     </table>
+                    <h4 class="diag-head">🎓 Abitur-Befehle (Akkumulator-Maschine)</h4>
+                    <p class="muted">Für Abituraufgaben gibt es eine Akkumulator-Maschine: der <strong>Akku</strong> (ganz oben in der Register-Anzeige) ist ein besonderes Register, die Speicherzellen <code>R0</code> bis <code>R15</code> sind der Hauptspeicher. Klein- und Großschreibung sind egal.</p>
+                    <table>
+                        <tr><td><pre class="code">LOAD #5
+LOAD 3
+LOAD *3
+LOAD (3)</pre></td><td>Lädt in den Akku: die Konstante <code>5</code> (<code>#</code>), den Inhalt der Speicherzelle <code>R3</code>, oder indirekt: den Inhalt der Zelle, deren Nummer in <code>R3</code> steht (<code>*3</code> oder <code>(3)</code>).</td></tr>
+                        <tr><td><pre class="code">STORE 3
+STORE *3
+STORE (3)</pre></td><td>Speichert den Akku in die Zelle <code>R3</code> bzw. indirekt in die Zelle, deren Nummer in <code>R3</code> steht.</td></tr>
+                        <tr><td><pre class="code">ADD 3
+ADD #3
+ADDI 3</pre></td><td>Akku = Akku + Inhalt von <code>R3</code> bzw. + Konstante. Genauso gibt es <code>SUB</code>, <code>SUBI</code>, <code>MUL</code>, <code>DIV</code> und <code>LOADI n</code> (Konstante in den Akku).</td></tr>
+                        <tr><td><pre class="code">SUB #5</pre></td><td>Achtung, Abitur-Konvention (Hessen): wird das Ergebnis negativ, wird es auf <code>0</code> gesetzt.</td></tr>
+                        <tr><td><pre class="code">DIV #0</pre></td><td>Division durch <code>0</code> beendet das Programm mit einem Fehler.</td></tr>
+                        <tr><td><pre class="code">GOTO marke
+JZERO marke
+JNZERO marke</pre></td><td>Springt immer, bzw. wenn der Akku <code>0</code> ist (JZERO) bzw. nicht <code>0</code> ist (JNZERO).</td></tr>
+                        <tr><td><pre class="code">JEQ marke
+JNE marke</pre></td><td>Bayerische Abiturschreibweise: springt, wenn das Flag <strong>gleich</strong> gesetzt ist (JEQ) bzw. nicht (JNE).</td></tr>
+                        <tr><td><pre class="code">OUT</pre></td><td>Ohne Register: gibt den Akku aus.</td></tr>
+                        <tr><td><pre class="code">END
+HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>).</td></tr>
+                    </table>
                     <p class="muted">Register heißen <code>R0</code> bis <code>R15</code>. Alle Werte sind ganze Zahlen. Dein Programm läuft komplett in deinem Browser, die Dateien werden der Reihe nach zu einem Programm zusammengesetzt, Marken gelten über alle Dateien hinweg.</p>
                 </div>
             </div>

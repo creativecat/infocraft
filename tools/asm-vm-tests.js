@@ -179,6 +179,55 @@ t('ParseOhneLauf', 'LOAD R1, 5' + NL + 'HALT', null, r => {
   eq(r.regs.length, 16, '16 Register');
 });
 
+/* --- Abitur-Befehlssatz: Akkumulator-Maschine (Hessen/Asteroth) --- */
+t('AbiturLoadStore', 'LOAD #7' + NL + 'STORE 3' + NL + 'LOAD #2' + NL + 'ADD 3' + NL + 'STORE *3' + NL + 'OUT' + NL + 'END', null, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '9' + NL, 'output');
+  eq(r.regs[7], 9, 'R7 ueber STORE *3 (R3 enthaelt 7)');
+});
+t('AbiturIndirekt', 'LOAD #5' + NL + 'STORE 2' + NL + 'LOAD #9' + NL + 'STORE 5' + NL + 'LOAD 2' + NL + 'STORE *2' + NL + 'LOAD #1' + NL + 'LOAD 9' + NL + 'OUT' + NL + 'HALT', null, r => {
+  /* R2=5, R5=9, Akku=R2=5, STORE *2 -> R5=5 ... Pruefung ueber R9 unreachable; nutze R5 */
+  eq(r.ok, true, 'ok');
+  eq(r.regs[5], 5, 'R5 durch indirektes STORE');
+});
+t('AbiturSubUnterlaufNull', 'LOAD #3' + NL + 'SUB #5' + NL + 'OUT' + NL + 'HALT', null, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '0' + NL, 'Asteroth: negatives Ergebnis wird 0');
+});
+t('AbiturGotoJzero', 'LOADI 3' + NL + 'schleife:' + NL + 'OUT' + NL + 'SUBI 1' + NL + 'JNZERO schleife' + NL + 'HALT', null, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '3' + NL + '2' + NL + '1' + NL, 'Zaehlschleife 3..1, JNZERO stoppt bei 0');
+});
+t('AbiturJzero', 'LOADI 0' + NL + 'JZERO fertig' + NL + 'OUT' + NL + 'fertig:' + NL + 'HALT', null, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '', 'JZERO springt bei Akku 0');
+});
+t('AbiturDivNull', 'LOADI 8' + NL + 'DIV #0' + NL + 'HALT', null, r => {
+  err1(r, 2, 'Division durch 0');
+});
+t('AbiturBayernKleingeschrieben', 'loadi 4' + NL + 'store 1' + NL + 'load 1' + NL + 'addi 6' + NL + 'jeq fertig' + NL + 'OUT' + NL + 'fertig:' + NL + 'hold', null, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '10' + NL, 'jeq springt nicht, wenn das Flag nicht gleich ist');
+});
+t('AbiturBayernIndirektKlammer', 'LOADI 3' + NL + 'STORE 4' + NL + 'LOADI 4' + NL + 'STORE (3)' + NL + 'LOAD 4' + NL + 'OUT' + NL + 'HALT', null, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.regs[0], 4, 'STORE (3) schreibt indirekt nach R0 (R3 enthaelt 0)');
+});
+t('AbiturGoto', 'LOADI 1' + NL + 'GOTO hinten' + NL + 'OUT' + NL + 'hinten:' + NL + 'OUT' + NL + 'HALT', null, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '1' + NL, 'GOTO springt zur Marke');
+});
+t('AbiturIndirekteAdresseUngueltig', 'LOADI 20' + NL + 'STORE 1' + NL + 'LOAD *1' + NL + 'HALT', null, r => {
+  err1(r, 3, 'ausserhalb');
+});
+t('AbiturStoreKonstanteVerboten', 'STORE #3' + NL + 'HALT', null, r => {
+  err1(r, 1, 'Speicherzelle');
+});
+t('ZweiOperandGehtWeiter', 'LOAD R1, 5' + NL + 'LOAD R2, 2' + NL + 'SUB R1, R2' + NL + 'OUT R1' + NL + 'HALT', null, r => {
+  eq(r.ok, true, 'ok');
+  eq(r.output, '3' + NL, 'registerbasiertes SUB bleibt negativ-faehig');
+});
+
 /* --- createRuntime: Einzelschritt --- */
 count++;
 (function () {

@@ -4,6 +4,12 @@
  * - 16 Register R0 bis R15, alle Werte ganze Zahlen
  * - Befehle: MOV/LOAD, ADD, SUB, MUL, DIV, MOD, INC, DEC, CMP,
  *   JMP, JZ, JNZ, JGT, JLT, OUT, OUTS, IN, HALT
+ * - Abitur-Befehlssatz (Akkumulator-Maschine, Akku): die Register
+ *   R0 bis R15 sind die Speicherzellen. Hessen/Asteroth: LOAD #i,
+ *   LOAD i, LOAD *i, STORE i, STORE *i, ADD/SUB/MUL/DIV ..., GOTO,
+ *   JZERO, JNZERO, END (SUB-Unterlauf ergibt 0). Bayern/ISB:
+ *   load x, load (x), loadi n, store x, store (x), add/addi,
+ *   sub/subi, jmp, jeq, jne, hold.
  * - Marken mit Doppelpunkt (marke:), Kommentare mit Semikolon (;)
  * - Flags (gleich/kleiner/groesser) nach CMP und Arithmetik
  * - Deutsche Fehlermeldungen mit Datei und Zeilennummer
@@ -19,9 +25,14 @@
   var OPS = {
     MOV: true, LOAD: true, ADD: true, SUB: true, MUL: true, DIV: true, MOD: true,
     INC: true, DEC: true, CMP: true, JMP: true, JZ: true, JNZ: true, JGT: true,
-    JLT: true, OUT: true, OUTS: true, IN: true, HALT: true
+    JLT: true, OUT: true, OUTS: true, IN: true, HALT: true,
+    STORE: true, LOADI: true, ADDI: true, SUBI: true,
+    GOTO: true, JZERO: true, JNZERO: true, JEQ: true, JNE: true, END: true, HOLD: true
   };
-  var JUMPS = { JMP: 1, JZ: 1, JNZ: 1, JGT: 1, JLT: 1 };
+  var JUMPS = { JMP: 1, JZ: 1, JNZ: 1, JGT: 1, JLT: 1, GOTO: 1, JZERO: 1, JNZERO: 1, JEQ: 1, JNE: 1 };
+  /* Akku-Befehle (Abitur): ein Operand ohne Komma, Akku ist der interne Akkumulator. */
+  var ACC_OPS = { LOAD: 1, ADD: 1, SUB: 1, MUL: 1, DIV: 1, STORE: 1 };
+  var IMM_OPS = { LOADI: 1, ADDI: 1, SUBI: 1 };
   var NL = String.fromCharCode(10);
 
   function regNum(token, err) {
@@ -46,6 +57,31 @@
       if (c === 't') { return '\t'; }
       return c;
     });
+  }
+
+  /* Parst einen Abitur-Operanden (Akkumulator-Maschine):
+   * #i Konstante, i direkt (Speicherzelle Ri), *i und (i) indirekt. */
+  function parseAccOperand(token, err) {
+    var m;
+    if (/^#-?[0-9]{1,9}$/.test(token)) { return { mode: 'imm', imm: parseInt(token.slice(1), 10), cell: -1 }; }
+    m = /^\*-?[0-9]{1,3}$/.exec(token);
+    if (m) { return { mode: 'ind', imm: 0, cell: parseInt(token.slice(1), 10) }; }
+    m = /^\((\d{1,3})\)$/.exec(token);
+    if (m) { return { mode: 'ind', imm: 0, cell: parseInt(m[1], 10) }; }
+    m = /^R(\d{1,2})$/i.exec(token);
+    if (m) { return { mode: 'dir', imm: 0, cell: parseInt(m[1], 10) }; }
+    if (/^\d{1,3}$/.test(token)) { return { mode: 'dir', imm: 0, cell: parseInt(token, 10) }; }
+    err('"' + token + '" verstehe ich nicht. Erlaubt sind #5 (Konstante), 5 (Speicherzelle R5), *5 oder (5) (indirekt). Falls du zwei Werte meinst, schreibe sie mit Komma, z. B. LOAD R1, 5.');
+    return null;
+  }
+
+  /* Prueft eine Speicherzellen-Nummer (0 bis 15). */
+  function cellOk(cell, err) {
+    if (cell < 0 || cell > 15) {
+      err('Die Speicherzelle ' + cell + ' gibt es nicht. Erlaubt sind R0 bis R15.');
+      return false;
+    }
+    return true;
   }
 
   /* files: Liste von { name, content } oder Objekt { name: content }.
@@ -95,12 +131,14 @@
         }
         var parts = text.split(/\s+/);
         var op = parts[0].toUpperCase();
+        /* Bayerische Abitur-Schreibweise: hold/end sind HALT */
+        if (op === 'END' || op === 'HOLD') { op = 'HALT'; }
         if (!OPS[op]) {
           errHere('Den Befehl "' + parts[0] + '" gibt es nicht. Alle Befehle stehen im Tab 📖 (Befehle).');
           continue;
         }
         var rest = text.slice(parts[0].length).trim();
-        var instr = { op: op, file: name, line: li + 1, aReg: -1, bReg: -1, imm: 0, label: '' };
+        var instr = { op: op, file: name, line: li + 1, aReg: -1, bReg: -1, imm: 0, label: '', acc: false, mode: '', cell: -1 };
         var args;
         if (op === 'HALT') {
           instrs.push(instr);
@@ -126,6 +164,7 @@
           continue;
         }
         if (op === 'OUT') {
+          if (rest === '') { instr.acc = true; instrs.push(instr); continue; }
           instr.aReg = regNum(rest, errHere);
           if (instr.aReg < 0) { continue; }
           instrs.push(instr);
@@ -141,6 +180,34 @@
           instr.aReg = regNum(rest, errHere);
           if (instr.aReg < 0) { continue; }
           instrs.push(instr);
+          continue;
+        }
+        /* Abitur: LOADI/ADDI/SUBI laden eine Konstante in den Akku */
+        if (IMM_OPS[op]) {
+          instr.acc = true;
+          instr.mode = 'imm';
+          instr.imm = parseNumber(rest, errHere);
+          instrs.push(instr);
+          continue;
+        }
+        /* Abitur: ein Operand ohne Komma (LOAD #3, LOAD 3, STORE *3, ...) */
+        if (ACC_OPS[op] && rest.indexOf(',') < 0) {
+          var opnd = parseAccOperand(rest, errHere);
+          if (!opnd) { continue; }
+          if (opnd.mode === 'imm' && op === 'STORE') {
+            errHere('STORE braucht eine Speicherzelle, z. B. STORE 3 oder STORE *3 (nicht STORE #3).');
+            continue;
+          }
+          if (opnd.mode !== 'imm' && !cellOk(opnd.cell, errHere)) { continue; }
+          instr.acc = true;
+          instr.mode = opnd.mode;
+          instr.imm = opnd.imm;
+          instr.cell = opnd.cell;
+          instrs.push(instr);
+          continue;
+        }
+        if (op === 'STORE') {
+          errHere('STORE braucht genau eine Speicherzelle, z. B. STORE 3 oder STORE *3.');
           continue;
         }
         /* Zwei-Operand-Befehle: MOV/LOAD/ADD/SUB/MUL/DIV/MOD/CMP
@@ -197,6 +264,7 @@
       inputs.push(input);
     }
     var rt = {
+      acc: 0,
       regs: regs,
       flags: { eq: false, lt: false, gt: false },
       pc: 0,
@@ -218,6 +286,21 @@
     function srcValue(instr) {
       return instr.bReg >= 0 ? rt.regs[instr.bReg] : instr.imm;
     }
+    /* Abitur-Operand lesen: #i (imm), i (dir), *i bzw. (i) (ind). */
+    function accOperand(instr) {
+      if (instr.mode === 'imm') { return { ok: true, value: instr.imm, cell: -1 }; }
+      if (instr.mode === 'dir') { return { ok: true, value: rt.regs[instr.cell], cell: instr.cell }; }
+      var inner = rt.regs[instr.cell];
+      if (inner < 0 || inner > 15) {
+        rt.error = { file: instr.file, line: instr.line, message: 'Indirekte Adresse ' + inner + ' in R' + instr.cell + ' liegt ausserhalb der Speicherzellen R0 bis R15 (Zeile ' + instr.line + ').' };
+        return { ok: false, value: 0, cell: -1 };
+      }
+      return { ok: true, value: rt.regs[inner], cell: inner };
+    }
+    function accFail() {
+      rt.halted = true;
+      return true;
+    }
     rt.step = function () {
       if (rt.halted) { return true; }
       if (rt.pc >= parsed.instrs.length) {
@@ -231,26 +314,80 @@
       var jumpTo = -1;
       switch (instr.op) {
       case 'MOV': case 'LOAD':
+        if (instr.acc) {
+          var aoL = accOperand(instr);
+          if (!aoL.ok) { return accFail(); }
+          rt.acc = aoL.value;
+          setFlags(rt.acc);
+          break;
+        }
         rt.regs[instr.aReg] = srcValue(instr);
         setFlags(rt.regs[instr.aReg]);
         rt.changed = instr.aReg;
         break;
+      case 'STORE':
+        if (instr.acc) {
+          var aoS = accOperand(instr);
+          if (!aoS.ok) { return accFail(); }
+          var target = instr.mode === 'ind' ? aoS.cell : instr.cell;
+          rt.regs[target] = rt.acc;
+          rt.changed = target;
+        }
+        break;
+      case 'LOADI':
+        rt.acc = instr.imm;
+        setFlags(rt.acc);
+        break;
       case 'ADD':
+        if (instr.acc) {
+          var aoA = accOperand(instr);
+          if (!aoA.ok) { return accFail(); }
+          rt.acc = rt.acc + aoA.value;
+          setFlags(rt.acc);
+          break;
+        }
         rt.regs[instr.aReg] = rt.regs[instr.aReg] + srcValue(instr);
         setFlags(rt.regs[instr.aReg]);
         rt.changed = instr.aReg;
         break;
       case 'SUB':
+        if (instr.acc) {
+          var aoS2 = accOperand(instr);
+          if (!aoS2.ok) { return accFail(); }
+          /* Abitur-Registermaschine: negatives Ergebnis wird 0 */
+          rt.acc = rt.acc - aoS2.value;
+          if (rt.acc < 0) { rt.acc = 0; }
+          setFlags(rt.acc);
+          break;
+        }
         rt.regs[instr.aReg] = rt.regs[instr.aReg] - srcValue(instr);
         setFlags(rt.regs[instr.aReg]);
         rt.changed = instr.aReg;
         break;
       case 'MUL':
+        if (instr.acc) {
+          var aoM = accOperand(instr);
+          if (!aoM.ok) { return accFail(); }
+          rt.acc = rt.acc * aoM.value;
+          setFlags(rt.acc);
+          break;
+        }
         rt.regs[instr.aReg] = rt.regs[instr.aReg] * srcValue(instr);
         setFlags(rt.regs[instr.aReg]);
         rt.changed = instr.aReg;
         break;
       case 'DIV':
+        if (instr.acc) {
+          var aoD = accOperand(instr);
+          if (!aoD.ok) { return accFail(); }
+          if (aoD.value === 0) {
+            rt.error = { file: instr.file, line: instr.line, message: 'Division durch 0 geht nicht. Pruefe den Operanden von DIV in Zeile ' + instr.line + '.' };
+            return accFail();
+          }
+          rt.acc = Math.trunc(rt.acc / aoD.value);
+          setFlags(rt.acc);
+          break;
+        }
         if (srcValue(instr) === 0) {
           rt.error = { file: instr.file, line: instr.line, message: 'Division durch 0 geht nicht. Pruefe den zweiten Wert von DIV in Zeile ' + instr.line + '.' };
           rt.halted = true;
@@ -284,11 +421,26 @@
         setFlags(rt.regs[instr.aReg] - srcValue(instr));
         break;
       case 'JMP': jumpTo = rt.labels[instr.label]; break;
+      case 'GOTO': jumpTo = rt.labels[instr.label]; break;
+      case 'JZERO': if (rt.acc === 0) { jumpTo = rt.labels[instr.label]; } break;
+      case 'JNZERO': if (rt.acc !== 0) { jumpTo = rt.labels[instr.label]; } break;
+      case 'JEQ': if (rt.flags.eq) { jumpTo = rt.labels[instr.label]; } break;
+      case 'JNE': if (!rt.flags.eq) { jumpTo = rt.labels[instr.label]; } break;
+      case 'ADDI':
+        rt.acc = rt.acc + instr.imm;
+        setFlags(rt.acc);
+        break;
+      case 'SUBI':
+        rt.acc = rt.acc - instr.imm;
+        if (rt.acc < 0) { rt.acc = 0; }
+        setFlags(rt.acc);
+        break;
       case 'JZ': if (rt.flags.eq) { jumpTo = rt.labels[instr.label]; } break;
       case 'JNZ': if (!rt.flags.eq) { jumpTo = rt.labels[instr.label]; } break;
       case 'JGT': if (rt.flags.gt) { jumpTo = rt.labels[instr.label]; } break;
       case 'JLT': if (rt.flags.lt) { jumpTo = rt.labels[instr.label]; } break;
       case 'OUT':
+        if (instr.acc) { rt.out += String(rt.acc) + NL; break; }
         rt.out += String(rt.regs[instr.aReg]) + NL;
         break;
       case 'OUTS':
@@ -406,6 +558,16 @@
       if (!regBox || !runtime) { return; }
       regBox.innerHTML = '';
       var i;
+      /* Akkumulator (Abitur-Befehle) immer ganz vorne */
+      var akkuCell = document.createElement('div');
+      akkuCell.className = 'asm-reg asm-akku';
+      var akkuName = document.createElement('span');
+      akkuName.textContent = 'Akku';
+      var akkuVal = document.createElement('span');
+      akkuVal.textContent = String(runtime.acc);
+      akkuCell.appendChild(akkuName);
+      akkuCell.appendChild(akkuVal);
+      regBox.appendChild(akkuCell);
       for (i = 0; i < 16; i++) {
         var cell = document.createElement('div');
         cell.className = 'asm-reg';

@@ -123,8 +123,8 @@ a { color: var(--primary); text-decoration: none; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; border-radius: 10px; padding: 9px 16px; font-size: 0.95rem; font-weight: 600; cursor: pointer; font-family: inherit; }
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-primary:hover { background: var(--primary-2); }
-.btn-ghost { background: transparent; border-color: var(--border); color: var(--text); }
-.btn-ghost:hover { background: #f1f4f9; }
+.btn-ghost { background: var(--surface); border-color: #94a3b8; color: var(--text); }
+.btn-ghost:hover { background: #e9edf5; border-color: #64748b; }
 .btn-block { width: 100%; }
 .btn-row { display: flex; gap: 10px; justify-content: flex-end; }
 

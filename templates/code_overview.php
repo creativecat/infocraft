@@ -12,16 +12,16 @@
             <?= csrf_field() ?>
             <label class="field"><span>Projekttitel</span><input type="text" name="title" required placeholder="z. B. Mein erstes Programm"></label>
             <label class="field"><span>Programmiersprache</span>
-                <select name="language">
+                <select name="language" id="new-lang">
                     <option value="java"<?= (($defaultLanguage ?? 'java') === 'java') ? ' selected' : '' ?>>☕ Java</option>
                     <option value="python"<?= (($defaultLanguage ?? 'java') === 'python') ? ' selected' : '' ?>>🐍 Python</option>
                     <option value="asm"<?= (($defaultLanguage ?? 'java') === 'asm') ? ' selected' : '' ?>>⚙️ Assembler</option>
                 </select>
             </label>
             <label class="field"><span>Art</span>
-                <select name="type">
+                <select name="type" id="new-type">
                     <option value="code" selected>☕ Java-Programm</option>
-                    <option value="html">🌐 HTML-Seite</option>
+                    <option value="html" id="new-type-html">🌐 HTML-Seite</option>
                 </select>
             </label>
             <label class="field"><span>Ordner</span>
@@ -32,7 +32,7 @@
                     <?php endforeach; ?>
                 </select>
             </label>
-            <label class="field"><span>Startpaket (nur Python)</span>
+            <label class="field" id="new-starter"><span>Startpaket (nur Python)</span>
                 <select name="starter">
                     <option value="">- leeres Blatt -</option>
                     <option value="zaehlen">🔢 Zählen mit Python (Schleifen)</option>
@@ -143,3 +143,34 @@
     <?php endforeach; ?>
 </div>
 
+
+<script>
+/* Formular „Neues anlegen“: Auswahl je nach Sprache sinnvoll einschraenken.
+ * Assembler ist immer ein Programm (keine HTML-Seite), Startpakete gibt es
+ * nur fuer Python. Laeuft ohne Abhaengigkeiten direkt auf der Uebersicht. */
+(function () {
+  'use strict';
+  var langSel = document.getElementById('new-lang');
+  var typeSel = document.getElementById('new-type');
+  var typeHtml = document.getElementById('new-type-html');
+  var starter = document.getElementById('new-starter');
+  if (!langSel || !typeSel || !typeHtml || !starter) { return; }
+  function syncNewForm() {
+    var lang = langSel.value;
+    if (lang === 'asm') {
+      typeSel.value = 'code';
+      typeHtml.disabled = true;
+    } else {
+      typeHtml.disabled = false;
+    }
+    /* Startpaket nur bei Python anbieten */
+    starter.style.display = (lang === 'python') ? '' : 'none';
+    if (lang !== 'python') {
+      starter.querySelectorAll('option').forEach(function (o) { if (o.value !== '') { o.selected = false; } });
+      starter.querySelector('option[value=""]').selected = true;
+    }
+  }
+  langSel.addEventListener('change', syncNewForm);
+  syncNewForm();
+})();
+</script>
