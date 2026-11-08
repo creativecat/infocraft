@@ -437,15 +437,17 @@ body.sidebar-mini .nav-item { justify-content: center; padding: 10px 8px; }
     opacity: 0.55; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
 }
 .editor-float-btn:hover, .editor-float-btn:focus-visible { opacity: 1; }
-/* Eigene Bilder (Sprites) in der Seitenleiste der Java-IDE. */
-.ide-side .ide-img-hint { margin: 0 0 8px; font-size: 0.8rem; }
-.ide-img-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-.ide-img-row { display: flex; align-items: center; gap: 8px; }
+/* Eigene Bilder (Sprites) im Sprites-Tab der Konsole. */
+.ide-img-hint { margin: 0 0 8px; font-size: 0.8rem; }
+.sprite-upload { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 6px 0 10px; }
+.sprite-upload .btn { flex: none; white-space: nowrap; }
+.ide-img-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.ide-img-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .ide-img-thumb {
-    width: 28px; height: 28px; object-fit: contain; flex: none;
+    width: 36px; height: 36px; object-fit: contain; flex: none;
     border: 1px solid var(--border, #cbd5e1); border-radius: 6px; background: #fff;
 }
-.ide-img-name { font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ide-img-name { font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ide-img-del { margin-left: auto; flex: none; }
 span.hlwrap { display: block; }
 .save-status {
@@ -780,8 +782,9 @@ span.hlwrap { display: block; }
 }
 .gfx-dock:empty { display: none; }
 .gfx-dock .gfx-window {
-    position: static;
-    width: auto; max-width: none;
+    position: relative;
+    width: 480px; max-width: 100%;
+    margin: 0 auto;
     background: var(--bg); border: none; border-radius: 0;
     box-shadow: none; overflow: hidden;
 }
@@ -791,6 +794,15 @@ span.hlwrap { display: block; }
     background: var(--surface); border: 2px solid #a5b4fc; border-radius: 12px;
     box-shadow: var(--shadow); overflow: hidden;
 }
+/* Greifer unten rechts: Grafik-Fenster in der Groesse ziehen (skalierbar). */
+.gfx-resize {
+    position: absolute; right: 0; bottom: 0; z-index: 3;
+    width: 18px; height: 18px; cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 0 45%, #c7d2fe 45% 55%, transparent 55% 65%, #a5b4fc 65% 100%);
+    border-bottom-right-radius: 6px;
+    touch-action: none;
+}
+.gfx-resize:hover { background: linear-gradient(135deg, transparent 0 45%, #93c5fd 45% 55%, transparent 55% 65%, #3b82f6 65% 100%); }
 .gfx-title {
     display: flex; align-items: center; justify-content: space-between;
     padding: 6px 10px; background: #eef2ff; border-bottom: 1px solid #c7d2fe;

@@ -3756,6 +3756,34 @@
     canvas.addEventListener('mouseup', function (ev) { gfxMouse(ev, 'up'); });
     canvas.addEventListener('mousemove', function (ev) { gfxMouse(ev, 'move'); });
     close.addEventListener('click', function () { gfxHideWindow(); });
+    /* Greifer unten rechts: Groesse des Grafik-Fensters frei einstellen. */
+    var grip = document.createElement('div');
+    grip.className = 'gfx-resize';
+    grip.setAttribute('title', 'Größe ändern: ziehen');
+    el.appendChild(grip);
+    grip.addEventListener('mousedown', function (ev) {
+      if (ev.preventDefault) { ev.preventDefault(); }
+      if (typeof document.addEventListener !== 'function') { return; }
+      var startW = el.offsetWidth || canvas.width || 480;
+      var startX = ev.clientX || 0;
+      var host = el.parentNode || document.body;
+      var maxW = 2000;
+      if (host && typeof host.getBoundingClientRect === 'function') {
+        var hw = host.getBoundingClientRect().width;
+        if (typeof hw === 'number' && hw > 40) { maxW = Math.max(280, Math.floor(hw)); }
+      }
+      function onMove(ev2) {
+        gfxResizeWindow(Math.max(280, Math.min(maxW, startW + ((ev2.clientX || 0) - startX))));
+      }
+      function onUp() {
+        if (document.removeEventListener) {
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+        }
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
     vm.gfx.windowState = st;
     return st;
   }
@@ -3763,6 +3791,18 @@
     var st = gfxWindowFind();
     if (st) { st.hidden = true; if (st.el.style) { st.el.style.display = 'none'; } }
     gfxDockSync(false);
+  }
+  /* Groesse des Grafik-Fensters einstellen (Greifer unten rechts oder per
+     Programm). Die internen Canvas-Pixel folgen der Anzeigebreite, damit
+     die Zeichnung scharf bleibt; das Welt-Koordinatensystem passt sich an. */
+  function gfxResizeWindow(w) {
+    var st = gfxWindowFind();
+    if (!st || !st.canvas) { return; }
+    var nw = Math.max(280, Math.min(2000, Math.round(w)));
+    if (st.el.style) { st.el.style.width = nw + 'px'; }
+    st.canvas.width = nw;
+    st.canvas.height = Math.round(nw * 0.75);
+    if (RUN_VM) { gfxRedraw(RUN_VM); }
   }
   function gfxShowWindow(vm) {
     var st = vm.gfx.windowState || gfxEnsureWindow(vm);
@@ -5425,6 +5465,13 @@
     var restBtn = document.getElementById('java-run-rest');
     var stopBtn = document.getElementById('java-stop');
     var fmtBtn = document.getElementById('java-format');
+    /* Grafik-Fenster wieder einblenden (nach dem Schliessen mit x). */
+    var gfxOpenBtn = document.getElementById('java-gfx-open');
+    if (gfxOpenBtn) {
+      gfxOpenBtn.addEventListener('click', function () {
+        if (RUN_VM && RUN_VM.gfx && RUN_VM.gfx.windowState) { gfxShowWindow(RUN_VM); }
+      });
+    }
     var gutterMap = Object.create(null);
     function setupGutters() {
       var gi;
@@ -6332,7 +6379,7 @@
 
   global.InfoCraftJavaVM = {
     lex: lex, JError: JError, Parser: Parser, run: run, openSession: openSession, NL: NL,
-    gfxTick: gfxTick, gfxStopLoop: gfxStopLoop, gfxDispatchKey: gfxDispatchKey, gfxSnapshot: gfxSnapshot, formatJavaSource: formatJavaSource
+    gfxTick: gfxTick, gfxStopLoop: gfxStopLoop, gfxDispatchKey: gfxDispatchKey, gfxSnapshot: gfxSnapshot, gfxResizeWindow: gfxResizeWindow, formatJavaSource: formatJavaSource
   };
   if (typeof module !== 'undefined' && module.exports) { module.exports = global.InfoCraftJavaVM; }
   if (typeof document !== 'undefined') { wireUi(); }

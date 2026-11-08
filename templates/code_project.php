@@ -36,29 +36,6 @@
                 <input type="text" name="name" placeholder="Auto.java" pattern="[A-Za-z][A-Za-z0-9_]*\.java" required>
                 <button class="btn btn-primary" type="submit" title="Neue Datei">＋</button>
             </form>
-            <div class="ide-side-title">Bilder</div>
-            <p class="muted ide-img-hint">Lade ein Bild hoch und benutze es im Code mit <code>new Sprite(400, 300, "Name");</code>. Es wandert beim Austeilen mit.</p>
-            <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/bild') ?>" enctype="multipart/form-data" class="form-inline ide-side-new">
-                <?= csrf_field() ?>
-                <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp" required title="Bild hochladen (PNG, JPEG, GIF oder WebP, maximal 1 MB)">
-                <button class="btn btn-primary" type="submit" title="Bild hochladen">⬆</button>
-            </form>
-            <?php if ($images !== []): ?>
-            <div class="ide-img-list">
-                <?php foreach ($images as $image): ?>
-                <div class="ide-img-row">
-                    <img src="<?= url('werkstatt/code/' . (int) $project->id . '/bild/' . rawurlencode($image->name)) ?>" alt="<?= e($image->name) ?>" class="ide-img-thumb">
-                    <code class="ide-img-name"><?= e($image->name) ?></code>
-                    <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/bild/' . rawurlencode($image->name) . '/loeschen') ?>" class="form-inline ide-img-del">
-                        <?= csrf_field() ?>
-                        <button class="btn btn-ghost" type="submit" title="Bild <?= e($image->name) ?> löschen">✕</button>
-                    </form>
-                </div>
-                <?php endforeach; ?>
-            </div>
-            <?php else: ?>
-            <p class="muted">Noch keine eigenen Bilder (maximal 8 pro Projekt, jeweils maximal 1 MB).</p>
-            <?php endif; ?>
         </aside>
         <div class="ide-work">
         <div class="ide-main">
@@ -84,6 +61,7 @@
                 <button class="btn btn-ghost run-icon" id="java-step" type="button" title="Einzelschritt: führt genau eine Anweisung aus und zeigt in den Zeilennummern, welche Zeile als Nächstes dran ist." aria-label="Einzelschritt">👣</button>
                 <button class="btn btn-ghost run-icon" id="java-run-rest" type="button" title="Weiter: lässt dein Programm vom Pausenpunkt an bis zum Ende laufen." aria-label="Weiter">⏩</button>
                 <button class="btn btn-ghost run-icon" id="java-stop" type="button" title="Stopp: hält dein Programm an – die act()-Animation stoppt und ein angefangener Einzelschritt wird abgebrochen." aria-label="Stopp">⏹</button>
+                <button class="btn btn-ghost run-icon" id="java-gfx-open" type="button" title="Grafik-Fenster anzeigen: blendet das Grafik-Fenster wieder ein, nachdem du es mit ✕ geschlossen hast." aria-label="Grafik-Fenster anzeigen">🎨</button>
                 <span class="muted">Strg + Enter funktioniert auch. Dein Programm läuft komplett in deinem Browser.</span>
             </div>
             <div id="java-step-info" class="step-info"></div>
@@ -91,6 +69,7 @@
                 <button type="button" class="console-tab active" data-ctab="out" title="Ausgabe">▶</button>
                 <button type="button" class="console-tab" data-ctab="classes" title="Klassen (Klassendiagramm) und Objekte (Objektdiagramm)">📐 <span class="err-badge" id="java-obj-badge">0</span></button>
                 <button type="button" class="console-tab" data-ctab="repl" title="Objektkonsole">🧪</button>
+                <button type="button" class="console-tab" data-ctab="sprites" title="Sprites: eigene Bilder und Figuren für new Sprite(...)">🖼</button>
                 <button type="button" class="console-tab api-open" id="java-api-open" title="Öffnet die API-Hilfe in einem eigenen Fenster. Es bleibt offen, während du weiterprogrammierst.">📖</button>
             </div>
             <div class="console-pane" data-cpane="out">
@@ -120,6 +99,32 @@
                     <input id="java-repl-in" class="mono" type="text" autocomplete="off" spellcheck="false" placeholder='Auto a = new Auto("BMW");'>
                 </div>
                 <div id="java-repl-ac" class="ac-box" hidden></div>
+            </div>
+            <div class="console-pane" data-cpane="sprites" hidden>
+                <p class="muted">Sprites sind fertige Figuren für dein Programm: <code>Sprite s = new Sprite(400, 300, "Schildkröte");</code>. Standard-Figuren: Schildkröte, Auto, Katze, Hund, Fisch, Baum, Wolke, Sonne, Stern, Herz, Raumschiff, Geist, Pilz, Blume.</p>
+                <p class="muted">Deine eigenen Bilder erscheinen hier und heißen im Code so wie ihre Datei (bei „ball.png“ also <code>"ball"</code>). Sie wandern beim Austeilen mit.</p>
+                <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/bild') ?>" enctype="multipart/form-data" class="form-inline sprite-upload">
+                    <?= csrf_field() ?>
+                    <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp" required title="Bild hochladen (PNG, JPEG, GIF oder WebP, maximal 1 MB)">
+                    <button class="btn btn-primary" type="submit" title="Bild hochladen">Bild hochladen ⬆</button>
+                </form>
+                <?php if ($images !== []): ?>
+                <div class="ide-img-list">
+                    <?php foreach ($images as $image): ?>
+                    <div class="ide-img-row">
+                        <img src="<?= url('werkstatt/code/' . (int) $project->id . '/bild/' . rawurlencode($image->name)) ?>" alt="<?= e($image->name) ?>" class="ide-img-thumb">
+                        <code class="ide-img-name"><?= e($image->name) ?></code>
+                        <code class="muted">new Sprite(x, y, "<?= e($image->name) ?>")</code>
+                        <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/bild/' . rawurlencode($image->name) . '/loeschen') ?>" class="form-inline ide-img-del">
+                            <?= csrf_field() ?>
+                            <button class="btn btn-ghost" type="submit" title="Bild <?= e($image->name) ?> löschen">✕</button>
+                        </form>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php else: ?>
+                <p class="muted">Noch keine eigenen Bilder (maximal 8 pro Projekt, jeweils maximal 1 MB).</p>
+                <?php endif; ?>
             </div>
             <div class="api-docs" id="java-api-src" hidden>
                 <div class="api-docs">
@@ -233,9 +238,9 @@ t.setBorderWidth(3);</pre></td><td>Stiftfarbe und Strichdicke.</td></tr>
                             <tr><td><pre class="code">s.scale(2); · s.rotate(45);
 s.move(10, 0); · s.destroy();</pre></td><td>Wie jede Figur strecken, drehen, bewegen, entfernen – auch <code>setAlpha</code>, <code>setVisible</code>, <code>mirrorX</code> und alles unter „Bewegen, Drehen, Spiegeln“.</td></tr>
                             <tr><td><pre class="code">Sprite a = new Sprite(100, 100, "Auto");</pre></td><td>Standard-Figuren: <code>Schildkröte</code>, <code>Auto</code>, <code>Katze</code>, <code>Hund</code>, <code>Fisch</code>, <code>Baum</code>, <code>Wolke</code>, <code>Sonne</code>, <code>Stern</code>, <code>Herz</code>, <code>Raumschiff</code>, <code>Geist</code>, <code>Pilz</code>, <code>Blume</code>.</td></tr>
-                            <tr><td><pre class="code">Sprite b = new Sprite(400, 300, "Ball");</pre></td><td>Eigene Bilder: Lade links unter <strong>Bilder</strong> eine Grafik hoch (PNG, JPEG, GIF, WebP, maximal 1 MB). Ihr Name ohne Endung ist der Sprite-Name – bei „ball.png“ also <code>"Ball"</code> bzw. <code>"ball"</code>.</td></tr>
+                            <tr><td><pre class="code">Sprite b = new Sprite(400, 300, "Ball");</pre></td><td>Eigene Bilder: Lade rechts im Tab 🖼 (Sprites) eine Grafik hoch (PNG, JPEG, GIF, WebP, maximal 1 MB). Ihr Name ohne Endung ist der Sprite-Name – bei „ball.png“ also <code>"Ball"</code> bzw. <code>"ball"</code>.</td></tr>
                         </table>
-                        <p class="muted">Eigene Bilder gehören zum Projekt: Wenn deine Lehrkraft es austeilten, bekommen alle dieselben Sprites. Und mit <code>class Auto extends Sprite</code> kannst du wie gewohnt <code>act()</code>, Tasten und Maus nutzen.</p>
+                        <p class="muted">Eigene Bilder gehören zum Projekt: Wenn deine Lehrkraft es austeilten, bekommen alle dieselben Sprites. Das Grafik-Fenster lässt sich unten rechts an der Ecke frei in der Größe ziehen und mit 🎨 über der Konsole wieder einblenden, falls du es mit ✕ geschlossen hast. Und mit <code>class Auto extends Sprite</code> kannst du wie gewohnt <code>act()</code>, Tasten und Maus nutzen.</p>
                     </details>
 
                     <details>

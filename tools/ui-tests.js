@@ -277,6 +277,8 @@ doc.register(apiSrc, 'java-api-src');
 apiSrc.innerHTML = '<p>Mini-Datenbank: <code>Database.execute(...)</code> und <code>Input.readString</code></p>';
 var stopBtn = new FakeEl('button');
 doc.register(stopBtn, 'java-stop');
+var gfxOpenBtn = new FakeEl('button');
+doc.register(gfxOpenBtn, 'java-gfx-open');
 var gfxDock = new FakeEl('div');
 doc.register(gfxDock, 'gfx-dock');
 gfxDock.setAttribute('hidden', 'hidden');
@@ -284,6 +286,8 @@ doc.body.appendChild(gfxDock);
 var paneOut = consolePane('out', true);
 var paneClasses = consolePane('classes', false);
 var paneRepl = consolePane('repl', false);
+var tabSprites = consoleTab('sprites', 'Sprites', false);
+var paneSprites = consolePane('sprites', false);
 
 var runBtn = new FakeEl('button');
 doc.register(runBtn, 'run-java');
@@ -569,6 +573,31 @@ setTimeout(function () {
       guiBtn.dispatch('click');
       shapes = vm.gfxSnapshot();
       ok(shapes.length === 1 && shapes[0].text === 'geklickt', 'T20b Klick loest onChange aus (Text geaendert)');
+    }
+
+    /* T20c: Grafik-Fenster mit X schliessen und ueber den 🎨-Knopf wieder anzeigen. */
+    var win2b = doc.querySelector('#gfx-window');
+    var gfxClose = win2b ? win2b.querySelector('.gfx-close') : null;
+    ok(gfxClose !== null, 'T20c Grafik-Fenster hat einen Schliessen-Knopf');
+    if (gfxClose) {
+      gfxClose.dispatch('click');
+      ok(win2b.style.display === 'none', 'T20c2 X schliesst das Grafik-Fenster');
+      ok(hidden(gfxDock), 'T20c3 Die Grafik-Zeile verschwindet mit dem Fenster');
+      gfxOpenBtn.dispatch('click');
+      ok(win2b.style.display === '', 'T20c4 🎨-Knopf blendet das Grafik-Fenster wieder ein');
+      ok(!hidden(gfxDock), 'T20c5 Die Grafik-Zeile ist wieder sichtbar');
+    }
+
+    /* T20d: Grafik-Fenster skalierbar (gfxResizeWindow haelt 4:3 und setzt die Breite). */
+    var win2c = doc.querySelector('#gfx-window');
+    if (win2c && vm.gfxResizeWindow) {
+      var cnv = win2c.querySelector('canvas');
+      vm.gfxResizeWindow(700);
+      ok(win2c.style.width === '700px', 'T20d Grafik-Fenster laesst sich auf 700px Breite skalieren');
+      ok(cnv.width === 700 && cnv.height === 525, 'T20d2 Canvas behaelt 4:3 (700x525)');
+      vm.gfxResizeWindow(100);
+      ok(win2c.style.width === '280px', 'T20d3 Untergrenze 280px wird eingehalten');
+      vm.gfxResizeWindow(700);
     }
 
     /* T21: Klammer-Automatik: ( schliesst sofort ), Cursor steht dazwischen. */
