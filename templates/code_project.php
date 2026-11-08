@@ -61,9 +61,6 @@
                 <button type="button" class="console-tab" data-ctab="classes" title="Klassendiagramm: live aus deinem Code, ganz ohne Ausführen">📐</button>
                 <button type="button" class="console-tab" data-ctab="objects" title="Objektdiagramm: alle Objekte mit Attributwerten, Methoden per Klick testen">🧩 <span class="err-badge" id="java-obj-badge">0</span></button>
                 <button type="button" class="console-tab" data-ctab="sprites" title="Sprites: eigene Bilder und Figuren für new Sprite(...)">🖼</button>
-                <?php if ($dbPanel): ?>
-                <button type="button" class="console-tab" data-ctab="db" title="Datenbank: vorhandene Tabellen und Spalten, Abfragen direkt testen">🗄</button>
-                <?php endif; ?>
                 <button type="button" class="console-tab api-open" id="java-api-open" title="Öffnet die API-Hilfe in einem eigenen Fenster. Es bleibt offen, während du weiterprogrammierst.">📖</button>
             </div>
             <div class="console-pane" data-cpane="out">
@@ -84,7 +81,7 @@
                 </div>
                 <div class="repl-actions">
                     <button class="btn btn-primary" id="java-repl-run" type="button" title="Anweisungen ausführen (Strg + Enter): erzeugt die Objekte und ruft die Methoden auf, je Zeile eine Anweisung.">▶ Anweisungen ausführen</button>
-                    <span class="muted">Strg + Enter funktioniert auch. Die Anweisungen bleiben stehen, du kannst sie ändern und erneut ausführen.</span>
+                    <span class="muted">Die Anweisungen bleiben stehen, du kannst sie ändern und erneut ausführen.</span>
                 </div>
                 <div id="java-repl-log" class="repl-log"></div>
                 <div id="java-repl-ac" class="ac-box" hidden></div>
@@ -103,8 +100,10 @@
                 <?php endif; ?>
             </div>
             <div class="console-pane" data-cpane="objects" hidden>
-                <h4 class="diag-head">🧩 Objektdiagramm <span class="pill">nach UML</span></h4>
-                <p class="muted">Jedes <code>new</code> landet hier: alle Objekte deines Programms als Kacheln mit abgerundeten Ecken, darunter ihre Attributwerte – die kleine Objektbank neben dem Klassendiagramm, wie in BlueJ. <strong>Methoden per Klick testen:</strong> Klicke auf einen Methodennamen unter dem Objekt. Methoden ohne Parameter laufen sofort, Rückgabewert und Ausgaben erscheinen im Tab ▶ im Protokoll der Objektkonsole. Methoden mit Parametern setzen den Aufruf ins Anweisungsfeld, damit du die Argumente ergänzt.</p>
+                <h4 class="diag-head">🧩 Objektdiagramm <span class="pill">nach UML</span> <details class="hint-details"><summary title="Erklärung zum Objektdiagramm und den anklickbaren Methoden">ℹ️</summary>
+                    <p class="muted">Jedes <code>new</code> landet hier: alle Objekte deines Programms als Kacheln mit abgerundeten Ecken, darunter ihre Attributwerte – die kleine Objektbank neben dem Klassendiagramm, wie in BlueJ.</p>
+                    <p class="muted"><strong>Methoden per Klick testen:</strong> Klicke auf einen Methodennamen unter dem Objekt. Methoden ohne Parameter laufen sofort, Rückgabewert und Ausgaben erscheinen in einer kleinen Blase am Objekt (und im Protokoll der Objektkonsole im Tab ▶). Methoden mit Parametern setzen den Aufruf ins Anweisungsfeld der Objektkonsole, damit du die Argumente ergänzt und ihn dort ausführst.</p>
+                </details></h4>
                 <div id="java-objects" class="objdiag">Noch keine Objekte. Klicke oben auf ▶ Ausführen.</div>
             </div>
             <div class="console-pane" data-cpane="sprites" hidden>
@@ -133,21 +132,6 @@
                 <p class="muted">Noch keine eigenen Bilder (maximal 8 pro Projekt, jeweils maximal 1 MB).</p>
                 <?php endif; ?>
             </div>
-            <?php if ($dbPanel): ?>
-            <div class="console-pane" data-cpane="db" hidden>
-                <h4 class="diag-head">🗄 Vorhandene Tabellen</h4>
-                <p class="muted">Alle Tabellen und Spalten deiner Datenbank, live nach jedem ▶ Ausführen: Hier siehst du, worauf dein Programm zugreifen kann (<code>Database.execute(...)</code> und <code>Database.query(...)</code>).</p>
-                <div id="java-dbschema" class="umldiag"></div>
-                <h4 class="diag-head">🗄 DB-Konsole</h4>
-                <p class="muted">Schicke Abfragen direkt an die Datenbank, ohne dein Programm zu ändern: <code>SELECT</code> zeigt das Ergebnis an, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>CREATE TABLE</code> und <code>DROP TABLE</code> ändern die Datenbank testweise (bis zum nächsten ▶ Ausführen).</p>
-                <textarea id="java-db-in" class="mono db-console-in" rows="3" autocomplete="off" spellcheck="false"></textarea>
-                <div class="repl-actions">
-                    <button class="btn btn-primary" id="java-db-run" type="button" title="Abfrage ausführen (Strg + Enter): schickt den SQL-Befehl an die Datenbank und zeigt das Ergebnis.">▶ Abfrage ausführen</button>
-                    <span class="muted">Strg + Enter funktioniert auch.</span>
-                </div>
-                <pre id="java-db-out" class="code ide-console-out db-console-out"></pre>
-            </div>
-            <?php endif; ?>
             <div class="api-docs" id="java-api-src" hidden>
                 <div class="api-docs">
                     <p class="muted">Hier stehen alle fertigen Klassen, die du in deinen Java-Programmen benutzen kannst. Zum Aufklappen auf die Überschrift klicken.</p>
@@ -454,6 +438,105 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
             </div>
         </div>
     </div>
+    <?php elseif ($project->type === 'code' && $project->language === 'asm'): ?>
+    <!-- Assembler-IDE: gleiche Optik wie die Java-IDE, aber reduziert auf
+         Editor, Ausgabe, Register-Anzeige und Befehlsübersicht. -->
+    <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="ide-savebar" id="code-save-form" aria-hidden="true">
+        <?= csrf_field() ?>
+    </form>
+    <div class="ide">
+        <aside class="ide-side">
+            <div class="ide-side-title">Dateien</div>
+            <div class="ide-side-files">
+                <?php foreach ($files as $i => $file): ?>
+                <div class="ide-file<?= $i === 0 ? ' active' : '' ?>" data-file-row="<?= (int) $file->id ?>">
+                    <button type="button" class="ide-file-btn file-tab<?= $i === 0 ? ' active' : '' ?>" data-file-tab="<?= (int) $file->id ?>" title="<?= e($file->name) ?>"><?= e($file->name) ?></button>
+                    <?php if ($file->id > 0): ?>
+                    <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/datei/' . (int) $file->id . '/loeschen') ?>" class="form-inline ide-file-del">
+                        <?= csrf_field() ?>
+                        <button class="btn btn-ghost" type="submit" title="Datei <?= e($file->name) ?> löschen">✕</button>
+                    </form>
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/datei') ?>" class="form-inline ide-side-new">
+                <?= csrf_field() ?>
+                <input type="text" name="name" placeholder="programm.asm" pattern="[A-Za-z][A-Za-z0-9_]{0,50}\.asm" required>
+                <button class="btn btn-primary" type="submit" title="Neue Datei">＋</button>
+            </form>
+        </aside>
+        <div class="ide-work">
+        <div class="ide-main">
+            <div class="ide-editors">
+            <?php foreach ($files as $i => $file): ?>
+            <div class="file-pane" data-file-pane="<?= (int) $file->id ?>" data-file-name="<?= e($file->name) ?>"<?= $i === 0 ? '' : ' hidden' ?>>
+                <div class="hlwrap ide-hlwrap">
+                    <textarea name="files[<?= (int) $file->id ?>]" form="code-save-form" rows="26" class="mono code-editor ide-editor" spellcheck="false"><?= e($file->content) ?></textarea>
+                </div>
+            </div>
+            <?php endforeach; ?>
+            </div>
+            <div class="console-errors-box" id="asm-errors-box">
+                <div class="console-errors-head">🚨 Fehlerkonsole <span class="err-badge" id="asm-error-badge">0</span></div>
+                <div class="java-errors" id="asm-errors">Noch nichts ausgeführt – hier erscheinen Fehler mit Datei, Zeile und Tipp.</div>
+                <button class="btn btn-ghost" id="asm-clear" type="button" title="Leeren">🗑</button>
+            </div>
+        </div>
+        <div class="ide-console">
+            <div class="console-tabs" role="tablist">
+                <button type="button" class="console-tab active" data-ctab="out" title="Ausgabe: Startknöpfe, Ausgabe deines Programms und Register">▶</button>
+                <button type="button" class="console-tab" data-ctab="cmd" title="Befehle: alle Assembler-Befehle mit Erklärung">📖</button>
+            </div>
+            <div class="console-pane" data-cpane="out">
+                <div class="console-run">
+                    <button class="btn btn-primary run-icon" id="run-asm" type="button" title="Ausführen (Strg + Enter): dein Assembler-Programm läuft komplett in deinem Browser." aria-label="Ausführen">▶</button>
+                    <button class="btn btn-ghost run-icon" id="asm-step" type="button" title="Einzelschritt: führt genau einen Befehl aus und markiert in den Zeilennummern, welcher Befehl als Nächster dran ist." aria-label="Einzelschritt">👣</button>
+                    <button class="btn btn-ghost run-icon" id="asm-run-rest" type="button" title="Weiter: lässt dein Programm vom Pausenpunkt an bis zum Ende laufen." aria-label="Weiter">⏩</button>
+                    <button class="btn btn-ghost run-icon" id="asm-stop" type="button" title="Stopp: hält dein Programm an." aria-label="Stopp">⏹</button>
+                </div>
+                <div id="asm-step-info" class="step-info"></div>
+                <div class="console-block-title">Ausgabe</div>
+                <pre id="asm-console" class="code ide-console-out">Noch nichts ausgeführt.</pre>
+                <div class="console-block-title">Register</div>
+                <p class="muted">Deine 16 Register mit ihren Werten, live bei jedem ▶ Ausführen und jedem 👣 Einzelschritt. <code>R0</code> bis <code>R15</code>, dahinter die Vergleichsflags und der Programmzähler.</p>
+                <div id="asm-registers" class="asm-registers"></div>
+                <div class="console-block-title">Eingabe für IN</div>
+                <p class="muted">Zahlen für <code>IN</code> hineinschreiben, mehrere mit Komma getrennt (z. B. <code>3, 12</code>): <code>IN R1</code> nimmt jeweils die nächste Zahl.</p>
+                <input type="text" id="asm-in" class="mono asm-in" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="console-pane" data-cpane="cmd" hidden>
+                <h4 class="diag-head">📖 Alle Befehle</h4>
+                <div id="asm-commands" class="asm-commands">
+                    <table>
+                        <tr><td><pre class="code">LOAD R1, 5
+LOAD R1, R2</pre></td><td>Lädt die Zahl <code>5</code> bzw. den Inhalt von <code>R2</code> ins Register <code>R1</code>. (Schreibweise <code>MOV</code> geht auch.)</td></tr>
+                        <tr><td><pre class="code">ADD R1, R2</pre></td><td><code>R1 = R1 + R2</code>. Auch mit Zahl: <code>ADD R1, 5</code>.</td></tr>
+                        <tr><td><pre class="code">SUB R1, R2</pre></td><td><code>R1 = R1 - R2</code>.</td></tr>
+                        <tr><td><pre class="code">MUL R1, R2</pre></td><td><code>R1 = R1 * R2</code>.</td></tr>
+                        <tr><td><pre class="code">DIV R1, R2</pre></td><td><code>R1 = R1 / R2</code> (ganzzahlig, Rest wird verworfen). Division durch 0 ist ein Fehler.</td></tr>
+                        <tr><td><pre class="code">MOD R1, R2</pre></td><td><code>R1 = R1 % R2</code> (Rest der Division).</td></tr>
+                        <tr><td><pre class="code">INC R1</pre></td><td><code>R1 = R1 + 1</code>.</td></tr>
+                        <tr><td><pre class="code">DEC R1</pre></td><td><code>R1 = R1 - 1</code>.</td></tr>
+                        <tr><td><pre class="code">CMP R1, R2</pre></td><td>Vergleicht beide Werte und setzt die Flags: <strong>gleich</strong>, <strong>kleiner</strong>, <strong>größer</strong>. Alle Sprünge hängen an diesen Flags.</td></tr>
+                        <tr><td><pre class="code">JMP marke</pre></td><td>Springt immer zur Marke <code>marke:</code>.</td></tr>
+                        <tr><td><pre class="code">JZ marke
+JNZ marke</pre></td><td>Springt, wenn die Flags <strong>gleich</strong> sind (JZ) bzw. nicht (JNZ).</td></tr>
+                        <tr><td><pre class="code">JGT marke
+JLT marke</pre></td><td>Springt, wenn <strong>größer</strong> (JGT) bzw. <strong>kleiner</strong> (JLT).</td></tr>
+                        <tr><td><pre class="code">marke:</pre></td><td>Setzt eine Marke (Sprungziel), z. B. <code>schleife:</code>.</td></tr>
+                        <tr><td><pre class="code">OUT R1</pre></td><td>Gibt den Wert von <code>R1</code> in der Ausgabe aus.</td></tr>
+                        <tr><td><pre class="code">OUTS "Hallo!"</pre></td><td>Gibt einen Text aus (Anführungszeichen nötig).</td></tr>
+                        <tr><td><pre class="code">IN R1</pre></td><td>Liest die nächste Zahl aus dem Eingabefeld ins Register.</td></tr>
+                        <tr><td><pre class="code">HALT</pre></td><td>Beendet das Programm. Fehlt HALT, meckert die Fehlerkonsole.</td></tr>
+                        <tr><td><pre class="code">; ein Kommentar</pre></td><td>Alles hinter <code>;</code> bis zum Zeilenende wird ignoriert.</td></tr>
+                    </table>
+                    <p class="muted">Register heißen <code>R0</code> bis <code>R15</code>. Alle Werte sind ganze Zahlen. Dein Programm läuft komplett in deinem Browser, die Dateien werden der Reihe nach zu einem Programm zusammengesetzt, Marken gelten über alle Dateien hinweg.</p>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
     <?php else: ?>
     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="form">
         <?= csrf_field() ?>
@@ -499,8 +582,10 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
     <pre id="code-output" class="code">Noch nichts ausgeführt.</pre>
 </section>
 <?php elseif ($project->type === 'code' && $project->language === 'java'): ?>
-<script src="<?= url('assets/js/java-vm.js') ?>"></script>
+<script src="<?= asset_url('assets/js/java-vm.js') ?>"></script>
 <script>window.IC_IMAGES = <?= json_encode((object) ($imageUrls ?? []), JSON_HEX_TAG | JSON_UNESCAPED_SLASHES) ?>;</script>
+<?php elseif ($project->type === 'code' && $project->language === 'asm'): ?>
+<script src="<?= asset_url('assets/js/asm-vm.js') ?>"></script>
 <?php elseif ($project->type === 'html'): ?>
 <section class="panel">
     <div class="notice">
@@ -524,5 +609,21 @@ int anzahl = Database.count("SELECT * FROM schueler");   // Zeilen einer Abfrage
 String beste = Database.value("SELECT name FROM schueler ORDER BY punkte DESC");
 System.out.println(Database.tables());                     // alle Tabellen</pre>
     <p class="muted">Verfügbar: <code>execute</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>query</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>count</code> die Zeilenanzahl, <code>value</code> den ersten Wert, <code>tables</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank startet bei jedem Ausführen neu und leer.</p>
+
+    <div class="db-block">
+        <h4 class="diag-head">🗄 Vorhandene Tabellen</h4>
+        <p class="muted">Alle Tabellen und Spalten deiner Datenbank, live nach jedem ▶ Ausführen: Hier siehst du, worauf dein Programm zugreifen kann (<code>Database.execute(...)</code> und <code>Database.query(...)</code>).</p>
+        <div id="java-dbschema" class="umldiag"></div>
+    </div>
+
+    <div class="db-block">
+        <h4 class="diag-head">🗄 DB-Konsole: Abfragen testen und Daten anlegen</h4>
+        <p class="muted">Schicke Abfragen direkt an die Datenbank, ohne dein Programm zu ändern: <code>SELECT</code> zeigt das Ergebnis an, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>CREATE TABLE</code> und <code>DROP TABLE</code> ändern die Datenbank testweise (bis zum nächsten ▶ Ausführen). Damit legst du hier auch neue Daten an und prüfst sofort, was dein Programm daraus liest.</p>
+        <textarea id="java-db-in" class="mono db-console-in" rows="3" autocomplete="off" spellcheck="false"></textarea>
+        <div class="repl-actions">
+            <button class="btn btn-primary" id="java-db-run" type="button" title="Abfrage ausführen (Strg + Enter): schickt den SQL-Befehl an die Datenbank und zeigt das Ergebnis.">▶ Abfrage ausführen</button>
+        </div>
+        <pre id="java-db-out" class="code ide-console-out db-console-out"></pre>
+    </div>
 </section>
 <?php endif; ?>

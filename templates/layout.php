@@ -11,7 +11,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($title) ?> · InfoCraft</title>
-    <link rel="stylesheet" href="<?= url('assets/css/style.css') ?>">
+    <link rel="stylesheet" href="<?= asset_url('assets/css/style.css') ?>">
     <link rel="icon" href="<?= url('assets/img/favicon.svg') ?>" type="image/svg+xml">
 </head>
 <body class="auth-body">
@@ -39,7 +39,7 @@ $navView = $user !== null ? \Infocraft\Models\UserPref::navView($user->id) : 'fu
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($title) ?> · InfoCraft</title>
-    <link rel="stylesheet" href="<?= url('assets/css/style.css') ?>">
+    <link rel="stylesheet" href="<?= asset_url('assets/css/style.css') ?>">
     <link rel="icon" href="<?= url('assets/img/favicon.svg') ?>" type="image/svg+xml">
 </head>
 <body data-csrf="<?= e(csrf_token()) ?>"<?= $examLock !== null ? ' data-exam-lock="1"' : '' ?><?= $navView === 'mini' ? ' class="sidebar-mini"' : '' ?>>
@@ -106,7 +106,7 @@ $navView = $user !== null ? \Infocraft\Models\UserPref::navView($user->id) : 'fu
         <footer class="foot">InfoCraft · Digitale Informatik-Werkstatt · PHP <?= e(PHP_VERSION) ?></footer>
     </div>
 </div>
-<script src="<?= url('assets/js/app.js') ?>"></script>
+<script src="<?= asset_url('assets/js/app.js') ?>"></script>
 </body>
 </html>
 

@@ -5921,9 +5921,28 @@
             box.appendChild(mrow);
           }
         }
+        /* Ergebnis-Blase des letzten Methoden-Klicks, direkt am Objekt. */
+        if (objBubble && objBubble.id === o.id) {
+          var bub = document.createElement('div');
+          bub.className = 'obj-bubble';
+          bub.appendChild(document.createTextNode(objBubble.text));
+          var bclose = document.createElement('button');
+          bclose.type = 'button';
+          bclose.className = 'obj-bubble-close';
+          bclose.title = 'Blase schließen';
+          bclose.textContent = '✕';
+          bub.appendChild(bclose);
+          box.appendChild(bub);
+        }
         objBox.appendChild(box);
       }
+      /* Die Blase verschwindet beim naechsten Neuzeichnen (Ausfuehren,
+       * Anweisung aus der Objektkonsole). */
+      objBubble = null;
     }
+
+    /* Blase mit dem Ergebnis des letzten Methoden-Klicks im Objektdiagramm. */
+    var objBubble = null;
 
     function objMethodChip(o, m) {
       var pnames = [];
@@ -5935,14 +5954,17 @@
       btn.textContent = m.name + '(' + pnames.join(', ') + ')';
       var zeroArgs = m.params.length === 0;
       btn.title = zeroArgs
-        ? 'Methode aufrufen: ' + o.name + '.' + m.name + '() läuft sofort. Rückgabewert und Ausgaben erscheinen im Tab ▶.'
-        : 'Aufruf ins Anweisungsfeld setzen: Ergänze die Argumente für ' + pnames.join(', ') + ' und führe die Anweisungen aus.';
+        ? 'Methode aufrufen: ' + o.name + '.' + m.name + '() läuft sofort, das Ergebnis erscheint in einer Blase am Objekt.'
+        : 'Aufruf ins Anweisungsfeld der Objektkonsole setzen: Ergänze die Argumente für ' + pnames.join(', ') + ' und führe die Anweisungen aus.';
       btn.addEventListener('click', function () {
         var call = o.name + '.' + m.name + '(' + pnames.join(', ') + ')';
         if (!session) { updateReplHint(); showPane('out'); return; }
         if (zeroArgs) {
           var res = session.evalLine(call);
           replLine(call, res);
+          /* Ergebnis als kleine Blase direkt am Objekt zeigen (kein Sprung
+           * in den ▶-Tab; das Protokoll der Objektkonsole führt es mit). */
+          objBubble = { id: o.id, text: objBubbleText(call, res) };
         } else {
           if (replIn) {
             replIn.value = (replIn.value ? String(replIn.value).replace(/\s+$/, '') + '\n' : '') + call;
@@ -5950,10 +5972,21 @@
             if (typeof replIn.focus === 'function') { replIn.focus(); }
           }
         }
-        showPane('out');
         renderObjects();
       });
       return btn;
+    }
+
+    /* Text der Ergebnis-Blase: Rueckgabewert und getaetigte Ausgaben. */
+    function objBubbleText(call, res) {
+      var parts = [call];
+      if (res && res.output !== '') {
+        parts.push(String(res.output).replace(/\s+$/, ''));
+      }
+      if (res && res.result !== null && res.result !== undefined) {
+        parts.push('= ' + res.result);
+      }
+      return parts.join('\n');
     }
 
     function replLine(input, res) {

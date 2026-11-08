@@ -62,7 +62,7 @@ final class CodeController
         $type = ($_POST['type'] ?? 'code') === 'html' ? 'html' : 'code';
         $language = match ($type) {
             'html' => 'html',
-            default => in_array($_POST['language'] ?? '', ['python', 'java'], true) ? (string) $_POST['language'] : SiteSetting::defaultLanguage(),
+            default => in_array($_POST['language'] ?? '', ['python', 'java', 'asm'], true) ? (string) $_POST['language'] : SiteSetting::defaultLanguage(),
         };
         $folderId = (int) ($_POST['folder_id'] ?? 0);
         $folderId = $folderId > 0 && Folder::belongsTo($folderId, $user->id) ? $folderId : null;
@@ -193,9 +193,12 @@ final class CodeController
             return;
         }
         $files = ProjectFile::allForProject($project->id);
-        if ($files === [] && $project->type === 'code' && $project->language === 'java') {
+        $isMultiFile = $project->type === 'code' && ($project->language === 'java' || $project->language === 'asm');
+        if ($files === [] && $isMultiFile) {
             // Noch keine Dateien: virtuelle Datei aus dem Projektinhalt anbieten.
-            $name = self::javaFileName($project->content, $project->title);
+            $name = $project->language === 'asm'
+                ? self::asmFileName($project->content, $project->title)
+                : self::javaFileName($project->content, $project->title);
             $files = [new ProjectFile(0, $project->id, $name, $project->content, 0, null)];
         }
         $owner = User::find($project->ownerId);
@@ -239,8 +242,9 @@ final class CodeController
             $title = $project->title;
         }
         $isJava = $project->type === 'code' && $project->language === 'java';
+        $isAsm = $project->type === 'code' && $project->language === 'asm';
         $postedFiles = $_POST['files'] ?? null;
-        if ($isJava && is_array($postedFiles)) {
+        if (($isJava || $isAsm) && is_array($postedFiles)) {
             $files = ProjectFile::allForProject($project->id);
             $combined = '';
             $map = [];
@@ -252,7 +256,7 @@ final class CodeController
                 $content = (string) $fileContent;
                 if ($fileId === 0) {
                     // Virtuelle Datei (Projekt hatte noch keine Dateien): erste echte Datei anlegen.
-                    ProjectFile::create($project->id, self::javaFileName($content, $title), $content);
+                    ProjectFile::create($project->id, $isAsm ? self::asmFileName($content, $title) : self::javaFileName($content, $title), $content);
                 } elseif (isset($map[$fileId])) {
                     $map[$fileId]->save($content);
                 }
@@ -284,12 +288,19 @@ final class CodeController
         }
         csrf_validate();
         $project = Project::find((int) ($params['id'] ?? 0));
-        if ($project === null || !self::canOpen($user, $project) || $project->type !== 'code' || $project->language !== 'java') {
+        if ($project === null || !self::canOpen($user, $project) || $project->type !== 'code' || ($project->language !== 'java' && $project->language !== 'asm')) {
             flash('error', 'Projekt nicht gefunden.');
             redirect('/werkstatt/code');
         }
+        $isJava = $project->language === 'java';
+        $isAsm = $project->language === 'asm';
         $name = trim((string) ($_POST['name'] ?? ''));
-        if (!preg_match('/^[A-Za-z][A-Za-z0-9_]{0,50}\.java$/', $name)) {
+        if ($isAsm) {
+            if (!preg_match('/^[A-Za-z][A-Za-z0-9_]{0,50}\.asm$/', $name)) {
+                flash('error', 'Der Dateiname muss mit einem Buchstaben beginnen und auf .asm enden, z. B. programm.asm.');
+                redirect('/werkstatt/code/' . $project->id);
+            }
+        } elseif (!preg_match('/^[A-Za-z][A-Za-z0-9_]{0,50}\.java$/', $name)) {
             flash('error', 'Der Dateiname muss wie eine Java-Klasse aufgebaut sein, z. B. Auto.java.');
             redirect('/werkstatt/code/' . $project->id);
         }
@@ -297,7 +308,7 @@ final class CodeController
         if ($files === []) {
             // Bisher lag der Quelltext nur im Projektinhalt (virtuelle Datei):
             // als echte Datei uebernehmen, damit nichts verloren geht.
-            ProjectFile::create($project->id, self::javaFileName($project->content, $project->title), $project->content);
+            ProjectFile::create($project->id, $isAsm ? self::asmFileName($project->content, $project->title) : self::javaFileName($project->content, $project->title), $project->content);
             $files = ProjectFile::allForProject($project->id);
         }
         if (count($files) >= 20) {
@@ -310,8 +321,12 @@ final class CodeController
                 redirect('/werkstatt/code/' . $project->id);
             }
         }
-        $class = substr($name, 0, -5);
-        ProjectFile::create($project->id, $name, "public class " . $class . " {\n    \n}\n");
+        if ($isAsm) {
+            ProjectFile::create($project->id, $name, "; " . $name . "\n; Schreibe hier deine Befehle, Marken mit Doppelpunkt (z. B. schleife:)\nHALT\n");
+        } else {
+            $class = substr($name, 0, -5);
+            ProjectFile::create($project->id, $name, "public class " . $class . " {\n    \n}\n");
+        }
         flash('success', 'Datei angelegt.');
         redirect('/werkstatt/code/' . $project->id);
     }
@@ -443,6 +458,13 @@ final class CodeController
         return ($clean === '' ? 'Main' : $clean) . '.java';
     }
 
+    /** Dateiname fuer eine virtuelle Assembler-Datei: Titel oder programm.asm. */
+    private static function asmFileName(string $content, string $title): string
+    {
+        $clean = preg_replace('/[^A-Za-z0-9_]/', '', $title);
+        return ($clean === '' ? 'programm' : $clean) . '.asm';
+    }
+
     private static function starterContent(string $type, string $language, string $title): string
     {
         if ($type === 'html') {
@@ -458,6 +480,11 @@ final class CodeController
              * benutzen (Objektdiagramm). */
             $var = lcfirst($name);
             return "public class " . $name . " {\n    private String name;\n\n    public " . $name . "(String nameStart) {\n        name = nameStart;\n    }\n\n    public String getName() {\n        return name;\n    }\n\n    public void vorstellen() {\n        System.out.println(\"Ich bin \" + name);\n    }\n}\n\n" . $name . " " . $var . " = new " . $name . "(\"Alex\");\n" . $var . ".vorstellen();\n";
+        }
+        if ($language === 'asm') {
+            /* Einstiegsbeispiel: zwei Zahlen addieren und ausgeben,
+             * mit Textausgabe zum Ausprobieren. */
+            return "; " . $title . "\n; Zwei Zahlen addieren und ausgeben\nLOAD R1, 5\nLOAD R2, 7\nADD R1, R2\nOUT R1\n\n; Text ausgeben (Anfuehrungszeichen noetig)\nOUTS \"Fertig!\"\nHALT\n";
         }
         return "# " . $title . "\nprint(\"Hallo InfoCraft!\")\n";
     }

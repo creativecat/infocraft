@@ -481,6 +481,10 @@ span.hlwrap { display: block; }
     align-self: start;
     position: sticky;
     top: 12px;
+    /* Fallback, falls die Hoehe per JavaScript nicht gesetzt werden kann:
+     * das Dateifenster geht nie ueber den Bildschirm hinaus, das Feld fuer
+     * neue Dateien bleibt sichtbar. */
+    max-height: calc(100vh - 32px);
 }
 .ide-side-title { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding: 2px 4px; }
 /* Dateiliste scrollt selbst, wenn das Dateifenster (wie das Codefenster)
@@ -552,7 +556,7 @@ span.hlwrap { display: block; }
     gap: 6px;
 }
 .console-tab.active { background: var(--surface); color: var(--primary-2); font-weight: 600; border-color: #c7d2fe; }
-.console-pane { padding: 12px; flex: 1; overflow: auto; max-height: 64vh; }
+.console-pane { padding: 12px; flex: 1; overflow: auto; min-height: 0; }
 /* Laufleiste (Ausführen/Einzelschritt/Weiter/Stopp): eigener, immer sichtbarer
  * Container über den Tabs. Reine Icon-Buttons: Die Erklärung kommt beim Hover
  * als Tooltip (title) und im aria-label für Screenreader. */
@@ -1067,3 +1071,56 @@ span.hlwrap { display: block; }
 .diagram-savestatus { font-size: 0.85rem; color: #64748b; margin: 0.25rem 0 0; }
 .syntax-table { margin: 0.5rem 0; }
 .syntax-help-block summary { cursor: pointer; }
+
+/* ===== Objektdiagramm: lange Erklaerung hinter dem kleinen ℹ️ (#29) ===== */
+.hint-details { display: inline-block; position: relative; }
+.hint-details summary {
+    list-style: none; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 999px;
+    border: 1px solid #c7d2fe; background: var(--surface);
+    color: var(--primary-2); font-size: 0.8rem; font-weight: 700;
+    vertical-align: middle;
+}
+.hint-details summary::-webkit-details-marker { display: none; }
+.hint-details[open] summary { background: #eef2ff; border-color: var(--primary); }
+.hint-details p { margin: 8px 0 0; text-align: left; max-width: 640px; }
+
+/* ===== Ergebnis-Blase am Objekt nach einem Methoden-Klick (#30) ===== */
+.obj-bubble {
+    position: relative; margin: 4px 10px 8px; padding: 8px 30px 8px 10px;
+    border: 1px solid var(--primary); border-radius: 10px;
+    background: #eef2ff; color: var(--primary-2);
+    font-size: 0.78rem; white-space: pre-wrap;
+    box-shadow: var(--shadow);
+}
+.obj-bubble-close {
+    position: absolute; top: 4px; right: 4px;
+    border: none; background: transparent; color: var(--muted);
+    cursor: pointer; font-size: 0.75rem; padding: 2px 5px; border-radius: 6px;
+}
+.obj-bubble-close:hover { background: var(--surface); color: var(--text); }
+
+/* ===== Datenbank-Block unten im Mini-Datenbank-Fenster (#28) ===== */
+.db-block { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--border); }
+.db-block .diag-head { margin-bottom: 4px; }
+
+/* ===== Assembler-IDE (#33): Register, Befehlsuebersicht, Eingabe ===== */
+.asm-registers {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+    gap: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.82rem;
+}
+.asm-reg {
+    display: flex; justify-content: space-between; gap: 6px;
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 4px 8px; background: var(--surface);
+}
+.asm-reg.changed { border-color: var(--primary); background: #eef2ff; color: var(--primary-2); font-weight: 700; }
+.asm-flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; font-size: 0.8rem; }
+.asm-flag { border: 1px dashed var(--border); border-radius: 999px; padding: 2px 10px; color: var(--muted); }
+.asm-flag.on { border-style: solid; border-color: var(--primary); color: var(--primary-2); font-weight: 700; background: #eef2ff; }
+.asm-in { width: 100%; margin-bottom: 8px; }
+.asm-commands table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.asm-commands td { border-top: 1px solid var(--border); padding: 6px 8px; vertical-align: top; }
+.asm-commands pre { margin: 0; }

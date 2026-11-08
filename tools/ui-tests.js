@@ -938,13 +938,19 @@ setTimeout(function () {
               if (chipVor) {
                 chipVor.dispatch('click');
                 var lastM = replLog.children[replLog.children.length - 1];
-                ok(lastM.textOf().indexOf('BMW ist 0 km gefahren.') !== -1, 'T35c Klick auf Methode ohne Parameter ruft sie auf und zeigt den Rueckgabewert');
-                ok(!hidden(paneOut), 'T35d das Ergebnis erscheint im Ausgabe-Tab (Objektkonsole-Protokoll)');
+                ok(lastM.textOf().indexOf('BMW ist 0 km gefahren.') !== -1, 'T35c Klick auf Methode ohne Parameter ruft sie auf und protokolliert den Rueckgabewert');
+                ok(hidden(paneOut), 'T35d der Klick springt nicht mehr in den ▶-Tab (Ausgabe-Tab bleibt zu)');
+                var bubbles = objBox.querySelectorAll('.obj-bubble');
+                ok(bubbles.length === 1, 'T35g das Ergebnis erscheint als Blase direkt am Objekt');
+                if (bubbles.length === 1) {
+                  ok(bubbles[0].textOf().indexOf('BMW ist 0 km gefahren.') !== -1, 'T35h die Blase zeigt Rueckgabe und Ausgabe des Aufrufs');
+                }
               }
               if (chipFahr) {
                 replIn.value = '';
                 chipFahr.dispatch('click');
                 ok(replIn.value === 'a.fahren(km)', 'T35e Methode mit Parametern setzt den Aufruf ins Anweisungsfeld');
+                ok(hidden(paneOut), 'T35f auch hier bleibt die Ansicht im Objekte-Tab stehen');
               }
 
               /* T36: Datenbank-Tab: Tabellen-Schema und DB-Konsole. */

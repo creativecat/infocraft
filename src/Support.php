@@ -17,6 +17,18 @@ function url(string $path = ''): string
 }
 
 /**
+ * Asset-URL mit Cache-Busting: haengt die Aenderungszeit der Datei als
+ * Versionsparameter an, damit Browser nach einem Update die neue Datei
+ * laden und keine alte Version aus dem Cache zeigen.
+ */
+function asset_url(string $path): string
+{
+    $file = (defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__, 2)) . '/public/' . ltrim($path, '/');
+    $v = is_file($file) ? (string) filemtime($file) : '0';
+    return url($path) . '?v=' . $v;
+}
+
+/**
  * Jahrgangsstufen mit Informatik am Gymnasium Bayern (LehrplanPLUS):
  * Informatik ist ein eigenstaendiges Fach erst ab Jahrgangsstufe 9,
  * in der 8. Jahrgangsstufe gibt es keinen Informatikunterricht.
