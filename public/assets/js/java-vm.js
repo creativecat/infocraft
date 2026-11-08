@@ -6360,6 +6360,213 @@
       })(panes[pe]);
     }
 
+    /* ---------- Autovervollständigung im Java-Editor (Issue #1) ----------
+     * Dropdown am Cursor (Strg + Leertaste oder beim Tippen), Vorschläge aus
+     * den Klassen, Attributen und Methoden des eigenen Projekts plus Java-
+     * Standard (System.out.println ...). ES5, ohne Abhängigkeiten. */
+    var edAcBox = null;
+    var edAcItems = [];
+    var edAcSel = -1;
+    var edAcArea = null;
+    var edAcFrom = 0;
+    function edAcEnsureBox() {
+      if (edAcBox) { return edAcBox; }
+      edAcBox = document.createElement('div');
+      edAcBox.className = 'ac-box';
+      edAcBox.setAttribute('hidden', 'hidden');
+      edAcBox.style.position = 'absolute';
+      edAcBox.style.zIndex = '90';
+      document.body.appendChild(edAcBox);
+      return edAcBox;
+    }
+    function edAcHide() {
+      if (edAcBox) { edAcBox.setAttribute('hidden', 'hidden'); }
+      edAcItems = [];
+      edAcSel = -1;
+      edAcArea = null;
+    }
+    /* Cursor-Position in Pixeln über eine Spiegel-Div messen (klassischer
+     * Trick: gleiche Schrift, gleiche Maße, Text bis zum Cursor, Markierung
+     * am Ende vermessen). */
+    function edAcCaretPos(area) {
+      if (!window || typeof window.getComputedStyle !== 'function' || !area.getBoundingClientRect) { return null; }
+      var cs = window.getComputedStyle(area);
+      var div = document.createElement('div');
+      var props = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom', 'borderWidth', 'boxSizing', 'width'];
+      var pi;
+      for (pi = 0; pi < props.length; pi++) {
+        try { div.style[props[pi]] = cs ? cs[props[pi]] : ''; } catch (e2) { /* ältere Browser */ }
+      }
+      div.style.position = 'absolute';
+      div.style.visibility = 'hidden';
+      div.style.whiteSpace = 'pre-wrap';
+      div.style.wordWrap = 'break-word';
+      div.textContent = area.value.substring(0, area.selectionStart);
+      var span = document.createElement('span');
+      span.textContent = String.fromCharCode(160);
+      div.appendChild(span);
+      if (!document.body || !document.body.appendChild) { return null; }
+      document.body.appendChild(div);
+      var box = area.getBoundingClientRect();
+      var left = box.left + (span.offsetLeft || 0) - (area.scrollLeft || 0);
+      var top = box.top + (span.offsetTop || 0) - (area.scrollTop || 0);
+      document.body.removeChild(div);
+      return { left: left, top: top, height: span.offsetHeight || 16 };
+    }
+    function edAcSuggestions(prefix) {
+      var items = [];
+      var seen = {};
+      function push(label, insert, hint, group) {
+        if (!label || seen[label + String.fromCharCode(1) + hint]) { return; }
+        seen[label + String.fromCharCode(1) + hint] = true;
+        if (prefix !== '' && label.toLowerCase().indexOf(prefix.toLowerCase()) !== 0) { return; }
+        items.push({ label: label, insert: insert !== undefined ? insert : label, hint: hint || '', group: group || '' });
+      }
+      var comp = null;
+      try { comp = compileAll(collectFiles()); } catch (e3) { comp = null; }
+      if (comp && comp.classes) {
+        var ci2, fj, mj;
+        for (ci2 = 0; ci2 < comp.classes.length; ci2++) {
+          var cls2 = comp.classes[ci2];
+          push(cls2.name, cls2.name, 'Klasse', 'Klassen');
+          for (fj = 0; fj < cls2.fields.length; fj++) {
+            push(cls2.fields[fj].name, cls2.fields[fj].name, (cls2.fields[fj].type ? typeName(cls2.fields[fj].type) : '') + ' Attribut', cls2.name);
+          }
+          for (mj = 0; mj < cls2.methods.length; mj++) {
+            push(cls2.methods[mj].name + '()', cls2.methods[mj].name + '()', 'Methode', cls2.name);
+          }
+        }
+      }
+      /* Java-Standard für den Unterricht: Ausgabe, Kontrollstrukturen, Typen. */
+      push('System.out.println()', 'System.out.println()', 'Ausgabe', 'Java');
+      push('System.out.print()', 'System.out.print()', 'Ausgabe', 'Java');
+      push('String', 'String', 'Typ', 'Java');
+      push('int', 'int', 'Typ', 'Java');
+      push('double', 'double', 'Typ', 'Java');
+      push('boolean', 'boolean', 'Typ', 'Java');
+      push('void', 'void', 'Typ', 'Java');
+      push('public', 'public', 'Sichtbarkeit', 'Java');
+      push('private', 'private', 'Sichtbarkeit', 'Java');
+      push('protected', 'protected', 'Sichtbarkeit', 'Java');
+      push('static', 'static', 'Modifikator', 'Java');
+      push('if', 'if', 'Kontrollstruktur', 'Java');
+      push('else', 'else', 'Kontrollstruktur', 'Java');
+      push('while', 'while', 'Schleife', 'Java');
+      push('for', 'for', 'Schleife', 'Java');
+      push('return', 'return', 'Rücksprung', 'Java');
+      push('new', 'new', 'Objekt erzeugen', 'Java');
+      push('class', 'class', 'Definition', 'Java');
+      push('extends', 'extends', 'Vererbung', 'Java');
+      /* Gruppieren: eigene Klassen zuerst, dann Java-Standard. */
+      items.sort(function (a, b) {
+        if (a.group === b.group) { return a.label < b.label ? -1 : (a.label > b.label ? 1 : 0); }
+        return a.group < b.group ? -1 : 1;
+      });
+      return items.slice(0, 10);
+    }
+    function edAcRender() {
+      if (!edAcBox) { return; }
+      edAcBox.innerHTML = '';
+      if (edAcItems.length === 0) { edAcBox.setAttribute('hidden', 'hidden'); return; }
+      edAcBox.removeAttribute('hidden');
+      var ii;
+      for (ii = 0; ii < edAcItems.length; ii++) {
+        (function (idx) {
+          var it = edAcItems[idx];
+          var row = document.createElement('div');
+          row.className = 'ac-item' + (idx === edAcSel ? ' sel' : '');
+          var lab = document.createElement('span');
+          lab.className = 'ac-label';
+          lab.textContent = it.label;
+          var hintEl = document.createElement('span');
+          hintEl.className = 'ac-hint';
+          hintEl.textContent = it.hint + (it.group !== '' ? ' · ' + it.group : '');
+          row.appendChild(lab);
+          row.appendChild(hintEl);
+          row.addEventListener('mousedown', function (ev) { ev.preventDefault(); edAcPick(idx); });
+          edAcBox.appendChild(row);
+        })(ii);
+      }
+    }
+    function edAcPick(idx) {
+      var area = edAcArea;
+      if (!area || !edAcItems[idx]) { edAcHide(); return; }
+      var it = edAcItems[idx];
+      var caret = area.selectionStart;
+      var text = area.value;
+      var wordEnd = caret;
+      while (wordEnd < text.length && isIdentChar(text.charAt(wordEnd))) { wordEnd++; }
+      area.value = text.substring(0, edAcFrom) + it.insert + text.substring(wordEnd);
+      var newCaret = edAcFrom + it.insert.length;
+      area.setSelectionRange(newCaret, newCaret);
+      edAcHide();
+      area.focus();
+      /* Autosave und Gutter wie bei jeder anderen Eingabe bedienen. */
+      if (typeof area.dispatchEvent === 'function') {
+        var evIn = document.createEvent('HTMLEvents');
+        evIn.initEvent('input', true, false);
+        area.dispatchEvent(evIn);
+      }
+    }
+    function edAcUpdate(area) {
+      if (!area) { edAcHide(); return; }
+      edAcArea = area;
+      var caret = area.selectionStart;
+      if (caret !== area.selectionEnd) { edAcHide(); return; }
+      var text = area.value;
+      /* Wort-Anfang ab dem Cursor rückwärts laufen lassen. */
+      var from = caret;
+      while (from > 0 && isIdentChar(text.charAt(from - 1))) { from--; }
+      var prefix = text.substring(from, caret);
+      edAcFrom = from;
+      var items = edAcSuggestions(prefix);
+      edAcItems = items;
+      edAcSel = -1;
+      if (edAcItems.length === 0) { edAcHide(); return; }
+      edAcEnsureBox();
+      var pos = edAcCaretPos(area);
+      if (pos === null) { edAcHide(); return; }
+      edAcBox.style.left = Math.max(8, pos.left) + 'px';
+      edAcBox.style.top = (pos.top + pos.height + 2) + 'px';
+      edAcBox.style.maxHeight = '220px';
+      edAcBox.style.overflowY = 'auto';
+      edAcRender();
+    }
+    (function wireEditorAutocomplete() {
+      var panesAC = document.querySelectorAll('[data-file-pane] textarea');
+      var ai;
+      for (ai = 0; ai < panesAC.length; ai++) {
+        (function (area) {
+          if (!area || area.getAttribute('data-edac') === '1') { return; }
+          area.setAttribute('data-edac', '1');
+          area.addEventListener('keydown', function (e) {
+            var visible = edAcItems.length > 0 && edAcBox && !edAcBox.hasAttribute('hidden');
+            if (visible) {
+              if (e.key === 'ArrowDown') { e.preventDefault(); edAcSel = (edAcSel + 1) % edAcItems.length; edAcRender(); return; }
+              if (e.key === 'ArrowUp') { e.preventDefault(); edAcSel = (edAcSel - 1 + edAcItems.length) % edAcItems.length; edAcRender(); return; }
+              if (e.key === 'Tab') { e.preventDefault(); edAcPick(edAcSel >= 0 ? edAcSel : 0); return; }
+              if (e.key === 'Escape') { edAcHide(); return; }
+              if (e.key === 'Enter') { e.preventDefault(); edAcPick(edAcSel >= 0 ? edAcSel : 0); return; }
+            }
+            if (e.key === ' ' && (e.ctrlKey || e.metaKey)) {
+              e.preventDefault();
+              edAcUpdate(area);
+            }
+          });
+          area.addEventListener('input', function () {
+            /* Automatisch beim Tippen innerhalb eines Bezeichners vorschlagen. */
+            var caret = area.selectionStart;
+            if (caret !== area.selectionEnd || caret === 0) { return; }
+            var ch = area.value.charAt(caret - 1);
+            if (isIdentChar(ch)) { edAcUpdate(area); }
+            else { edAcHide(); }
+          });
+          area.addEventListener('blur', function () { window.setTimeout(edAcHide, 150); });
+          area.addEventListener('scroll', edAcHide);
+        })(panesAC[ai]);
+      }
+    })();
+
     /* Objektkonsole mit Autovervollständigung */
     var acItems = [];
     var acSel = -1;
