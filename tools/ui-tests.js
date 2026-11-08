@@ -104,6 +104,18 @@ FakeEl.prototype.removeChild = function (child) {
   var i = this.children.indexOf(child);
   if (i !== -1) { this.children.splice(i, 1); }
 };
+FakeEl.prototype.insertBefore = function (el, ref) {
+  if (ref) {
+    var i = this.children.indexOf(ref);
+    if (i !== -1) {
+      if (el.parent && el.parent.removeChild) { el.parent.removeChild(el); }
+      this.children.splice(i, 0, el);
+      el.parent = this;
+      return el;
+    }
+  }
+  return this.appendChild(el);
+};
 FakeEl.prototype.querySelectorAll = function (sel) {
   var parts = sel.split(' ').filter(Boolean);
   var out = [];
@@ -283,6 +295,11 @@ var gfxDock = new FakeEl('div');
 doc.register(gfxDock, 'gfx-dock');
 gfxDock.setAttribute('hidden', 'hidden');
 doc.body.appendChild(gfxDock);
+/* Hinweis unter dem Grafik-Fenster (wie templates/code_project.php) */
+var gfxDockHint = new FakeEl('p');
+gfxDockHint.className = 'gfx-dock-hint';
+gfxDockHint.textContent = 'Die Größe des Grafik-Fensters legst du im Code fest.';
+gfxDock.appendChild(gfxDockHint);
 var paneOut = consolePane('out', true);
 var paneClasses = consolePane('classes', false);
 var paneRepl = consolePane('repl', false);
@@ -305,8 +322,12 @@ var errBox = new FakeEl('div');
 doc.register(errBox, 'java-errors');
 var replLog = new FakeEl('div');
 doc.register(replLog, 'java-repl-log');
-var replIn = new FakeEl('input');
+var replIn = new FakeEl('textarea');
 doc.register(replIn, 'java-repl-in');
+var replGut = new FakeEl('div');
+doc.register(replGut, 'java-repl-gutter');
+var replRunBtn = new FakeEl('button');
+doc.register(replRunBtn, 'java-repl-run');
 doc.register(new FakeEl('p'), 'java-repl-hint');
 var acBox = new FakeEl('div');
 doc.register(acBox, 'java-repl-ac');
@@ -403,14 +424,23 @@ consoleEl.textContent = '';
 pane1.querySelector('textarea').dispatch('keydown', { ctrlKey: true, key: 'Enter' });
 ok(consoleEl.textContent.indexOf('BMW') !== -1, 'T5 Strg+Enter fuehrt aus');
 
-/* T6: Objektkonsole: Objekt erzeugen per Enter. */
+/* T6: Objektkonsole: Anweisungsfeld mit Zeilennummern, Ausfuehren per Knopf. */
 replIn.value = 'Auto b = new Auto("Audi");';
-replIn.dispatch('keydown', { key: 'Enter' });
-ok(replLog.children.length > 0, 'T6a Objektkonsole protokolliert die Eingabe');
-replIn.value = 'b.vorstellen();';
-replIn.dispatch('keydown', { key: 'Enter' });
+replIn.dispatch('input');
+ok(replGut.textContent === '1\n', 'T6 Zeilennummern des Anweisungsfelds folgen der Eingabe');
+replIn.value = 'Auto b = new Auto("Audi");\nb.vorstellen();';
+replIn.dispatch('input');
+ok(replGut.textContent === '1\n2\n', 'T6b mehrzeilige Eingabe zaehlt die Zeilennummern mit');
+replRunBtn.dispatch('click');
+ok(replLog.children.length > 0, 'T6c Ausfuehren-Knopf der Objektkonsole protokolliert die Eingabe');
 var last = replLog.children[replLog.children.length - 1];
-ok(last.textOf().indexOf('Audi') !== -1, 'T6b Methodenaufruf liefert Ergebnis');
+ok(last.textOf().indexOf('Audi') !== -1, 'T6d Methodenaufruf liefert Ergebnis');
+/* Strg + Enter fuehrt ebenfalls aus, Eingabe bleibt stehen */
+replIn.value = 'b.vorstellen();';
+replIn.dispatch('keydown', { key: 'Enter', ctrlKey: true });
+last = replLog.children[replLog.children.length - 1];
+ok(last.textOf().indexOf('Audi') !== -1, 'T6e Strg+Enter im Anweisungsfeld fuehrt aus');
+ok(replIn.value === 'b.vorstellen();', 'T6f die Anweisungen bleiben nach dem Ausfuehren stehen');
 
 /* T7: Live-Klassendiagramm beim Tippen (ohne Ausfuehren). */
 var ta = pane1.querySelector('textarea');
@@ -588,17 +618,48 @@ setTimeout(function () {
       ok(!hidden(gfxDock), 'T20c5 Die Grafik-Zeile ist wieder sichtbar');
     }
 
-    /* T20d: Grafik-Fenster skalierbar (gfxResizeWindow haelt 4:3 und setzt die Breite). */
+    /* T20d: new World(b, h) passt das Grafik-Fenster in der Groesse des Codes an. */
     var win2c = doc.querySelector('#gfx-window');
-    if (win2c && vm.gfxResizeWindow) {
+    ok(win2c !== null, 'T20d Grafik-Fenster ist offen');
+    if (win2c) {
       var cnv = win2c.querySelector('canvas');
-      vm.gfxResizeWindow(700);
-      ok(win2c.style.width === '700px', 'T20d Grafik-Fenster laesst sich auf 700px Breite skalieren');
-      ok(cnv.width === 700 && cnv.height === 525, 'T20d2 Canvas behaelt 4:3 (700x525)');
-      vm.gfxResizeWindow(100);
-      ok(win2c.style.width === '280px', 'T20d3 Untergrenze 280px wird eingehalten');
-      vm.gfxResizeWindow(700);
+      var hintIdx = gfxDock.children.indexOf(gfxDockHint);
+      var winIdx = gfxDock.children.indexOf(win2c);
+      ok(hintIdx > winIdx && winIdx !== -1, 'T20d2 Erklaer-Hinweis steht unter dem Grafik-Fenster');
+      ta.value = 'World w = new World(500, 400);';
+      ta.dispatch('input');
+      runBtn.dispatch('click');
+      ok(win2c.style.width === '500px', 'T20d3 new World(500, 400) setzt die Fensterbreite auf 500px');
+      ok(cnv.width === 500 && cnv.height === 400, 'T20d4 Canvas folgt der World-Groesse (500x400)');
+      ta.value = 'World w = new World(2000, 1500);';
+      ta.dispatch('input');
+      runBtn.dispatch('click');
+      ok(cnv.width === 960 && cnv.height === 720, 'T20d5 riesige World wird auf 960x720 begrenzt');
     }
+
+    /* T20e: Zum Start ist das Grafik-Fenster immer geleert und versteckt. */
+    ta.value = 'System.out.println("kein Grafik-Fenster");';
+    ta.dispatch('input');
+    runBtn.dispatch('click');
+    var win2e = doc.querySelector('#gfx-window');
+    ok(win2e.style.display === 'none', 'T20e Start ohne Grafik versteckt das Fenster');
+    ok(hidden(gfxDock), 'T20e2 die Grafik-Zeile verschwindet mit dem Fenster');
+    if (win2e) {
+      var cnv2 = win2e.querySelector('canvas');
+      ok(cnv2.width === 480 && cnv2.height === 360, 'T20e3 Canvas ist auf die Standardgroesse zurueckgesetzt');
+      ok(cnv2.__ctx.__calls.indexOf('clearRect') !== -1, 'T20e4 die alte Zeichnung ist weggeleert');
+      var guiLeft = win2e.querySelector('.gfx-gui');
+      ok(guiLeft.children.length === 0, 'T20e5 alte Knoepfe und Eingabefelder sind entfernt');
+    }
+    /* und ein neues Grafik-Programm oeffnet das geleerte Fenster wieder */
+    ta.value = 'class Auto extends Circle {' + NLt +
+      '  Auto() { super(50, 60, 10); }' + NLt +
+      '}' + NLt +
+      'Auto b = new Auto();';
+    ta.dispatch('input');
+    runBtn.dispatch('click');
+    var win2f = doc.querySelector('#gfx-window');
+    ok(win2f.style.display === '' && !hidden(gfxDock), 'T20e6 ein neues Grafik-Programm oeffnet das Fenster wieder');
 
     /* T21: Klammer-Automatik: ( schliesst sofort ), Cursor steht dazwischen. */
     var taE = pane1.querySelector('textarea');

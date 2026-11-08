@@ -1,8 +1,8 @@
 <section class="panel">
     <div class="panel-head">
+        <a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück">←</a>
         <h3><?= $project->type === 'html' ? '🌐' : '💻' ?> <?= e($project->title) ?></h3>
         <span class="save-status" id="java-save-info" title="Dein Code wird bei jeder Änderung automatisch gespeichert – auch ohne Speichern-Klick."></span>
-        <a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück">←</a>
     </div>
     <?php if ($isForeign): ?>
     <div class="notice">
@@ -92,12 +92,18 @@
                 <div id="java-objects" class="objdiag">Noch keine Objekte. Klicke oben auf ▶ Ausführen.</div>
             </div>
             <div class="console-pane" data-cpane="repl" hidden>
-                <p class="muted" id="java-repl-hint">Erst ▶ Ausführen klicken, dann kannst du hier Objekte erzeugen und Methoden aufrufen.</p>
-                <div id="java-repl-log" class="repl-log"></div>
-                <div class="repl-input-row">
-                    <span class="repl-prompt">›</span>
-                    <input id="java-repl-in" class="mono" type="text" autocomplete="off" spellcheck="false" placeholder='Auto a = new Auto("BMW");'>
+                <p class="muted" id="java-repl-hint">Erst ▶ Ausführen klicken. Dann schreibst du hier auf mehrere Zeilen, was dein Programm tun soll: Objekte erzeugen und Methoden aufrufen, getrennt vom Entwurf deiner Klassen im Codefenster.</p>
+                <div class="repl-edit">
+                    <div class="repl-gutter mono" id="java-repl-gutter">1</div>
+                    <textarea id="java-repl-in" class="mono" rows="4" autocomplete="off" spellcheck="false" placeholder='Auto a = new Auto("BMW");
+a.fahren(100);
+System.out.println(a.vorstellen());'></textarea>
                 </div>
+                <div class="repl-actions">
+                    <button class="btn btn-primary" id="java-repl-run" type="button" title="Anweisungen ausführen (Strg + Enter): erzeugt die Objekte und ruft die Methoden auf, je Zeile eine Anweisung.">▶ Anweisungen ausführen</button>
+                    <span class="muted">Strg + Enter funktioniert auch. Die Anweisungen bleiben stehen, du kannst sie ändern und erneut ausführen.</span>
+                </div>
+                <div id="java-repl-log" class="repl-log"></div>
                 <div id="java-repl-ac" class="ac-box" hidden></div>
             </div>
             <div class="console-pane" data-cpane="sprites" hidden>
@@ -157,7 +163,7 @@
                         <summary>🖼️ Grafik-Fenster: World und Koordinaten</summary>
                         <p>Erzeugst du eine Figur oder eine World, öffnet sich das Grafik-Fenster mit einem XY-Feld. <strong>Wichtig:</strong> Der Ursprung (0|0) ist <strong>links oben</strong>, y zeigt nach <strong>unten</strong> – wie in der OnlineIDE/learnj.</p>
                         <table>
-                            <tr><td><pre class="code">World w = new World(800, 600);</pre></td><td>Legt die Welt an (Breite, Höhe) und öffnet das Fenster. Ohne eigene World gilt automatisch 800 × 600.</td></tr>
+                            <tr><td><pre class="code">World w = new World(800, 600);</pre></td><td>Legt die Welt an (Breite, Höhe) und öffnet das Fenster in genau dieser Größe. Ohne eigene World gilt automatisch 800 × 600 (im kleineren Fenster maßstabsgerecht dargestellt).</td></tr>
                             <tr><td><pre class="code">w.setBackgroundColor(Color.red);
 // oder "#ff8000" oder rgb(255,128,0)</pre></td><td>Hintergrundfarbe der Welt.</td></tr>
                             <tr><td><pre class="code">w.getWidth() · w.getHeight()</pre></td><td>Breite und Höhe der Welt als Zahl.</td></tr>
@@ -240,7 +246,7 @@ s.move(10, 0); · s.destroy();</pre></td><td>Wie jede Figur strecken, drehen, be
                             <tr><td><pre class="code">Sprite a = new Sprite(100, 100, "Auto");</pre></td><td>Standard-Figuren: <code>Schildkröte</code>, <code>Auto</code>, <code>Katze</code>, <code>Hund</code>, <code>Fisch</code>, <code>Baum</code>, <code>Wolke</code>, <code>Sonne</code>, <code>Stern</code>, <code>Herz</code>, <code>Raumschiff</code>, <code>Geist</code>, <code>Pilz</code>, <code>Blume</code>.</td></tr>
                             <tr><td><pre class="code">Sprite b = new Sprite(400, 300, "Ball");</pre></td><td>Eigene Bilder: Lade rechts im Tab 🖼 (Sprites) eine Grafik hoch (PNG, JPEG, GIF, WebP, maximal 1 MB). Ihr Name ohne Endung ist der Sprite-Name – bei „ball.png“ also <code>"Ball"</code> bzw. <code>"ball"</code>.</td></tr>
                         </table>
-                        <p class="muted">Eigene Bilder gehören zum Projekt: Wenn deine Lehrkraft es austeilten, bekommen alle dieselben Sprites. Das Grafik-Fenster lässt sich unten rechts an der Ecke frei in der Größe ziehen und mit 🎨 über der Konsole wieder einblenden, falls du es mit ✕ geschlossen hast. Und mit <code>class Auto extends Sprite</code> kannst du wie gewohnt <code>act()</code>, Tasten und Maus nutzen.</p>
+                        <p class="muted">Eigene Bilder gehören zum Projekt: Wenn deine Lehrkraft es austeilt, bekommen alle dieselben Sprites. Die Größe des Grafik-Fensters legst du im Code fest (<code>new World(640, 480)</code>), bei jedem ▶ Ausführen startet es leer, und mit 🎨 über der Konsole blendest du es wieder ein, falls du es mit ✕ geschlossen hast. Und mit <code>class Auto extends Sprite</code> kannst du wie gewohnt <code>act()</code>, Tasten und Maus nutzen.</p>
                     </details>
 
                     <details>
@@ -423,7 +429,9 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
                 </div>
             </div>
             </div>
-            <div class="gfx-dock" id="gfx-dock" hidden></div>
+            <div class="gfx-dock" id="gfx-dock" hidden>
+                <p class="muted gfx-dock-hint">Die Größe des Grafik-Fensters legst du im Code fest: <code>new World(640, 480)</code> passt es an dein Programm an (Standard 800 × 600). Bei jedem ▶ Ausführen startet das Fenster leer. Mit ✕ schließt du es, mit 🎨 über der Konsole blendest du es wieder ein.</p>
+            </div>
         </div>
     </div>
     <?php else: ?>

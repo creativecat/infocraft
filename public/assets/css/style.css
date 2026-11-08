@@ -478,9 +478,14 @@ span.hlwrap { display: block; }
     flex-direction: column;
     gap: 6px;
     min-width: 0;
+    align-self: start;
+    position: sticky;
+    top: 12px;
 }
 .ide-side-title { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding: 2px 4px; }
-.ide-side-files { display: flex; flex-direction: column; gap: 3px; }
+/* Dateiliste scrollt selbst, wenn das Dateifenster (wie das Codefenster)
+ * hoeher ist als die Liste; das Feld fuer neue Dateien bleibt unten sichtbar. */
+.ide-side-files { display: flex; flex-direction: column; gap: 3px; min-height: 0; overflow-y: auto; }
 .ide-file { display: flex; gap: 4px; align-items: center; }
 .ide-file-btn {
     flex: 1;
@@ -572,11 +577,31 @@ span.hlwrap { display: block; }
 /* Objektkonsole (interaktiv, mit Autovervollstaendung) */
 .repl-log { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; max-height: 40vh; overflow: auto; }
 .repl-line { border-left: 3px solid #c7d2fe; padding: 2px 8px; }
-.repl-in-line { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88rem; color: var(--primary-2); }
+.repl-in-line { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88rem; color: var(--primary-2); white-space: pre-wrap; }
 .repl-out { margin: 4px 0 0; font-size: 0.85rem; white-space: pre-wrap; }
 .repl-res { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88rem; color: #047857; font-weight: 600; margin-top: 4px; }
-.repl-input-row { display: flex; gap: 8px; align-items: center; position: relative; }
-.repl-prompt { font-weight: 700; color: var(--primary); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+/* Anweisungsfeld der Objektkonsole: Textfeld mit Zeilennummern links daneben */
+.repl-edit {
+    display: flex; align-items: stretch;
+    border: 2px solid #a5b4fc; border-radius: 12px;
+    background: var(--surface); overflow: hidden;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+}
+.repl-gutter {
+    flex: none; width: 36px; padding: 8px 6px;
+    text-align: right; font-size: 0.85rem; line-height: 1.45;
+    color: var(--muted); background: var(--bg);
+    border-right: 1px solid var(--border);
+    white-space: pre; overflow: hidden; user-select: none;
+}
+#java-repl-in {
+    flex: 1; min-width: 0; min-height: 96px;
+    border: none; outline: none; resize: vertical;
+    padding: 8px 10px; background: transparent;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.88rem; line-height: 1.45; color: var(--text);
+}
+.repl-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0 10px; position: relative; }
 #java-repl-in {
     flex: 1;
     min-width: 0;
@@ -784,9 +809,13 @@ span.hlwrap { display: block; }
 .gfx-dock .gfx-window {
     position: relative;
     width: 480px; max-width: 100%;
-    margin: 0 auto;
+    margin: 0;
     background: var(--bg); border: none; border-radius: 0;
     box-shadow: none; overflow: hidden;
+}
+.gfx-dock-hint {
+    margin: 0; padding: 6px 12px 10px;
+    font-size: 0.8rem; color: var(--muted);
 }
 .gfx-window {
     position: fixed; right: 18px; top: 72px; z-index: 60;
@@ -794,20 +823,11 @@ span.hlwrap { display: block; }
     background: var(--surface); border: 2px solid #a5b4fc; border-radius: 12px;
     box-shadow: var(--shadow); overflow: hidden;
 }
-/* Greifer unten rechts: Grafik-Fenster in der Groesse ziehen (skalierbar). */
-.gfx-resize {
-    position: absolute; right: 0; bottom: 0; z-index: 3;
-    width: 18px; height: 18px; cursor: nwse-resize;
-    background: linear-gradient(135deg, transparent 0 45%, #c7d2fe 45% 55%, transparent 55% 65%, #a5b4fc 65% 100%);
-    border-bottom-right-radius: 6px;
-    touch-action: none;
-}
-.gfx-resize:hover { background: linear-gradient(135deg, transparent 0 45%, #93c5fd 45% 55%, transparent 55% 65%, #3b82f6 65% 100%); }
 .gfx-title {
     display: flex; align-items: center; justify-content: space-between;
     padding: 6px 10px; background: #eef2ff; border-bottom: 1px solid #c7d2fe;
     font-size: 0.85rem; font-weight: 700; color: var(--primary-2);
-    cursor: move; user-select: none;
+    cursor: default; user-select: none;
 }
 .gfx-close {
     border: 1px solid #c7d2fe; background: var(--surface); border-radius: 6px;

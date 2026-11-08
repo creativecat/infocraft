@@ -3743,10 +3743,13 @@
     el.appendChild(canvas);
     el.appendChild(guiLayer);
     /* Eigene Zeile unterhalb der Konsole (gfx-dock); ohne Dock (z. B. alte
-     * Seiten) bleibt das Fenster wie bisher ein Overlay am Seitenrand. */
+     * Seiten) bleibt das Fenster wie bisher ein Overlay am Seitenrand.
+     * Ein eventueller Erklaer-Hinweis im Dock bleibt UNTER dem Fenster. */
     var host = document.getElementById('gfx-dock');
     if (!host) { host = document.body; }
-    host.appendChild(el);
+    var dockHint = host.querySelector ? host.querySelector('.gfx-dock-hint') : null;
+    if (dockHint && typeof host.insertBefore === 'function') { host.insertBefore(el, dockHint); }
+    else { host.appendChild(el); }
     st = { el: el, canvas: canvas, guiLayer: guiLayer, label: label, hidden: false };
     el.__gfxState = st;
     /* Ereignisse: Tastatur und Maus gehen an die Objekte des laufenden Programms */
@@ -3756,34 +3759,6 @@
     canvas.addEventListener('mouseup', function (ev) { gfxMouse(ev, 'up'); });
     canvas.addEventListener('mousemove', function (ev) { gfxMouse(ev, 'move'); });
     close.addEventListener('click', function () { gfxHideWindow(); });
-    /* Greifer unten rechts: Groesse des Grafik-Fensters frei einstellen. */
-    var grip = document.createElement('div');
-    grip.className = 'gfx-resize';
-    grip.setAttribute('title', 'Größe ändern: ziehen');
-    el.appendChild(grip);
-    grip.addEventListener('mousedown', function (ev) {
-      if (ev.preventDefault) { ev.preventDefault(); }
-      if (typeof document.addEventListener !== 'function') { return; }
-      var startW = el.offsetWidth || canvas.width || 480;
-      var startX = ev.clientX || 0;
-      var host = el.parentNode || document.body;
-      var maxW = 2000;
-      if (host && typeof host.getBoundingClientRect === 'function') {
-        var hw = host.getBoundingClientRect().width;
-        if (typeof hw === 'number' && hw > 40) { maxW = Math.max(280, Math.floor(hw)); }
-      }
-      function onMove(ev2) {
-        gfxResizeWindow(Math.max(280, Math.min(maxW, startW + ((ev2.clientX || 0) - startX))));
-      }
-      function onUp() {
-        if (document.removeEventListener) {
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-        }
-      }
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-    });
     vm.gfx.windowState = st;
     return st;
   }
@@ -3792,17 +3767,18 @@
     if (st) { st.hidden = true; if (st.el.style) { st.el.style.display = 'none'; } }
     gfxDockSync(false);
   }
-  /* Groesse des Grafik-Fensters einstellen (Greifer unten rechts oder per
-     Programm). Die internen Canvas-Pixel folgen der Anzeigebreite, damit
-     die Zeichnung scharf bleibt; das Welt-Koordinatensystem passt sich an. */
-  function gfxResizeWindow(w) {
-    var st = gfxWindowFind();
-    if (!st || !st.canvas) { return; }
-    var nw = Math.max(280, Math.min(2000, Math.round(w)));
-    if (st.el.style) { st.el.style.width = nw + 'px'; }
-    st.canvas.width = nw;
-    st.canvas.height = Math.round(nw * 0.75);
-    if (RUN_VM) { gfxRedraw(RUN_VM); }
+  /* Die Groesse des Grafik-Fensters steht im Code: new World(b, h) passt das
+     Fenster an (240 bis 960 Pixel Breite, Hoehre im selben Verhaeltnis).
+     Ohne eigenes new World(...) bleibt das Fenster 480 x 360 und zeigt die
+     Standard-Welt 800 x 600 verkleinert. */
+  function gfxApplyWorldSize(vm, w) {
+    var st = vm.gfx.windowState || gfxWindowFind();
+    if (!st || !st.canvas || !w || !(w.w > 0) || !(w.h > 0)) { return; }
+    var cw = Math.max(240, Math.min(960, Math.round(w.w)));
+    var ch = Math.max(1, Math.round(cw * w.h / w.w));
+    st.canvas.width = cw;
+    st.canvas.height = ch;
+    if (st.el && st.el.style) { st.el.style.width = cw + 'px'; }
   }
   function gfxShowWindow(vm) {
     var st = vm.gfx.windowState || gfxEnsureWindow(vm);
@@ -4261,6 +4237,8 @@
       vm.gfx.world = wst;
       vm.gfx.worldRef = { t: 'ref', cls: 'World', obj: { cls: 'World', f: {}, g: wst } };
       gfxShowWindow(vm);
+      /* new World(b, h) passt das Grafik-Fenster in genau dieser Groesse an. */
+      gfxApplyWorldSize(vm, wst);
       gfxRedraw(vm);
       return vm.gfx.worldRef;
     }
@@ -5127,6 +5105,32 @@
   /* Aufräumen zwischen zwei Läufen */
   function gfxResetRun() {
     gfxStopLoop();
+    /* Zum Start ist das Grafik-Fenster immer leer: Zeichnung, Knöpfe und
+     * Eingabefelder des vorherigen Laufs verschwinden komplett. Das Fenster
+     * wartet versteckt, bis das neue Programm wieder Figuren anlegt. */
+    var ost = gfxWindowFind();
+    if (ost) {
+      if (ost.guiLayer && ost.guiLayer.children) {
+        var kids = [];
+        var k;
+        for (k = 0; k < ost.guiLayer.children.length; k++) { kids.push(ost.guiLayer.children[k]); }
+        for (k = 0; k < kids.length; k++) {
+          if (kids[k].parentNode && kids[k].parentNode.removeChild) { kids[k].parentNode.removeChild(kids[k]); }
+          else if (ost.guiLayer.removeChild) { ost.guiLayer.removeChild(kids[k]); }
+        }
+      }
+      if (ost.canvas && typeof ost.canvas.getContext === 'function') {
+        var c2 = ost.canvas.getContext('2d');
+        if (c2 && c2.clearRect) { c2.clearRect(0, 0, ost.canvas.width, ost.canvas.height); }
+      }
+      /* Zurueck auf die Standardgroesse, solange kein new World(...) kommt. */
+      if (ost.canvas) {
+        ost.canvas.width = 480;
+        ost.canvas.height = 360;
+      }
+      if (ost.el && ost.el.style) { ost.el.style.width = ''; }
+      gfxHideWindow();
+    }
     if (RUN_VM && RUN_VM.gfx) {
       var i;
       for (i = 0; i < RUN_VM.gfx.shapes.length; i++) {
@@ -5134,7 +5138,6 @@
         if (RUN_VM.gfx.shapes[i].dom && RUN_VM.gfx.shapes[i].dom.parentNode) { RUN_VM.gfx.shapes[i].dom.parentNode.removeChild(RUN_VM.gfx.shapes[i].dom); }
       }
       RUN_VM.gfx.shapes = [];
-      if (RUN_VM.gfx.world || RUN_VM.gfx.windowState) { gfxHideWindow(); }
       RUN_VM.gfx.world = null;
       RUN_VM.gfx.worldRef = null;
       RUN_VM.gfx.hover = null;
@@ -5273,6 +5276,8 @@
     var replIn = document.getElementById('java-repl-in');
     var replHint = document.getElementById('java-repl-hint');
     var acBox = document.getElementById('java-repl-ac');
+    var replGut = document.getElementById('java-repl-gutter');
+    var replRunBtn = document.getElementById('java-repl-run');
     var objBox = document.getElementById('java-objects');
     var objCount = document.getElementById('java-obj-badge');
     function badge() { return document.getElementById('java-error-badge'); }
@@ -5906,12 +5911,12 @@
     function updateReplHint() {
       if (!replHint) { return; }
       if (!session) {
-        replHint.textContent = 'Erst ▶ Ausführen klicken, dann kannst du hier Objekte erzeugen und Methoden aufrufen.';
+        replHint.textContent = 'Erst ▶ Ausführen klicken. Dann schreibst du hier auf mehrere Zeilen, was dein Programm tun soll: Objekte erzeugen und Methoden aufrufen.';
         return;
       }
       var names = session.classNames();
       if (names.length === 0) { replHint.textContent = 'Dieses Projekt enthält noch keine Klasse.'; return; }
-      replHint.textContent = 'Klassen: ' + names.join(', ') + '. Beispiel: ' + names[0] + ' a = new ' + names[0] + '(...); danach a.methode();';
+      replHint.textContent = 'Klassen: ' + names.join(', ') + '. Schreibe unten deine Anweisungen (eine je Zeile), z. B. ' + names[0] + ' a = new ' + names[0] + '(...); und a.methode(); dann ▶ Anweisungen ausführen.';
     }
 
     runBtn.addEventListener('click', doRun);
@@ -6326,8 +6331,38 @@
       acTouched = false;
       acRender();
     }
+    /* ---------- Anweisungsfeld der Objektkonsole (mit Zeilennummern) ----------
+     * Hier steht, was das Programm TUN soll (Objekte erzeugen, Methoden
+     * aufrufen), getrennt vom Entwurf der Klassen im Codefenster. Mehrere
+     * Zeilen sind erlaubt; ▶ bzw. Strg + Enter fuehrt alles aus. */
+    function replGutterSync() {
+      if (!replGut || !replIn) { return; }
+      var lines = String(replIn.value == null ? '' : replIn.value).split('\n');
+      var txt = '';
+      var i2;
+      for (i2 = 0; i2 < lines.length; i2++) { txt += (i2 + 1) + '\n'; }
+      replGut.textContent = txt;
+      if (typeof replGut.scrollTop === 'number' && typeof replIn.scrollTop === 'number') {
+        replGut.scrollTop = replIn.scrollTop;
+      }
+    }
+    function replRunAll() {
+      if (!replIn) { return; }
+      var input = replIn.value;
+      if (!session) {
+        /* Noch keine Session: nichts ausfuehren, Eingabe bleibt erhalten. */
+        updateReplHint();
+        return;
+      }
+      acHide();
+      var res = session.evalLine(input);
+      replLine(input, res);
+      renderObjects();
+      replGutterSync();
+    }
+    if (replRunBtn) { replRunBtn.addEventListener('click', replRunAll); }
     if (replIn) {
-      replIn.addEventListener('input', acUpdate);
+      replIn.addEventListener('input', function () { acUpdate(); replGutterSync(); });
       replIn.addEventListener('mouseup', acUpdate);
       replIn.addEventListener('keyup', function (e) {
         if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { acUpdate(); }
@@ -6342,19 +6377,11 @@
           if (e.key === 'Escape') { acHide(); return; }
           if (e.key === 'Enter' && acTouched && acSel >= 0) { e.preventDefault(); acPick(acSel); return; }
         }
-        if (e.key === 'Enter') {
+        /* Enter ohne Strg: neue Zeile im Anweisungsfeld (normales Textfeld).
+         * Strg + Enter (oder der ▶-Knopf) fuehrt alle Zeilen aus. */
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
           e.preventDefault();
-          var input = replIn.value;
-          if (!session) {
-            /* Noch keine Session: Eingabe NICHT löschen, damit nichts verloren geht. */
-            updateReplHint();
-            return;
-          }
-          replIn.value = '';
-          acHide();
-          var res = session.evalLine(input);
-          replLine(input, res);
-          renderObjects();
+          replRunAll();
         }
       });
     }
@@ -6371,6 +6398,24 @@
     }
     renderObjects();
     updateReplHint();
+    replGutterSync();
+
+    /* ---------- Dateifenster links: nur so hoch wie das Codefenster ----------
+     * Die Liste der Dateien scrollt dann selbst, und das Feld fuer neue
+     * Dateien bleibt immer im Bild (unten im Dateifenster sichtbar). */
+    var ideSide = document.querySelector('.ide-side');
+    var ideEditors = document.querySelector('.ide-editors');
+    function ideSideFit() {
+      if (!ideSide || !ideEditors || typeof ideEditors.getBoundingClientRect !== 'function') { return; }
+      var rect = ideEditors.getBoundingClientRect();
+      if (rect && typeof rect.height === 'number' && rect.height > 120) {
+        ideSide.style.maxHeight = rect.height + 'px';
+      }
+    }
+    ideSideFit();
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('resize', ideSideFit);
+    }
   }
 
   function escapeHtml(s) {
@@ -6379,7 +6424,7 @@
 
   global.InfoCraftJavaVM = {
     lex: lex, JError: JError, Parser: Parser, run: run, openSession: openSession, NL: NL,
-    gfxTick: gfxTick, gfxStopLoop: gfxStopLoop, gfxDispatchKey: gfxDispatchKey, gfxSnapshot: gfxSnapshot, gfxResizeWindow: gfxResizeWindow, formatJavaSource: formatJavaSource
+    gfxTick: gfxTick, gfxStopLoop: gfxStopLoop, gfxDispatchKey: gfxDispatchKey, gfxSnapshot: gfxSnapshot, formatJavaSource: formatJavaSource
   };
   if (typeof module !== 'undefined' && module.exports) { module.exports = global.InfoCraftJavaVM; }
   if (typeof document !== 'undefined') { wireUi(); }
