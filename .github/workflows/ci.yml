@@ -20,9 +20,11 @@ jobs:
           extensions: pdo_sqlite, curl
       - name: Syntaxpruefung (php -l)
         run: |
-          OUT=$(find . -name "*.php" -print0 | xargs -0 -n1 php -l 2>&1); ST=$?
+          set +e
+          OUT=$(find . -name "*.php" -print0 | xargs -0 -n1 php -l 2>&1)
+          ST=$?
           echo "$OUT"
-          if [ "$ST" -ne 0 ]; then echo "::error::$(echo "$OUT" | grep -m1 'Parse error' || true)"; exit 1; fi
+          if [ "$ST" -ne 0 ]; then echo "::error::$(echo "$OUT" | grep -m1 'Parse error')"; exit 1; fi
       - name: Migration mit Beispieldaten
         run: php tools/migrate.php --driver sqlite
       - name: Migration erneut ausfuehren (Idempotenz)
