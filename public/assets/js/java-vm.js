@@ -6297,6 +6297,158 @@
       }
       return files;
     }
+    /* ---------- Projektsymbole per Muster (#59) ----------
+     * Waehrend des Tippens ist der Quelltext immer wieder zwischendurch
+     * ungueltig; compileAll bricht dann ab. Damit Klassen, Attribute und
+     * Methoden aus ALLEN Projektdateien trotzdem in der Autovervoll-
+     * staendigung bleiben (und sich beim Tippen miterweitern), liest der
+     * Fallback die Symbole direkt aus dem Quelltext - er greift nur, wenn
+     * der Compiler keinen vollstaendigen Stand liefert. */
+    function edAcAllCode() {
+      var files = collectFiles();
+      var all = [];
+      var fk;
+      for (fk in files) {
+        if (Object.prototype.hasOwnProperty.call(files, fk)) { all.push(String(files[fk])); }
+      }
+      return all.join(NL);
+    }
+    function edAcFallbackSymbols() {
+      var sym = { classes: {}, order: [] };
+      var KW = { if: 1, for: 1, while: 1, switch: 1, catch: 1, return: 1, new: 1, else: 1, try: 1, do: 1 };
+      /* Pro Datei scannen (#59): Eine nicht geschlossene Klammer in einer
+       * Datei darf die Klassen der naechsten Datei nicht verschlucken. */
+      var files38 = collectFiles();
+      var fn38;
+      for (fn38 in files38) {
+        if (Object.prototype.hasOwnProperty.call(files38, fn38)) {
+          edAcFallbackScan(String(files38[fn38]), sym, KW);
+        }
+      }
+      return sym;
+    }
+    function edAcFallbackScan(code, sym, KW) {
+      {
+      var clsHead = /\b(?:class|interface|enum)\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s+extends\s+([A-Za-z_][A-Za-z0-9_]*))?/g;
+      clsHead.lastIndex = 0;
+      var m;
+      while ((m = clsHead.exec(code)) !== null) {
+        var open = code.indexOf('{', clsHead.lastIndex);
+        if (open === -1) { break; }
+        var depth = 0;
+        var end = code.length - 1;
+        var ci;
+        for (ci = open; ci < code.length; ci++) {
+          if (code.charAt(ci) === '{') { depth++; }
+          else if (code.charAt(ci) === '}') { depth--; if (depth === 0) { end = ci; break; } }
+        }
+        var name = m[1];
+        var cls = sym.classes[name];
+        if (!cls) { cls = sym.classes[name] = { fields: [], methods: [], ctors: [], parent: m[2] || null }; sym.order.push(name); }
+        else if (m[2]) { cls.parent = m[2]; }
+        var body = code.substring(open + 1, end);
+        /* Attribute und lokale Variablen: "Typ name;" bzw. "Typ name = ..." */
+        var fldRe = /(?:^|\n|\{|;)\s*(?:(?:public|private|protected|static|final)\s+)*([A-Za-z_][A-Za-z0-9_]*(?:\[\s*\])?)\s+([a-z_][A-Za-z0-9_]*)\s*(?:=[^=]|\)|,|;)/g;
+        while ((m = fldRe.exec(body)) !== null) {
+          if (m[1] === 'return' || m[1] === 'new' || m[1] === 'else') { continue; }
+          cls.fields.push({ name: m[2], type: m[1] });
+        }
+        /* Methoden: "Rueckgabetyp name(...) {" mit Parametern fuer den Hinweis */
+        var metRe = /(?:^|\n|\{|;)\s*(?:(?:public|private|protected|static|final|abstract)\s+)*([A-Za-z_][A-Za-z0-9_]*(?:\[\s*\])?)\s+([a-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*\{/g;
+        while ((m = metRe.exec(body)) !== null) {
+          if (KW[m[1]]) { continue; }
+          cls.methods.push({ name: m[2], params: String(m[3] || '').replace(/\s+/g, ' ').trim() });
+        }
+        /* Konstruktoren: "Klasse(...) {" */
+        var ctorRe = /(?:^|\n|\{|;)\s*(?:(?:public|private)\s+)?([A-Z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*\{/g;
+        while ((m = ctorRe.exec(body)) !== null) {
+          if (KW[m[1]] || m[1] !== name) { continue; }
+          cls.ctors.push({ params: String(m[2] || '').replace(/\s+/g, ' ').trim() });
+        }
+        clsHead.lastIndex = end;
+      }
+      }
+    }
+    /* Mitglieder einer Fallback-Klasse (inkl. geerbter Oberklassen). */
+    function edAcFallbackMembersOf(sym, clsName, wantStatic) {
+      var out = [];
+      var seen = {};
+      var guard = 0;
+      var cls = sym.classes[clsName];
+      while (cls && guard < 30) {
+        var fi;
+        for (fi = 0; fi < cls.fields.length; fi++) {
+          if (!seen['f' + cls.fields[fi].name]) {
+            seen['f' + cls.fields[fi].name] = true;
+            out.push({ label: cls.fields[fi].name, insert: cls.fields[fi].name, hint: (wantStatic ? 'Klassen-Attribut: ' : 'Attribut: ') + cls.fields[fi].type });
+          }
+        }
+        var mi;
+        for (mi = 0; mi < cls.methods.length; mi++) {
+          var mm = cls.methods[mi];
+          if (!seen['m' + mm.name]) {
+            seen['m' + mm.name] = true;
+            out.push({ label: mm.name + '(', insert: mm.name + '(', hint: 'Methode(' + mm.params + ')' });
+          }
+        }
+        if (wantStatic) {
+          var ci2;
+          for (ci2 = 0; ci2 < cls.ctors.length; ci2++) {
+            out.push({ label: 'new ' + clsName + '(', insert: 'new ' + clsName + '(', hint: 'Konstruktor (' + cls.ctors[ci2].params + ')' });
+          }
+        }
+        cls = cls.parent ? sym.classes[cls.parent] : null;
+        wantStatic = false;
+        guard++;
+      }
+      return out;
+    }
+    /* Punkt-Kontext ohne lauffaehige Session (#59): Empfaenger per Muster
+     * bestimmen (Variable mit Typ oder Klassenname direkt) und Mitglieder
+     * anbieten. */
+    function edAcFallbackMembers(text, caret, prefix) {
+      var head = text.substring(0, caret);
+      var dotPos = -1;
+      var i;
+      for (i = head.length - 1; i >= 0; i--) {
+        var ch = head.charAt(i);
+        if (isIdentChar(ch)) { continue; }
+        if (ch === '.') { dotPos = i; break; }
+        return [];
+      }
+      if (dotPos === -1) { return []; }
+      var r = dotPos;
+      while (r > 0 && isIdentChar(head.charAt(r - 1))) { r--; }
+      var recv = head.substring(r, dotPos);
+      if (recv === '') { return []; }
+      var items = [];
+      var sym = edAcFallbackSymbols();
+      if (recv === 'System.out' || recv === 'System.err' || (recv === 'out' && false)) {
+        items = [
+          { label: 'println(', insert: 'println(', hint: 'Ausgabe mit Zeilenumbruch' },
+          { label: 'print(', insert: 'print(', hint: 'Ausgabe ohne Zeilenumbruch' }
+        ];
+      } else if (sym.classes[recv]) {
+        items = edAcFallbackMembersOf(sym, recv, true);
+      } else {
+        /* Typ der Variable im Quelltext suchen: "Auto rob = ..." */
+        var declRe = new RegExp('([A-Za-z_][A-Za-z0-9_]*)\\s+' + recv + '\\s*(?:=[^=]|;|,|\\))');
+        var dm = declRe.exec(edAcAllCode());
+        if (dm && sym.classes[dm[1]]) {
+          items = edAcFallbackMembersOf(sym, dm[1], false);
+        } else {
+          return [];
+        }
+      }
+      var out = [];
+      var oi;
+      for (oi = 0; oi < items.length; oi++) {
+        if (prefix === '' || String(items[oi].label).toLowerCase().indexOf(prefix.toLowerCase()) === 0) {
+          out.push({ label: items[oi].label, insert: items[oi].insert, hint: items[oi].hint, group: '', pref: prefix });
+        }
+      }
+      return out.slice(0, 40);
+    }
     function typeName(ty) {
       if (!ty) { return ''; }
       return ty.name + (ty.arr ? '[]' : '');
@@ -6618,7 +6770,7 @@
       }
       var comp = null;
       try { comp = compileAll(collectFiles()); } catch (e3) { comp = null; }
-      if (comp && comp.classes) {
+      if (comp && comp.classes && comp.classes.length > 0) {
         var ci2, fj, mj;
         for (ci2 = 0; ci2 < comp.classes.length; ci2++) {
           var cls2 = comp.classes[ci2];
@@ -6630,6 +6782,24 @@
             push(cls2.methods[mj].name + '()', cls2.methods[mj].name + '()', 'Methode', cls2.name);
           }
         }
+      } else {
+        /* Compiler hat (noch) keinen gueltigen Stand (#59): eigene Klassen,
+         * Attribute und Methoden trotzdem anbieten, direkt aus dem Quelltext. */
+        try {
+          var fb = edAcFallbackSymbols();
+          var fbi, fbj;
+          for (fbi = 0; fbi < fb.order.length; fbi++) {
+            var fbName = fb.order[fbi];
+            var fbCls = fb.classes[fbName];
+            push(fbName, fbName, 'Klasse', 'Klassen');
+            for (fbj = 0; fbj < fbCls.fields.length; fbj++) {
+              push(fbCls.fields[fbj].name, fbCls.fields[fbj].name, fbCls.fields[fbj].type + ' Attribut', fbName);
+            }
+            for (fbj = 0; fbj < fbCls.methods.length; fbj++) {
+              push(fbCls.methods[fbj].name + '()', fbCls.methods[fbj].name + '()', 'Methode(' + fbCls.methods[fbj].params + ')', fbName);
+            }
+          }
+        } catch (eFb) { /* Fallback darf nie stören */ }
       }
       /* Java-Standard für den Unterricht: Ausgabe, Kontrollstrukturen, Typen. */
       push('System.out.println()', 'System.out.println()', 'Ausgabe', 'Java');
@@ -6653,6 +6823,12 @@
       push('extends', 'extends', 'Vererbung', 'Java');
       /* Gruppieren: eigene Klassen zuerst, dann Java-Standard. */
       items.sort(function (a, b) {
+        /* Eigene Klassen, Attribute und Methoden zuerst (#59), Java-Standard
+         * danach - sonst verdraengt das Standard-Repertoire die eigenen
+         * Symbole aus der begrenzten Box (10 Zeilen). */
+        var ra = a.group === 'Java' ? 1 : 0;
+        var rb = b.group === 'Java' ? 1 : 0;
+        if (ra !== rb) { return ra - rb; }
         if (a.group === b.group) { return a.label < b.label ? -1 : (a.label > b.label ? 1 : 0); }
         return a.group < b.group ? -1 : 1;
       });
@@ -6754,18 +6930,23 @@
       var prefix = text.substring(from, caret);
       edAcFrom = from;
       var items;
-      /* Nach einem Punkt: Mitglieder des Objekts mit echten Signaturen (#54). */
+      /* Nach einem Punkt: Mitglieder des Objekts mit echten Signaturen (#54).
+       * Ohne lauffaehige Session greift der Muster-Fallback (#59), damit die
+       * eigenen Attribute und Methoden auch waehrend des Tippens bleiben. */
       if (from > 0 && text.charAt(from - 1) === '.') {
         var edSess = edAcSession();
-        if (!edSess) { edAcHide(); return; }
-        var compl = edSess.complete(text.substring(0, caret));
-        items = [];
-        var cqi;
-        for (cqi = 0; cqi < compl.items.length; cqi++) {
-          items.push({ label: compl.items[cqi].label, insert: compl.items[cqi].insert, hint: compl.items[cqi].hint || '', group: '', pref: prefix });
+        if (edSess) {
+          var compl = edSess.complete(text.substring(0, caret));
+          items = [];
+          var cqi;
+          for (cqi = 0; cqi < compl.items.length; cqi++) {
+            items.push({ label: compl.items[cqi].label, insert: compl.items[cqi].insert, hint: compl.items[cqi].hint || '', group: '', pref: prefix });
+          }
+          edAcFrom = compl.from;
+        } else {
+          items = edAcFallbackMembers(text, caret, prefix);
+          if (items.length === 0) { edAcHide(); return; }
         }
-        edAcFrom = compl.from;
-        if (items.length === 0) { edAcHide(); return; }
       } else {
         items = edAcSuggestions(prefix);
         var iiq;
@@ -7120,6 +7301,24 @@ function renderDbSchema() {
   dbSchemaBox.appendChild(wrap);
 }
 dbSchemaRenderHook = renderDbSchema;
+/* Schema der gespeicherten Beispieldatenbank sofort zeichnen (#60):
+ * wireUi laeuft vor dieser Funktion und konnte den Hook noch nicht
+ * nutzen - bislang blieb das Live-Schema deshalb unsichtbar, bis das
+ * Programm einmal lief oder die Konsole benutzt wurde. */
+try {
+  var bootTbl = dbTables();
+  var bootCnt = 0;
+  var btk;
+  for (btk in bootTbl) {
+    if (Object.prototype.hasOwnProperty.call(bootTbl, btk)) { bootCnt++; }
+  }
+  if (bootCnt > 0) { renderDbSchema(); }
+} catch (eSchemaBoot) { /* Anzeige darf nichts blockieren */ }
+/* Platzhalter in die Ausgabe-Box (#60): So ist immer sichtbar, dass die
+ * Konsole verdrahtet ist - und das Ergebnis ersetzt diesen Text. */
+if (dbOut && dbOut.textContent === '') {
+  dbOut.textContent = 'Noch keine Abfrage: Schreibe z. B. SELECT * FROM tabelle; und klicke auf Abfrage ausführen (Strg + Enter geht auch).';
+}
 /* SQL-Text an Semikolons auf oberster Ebene trennen (Anführungszeichen
  * respektieren), damit auch mehrere Befehle am Stueck klappen. */
 function dbConsoleSplit(sqlText) {
@@ -7146,6 +7345,7 @@ function dbConsoleSplit(sqlText) {
 }
 function dbConsoleRun() {
   if (!dbIn || !dbOut) { return; }
+  try {
   var sqlAll = String(dbIn.value == null ? '' : dbIn.value).replace(/^\s+/, '').replace(/\s+$/, '');
   if (sqlAll === '') {
     dbOut.textContent = 'Schreibe zuerst eine Abfrage, z. B. SELECT * FROM tabelle;';
@@ -7187,8 +7387,29 @@ function dbConsoleRun() {
   try { renderDbSchema(); } catch (e2) { /* Schema-Anzeige darf die Konsole nicht blockieren */ }
   /* Änderungen aus der DB-Konsole automatisch mitspeichern (#44). */
   try { if (window.__icAutoSaveSoon) { window.__icAutoSaveSoon(); } } catch (eSave) { /* Speichern optional */ }
+  } catch (eTop) {
+    /* Auch ein Fehler VOR der eigentlichen Ausfuehrung darf die Konsole
+     * nie stumm lassen (#60): Immer eine sichtbare Rückmeldung. */
+    try {
+      if (dbOut) { dbOut.textContent = 'Die Abfrage konnte nicht gestartet werden: ' + (eTop && eTop.message ? eTop.message : String(eTop)); }
+    } catch (eSilent) { /* nichts mehr zu retten */ }
+    try { if (typeof console !== 'undefined' && console.error) { console.error('InfoCraft: DB-Konsole abgebrochen', eTop); } } catch (eC) { }
+  }
 }
-if (dbRunBtn) { dbRunBtn.addEventListener('click', dbConsoleRun); }
+/* Klick-Delegation (#60): Der Listener hängt am Dokument und greift jeden
+ * Klick auf #java-db-run ab - auch dann, wenn der Button durch DOM-Umbauten
+ * neu erstellt wurde und ein direkter Listener verlorengegangen ist.
+ * Ohne document.addEventListener (Test-Harness) bleibt der direkte Listener. */
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  document.addEventListener('click', function (ev) {
+    var t = ev.target;
+    while (t && t.tagName) {
+      if (t.id === 'java-db-run') { dbConsoleRun(); return; }
+      if (t === document.body || !t.parentNode) { return; }
+      t = t.parentNode;
+    }
+  });
+} else if (dbRunBtn) { dbRunBtn.addEventListener('click', dbConsoleRun); }
 if (dbIn) {
   dbIn.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
