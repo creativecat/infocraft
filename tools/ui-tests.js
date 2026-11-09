@@ -151,8 +151,28 @@ FakeEl.prototype.dispatch = function (type, opts) {
     preventDefault: function () {},
   };
   if (opts) { for (var k in opts) { ev[k] = opts[k]; } }
+  /* Bubbling wie im Browser: erst die Listener am Ziel, dann der Weg
+   * nach oben ueber alle Eltern bis zum Dokument (#60/#62): Der echte
+   * Browser greift den Button-Klick per Delegation am document ab, der
+   * Test-Harness bildet das jetzt genauso ab. */
+  var stopped = false;
+  ev.stopPropagation = function () { stopped = true; };
   var list = this.handlers[type] || [];
-  for (var i = 0; i < list.length; i++) { list[i](ev); }
+  var i;
+  for (i = 0; i < list.length; i++) { list[i](ev); }
+  var node = this.parent;
+  var sawBody = (global.document && global.document.body === this);
+  while (!stopped && node) {
+    if (global.document && global.document.body === node) { sawBody = true; }
+    var l2 = (node.handlers && node.handlers[type]) || [];
+    ev.currentTarget = node;
+    for (var j = 0; j < l2.length; j++) { l2[j](ev); }
+    node = node.parent;
+  }
+  if (!stopped && sawBody && global.document && typeof global.document._fire === 'function') {
+    ev.currentTarget = global.document;
+    global.document._fire(type, ev);
+  }
 };
 FakeEl.prototype.setSelectionRange = function (s, e) { this.selectionStart = s; this.selectionEnd = e; };
 FakeEl.prototype.getBoundingClientRect = function () { return { left: 8, top: 8, width: 420, height: 20 }; };
@@ -210,6 +230,24 @@ FakeDoc.prototype.querySelector = function (sel) {
   return all.length > 0 ? all[0] : null;
 };
 FakeDoc.prototype.register = function (el, id) { el.id = id; this._byId[id] = el; this.body.appendChild(el); };
+/* document-Listener (Delegation) wie im Browser (#60): Klick-Delegation von
+ * java-vm.js haengt am document und greift den Button auch dann ab, wenn der
+ * Klick auf ein inneres Element geht. */
+FakeDoc.prototype.addEventListener = function (type, fn) {
+  if (!this._handlers) { this._handlers = {}; }
+  (this._handlers[type] = this._handlers[type] || []).push(fn);
+};
+FakeDoc.prototype.removeEventListener = function (type, fn) {
+  var l = this._handlers && this._handlers[type];
+  if (!l) { return; }
+  var i = l.indexOf(fn);
+  if (i !== -1) { l.splice(i, 1); }
+};
+FakeDoc.prototype._fire = function (type, ev) {
+  var l = this._handlers && this._handlers[type];
+  if (!l) { return; }
+  for (var i = 0; i < l.length; i++) { l[i](ev); }
+};
 
 /* ---------- IDE-Seite nachbauen (wie templates/code_project.php) ---------- */
 var AUTO_CODE = 'public class Auto {\n' +
@@ -482,6 +520,34 @@ ta38.dispatch('input');
 ta2.value = keep2;
 ta2.setSelectionRange(0, 0);
 ta2.dispatch('input');
+
+/* T39: DB-Konsole ueber die echte Delegation (#60 Nacharbeit): Im Browser
+ * greift java-vm.js den Button-Klick per document-Delegation ab; der direkte
+ * Listener am Button und die Delegation duerfen die Abfrage nie doppelt
+ * ausfuehren (__icDbRunDone-Guard). */
+dbIn.value = "INSERT INTO produkte VALUES ('Stift', 3)";
+dbOut.textContent = '';
+dbRunBtn.dispatch('click');
+ok(dbOut.textContent.indexOf('Befehl(e)') !== -1, 'T39a INSERT ueber den Button meldet sich sichtbar');
+dbIn.value = 'SELECT * FROM produkte';
+dbOut.textContent = '';
+dbRunBtn.dispatch('click');
+var t39treffer = (dbOut.textContent.match(/Stift/g) || []).length;
+ok(t39treffer === 1, 'T39b Guard: Der Button-Klick fuehrt die Abfrage genau einmal aus (Zeile genau einmal da)');
+/* Klick auf ein INNERES Element des Buttons: Der direkte Listener am Button
+ * fehlt dafuer, die Delegation muss den Button auf dem Weg nach oben finden. */
+var btnText39 = new FakeEl('span');
+btnText39.textContent = 'Abfrage ausfuehren';
+dbRunBtn.appendChild(btnText39);
+dbIn.value = 'SELECT * FROM produkte';
+dbOut.textContent = '';
+btnText39.dispatch('click');
+var t39treffer2 = (dbOut.textContent.match(/Stift/g) || []).length;
+ok(dbOut.textContent.indexOf('Stift') !== -1, 'T39c Klick auf den Button-Text (inneres Element) startet die Abfrage');
+ok(t39treffer2 === 1, 'T39d Delegation + Guard: Auch der indirekte Klick laeuft genau einmal');
+dbRunBtn.removeChild(btnText39);
+dbIn.value = '';
+dbOut.textContent = '';
 
 /* T2: Konsolen-Tabs schalten die Panes (Klassendiagramm-Tab inklusive). */
 tabClasses.dispatch('click');
