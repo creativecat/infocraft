@@ -156,6 +156,7 @@ $router->get('/aufgaben/{id}/loesung/fenster', [TaskController::class, 'solution
 $router->post('/aufgaben/{id}/loeschen', [TaskController::class, 'delete']);
 $router->post('/aufgaben/{id}/todos', [TaskController::class, 'todoTeacher']);
 $router->post('/aufgaben/{id}/todos/schueler', [TaskController::class, 'todoStudent']);
+$router->post('/aufgaben/{id}/todos/eigene', [TaskController::class, 'todoOwn']);
 $router->post('/aufgaben/{id}/material', [TaskController::class, 'materialSave']);
 $router->get('/aufgaben/{id}/material/{mid}', [TaskController::class, 'materialDownload']);
 $router->post('/aufgaben/{id}/variante', [TaskController::class, 'variant']);

@@ -30,7 +30,7 @@ final class ModuleController
                 'route' => 'werkstatt/sql',
                 'description' => 'Datenbanken begreifbar machen: von der Tabelle bis zum SQL-Abenteuer.',
                 'features' => [
-                    'Abbildung eines Shops und von Instagram als Datenmodell',
+                    'Abbildung eines Shops und eines Social-Feeds als Datenmodell',
                     'SQL-Werkbank: Abfragen ausführen, Ergebnisse als Tabelle, Rechte je Person',
                     'Automatisch generierte ER-Diagramme (Quelltext zum Weiterverwenden)',
                     'SQL-Text-Adventure im Stil von SQL Island (Dateninsel)',

@@ -7,7 +7,7 @@ use Infocraft\Database;
 use Infocraft\Models\User;
 
 /**
- * SQL-Vorlage (z. B. Shop, Instagram, Adventure) mit Missionen
+ * SQL-Vorlage (z. B. Shop, InstaCraft, Adventure) mit Missionen
  * und Rechte-Zuweisungen (read/write/admin) pro Person.
  */
 final class SqlTemplate

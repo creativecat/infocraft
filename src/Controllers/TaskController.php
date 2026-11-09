@@ -452,6 +452,7 @@ final class TaskController
             'topics' => $topics,
             'materials' => TaskMaterial::forTask($task->id),
             'todos' => TaskTodo::templatesForTask($task->id),
+            'ownTodos' => TaskTodo::forStudentTasks($user->id, [$task->id])[$task->id] ?? [],
             'targets' => $targets,
             'progress' => $progressByTarget,
             'openGradings' => $open,
@@ -840,6 +841,53 @@ final class TaskController
     }
 
     /** ToDos der Lehrkraft an einer Aufgabe pflegen (Vorlage für alle Empfänger). */
+    /**
+     * Eigene ToDos (#45 Nacharbeit): Schuelerinnen und Schueler an ihren
+     * ausgeteilten Aufgaben und Lehrkrafte an ihren eigenen Aufgaben koennen
+     * persoenliche ToDos anlegen, abhaken und loeschen (nur fuer sich sichtbar).
+     */
+    public static function todoOwn(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $task = Task::find((int) ($params['id'] ?? 0));
+        $allowed = false;
+        if ($task !== null) {
+            $allowed = Auth::isTeacher() ? Task::ownedBy($task, $user) : self::taskReachesStudent($task, $user);
+        }
+        if ($task === null || !$allowed) {
+            flash('error', 'Diese Aufgabe ist nicht für dich ausgeteilt.');
+            redirect('/aufgaben');
+        }
+        $back = (string) ($_POST['back'] ?? '');
+        if ($back !== '' && str_starts_with($back, '/werkstatt/') === false && str_starts_with($back, '/aufgaben/') === false) {
+            $back = '';
+        }
+        $target = $back !== '' ? $back : (Auth::isTeacher() ? '/aufgaben/' . $task->id . '/bearbeiten' : '/aufgaben');
+        $deleteId = (int) ($_POST['delete_todo_id'] ?? 0);
+        if ($deleteId > 0) {
+            TaskTodo::deleteStudent($deleteId, $user->id);
+            flash('success', 'Eigenes ToDo entfernt.');
+            redirect($target);
+        }
+        $toggleId = (int) ($_POST['toggle_todo_id'] ?? 0);
+        if ($toggleId > 0) {
+            TaskTodo::toggleStudent($toggleId, $user->id);
+            redirect($target);
+        }
+        $title = trim((string) ($_POST['todo_title'] ?? ''));
+        if ($title === '') {
+            flash('error', 'Bitte einen Text für das ToDo angeben.');
+            redirect($target);
+        }
+        TaskTodo::addStudent($task->id, $user->id, $title);
+        flash('success', 'Eigenes ToDo hinzugefügt (nur für dich sichtbar).');
+        redirect($target);
+    }
+
     public static function todoTeacher(array $params): void
     {
         $user = Auth::user();
