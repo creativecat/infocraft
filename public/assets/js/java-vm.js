@@ -784,6 +784,9 @@
   /* Laufzeitkontext aller laufenden Programme (pro run-Aufruf neu). */
   var RUN_CLASS_MAP = Object.create(null);
   var RUN_VM = null;
+  /* Haken auf das Schema-Rendering der eigenstaendigen DB-Konsole (#53):
+   * wireUi aktualisiert das Tabellenschema darueber, ohne von der Konsole abzuhaengen. */
+  var dbSchemaRenderHook = null;
   var RUN_DB = null;
   var files0 = Object.create(null);
 
@@ -1505,6 +1508,37 @@
     return null;
   }
 
+  /* ===== Lesbare Signaturen fuer Fehlermeldungen (#50, #51) =====
+   * Statt "mit 0 Parameter(n)" bekommt die Schuelerin die erwartete
+   * Signatur mit Parametertypen und -namen genannt. */
+  function paramList(params) {
+    var ps = [];
+    var i;
+    for (i = 0; i < params.length; i++) { ps.push(typeName(params[i].type) + ' ' + params[i].name); }
+    return ps.join(', ');
+  }
+  function ctorListText(cls) {
+    if (!cls || !cls.ctors || cls.ctors.length === 0) { return ''; }
+    var out = [];
+    var i;
+    for (i = 0; i < cls.ctors.length; i++) { out.push(cls.name + '(' + paramList(cls.ctors[i].params) + ')'); }
+    return out.join(' oder ');
+  }
+  function methodSigsText(cls, name) {
+    var sigs = [];
+    var c = cls;
+    var guard = 0;
+    var i;
+    while (c && guard < 40) {
+      for (i = 0; i < c.methods.length; i++) {
+        if (c.methods[i].name === name) { sigs.push(name + '(' + paramList(c.methods[i].params) + ')'); }
+      }
+      c = c.parent ? RUN_CLASS_MAP[c.parent] : null;
+      guard++;
+    }
+    return sigs.join(' oder ');
+  }
+
   function initStatics(cls, vm) {
     if (vm.statics[cls.name]) { return; }
     vm.statics[cls.name] = Object.create(null);
@@ -1646,8 +1680,17 @@
     for (var i = 0; i < cls.ctors.length; i++) {
       if (cls.ctors[i].params.length === args.length) { ctor = cls.ctors[i]; break; }
     }
-    if (!ctor && args.length > 0) {
-      throw rt(ctx, cls.line, 'Kein Konstruktor von ' + cls.name + ' nimmt ' + args.length + ' Argument(e).', 'Es gibt keinen Konstruktor mit dieser Parameterzahl. Ergänze einen Konstruktor ' + cls.name + '(...) oder passe den new-Aufruf an.');
+    if (!ctor) {
+      /* Auch new ohne Argumente ist ein Fehler, wenn es keinen passenden
+       * Konstruktor gibt (#50) - die Signatur wird mit genannt (#51). */
+      var ctorList = ctorListText(cls);
+      if (ctorList !== '') {
+        var mehrere = ctorList.indexOf(' oder ') !== -1;
+        throw rt(ctx, cls.line, 'Der Aufruf new ' + cls.name + '(...) mit ' + args.length + ' Argument(en) passt nicht: ' + (mehrere ? 'Es gibt nur diese Konstruktoren: ' + ctorList + '.' : 'Es gibt nur den Konstruktor ' + ctorList + '.'), 'Passe den new-Aufruf an, z. B. new ' + ctorList + ' - oder schreibe einen eigenen Konstruktor ' + cls.name + '() dazu.');
+      }
+      if (args.length > 0) {
+        throw rt(ctx, cls.line, 'Kein Konstruktor von ' + cls.name + ' nimmt ' + args.length + ' Argument(e).', 'Es gibt keinen Konstruktor mit dieser Parameterzahl. Ergänze einen Konstruktor ' + cls.name + '(...) oder passe den new-Aufruf an.');
+      }
     }
     if (ctor) { execCtor(cls, ctor, obj, args, newEnv(null)); }
     else { initFieldsOf(cls, obj, newEnv(null), ctx); }
@@ -2254,7 +2297,7 @@
       var tcls = ctx.cls;
       var tc = null;
       for (var j2 = 0; j2 < tcls.ctors.length; j2++) { if (tcls.ctors[j2].params.length === args.length) { tc = tcls.ctors[j2]; break; } }
-      if (!tc) { throw rt(ctx, e.line, 'Kein Konstruktor von ' + tcls.name + ' nimmt ' + args.length + ' Argument(e).', 'Legge den passenden Konstruktor an.'); }
+      if (!tc) { var supCtors = ctorListText(tcls); throw rt(ctx, e.line, 'Kein Konstruktor von ' + tcls.name + ' nimmt ' + args.length + ' Argument(e).' + (supCtors ? ' Vorhanden: ' + supCtors + '.' : ''), 'Passe super(...) an die Parameter des Konstruktors an.'); }
       execCtor(tcls, tc, ctx.thisVal.obj, args, newEnv(null));
       return VOIDV;
     }
@@ -2271,7 +2314,8 @@
       if (ctx.thisVal && ctx.thisVal.t === 'ref' && ctx.thisVal.obj && ctx.thisVal.obj.g) {
         return gfxMethodCall(ctx.thisVal, name, args, ctx, e.line);
       }
-      throw rt(ctx, e.line, 'Die Methode ' + name + ' mit ' + args.length + ' Parameter(n) ist nicht bekannt.', 'Prüfe Schreibweise und Groß-/Kleinschreibung, die Parameterzahl und ob die Methode überhaupt existiert.');
+      var expectSelf = methodSigsText(ctx.cls, name);
+      throw rt(ctx, e.line, 'Die Methode ' + name + ' mit ' + args.length + ' Parameter(n) ist nicht bekannt.' + (expectSelf ? ' Deine Klasse ' + ctx.cls.name + ' kennt nur: ' + expectSelf + '.' : ''), 'Prüfe Schreibweise und Groß-/Kleinschreibung' + (expectSelf ? ', und übergebe die Parameter in der richtigen Zahl und Reihenfolge: ' + expectSelf : ' und die Parameterzahl') + '.');
     }
 
     var target = e.target;
@@ -2289,7 +2333,8 @@
         if (sm.m.isStatic) { return invokeMethod(sm.cls, sm.m, null, args, ctx.vm); }
         throw rt(ctx, e.line, 'Die Methode ' + name + ' ist nicht static und braucht ein Objekt von ' + scls.name + '.', 'Erzeuge zuerst ein Objekt: ' + scls.name + ' obj = new ' + scls.name + '(...);');
       }
-      throw rt(ctx, e.line, 'Die Klasse ' + target.v + ' hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Prüfe Schreibweise und Parameterzahl.');
+      var expectStatic = methodSigsText(scls, name);
+      throw rt(ctx, e.line, 'Die Klasse ' + target.v + ' hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).' + (expectStatic ? ' Erwartet: ' + expectStatic + '.' : ''), 'Prüfe Schreibweise und Parameterzahl' + (expectStatic ? ' und übergebe: ' + expectStatic : '') + '.');
     }
 
     /* Builtins */
@@ -2330,7 +2375,7 @@
       if (!ctx.cls || !ctx.cls.parent || !RUN_CLASS_MAP[ctx.cls.parent]) { throw rt(ctx, e.line, 'super.methode() geht nur, wenn die Klasse extends hat.', ''); }
       var supCls = RUN_CLASS_MAP[ctx.cls.parent];
       var supm = findMethod(supCls, name, args.length);
-      if (!supm) { throw rt(ctx, e.line, 'Die Oberklasse ' + supCls.name + ' hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Prüfe Schreibweise und Parameterzahl.'); }
+      if (!supm) { var supSigs = methodSigsText(supCls, name); throw rt(ctx, e.line, 'Die Oberklasse ' + supCls.name + ' hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).' + (supSigs ? ' Erwartet: ' + supSigs + '.' : ''), 'Prüfe Schreibweise und Parameterzahl' + (supSigs ? ' und übergebe: ' + supSigs : '') + '.'); }
       return invokeMethod(supm.cls, supm.m, ctx.thisVal, args, ctx.vm);
     }
 
@@ -2356,7 +2401,8 @@
     var objCls = RUN_CLASS_MAP[recv.cls];
     var vm0 = findMethod(objCls, name, args.length);
     if (!vm0) {
-      throw rt(ctx, e.line, 'Die Klasse ' + recv.cls + ' hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).', 'Prüfe Schreibweise und Groß-/Kleinschreibung, die Parameterzahl und ob die Methode existiert.');
+      var objSigs = methodSigsText(RUN_CLASS_MAP[recv.cls], name);
+    throw rt(ctx, e.line, 'Die Klasse ' + recv.cls + ' hat keine Methode ' + name + ' mit ' + args.length + ' Parameter(n).' + (objSigs ? ' Erwartet: ' + objSigs + '.' : ''), 'Prüfe Schreibweise und Groß-/Kleinschreibung' + (objSigs ? ' und übergebe die Parameter: ' + objSigs : ' und die Parameterzahl') + '.');
     }
     return invokeMethod(vm0.cls, vm0.m, recv, args, ctx.vm);
   }
@@ -5435,6 +5481,12 @@
 
     var session = null;
 
+    /* Schema der Datenbank aktualisieren: die eigentliche Logik sitzt in der
+     * eigenstaendigen DB-Konsole (#53), hier nur der abgesicherte Aufruf. */
+    function renderDbSchema() {
+      try { if (dbSchemaRenderHook) { dbSchemaRenderHook(); } } catch (e) { /* Schema darf nichts blockieren */ }
+    }
+
     /* Konsolen-Tabs rechts: Ausgabe / Objektkonsole / Objekte / Fehlerkonsole */
     var ctabs = document.querySelectorAll('[data-ctab]');
     var cpanes = document.querySelectorAll('[data-cpane]');
@@ -6416,6 +6468,9 @@
       if (autoTimer) { clearTimeout(autoTimer); }
       autoTimer = setTimeout(autoSave, 700);
     }
+    /* Fuer die eigenstaendige DB-Konsole (#53): dort gespeicherte Aenderungen
+     * werden ueber diesen Haken genauso automatisch gesichert. */
+    try { window.__icAutoSaveSoon = autoSaveSoon; } catch (eSaveExp) { /* kein window: egal */ }
     if (saveForm && typeof fetch === 'function') {
       savedSnap = collectSaveSnap();
       var pe3;
@@ -6515,6 +6570,7 @@
     }
     function edAcHide() {
       if (edAcBox) { edAcBox.setAttribute('hidden', 'hidden'); }
+      try { if (window.IC_GHOST && edAcArea) { window.IC_GHOST.hide(edAcArea); } } catch (e) { /* rein optisch */ }
       edAcItems = [];
       edAcSel = -1;
       edAcArea = null;
@@ -6542,8 +6598,12 @@
       if (!document.body || !document.body.appendChild) { return null; }
       document.body.appendChild(div);
       var box = area.getBoundingClientRect();
-      var left = box.left + (span.offsetLeft || 0) - (area.scrollLeft || 0);
-      var top = box.top + (span.offsetTop || 0) - (area.scrollTop || 0);
+      /* Viewport-Koordinaten in Seiten-Koordinaten umrechnen: das Dropdown
+       * liegt absolut im body, bei gescrollter Seite muss der Versatz mit (#54). */
+      var scX = window.pageXOffset || 0;
+      var scY = window.pageYOffset || 0;
+      var left = box.left + scX + (span.offsetLeft || 0) - (area.scrollLeft || 0);
+      var top = box.top + scY + (span.offsetTop || 0) - (area.scrollTop || 0);
       document.body.removeChild(div);
       return { left: left, top: top, height: span.offsetHeight || 16 };
     }
@@ -6642,6 +6702,46 @@
         area.dispatchEvent(evIn);
       }
     }
+    /* Session nur fuer den Editor (#54): Variablentypen aus dem Quelltext
+     * ableiten (Auto rob = new Auto(...);), damit auch im Editor die
+     * Mitglieder nach einem Punkt mit echten Signaturen erscheinen. */
+    function edAcSession() {
+      try {
+        var files = collectFiles();
+        var comp = compileAll(files);
+        if (!comp || !comp.ok || !comp.classes) { return null; }
+        var env = newEnv(null);
+        var code = '';
+        var k;
+        for (k in files) {
+          if (Object.prototype.hasOwnProperty.call(files, k)) { code += files[k] + NL; }
+        }
+        var declRe = /([A-Za-z_][A-Za-z0-9_]*)\s+([a-z_][A-Za-z0-9_]*)\s*(?:=|;|,|\))/g;
+        var m;
+        while ((m = declRe.exec(code)) !== null) {
+          var ty = m[1];
+          var nm = m[2];
+          if (ty === 'return' || ty === 'new') { continue; }
+          if (comp.classMap[ty]) { envDeclare(env, nm, ty, { t: 'ref', cls: ty, obj: null }); }
+          else if (ty === 'String') { envDeclare(env, nm, ty, { t: 'String', v: '' }); }
+        }
+        var arrRe = /([A-Za-z_][A-Za-z0-9_]*)\[\]\s+([a-z_][A-Za-z0-9_]*)\s*(?:=|;)/g;
+        while ((m = arrRe.exec(code)) !== null) { envDeclare(env, m[2], m[1], { t: 'array', arr: [] }); }
+        return makeSession(comp, { objects: [] }, env);
+      } catch (e) { return null; }
+    }
+    function edAcGhost(area) {
+      /* Grauer Vorschlag direkt in der Zeile (#55): Tab uebernimmt ihn. */
+      try {
+        if (!window.IC_GHOST) { return; }
+        if (!area || edAcItems.length === 0) { if (edAcArea) { window.IC_GHOST.hide(edAcArea); } return; }
+        var gi = edAcSel >= 0 ? edAcSel : 0;
+        var ins = String(edAcItems[gi].insert);
+        var pref = String(edAcItems[gi].pref || '');
+        var rem = pref !== '' && ins.toLowerCase().indexOf(pref.toLowerCase()) === 0 ? ins.slice(pref.length) : ins;
+        window.IC_GHOST.show(area, rem);
+      } catch (e) { /* rein optisch */ }
+    }
     function edAcUpdate(area) {
       if (!area) { edAcHide(); return; }
       edAcArea = area;
@@ -6653,7 +6753,24 @@
       while (from > 0 && isIdentChar(text.charAt(from - 1))) { from--; }
       var prefix = text.substring(from, caret);
       edAcFrom = from;
-      var items = edAcSuggestions(prefix);
+      var items;
+      /* Nach einem Punkt: Mitglieder des Objekts mit echten Signaturen (#54). */
+      if (from > 0 && text.charAt(from - 1) === '.') {
+        var edSess = edAcSession();
+        if (!edSess) { edAcHide(); return; }
+        var compl = edSess.complete(text.substring(0, caret));
+        items = [];
+        var cqi;
+        for (cqi = 0; cqi < compl.items.length; cqi++) {
+          items.push({ label: compl.items[cqi].label, insert: compl.items[cqi].insert, hint: compl.items[cqi].hint || '', group: '', pref: prefix });
+        }
+        edAcFrom = compl.from;
+        if (items.length === 0) { edAcHide(); return; }
+      } else {
+        items = edAcSuggestions(prefix);
+        var iiq;
+        for (iiq = 0; iiq < items.length; iiq++) { items[iiq].pref = prefix; }
+      }
       edAcItems = items;
       edAcSel = -1;
       if (edAcItems.length === 0) { edAcHide(); return; }
@@ -6665,6 +6782,7 @@
       edAcBox.style.maxHeight = '220px';
       edAcBox.style.overflowY = 'auto';
       edAcRender();
+      edAcGhost(area);
     }
     (function wireEditorAutocomplete() {
       var panesAC = document.querySelectorAll('[data-file-pane] textarea');
@@ -6676,8 +6794,8 @@
           area.addEventListener('keydown', function (e) {
             var visible = edAcItems.length > 0 && edAcBox && !edAcBox.hasAttribute('hidden');
             if (visible) {
-              if (e.key === 'ArrowDown') { e.preventDefault(); edAcSel = (edAcSel + 1) % edAcItems.length; edAcRender(); return; }
-              if (e.key === 'ArrowUp') { e.preventDefault(); edAcSel = (edAcSel - 1 + edAcItems.length) % edAcItems.length; edAcRender(); return; }
+              if (e.key === 'ArrowDown') { e.preventDefault(); edAcSel = (edAcSel + 1) % edAcItems.length; edAcRender(); edAcGhost(area); return; }
+              if (e.key === 'ArrowUp') { e.preventDefault(); edAcSel = (edAcSel - 1 + edAcItems.length) % edAcItems.length; edAcRender(); edAcGhost(area); return; }
               if (e.key === 'Tab') { e.preventDefault(); edAcPick(edAcSel >= 0 ? edAcSel : 0); return; }
               if (e.key === 'Escape') { edAcHide(); return; }
               if (e.key === 'Enter') { e.preventDefault(); edAcPick(edAcSel >= 0 ? edAcSel : 0); return; }
@@ -6708,6 +6826,7 @@
     var acFrom = 0;
     function acHide() {
       if (acBox) { acBox.setAttribute('hidden', 'hidden'); }
+      try { if (window.IC_GHOST && replIn) { window.IC_GHOST.hide(replIn); } } catch (e) { /* rein optisch */ }
       acItems = [];
       acSel = -1;
       acTouched = false;
@@ -6782,6 +6901,18 @@
       acSel = -1;
       acTouched = false;
       acRender();
+      /* Grauer Vorschlag in der Zeile (#55): Tab uebernimmt ihn. */
+      try {
+        if (window.IC_GHOST && acItems.length > 0) {
+          var gIt = acItems[0];
+          var gIns = String(gIt.insert);
+          var gWord = head.substring(compl.from);
+          var gRem = gWord !== '' && gIns.toLowerCase().indexOf(gWord.toLowerCase()) === 0 ? gIns.slice(gWord.length) : gIns;
+          window.IC_GHOST.show(replIn, gRem);
+        } else if (window.IC_GHOST) {
+          window.IC_GHOST.hide(replIn);
+        }
+      } catch (e) { /* rein optisch */ }
     }
     /* ---------- Anweisungsfeld der Objektkonsole (mit Zeilennummern) ----------
      * Hier steht, was das Programm TUN soll (Objekte erzeugen, Methoden
@@ -6834,174 +6965,6 @@
         if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
           e.preventDefault();
           replRunAll();
-        }
-      });
-    }
-
-    /* ---------- Datenbank-Tab: vorhandene Tabellen + Abfrage-Konsole ----------
-     * Nach dem Ausführen zeigt der Tab das Schema aller angelegten Tabellen
-     * (als Kacheln wie im Klassendiagramm), darunter laesst sich SQL direkt
-     * testen: SELECT zeigt das Ergebnis, alles andere aendert die DB testweise. */
-    var dbSchemaBox = document.getElementById('java-dbschema');
-    var dbIn = document.getElementById('java-db-in');
-    var dbOut = document.getElementById('java-db-out');
-    var dbRunBtn = document.getElementById('java-db-run');
-    var dbSchemaStatic = document.getElementById('java-dbschema-static');
-    function renderDbSchema() {
-      if (!dbSchemaBox) { return; }
-      /* Serverseitig gerendertes Schema (#45): verstecken, sobald die
-       * Live-Anzeige uebernimmt, damit nichts doppelt erscheint. */
-      if (dbSchemaStatic) { dbSchemaStatic.style.display = 'none'; }
-      dbSchemaBox.innerHTML = '';
-      var tables = dbTables();
-      var all = [];
-      var k;
-      for (k in tables) {
-        if (Object.prototype.hasOwnProperty.call(tables, k)) { all.push(tables[k]); }
-      }
-      all.sort(function (a, b) { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
-      /* Tabellennamen fuer die Autovervollstaendigung der DB-Konsole (#45 Nacharbeit). */
-      try {
-        var acNames = [];
-        for (var ai = 0; ai < all.length; ai++) { acNames.push(all[ai].name); }
-        window.IC_DB_TABLES = acNames;
-      } catch (e2) { /* kein window im Harness: egal */ }
-      if (all.length === 0) {
-        if (DB_SEED_ERRORS > 0) {
-          var warn = document.createElement('div');
-          warn.className = 'notice';
-          warn.innerHTML = '';
-          warn.appendChild(document.createTextNode('Achtung: ' + DB_SEED_ERRORS + ' SQL-Befehl(e) der gespeicherten Beispieldatenbank konnten nicht geladen werden. Lade die Seite neu (Strg bzw. Cmd + Shift + R), falls gerade ein Update eingespielt wurde.'));
-          dbSchemaBox.appendChild(warn);
-          return;
-        }
-        dbSchemaBox.appendChild(document.createTextNode('Noch keine Tabellen: Lege sie im Programm an, z. B. Database.execute("CREATE TABLE schueler (name TEXT, punkte INT)"); danach erscheinen sie hier nach jedem Ausführen.'));
-        return;
-      }
-      /* Reines Tabellenschema (#45 Nacharbeit): jede Tabelle als eigene
-       * uebersichtliche Tabelle mit Spaltenname und Typ, keine Kacheln. */
-      var wrap = document.createElement('div');
-      wrap.className = 'schema-grid';
-      for (var ti2 = 0; ti2 < all.length; ti2++) {
-        var t = all[ti2];
-        var tbl = document.createElement('table');
-        tbl.className = 'db-schema-table';
-        tbl.title = 'Tabelle ' + t.name;
-        var thead = document.createElement('thead');
-        var hrow = document.createElement('tr');
-        var hcell = document.createElement('th');
-        hcell.colSpan = 2;
-        hcell.textContent = t.name;
-        hrow.appendChild(hcell);
-        thead.appendChild(hrow);
-        var sub = document.createElement('tr');
-        var sub1 = document.createElement('th');
-        sub1.textContent = 'Spalte';
-        var sub2 = document.createElement('th');
-        sub2.textContent = 'Typ';
-        sub.appendChild(sub1);
-        sub.appendChild(sub2);
-        thead.appendChild(sub);
-        tbl.appendChild(thead);
-        var tbody = document.createElement('tbody');
-        for (var ci2 = 0; ci2 < t.cols.length; ci2++) {
-          var row = document.createElement('tr');
-          var c1 = document.createElement('td');
-          c1.textContent = t.cols[ci2].name;
-          var c2 = document.createElement('td');
-          var kindName = { text: 'TEXT', int: 'INT', double: 'DOUBLE' }[t.cols[ci2].kind] || t.cols[ci2].kind;
-          c2.textContent = kindName;
-          row.appendChild(c1);
-          row.appendChild(c2);
-          tbody.appendChild(row);
-        }
-        if (t.cols.length === 0) {
-          var erow = document.createElement('tr');
-          var ecell = document.createElement('td');
-          ecell.colSpan = 2;
-          ecell.textContent = '(keine Spalten)';
-          erow.appendChild(ecell);
-          tbody.appendChild(erow);
-        }
-        tbl.appendChild(tbody);
-        wrap.appendChild(tbl);
-      }
-      dbSchemaBox.appendChild(wrap);
-    }
-    /* SQL-Text an Semikolons auf oberster Ebene trennen (Anführungszeichen
-     * respektieren), damit auch mehrere Befehle am Stueck klappen. */
-    function dbConsoleSplit(sqlText) {
-      var parts = [];
-      var current = '';
-      var inStr = false;
-      for (var i = 0; i < sqlText.length; i++) {
-        var ch = sqlText.charAt(i);
-        if (inStr) {
-          current += ch;
-          if (ch === "'") { inStr = false; }
-          continue;
-        }
-        if (ch === "'") { inStr = true; current += ch; continue; }
-        if (ch === ';') {
-          parts.push(current);
-          current = '';
-          continue;
-        }
-        current += ch;
-      }
-      parts.push(current);
-      return parts;
-    }
-    function dbConsoleRun() {
-      if (!dbIn || !dbOut) { return; }
-      var sqlAll = String(dbIn.value == null ? '' : dbIn.value).replace(/^\s+/, '').replace(/\s+$/, '');
-      if (sqlAll === '') {
-        dbOut.textContent = 'Schreibe zuerst eine Abfrage, z. B. SELECT * FROM tabelle;';
-        return;
-      }
-      var ctx2 = { file: 'DB-Konsole', line: 1, cls: null, thisVal: null, vm: RUN_VM };
-      var lines = [];
-      try {
-        var parts = dbConsoleSplit(sqlAll);
-        var lastSelect = null;
-        var ran = 0;
-        for (var pi = 0; pi < parts.length; pi++) {
-          var sql = parts[pi].replace(/^\s+/, '').replace(/\s+$/, '');
-          if (sql === '') { continue; }
-          var kwM = /^\s*([A-Za-z]+)/.exec(sql);
-          var kw = kwM ? kwM[1].toUpperCase() : '';
-          if (kw === 'SELECT') {
-            lastSelect = dbFormat(dbSelect(sql, ctx2, 1));
-            lines.push('✅ SELECT ausgeführt.');
-          } else {
-            dbExec(sql, ctx2, 1);
-            ran++;
-          }
-        }
-        if (ran > 0) {
-          lines.push('✅ ' + ran + ' Befehl(e) ausgeführt. Die Datenbank wird automatisch mit deinem Projekt gespeichert: INSERT, UPDATE und DELETE siehst du mit SELECT, neue Tabellen erscheinen oben.');
-        }
-        if (lastSelect !== null) { lines.push(lastSelect); }
-        dbOut.textContent = lines.join('\n');
-      } catch (e) {
-        if (e && e.jerr) {
-          dbOut.textContent = e.jerr.message + (e.jerr.hint ? '  Tipp: ' + e.jerr.hint : '');
-        }
-        else {
-          /* Kein stiller Absturz: Jede Rueckmeldung ist besser als nichts. */
-          dbOut.textContent = 'Unerwarteter Fehler beim Ausführen: ' + (e && e.message ? e.message : String(e));
-        }
-      }
-      try { renderDbSchema(); } catch (e2) { /* Schema-Anzeige darf die Konsole nicht blockieren */ }
-      /* Änderungen aus der DB-Konsole automatisch mitspeichern (#44). */
-      if (typeof autoSaveSoon === 'function') { autoSaveSoon(); }
-    }
-    if (dbRunBtn) { dbRunBtn.addEventListener('click', dbConsoleRun); }
-    if (dbIn) {
-      dbIn.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-          e.preventDefault();
-          dbConsoleRun();
         }
       });
     }
@@ -7061,6 +7024,187 @@
     gfxTick: gfxTick, gfxStopLoop: gfxStopLoop, gfxDispatchKey: gfxDispatchKey, gfxSnapshot: gfxSnapshot, formatJavaSource: formatJavaSource
   };
   if (typeof module !== 'undefined' && module.exports) { module.exports = global.InfoCraftJavaVM; }
-  if (typeof document !== 'undefined') { wireUi(); }
+  /* ---------- DB-Konsole: eigenstaendig verdrahtet (#53) ----------
+   * Der "Abfrage ausfuehren"-Button bekommt seinen Listener unabhaengig
+   * vom Rest der IDE-Initialisierung: Bricht frueher Code ab, bleibt die
+   * Konsole trotzdem bedienbar. */
+  function wireDbConsole() {
+/* ---------- Datenbank-Tab: vorhandene Tabellen + Abfrage-Konsole ----------
+ * Nach dem Ausführen zeigt der Tab das Schema aller angelegten Tabellen
+ * (als Kacheln wie im Klassendiagramm), darunter laesst sich SQL direkt
+ * testen: SELECT zeigt das Ergebnis, alles andere aendert die DB testweise. */
+var dbSchemaBox = document.getElementById('java-dbschema');
+var dbIn = document.getElementById('java-db-in');
+var dbOut = document.getElementById('java-db-out');
+var dbRunBtn = document.getElementById('java-db-run');
+var dbSchemaStatic = document.getElementById('java-dbschema-static');
+function renderDbSchema() {
+  if (!dbSchemaBox) { return; }
+  /* Serverseitig gerendertes Schema (#45): verstecken, sobald die
+   * Live-Anzeige uebernimmt, damit nichts doppelt erscheint. */
+  if (dbSchemaStatic) { dbSchemaStatic.style.display = 'none'; }
+  dbSchemaBox.innerHTML = '';
+  var tables = dbTables();
+  var all = [];
+  var k;
+  for (k in tables) {
+    if (Object.prototype.hasOwnProperty.call(tables, k)) { all.push(tables[k]); }
+  }
+  all.sort(function (a, b) { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
+  /* Tabellennamen fuer die Autovervollstaendigung der DB-Konsole (#45 Nacharbeit). */
+  try {
+    var acNames = [];
+    for (var ai = 0; ai < all.length; ai++) { acNames.push(all[ai].name); }
+    window.IC_DB_TABLES = acNames;
+  } catch (e2) { /* kein window im Harness: egal */ }
+  if (all.length === 0) {
+    if (DB_SEED_ERRORS > 0) {
+      var warn = document.createElement('div');
+      warn.className = 'notice';
+      warn.innerHTML = '';
+      warn.appendChild(document.createTextNode('Achtung: ' + DB_SEED_ERRORS + ' SQL-Befehl(e) der gespeicherten Beispieldatenbank konnten nicht geladen werden. Lade die Seite neu (Strg bzw. Cmd + Shift + R), falls gerade ein Update eingespielt wurde.'));
+      dbSchemaBox.appendChild(warn);
+      return;
+    }
+    dbSchemaBox.appendChild(document.createTextNode('Noch keine Tabellen: Lege sie im Programm an, z. B. Database.execute("CREATE TABLE schueler (name TEXT, punkte INT)"); danach erscheinen sie hier nach jedem Ausführen.'));
+    return;
+  }
+  /* Reines Tabellenschema (#45 Nacharbeit): jede Tabelle als eigene
+   * uebersichtliche Tabelle mit Spaltenname und Typ, keine Kacheln. */
+  var wrap = document.createElement('div');
+  wrap.className = 'schema-grid';
+  for (var ti2 = 0; ti2 < all.length; ti2++) {
+    var t = all[ti2];
+    var tbl = document.createElement('table');
+    tbl.className = 'db-schema-table';
+    tbl.title = 'Tabelle ' + t.name;
+    var thead = document.createElement('thead');
+    var hrow = document.createElement('tr');
+    var hcell = document.createElement('th');
+    hcell.colSpan = 2;
+    hcell.textContent = t.name;
+    hrow.appendChild(hcell);
+    thead.appendChild(hrow);
+    var sub = document.createElement('tr');
+    var sub1 = document.createElement('th');
+    sub1.textContent = 'Spalte';
+    var sub2 = document.createElement('th');
+    sub2.textContent = 'Typ';
+    sub.appendChild(sub1);
+    sub.appendChild(sub2);
+    thead.appendChild(sub);
+    tbl.appendChild(thead);
+    var tbody = document.createElement('tbody');
+    for (var ci2 = 0; ci2 < t.cols.length; ci2++) {
+      var row = document.createElement('tr');
+      var c1 = document.createElement('td');
+      c1.textContent = t.cols[ci2].name;
+      var c2 = document.createElement('td');
+      var kindName = { text: 'TEXT', int: 'INT', double: 'DOUBLE' }[t.cols[ci2].kind] || t.cols[ci2].kind;
+      c2.textContent = kindName;
+      row.appendChild(c1);
+      row.appendChild(c2);
+      tbody.appendChild(row);
+    }
+    if (t.cols.length === 0) {
+      var erow = document.createElement('tr');
+      var ecell = document.createElement('td');
+      ecell.colSpan = 2;
+      ecell.textContent = '(keine Spalten)';
+      erow.appendChild(ecell);
+      tbody.appendChild(erow);
+    }
+    tbl.appendChild(tbody);
+    wrap.appendChild(tbl);
+  }
+  dbSchemaBox.appendChild(wrap);
+}
+dbSchemaRenderHook = renderDbSchema;
+/* SQL-Text an Semikolons auf oberster Ebene trennen (Anführungszeichen
+ * respektieren), damit auch mehrere Befehle am Stueck klappen. */
+function dbConsoleSplit(sqlText) {
+  var parts = [];
+  var current = '';
+  var inStr = false;
+  for (var i = 0; i < sqlText.length; i++) {
+    var ch = sqlText.charAt(i);
+    if (inStr) {
+      current += ch;
+      if (ch === "'") { inStr = false; }
+      continue;
+    }
+    if (ch === "'") { inStr = true; current += ch; continue; }
+    if (ch === ';') {
+      parts.push(current);
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  parts.push(current);
+  return parts;
+}
+function dbConsoleRun() {
+  if (!dbIn || !dbOut) { return; }
+  var sqlAll = String(dbIn.value == null ? '' : dbIn.value).replace(/^\s+/, '').replace(/\s+$/, '');
+  if (sqlAll === '') {
+    dbOut.textContent = 'Schreibe zuerst eine Abfrage, z. B. SELECT * FROM tabelle;';
+    return;
+  }
+  var ctx2 = { file: 'DB-Konsole', line: 1, cls: null, thisVal: null, vm: RUN_VM };
+  var lines = [];
+  try {
+    var parts = dbConsoleSplit(sqlAll);
+    var lastSelect = null;
+    var ran = 0;
+    for (var pi = 0; pi < parts.length; pi++) {
+      var sql = parts[pi].replace(/^\s+/, '').replace(/\s+$/, '');
+      if (sql === '') { continue; }
+      var kwM = /^\s*([A-Za-z]+)/.exec(sql);
+      var kw = kwM ? kwM[1].toUpperCase() : '';
+      if (kw === 'SELECT') {
+        lastSelect = dbFormat(dbSelect(sql, ctx2, 1));
+        lines.push('✅ SELECT ausgeführt.');
+      } else {
+        dbExec(sql, ctx2, 1);
+        ran++;
+      }
+    }
+    if (ran > 0) {
+      lines.push('✅ ' + ran + ' Befehl(e) ausgeführt. Die Datenbank wird automatisch mit deinem Projekt gespeichert: INSERT, UPDATE und DELETE siehst du mit SELECT, neue Tabellen erscheinen oben.');
+    }
+    if (lastSelect !== null) { lines.push(lastSelect); }
+    dbOut.textContent = lines.join('\n');
+  } catch (e) {
+    if (e && e.jerr) {
+      dbOut.textContent = e.jerr.message + (e.jerr.hint ? '  Tipp: ' + e.jerr.hint : '');
+    }
+    else {
+      /* Kein stiller Absturz: Jede Rueckmeldung ist besser als nichts. */
+      dbOut.textContent = 'Unerwarteter Fehler beim Ausführen: ' + (e && e.message ? e.message : String(e));
+    }
+  }
+  try { renderDbSchema(); } catch (e2) { /* Schema-Anzeige darf die Konsole nicht blockieren */ }
+  /* Änderungen aus der DB-Konsole automatisch mitspeichern (#44). */
+  try { if (window.__icAutoSaveSoon) { window.__icAutoSaveSoon(); } } catch (eSave) { /* Speichern optional */ }
+}
+if (dbRunBtn) { dbRunBtn.addEventListener('click', dbConsoleRun); }
+if (dbIn) {
+  dbIn.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      dbConsoleRun();
+    }
+  });
+}
+
+  }
+  /* Initialisierung (#53): getrennte, abgesicherte Bereiche. Bricht ein Teil
+   * ab (z. B. ein Browser-Addon, das eine API blockt), laufen die anderen weiter:
+   * Der Rest der IDE, die DB-Konsole und die Objektkonsole bleiben bedienbar. */
+  if (typeof document !== 'undefined') {
+    try { wireUi(); } catch (eUi) { try { if (typeof console !== 'undefined' && console.error) { console.error('InfoCraft: Java-IDE Initialisierung abgebrochen', eUi); } } catch (eC) { } }
+    try { wireDbConsole(); } catch (eDb) { try { if (typeof console !== 'undefined' && console.error) { console.error('InfoCraft: DB-Konsole Initialisierung abgebrochen', eDb); } } catch (eC) { } }
+  }
 })(typeof window !== 'undefined' ? window : globalThis);
 
