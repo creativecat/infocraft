@@ -18,6 +18,7 @@ use Infocraft\Controllers\DiagramController;
 use Infocraft\Controllers\ExamController;
 use Infocraft\Controllers\HomeController;
 use Infocraft\Controllers\HtmlController;
+use Infocraft\Controllers\InfoBookController;
 use Infocraft\Controllers\ModuleController;
 use Infocraft\Controllers\PresentationController;
 use Infocraft\Controllers\QuizController;
@@ -191,6 +192,27 @@ $router->post('/praesentationen/{id}/abstimmung/start', [PresentationController:
 $router->post('/praesentationen/{id}/abstimmung/ende', [PresentationController::class, 'pollEnd']);
 $router->get('/praesentationen/{id}/abstimmung/status', [PresentationController::class, 'pollStatus']);
 $router->post('/praesentationen/{id}/abstimmung/stimme', [PresentationController::class, 'pollVote']);
+
+// InfoBook (#62): Notizbücher im OneNote-Stil, eng verknüpft mit den
+// Präsentationen (Seiten als Präsentation zeigen oder übernehmen).
+$router->get('/infobuecher', [InfoBookController::class, 'index']);
+$router->post('/infobuecher/anlegen', [InfoBookController::class, 'create']);
+$router->get('/infobuecher/klasse/{cid}', [InfoBookController::class, 'openClass']);
+$router->get('/infobuecher/medium/{mid}', [InfoBookController::class, 'serveMedia']);
+$router->get('/infobuecher/{id}', [InfoBookController::class, 'show']);
+$router->post('/infobuecher/{id}/teilen', [InfoBookController::class, 'share']);
+$router->post('/infobuecher/{id}/loeschen', [InfoBookController::class, 'deleteBook']);
+$router->post('/infobuecher/{id}/abschnitt', [InfoBookController::class, 'createSection']);
+$router->post('/infobuecher/{id}/abschnitt/{sid}/loeschen', [InfoBookController::class, 'deleteSection']);
+$router->post('/infobuecher/{id}/seite', [InfoBookController::class, 'createPage']);
+$router->get('/infobuecher/{id}/seite/{pid}', [InfoBookController::class, 'page']);
+$router->post('/infobuecher/{id}/seite/{pid}', [InfoBookController::class, 'savePage']);
+$router->post('/infobuecher/{id}/seite/{pid}/loeschen', [InfoBookController::class, 'deletePage']);
+$router->post('/infobuecher/{id}/medium', [InfoBookController::class, 'uploadMedia']);
+$router->post('/infobuecher/{id}/zeichnung', [InfoBookController::class, 'saveDrawing']);
+$router->post('/infobuecher/{id}/verteilen', [InfoBookController::class, 'distribute']);
+$router->get('/infobuecher/{id}/praesentation', [InfoBookController::class, 'present']);
+$router->post('/infobuecher/{id}/als-praesentation', [InfoBookController::class, 'createPresentation']);
 
 // Verwaltung
 $router->get('/admin/users', [AdminController::class, 'users']);

@@ -400,3 +400,42 @@ CREATE TABLE IF NOT EXISTS poll_votes (
     voted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (poll_id, user_id)
 );
+
+-- InfoBook (#62): Notizbücher im OneNote-Stil. Persönliche Bücher der
+-- Lehrkraft, ein Klassen-InfoBook pro Klasse mit drei Bereichen:
+-- lernbereich (Schüler lesen), gemeinsam (alle schreiben), eigen
+-- (privater Bereich je Schülerin/Schüler).
+CREATE TABLE IF NOT EXISTS ibooks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    class_id INTEGER NULL REFERENCES classes (id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    shared INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS ibook_sections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    book_id INTEGER NOT NULL REFERENCES ibooks (id) ON DELETE CASCADE,
+    area TEXT NOT NULL DEFAULT 'lernbereich',
+    owner_user_id INTEGER NULL REFERENCES users (id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    position INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS ibook_pages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    section_id INTEGER NOT NULL REFERENCES ibook_sections (id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL DEFAULT '[]',
+    position INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS ibook_media (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    book_id INTEGER NOT NULL REFERENCES ibooks (id) ON DELETE CASCADE,
+    kind TEXT NOT NULL DEFAULT 'image',
+    name TEXT NOT NULL,
+    mime TEXT NOT NULL,
+    size INTEGER NOT NULL DEFAULT 0,
+    data BLOB,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

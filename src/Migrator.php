@@ -52,6 +52,8 @@ final class Migrator
         // Live-Abstimmung während der Präsentation (Issue #3): Tabellen
         // fehlen evtl. noch in Bestehensinstallationen, idempotent anlegen.
         self::ensurePollTables($pdo, $driver);
+        // InfoBook (#62): Tabellen in Bestehensinstallationen idempotent anlegen.
+        self::ensureInfoBookTables($pdo, $driver);
         // Dateninsel Kapitel 2 (Issue #7): Missionen 9 bis 12 und die
         // Bibliothek fehlen evtl. noch in Bestehensinstallationen.
         self::ensureAdventureChapter2($pdo);
@@ -77,6 +79,7 @@ final class Migrator
             self::seedDemoDiagrams($pdo);
             self::seedWikiPages($pdo);
             self::seedPresentations($pdo);
+            self::seedDemoInfoBooks($pdo);
         }
 
         return ['statements' => count($statements), 'classes' => $classes, 'users' => $users];
@@ -1673,6 +1676,128 @@ final class Migrator
     private static function wikiTeacherGuide(): string
     {
         return "# Anleitung für Lehrkräfte\n\nWillkommen bei **InfoCraft**! Diese Seite fasst die wichtigsten Arbeitsschritte zusammen. Du kannst sie hier bearbeiten und um eigene Hinweise ergänzen.\n\n## Erste Schritte\n\n1. Anmelden über die Startseite.\n2. Unter **Nutzer** Konten für Schülerinnen und Schüler anlegen oder per **CSV-Import** ganze Klassen einspielen.\n3. Unter **Meine Klassen** deinem Konto Klassen zuordnen: Du siehst dann nur deine Klassen und deine Schülerinnen und Schüler.\n\n## Module passend zum Lehrplan freigeben\n\nUnter **Meine Klassen** legst du für jede Klasse fest, welche Arbeitsbereiche sichtbar sind:\n\n- **Standard**: Der LehrplanPLUS-Stufe des Moduls folgt (z. B. SQL erst ab Jgst. 9).\n- **Freigeben**: Die Klasse sieht das Modul früher.\n- **Sperren**: Die Klasse sieht das Modul nicht.\n\nDas gilt auch für die direkte URL: gesperrte Module sind nicht aufrufbar.\n\n## Arbeiten austeilen\n\n- **Code-Werkstatt**: Projekte anlegen und an Klassen oder Einzelne austeilen; über die Schüleransicht erreichst du die Projekte deiner Schülerinnen und Schüler.\n- **SQL-Werkstatt**: Vorlagen (Datenbanken) ausgeben mit Rechten für *nur lesen*, *lesen und schreiben* oder *Tabellen anlegen*.\n- **Aufgabenpool**: eigene Aufgaben anlegen oder fertige Aufgaben (Jgst. 6 bis 13) aus dem Katalog übernehmen und austeilen.\n\n## Präsentieren und Nachschlagen\n\n- **Wiki**: Diese Nachschlage-Seiten hier. Der Stufen-Filter blendet Seiten aus, die über der Klassenstufe liegen.\n- **Präsentationen**: Folien aus Text und Code, kompakt gruppiert nach Jahrgangsstufe (Jgst. 6 bis 12). Im Präsentationsmodus:\n    - **Vollbild** über den Knopf oder Taste **F**\n    - **Pfeiltasten** oder Leertaste blättern\n    - Code-Folien lassen sich über *Code verändern* direkt während der Präsentation bearbeiten und speichern\n- **Moderatorenbildschirm** (nur für Lehrkräfte): Der Knopf **Moderator** öffnet eine Steuerzentrale mit aktueller und nächster Folie, Folienliste, Timer und Uhr. Öffne sie am Laptop und die Präsentationsansicht im Vollbild auf dem Beamer - beide Fenster laufen im selben Browser synchron mit (Pfeiltasten steuern beide).\n\n## Prüfungen und Schularbeiten\n\nUnter **Prüfungen & Arbeiten** legst du Gruppen mit eigenen Vorlagen an und startest die Prüfung. Während der Prüfung sind für die betroffene Klasse alle anderen Bereiche gesperrt - andere Klassen arbeiten normal weiter. Korrektur mit Punkten und Noten, optional anonymisiert; Schularbeiten ohne Sperre sind ebenfalls möglich.";
+    }
+
+    /**
+     * InfoBook-Tabellen (#62): In Bestehensinstallationen idempotent anlegen,
+     * das Schema-File deckt Neuinstallationen ab.
+     */
+    private static function ensureInfoBookTables(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS ibooks (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                owner_id INT UNSIGNED NOT NULL,
+                class_id INT UNSIGNED NULL,
+                title VARCHAR(160) NOT NULL,
+                shared TINYINT(1) NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_ibooks_class (class_id),
+                CONSTRAINT fk_ibooks_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE,
+                CONSTRAINT fk_ibooks_class FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+            $pdo->exec('CREATE TABLE IF NOT EXISTS ibook_sections (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                book_id INT UNSIGNED NOT NULL,
+                area VARCHAR(20) NOT NULL DEFAULT \'lernbereich\',
+                owner_user_id INT UNSIGNED NULL,
+                title VARCHAR(160) NOT NULL,
+                position INT NOT NULL DEFAULT 0,
+                PRIMARY KEY (id),
+                KEY idx_ibsec_book (book_id),
+                CONSTRAINT fk_ibsec_book FOREIGN KEY (book_id) REFERENCES ibooks (id) ON DELETE CASCADE,
+                CONSTRAINT fk_ibsec_user FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+            $pdo->exec('CREATE TABLE IF NOT EXISTS ibook_pages (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                section_id INT UNSIGNED NOT NULL,
+                title VARCHAR(160) NOT NULL,
+                content MEDIUMTEXT NOT NULL,
+                position INT NOT NULL DEFAULT 0,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_ibpg_section (section_id),
+                CONSTRAINT fk_ibpg_section FOREIGN KEY (section_id) REFERENCES ibook_sections (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+            $pdo->exec('CREATE TABLE IF NOT EXISTS ibook_media (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                book_id INT UNSIGNED NOT NULL,
+                kind VARCHAR(10) NOT NULL DEFAULT \'image\',
+                name VARCHAR(160) NOT NULL,
+                mime VARCHAR(80) NOT NULL,
+                size INT UNSIGNED NOT NULL DEFAULT 0,
+                data LONGBLOB,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_ibmedia_book (book_id),
+                CONSTRAINT fk_ibmedia_book FOREIGN KEY (book_id) REFERENCES ibooks (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+            return;
+        }
+        $pdo->exec('CREATE TABLE IF NOT EXISTS ibooks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+            class_id INTEGER NULL REFERENCES classes (id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            shared INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS ibook_sections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            book_id INTEGER NOT NULL REFERENCES ibooks (id) ON DELETE CASCADE,
+            area TEXT NOT NULL DEFAULT \'lernbereich\',
+            owner_user_id INTEGER NULL REFERENCES users (id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            position INTEGER NOT NULL DEFAULT 0
+        )');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS ibook_pages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            section_id INTEGER NOT NULL REFERENCES ibook_sections (id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL DEFAULT \'[]\',
+            position INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS ibook_media (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            book_id INTEGER NOT NULL REFERENCES ibooks (id) ON DELETE CASCADE,
+            kind TEXT NOT NULL DEFAULT \'image\',
+            name TEXT NOT NULL,
+            mime TEXT NOT NULL,
+            size INTEGER NOT NULL DEFAULT 0,
+            data BLOB,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )');
+    }
+
+    /**
+     * Demo-InfoBook (#62): Ein persönliches Buch für die Demo-Lehrkraft mit
+     * einer Beispiel-Seite (Text und Einbettung), damit der Bereich nicht
+     * leer startet. Klassen-InfoBooks entstehen automatisch beim Öffnen.
+     */
+    private static function seedDemoInfoBooks(PDO $pdo): void
+    {
+        $teacherId = $pdo->query("SELECT id FROM users WHERE login_name = 'stefan.schmidt' LIMIT 1")->fetchColumn();
+        if ($teacherId === false || $teacherId === null) {
+            return;
+        }
+        $count = (int) $pdo->query('SELECT COUNT(*) FROM ibooks WHERE class_id IS NULL')->fetchColumn();
+        if ($count > 0) {
+            return;
+        }
+        $pdo->prepare('INSERT INTO ibooks (owner_id, class_id, title, shared) VALUES (?, NULL, ?, 0)')
+            ->execute([(int) $teacherId, 'Informatik 9 - Unterlagen']);
+        $bookId = (int) $pdo->lastInsertId();
+        $pdo->prepare('INSERT INTO ibook_sections (book_id, area, owner_user_id, title, position) VALUES (?, \'lernbereich\', NULL, ?, 0)')
+            ->execute([$bookId, 'Vererbung & Co']);
+        $sectionId = (int) $pdo->lastInsertId();
+        $blocks = json_encode([
+            ['type' => 'text', 'body' => "# Vererbung bei Tieren\n\n**Merke:** Eine Klasse *erbt* alle Attribute und Methoden ihrer Oberklasse.\n\n- `Tier` ist die Oberklasse\n- `Hund` und `Katze` erben davon"],
+            ['type' => 'embed', 'url' => 'https://learningapps.org/watch?v=pe8y8nupk24', 'title' => 'LearningApps: Vererbung üben'],
+        ], JSON_UNESCAPED_UNICODE);
+        $pdo->prepare('INSERT INTO ibook_pages (section_id, title, content, position) VALUES (?, ?, ?, 0)')
+            ->execute([$sectionId, 'Vererbung verstehen', $blocks]);
     }
 }
 

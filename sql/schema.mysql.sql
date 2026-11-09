@@ -514,3 +514,56 @@ CREATE TABLE IF NOT EXISTS poll_votes (
     CONSTRAINT fk_pvotes_poll FOREIGN KEY (poll_id) REFERENCES polls (id) ON DELETE CASCADE,
     CONSTRAINT fk_pvotes_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- InfoBook (#62): Notizbücher im OneNote-Stil. Persönliche Bücher der
+-- Lehrkraft, ein Klassen-InfoBook pro Klasse mit drei Bereichen:
+-- lernbereich (Schüler lesen), gemeinsam (alle schreiben), eigen
+-- (privater Bereich je Schülerin/Schüler).
+CREATE TABLE IF NOT EXISTS ibooks (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    owner_id INT UNSIGNED NOT NULL,
+    class_id INT UNSIGNED NULL,
+    title VARCHAR(160) NOT NULL,
+    shared TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_ibooks_class (class_id),
+    CONSTRAINT fk_ibooks_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_ibooks_class FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS ibook_sections (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    book_id INT UNSIGNED NOT NULL,
+    area VARCHAR(20) NOT NULL DEFAULT 'lernbereich',
+    owner_user_id INT UNSIGNED NULL,
+    title VARCHAR(160) NOT NULL,
+    position INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    KEY idx_ibsec_book (book_id),
+    CONSTRAINT fk_ibsec_book FOREIGN KEY (book_id) REFERENCES ibooks (id) ON DELETE CASCADE,
+    CONSTRAINT fk_ibsec_user FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS ibook_pages (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    section_id INT UNSIGNED NOT NULL,
+    title VARCHAR(160) NOT NULL,
+    content MEDIUMTEXT NOT NULL,
+    position INT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_ibpg_section (section_id),
+    CONSTRAINT fk_ibpg_section FOREIGN KEY (section_id) REFERENCES ibook_sections (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS ibook_media (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    book_id INT UNSIGNED NOT NULL,
+    kind VARCHAR(10) NOT NULL DEFAULT 'image',
+    name VARCHAR(160) NOT NULL,
+    mime VARCHAR(80) NOT NULL,
+    size INT UNSIGNED NOT NULL DEFAULT 0,
+    data LONGBLOB,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_ibmedia_book (book_id),
+    CONSTRAINT fk_ibmedia_book FOREIGN KEY (book_id) REFERENCES ibooks (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
