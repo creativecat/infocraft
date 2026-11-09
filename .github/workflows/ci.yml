@@ -158,7 +158,7 @@ jobs:
           grep -q "icv-code-langsel" public/assets/js/app.js && grep -q "InfoCraftJavaVM" public/assets/js/app.js && IBK_LANGJS_OK=1 || IBK_LANGJS_OK=0
           grep -q "icv-code-langtag" src/Controllers/InfoBookController.php && grep -q "java-vm.js" templates/ibook_page.php && grep -Fq "'lang'" src/Models/InfoBook.php && IBK_LANGPHP_OK=1 || IBK_LANGPHP_OK=0
           grep -q "icv-db-libsel" public/assets/js/app.js && grep -q "dbTemplates" src/Controllers/InfoBookController.php && grep -q "data-dbtemplates" templates/ibook_page.php && IBK_DBTPL_OK=1 || IBK_DBTPL_OK=0
-          grep -Fq "run({ 'Main.java':" public/assets/js/app.js && IBK_JAVAFIX_OK=1 || IBK_JAVAFIX_OK=0
+          grep -Fq "files['Main.java'] = String(src);" public/assets/js/app.js && IBK_JAVAFIX_OK=1 || IBK_JAVAFIX_OK=0
           grep -q "icv-db-table" public/assets/js/app.js && grep -q "icv-db-table" public/assets/css/style.css && grep -q "icv-db-count" public/assets/js/app.js && IBK_DBTAB_OK=1 || IBK_DBTAB_OK=0
           grep -q "icv-code-projsel" public/assets/js/app.js && grep -q "codeClasses" src/Controllers/InfoBookController.php && grep -q "data-codeclasses" templates/ibook_page.php && IBK_CLSPROJ_OK=1 || IBK_CLSPROJ_OK=0
           grep -q "icv-code-card" public/assets/js/app.js && grep -q "icv-code-card" public/assets/css/style.css && grep -Fq "'cls'" src/Models/InfoBook.php && grep -q "data-clsfiles" src/Controllers/InfoBookController.php && IBK_CLSCARD_OK=1 || IBK_CLSCARD_OK=0
