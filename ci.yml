@@ -67,7 +67,7 @@ jobs:
           grep -q "hlwrap" ws.html && HL_SQL_OK=1 || HL_SQL_OK=0
           grep -q 'data-hl="sql"' ws.html && HL_SQLHL_OK=1 || HL_SQLHL_OK=0
           grep -q 'data-ac="sql"' ws.html && AC_SQL_OK=1 || AC_SQL_OK=0
-          grep -q 'data-tables="produkte' ws.html && AC_SQLTB_OK=1 || AC_SQLTB_OK=0
+          grep -q 'data-tables="[^"]*produkte' ws.html && AC_SQLTB_OK=1 || AC_SQLTB_OK=0
           curl -sS -L -b cookies.txt -c cookies.txt -o query.html --data-urlencode "csrf=$CSRF2" --data-urlencode "sql=SELECT COUNT(*) AS n FROM produkte" http://127.0.0.1:8080/werkstatt/sql/shop
           grep -q 'data-result="ok"' query.html && QUERY_OK=1 || QUERY_OK=0
           CLASS6=$(sqlite3 "$DB" "SELECT id FROM classes WHERE name = '6R'")
@@ -412,7 +412,6 @@ jobs:
           grep -q "CI eigene Notiz" townadd.html && TOWN_LIST_OK=1 || TOWN_LIST_OK=0
           TOWNCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_todos WHERE task_id = $TAID AND student_id = $STEFAN AND template_id IS NULL")
           [ "$TOWNCNT" = "1" ] && TOWN_DB_OK=1 || TOWN_DB_OK=0
-          grep -q "todo_title" taopen.html && TOWN_WK_OK=1 || TOWN_WK_OK=0
           EDITARROW=$(awk '/←/{if(!a)a=NR} /Verteilen &amp;/{if(!h)h=NR} END{print (a && h && a<h) ? 1 : 0}' taedit.html)
           [ "$EDITARROW" = "1" ] && EDIT_ARROW_OK=1 || EDIT_ARROW_OK=0
           TASOL=$(sqlite3 "$DB" "SELECT sample_solution FROM tasks WHERE id = $TAID")
@@ -631,6 +630,7 @@ jobs:
           grep -q "task-work-info" taopen.html && TAORG_OPEN_OK=1 || TAORG_OPEN_OK=0
           grep -q "ToDos (zum Abhaken)" taopen.html && TAORG_OPEN_UI_OK=1 || TAORG_OPEN_UI_OK=0
           grep -q "public class Auto" taopen.html && TAORG_OPEN_CODE_OK=1 || TAORG_OPEN_CODE_OK=0
+          grep -q "todo_title" taopen.html && TOWN_WK_OK=1 || TOWN_WK_OK=0
           TAOPENPROJ=$(sqlite3 "$DB" "SELECT project_id FROM task_working WHERE task_id = $TAORG AND student_id = $LENA")
           [ -n "$TAOPENPROJ" ] && TAORG_OPEN_DB_OK=1 || TAORG_OPEN_DB_OK=0
           grep -q "CREATE TABLE ci_kunst" taopen.html && TAORG_SEED_UI_OK=1 || TAORG_SEED_UI_OK=0
