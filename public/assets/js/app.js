@@ -379,11 +379,6 @@
 (function () {
   'use strict';
 
-  var runBtn = document.getElementById('run-python');
-  var editor = document.getElementById('code-editor');
-  var output = document.getElementById('code-output');
-  if (!runBtn || !editor || !output) { return; }
-
   var pyodidePromise = null;
 
   function ensurePyodide() {
@@ -398,6 +393,14 @@
     });
     return pyodidePromise;
   }
+  /* Pyodide auch ausserhalb der Python-Werkstatt nutzbar (#81): Das
+   * Code-Fenster der InfoBook-Freien Flaeche laedt Python damit im Browser. */
+  if (typeof window !== 'undefined') { window.IC_ENSURE_PYODIDE = ensurePyodide; }
+
+  var runBtn = document.getElementById('run-python');
+  var editor = document.getElementById('code-editor');
+  var output = document.getElementById('code-output');
+  if (!runBtn || !editor || !output) { return; }
 
   function run() {
     output.textContent = 'Python wird geladen ... (beim ersten Start kann das etwas dauern)';
@@ -1720,6 +1723,16 @@
   var navPages = [];
   try { navPages = JSON.parse(editor.getAttribute('data-nav') || '[]') || []; } catch (eNav) { navPages = []; }
   if (!Array.isArray(navPages)) { navPages = []; }
+  /* Eigene Diagramm-Bibliothek (#79): [{id, t, kind, src}] - im Editor
+   * uebernimmt das Dropdown daraus den Mermaid-Code. */
+  var diagramLib = [];
+  try { diagramLib = JSON.parse(editor.getAttribute('data-diagrams') || '[]') || []; } catch (eDgLib) { diagramLib = []; }
+  if (!Array.isArray(diagramLib)) { diagramLib = []; }
+  /* Vorhandene Datenbanken der SQL-Werkstatt (#80): [{slug, t, sql}] -
+   * die Auswahl fuellt das Schema-Feld des DB-Elements. */
+  var dbTemplates = [];
+  try { dbTemplates = JSON.parse(editor.getAttribute('data-dbtemplates') || '[]') || []; } catch (eDbTpl) { dbTemplates = []; }
+  if (!Array.isArray(dbTemplates)) { dbTemplates = []; }
   var status = null;
   var dirty = false;
 
@@ -2100,8 +2113,28 @@
       div.appendChild(vid);
       div.appendChild(el('div', 'muted icv-ph-sub', (item.name || 'Video') + ' · im Lesemodus abspielbar'));
     } else if (item.kind === 'code') {
-      /* Code-Fenster mit Konsole (#75): Quelltext editieren, Ausfuehren
-       * uebernimmt der globale .icv-code-run-Delegations-Listener unten. */
+      /* Code-Fenster mit Konsole (#75/#81): Sprachenauswahl (Standard Java),
+       * Ausfuehren uebernimmt der globale .icv-code-run-Delegations-Listener.
+       * Java laeuft ueber die Java-VM, Python ueber Pyodide, JavaScript
+       * direkt mit gefangener Konsole. */
+      var cctl = el('div', 'icv-code-ctl');
+      var clang = el('select', 'icv-code-langsel');
+      clang.title = 'Programmiersprache';
+      var clangs = [['java', 'Java'], ['javascript', 'JavaScript'], ['python', 'Python']];
+      for (var li = 0; li < clangs.length; li++) {
+        var lo = el('option', '', clangs[li][1]);
+        lo.value = clangs[li][0];
+        clang.appendChild(lo);
+      }
+      var clangVal = (item.lang === 'javascript' || item.lang === 'python') ? item.lang : 'java';
+      clang.value = clangVal;
+      clang.addEventListener('change', function () {
+        item.lang = clang.value;
+        crun.setAttribute('data-lang', clang.value);
+        collect(); markDirty();
+      });
+      cctl.appendChild(clang);
+      div.appendChild(cctl);
       var cta = el('textarea', 'mono icv-code-ta');
       cta.value = item.code || '';
       cta.setAttribute('spellcheck', 'false');
@@ -2112,12 +2145,41 @@
       div.appendChild(cta);
       var crun = el('button', 'icv-code-run', '▶ Ausführen');
       crun.type = 'button';
+      crun.setAttribute('data-lang', clangVal);
       div.appendChild(crun);
       div.appendChild(el('pre', 'mono icv-code-out'));
     } else if (item.kind === 'db') {
-      /* Datenbank-Element (#76): Schema/Beispieldaten pflegen, Abfrage dazu,
-       * Ausfuehren uebernimmt der globale .icv-db-run-Delegations-Listener. */
+      /* Datenbank-Element (#76/#80): Schema/Beispieldaten pflegen, Abfrage dazu,
+       * Ausfuehren uebernimmt der globale .icv-db-run-Delegations-Listener.
+       * Vorhandene Datenbanken der SQL-Werkstatt fuellen das Schema per
+       * Dropdown, ihre Tabellen lassen sich dann einzeln abfragen. */
       div.appendChild(el('div', 'icv-db-head', '🗄️ Schema und Beispieldaten (SQL)'));
+      if (dbTemplates.length > 0) {
+        var dbLib = el('select', 'icv-db-libsel');
+        dbLib.title = 'Eine vorhandene Datenbank aus der SQL-Werkstatt einfügen';
+        var dbLibNone = el('option', '', 'Vorhandene Datenbank einfügen …');
+        dbLibNone.value = '';
+        dbLib.appendChild(dbLibNone);
+        dbTemplates.forEach(function (tpl) {
+          var o = el('option', '', tpl.t || tpl.slug);
+          o.value = String(tpl.slug);
+          dbLib.appendChild(o);
+        });
+        dbLib.addEventListener('change', function () {
+          var picked = null;
+          dbTemplates.forEach(function (tpl) { if (String(tpl.slug) === dbLib.value) { picked = tpl; } });
+          if (!picked) { return; }
+          item.dbseed = String(picked.sql || '');
+          dbSeedTa.value = item.dbseed;
+          var sch = div.querySelector('.icv-db-schema');
+          if (sch && window.IC_DB_SCHEMA) { sch.textContent = window.IC_DB_SCHEMA(item.dbseed); }
+          dbLib.value = '';
+          collect(); markDirty();
+        });
+        var dbCtl = el('div', 'icv-db-ctl');
+        dbCtl.appendChild(dbLib);
+        div.appendChild(dbCtl);
+      }
       var dbSeedTa = el('textarea', 'mono icv-db-seed-ta');
       dbSeedTa.value = item.dbseed || '';
       dbSeedTa.setAttribute('spellcheck', 'false');
@@ -2148,15 +2210,66 @@
       div.appendChild(dbRun);
       div.appendChild(el('pre', 'mono icv-db-out'));
     } else if (item.kind === 'diagram') {
-      /* Diagramm-Element (#77): Code links, Diagramm rechts, live. Der
-       * Doppelklick auf die Vorschau springt in den Code zurueck. */
+      /* Diagramm-Element (#77/#79): Zwei Varianten - pur (Standard): im
+       * Editor nur der Quelltext (keine Vorschau), im Lesemodus nur das
+       * fertige Diagramm; geteilt: im Lesemodus Code und Diagramm
+       * nebeneinander wie im Editor. Eigene Diagramme aus der Bibliothek
+       * lassen sich per Dropdown uebernehmen. */
+      var dgCtl = el('div', 'icv-diagram-ctl');
+      var dgMode = el('select', 'icv-diagram-mode');
+      dgMode.title = 'Wie soll das Diagramm im Lesemodus aussehen?';
+      var dgModePur = el('option', '', 'Pur: nur Diagramm im Lesemodus');
+      dgModePur.value = 'pur';
+      var dgModeSplit = el('option', '', 'Geteilt: Code + Diagramm im Lesemodus');
+      dgModeSplit.value = 'split';
+      dgMode.appendChild(dgModePur);
+      dgMode.appendChild(dgModeSplit);
+      dgMode.value = item.dmode === 'split' ? 'split' : 'pur';
+      dgMode.addEventListener('change', function () {
+        item.dmode = dgMode.value === 'split' ? 'split' : 'pur';
+        if (dgMode.value === 'split') { dgWrap.classList.remove('icv-diagram-noprev'); if (window.IC_RENDER_DIAGRAM) { window.IC_RENDER_DIAGRAM(dgPrev, item.src || ''); } }
+        else { dgWrap.classList.add('icv-diagram-noprev'); }
+        collect(); markDirty();
+      });
+      dgCtl.appendChild(dgMode);
+      if (diagramLib.length > 0) {
+        /* Eigene Diagramm-Bibliothek (#79): Auswahl uebernimmt den
+         * Mermaid-Code in das Element, danach laesst er sich weiter
+         * bearbeiten. */
+        var dgLib = el('select', 'icv-diagram-lib');
+        dgLib.title = 'Ein vorhandenes Diagramm aus deiner Bibliothek uebernehmen';
+        var dgLibNone = el('option', '', 'Diagramm aus Bibliothek übernehmen …');
+        dgLibNone.value = '';
+        dgLib.appendChild(dgLibNone);
+        diagramLib.forEach(function (dg) {
+          var o = el('option', '', (dg.t || 'Diagramm') + (dg.kind ? ' (' + dg.kind + ')' : ''));
+          o.value = String(dg.id);
+          dgLib.appendChild(o);
+        });
+        dgLib.addEventListener('change', function () {
+          var picked = null;
+          var vid = parseInt(dgLib.value, 10) || 0;
+          diagramLib.forEach(function (dg) { if (dg.id === vid) { picked = dg; } });
+          if (!picked) { return; }
+          item.src = String(picked.src || picked.mermaid || '');
+          dgTa.value = item.src;
+          if (item.dmode !== 'split') { if (window.IC_RENDER_DIAGRAM) { window.IC_RENDER_DIAGRAM(dgPrev, item.src || ''); } }
+          dgLib.value = '';
+          collect(); markDirty();
+        });
+        dgCtl.appendChild(dgLib);
+      }
+      div.appendChild(dgCtl);
       var dgWrap = el('div', 'icv-diagram-wrap');
+      if (item.dmode !== 'split') { dgWrap.className += ' icv-diagram-noprev'; }
       var dgTa = el('textarea', 'mono icv-diagram-src');
       dgTa.value = item.src || '';
       dgTa.setAttribute('spellcheck', 'false');
       dgTa.addEventListener('input', function () {
         item.src = dgTa.value;
-        if (window.IC_RENDER_DIAGRAM) { window.IC_RENDER_DIAGRAM(dgPrev, item.src || ''); }
+        if (item.dmode === 'split' || !dgWrap.classList || dgWrap.classList.contains('icv-diagram-noprev') === false) {
+          if (window.IC_RENDER_DIAGRAM) { window.IC_RENDER_DIAGRAM(dgPrev, item.src || ''); }
+        }
         collect(); markDirty();
       });
       dgWrap.appendChild(dgTa);
@@ -2166,7 +2279,7 @@
       dgWrap.appendChild(dgPrev);
       div.appendChild(dgWrap);
       setTimeout(function () { /* Renderer steht erst am Dateiende: einmalig zeichnen */
-        if (window.IC_RENDER_DIAGRAM) { window.IC_RENDER_DIAGRAM(dgPrev, item.src || ''); }
+        if (item.dmode === 'split' && window.IC_RENDER_DIAGRAM) { window.IC_RENDER_DIAGRAM(dgPrev, item.src || ''); }
       }, 0);
     }
     refreshLinkBadge(div, item); /* verlinktes Element zeigt das Badge (#73) */
@@ -2194,10 +2307,13 @@
        * das Objekt wieder liegt, ist die Flaeche frei. */
       if (mode === 'select' && !dragActive && sel !== item) { selectItem(item); }
     });
-    /* Ganze Fläche als Griff (#66): Striche, Bilder, Audio, Video und
-     * Einbettungen lassen sich ueberall greifen. Textfelder weiter nur
-     * ueber die Leiste oben, sonst waere Textauswahl und Tippen kaputt. */
-    if (item.kind !== 'text') { attachMove(div, item, div); }
+    /* Ganze Flaeche als Griff (#66/#78): Nur reine Anzeige-Elemente (Bild,
+     * Strich, Einbettung, Audio, Video) lassen sich ueberall greifen.
+     * Elemente mit Textfeldern (Text, Code, Datenbank, Diagramm) duerfen
+     * die Flaeche NICHT gepackt werden: attachMove ruft bei pointerdown
+     * preventDefault() und blockiert damit das Anklicken der Textarea.
+     * Sie lassen sich weiter ueber die Leiste oben verschieben. */
+    if (item.kind === 'image' || item.kind === 'ink' || item.kind === 'embed' || item.kind === 'audio' || item.kind === 'video') { attachMove(div, item, div); }
     return div;
   }
   var overlay = el('canvas', 'icv-inkcanvas');
@@ -2535,7 +2651,7 @@
   embBtn.addEventListener('click', function () { addEmbedAt(block.w / 2 - 240, block.h / 2 - 40); });
   toolbar.appendChild(embBtn);
   var codeBtn = el('button', 'btn btn-ghost', '💻'); codeBtn.type = 'button';
-  codeBtn.title = 'Code-Fenster einfügen (JavaScript mit Konsole)';
+  codeBtn.title = 'Code-Fenster einfügen (Java, JavaScript oder Python mit Konsole)';
   codeBtn.addEventListener('click', function () { addCodeAt(block.w / 2 - 260, block.h / 2 - 90); });
   toolbar.appendChild(codeBtn);
   var dbBtn = el('button', 'btn btn-ghost', '🗄️'); dbBtn.type = 'button';
@@ -2631,7 +2747,7 @@
     collect(); markDirty();
   }
   function addCodeAt(x, y) {
-    var item = { kind: 'code', code: '', x: clampN(x, 0, block.w - 120), y: clampN(y, 0, block.h - 60), w: 520 };
+    var item = { kind: 'code', code: '', lang: 'java', x: clampN(x, 0, block.w - 120), y: clampN(y, 0, block.h - 60), w: 520 };
     block.items.push(item);
     renderStage();
     selectItem(item);
@@ -2902,11 +3018,15 @@
           e.title = item.title || '';
         } else if (item.kind === 'code') {
           e.code = item.code || '';
+          /* Sprache (#81): Standard Java, wird im Lesemodus als Tag gezeigt
+           * und entscheidet ueber die Ausfuehrung (VM/Pyodide/eval). */
+          e.lang = (item.lang === 'javascript' || item.lang === 'python') ? item.lang : 'java';
         } else if (item.kind === 'db') {
           e.dbseed = item.dbseed || '';
           e.dbq = item.dbq || '';
         } else if (item.kind === 'diagram') {
           e.src = item.src || '';
+          if (item.dmode === 'split') { e.dmode = 'split'; }
         } else {
           e.media = item.media || 0;
           e.name = item.name || '';
@@ -3024,32 +3144,81 @@
 })();
 
 
-/* InfoBook Code-Fenster (#75): Ausfuehren im Editor und im Lesemodus.
- * window.IC_RUN_CODE ist der gemeinsame Kern, der Quelltext laeuft in einer
- * new Function mit eigener console - alle Ausgaben landen im Konsole-Feld.
- * Der Klick-Listener arbeitet per Delegation am document und greift damit
- * beide Welten ab: die Textarea im Editor und das pre im Lesemodus. */
+/* InfoBook Code-Fenster (#75/#81): Ausfuehren im Editor und im Lesemodus.
+ * window.IC_RUN_CODE ist der gemeinsame Kern mit Sprachauswahl: Java laeuft
+ * ueber die Java-VM (InfoCraftJavaVM.run), Python ueber Pyodide, JavaScript
+ * direkt in einer new Function mit eigener console - alle Ausgaben landen im
+ * Konsole-Feld. Der Klick-Listener arbeitet per Delegation am document und
+ * greift damit beide Welten ab: die Textarea im Editor und das pre im
+ * Lesemodus. */
 (function () {
   'use strict';
   if (typeof window === 'undefined') { return; }
-  window.IC_RUN_CODE = function (outEl, src) {
-    if (!outEl) { return ''; }
-    var lines = [];
-    function fmt(v) {
-      if (typeof v === 'string') { return v; }
-      try { return JSON.stringify(v); } catch (e) { return String(v); }
+  function fmtVal(v) {
+    if (typeof v === 'string') { return v; }
+    try { return JSON.stringify(v); } catch (e) { return String(v); }
+  }
+  function runJava(outEl, src) {
+    if (!window.InfoCraftJavaVM || !window.InfoCraftJavaVM.run) {
+      outEl.textContent = '✖ Die Java-VM ist auf dieser Seite nicht geladen. Seite neu laden (Strg bzw. Cmd + Shift + R).';
+      return outEl.textContent;
     }
+    var res;
+    try {
+      res = window.InfoCraftJavaVM.run([{ name: 'Main.java', text: String(src) }]);
+    } catch (e) {
+      outEl.textContent = '✖ ' + (e && e.message ? e.message : String(e));
+      return outEl.textContent;
+    }
+    var lines = [];
+    if (res && typeof res.output === 'string' && res.output !== '') { lines.push(res.output); }
+    var errs = (res && res.errors) ? res.errors : [];
+    for (var ei = 0; ei < errs.length; ei++) {
+      var er = errs[ei];
+      var emsg = (er && er.message ? er.message : String(er));
+      if (er && er.line) { emsg += ' (Zeile ' + er.line + (er.file ? ', ' + er.file : '') + ')'; }
+      lines.push((er && er.kind === 'stderr' ? '' : '✖ ') + emsg);
+    }
+    if (lines.length === 0) { lines.push('(keine Ausgabe)'); }
+    outEl.textContent = lines.join('\n');
+    return outEl.textContent;
+  }
+  function runPython(outEl, src) {
+    if (!window.IC_ENSURE_PYODIDE) {
+      outEl.textContent = '✖ Python ist auf dieser Seite nicht verfügbar.';
+      return '';
+    }
+    outEl.textContent = 'Python wird geladen ... (beim ersten Start kann das etwas dauern)';
+    window.IC_ENSURE_PYODIDE().then(function (pyodide) {
+      var lines = [];
+      pyodide.setStdout({ batched: function (text) { lines.push(text); } });
+      pyodide.setStderr({ batched: function (text) { lines.push(text); } });
+      outEl.textContent = 'Programm läuft ...';
+      return pyodide.runPythonAsync(String(src)).then(function () {
+        outEl.textContent = lines.length > 0 ? lines.join('\n') : '(keine Ausgabe)';
+      });
+    }).catch(function (err) {
+      outEl.textContent = '✖ ' + (err && err.message ? err.message : String(err));
+    });
+    return '';
+  }
+  window.IC_RUN_CODE = function (outEl, src, lang) {
+    if (!outEl) { return ''; }
+    var mode = (lang === 'javascript' || lang === 'python') ? lang : 'java';
+    if (mode === 'java') { return runJava(outEl, src); }
+    if (mode === 'python') { return runPython(outEl, src); }
+    var lines = [];
     var con = {
-      log: function () { lines.push(Array.prototype.map.call(arguments, fmt).join(' ')); },
-      error: function () { lines.push('✖ ' + Array.prototype.map.call(arguments, fmt).join(' ')); },
-      warn: function () { lines.push('⚠ ' + Array.prototype.map.call(arguments, fmt).join(' ')); }
+      log: function () { lines.push(Array.prototype.map.call(arguments, fmtVal).join(' ')); },
+      error: function () { lines.push('✖ ' + Array.prototype.map.call(arguments, fmtVal).join(' ')); },
+      warn: function () { lines.push('⚠ ' + Array.prototype.map.call(arguments, fmtVal).join(' ')); }
     };
     try {
       /* REPL-artig: eval liefert den Completion-Wert der letzten Anweisung,
        * '6 * 7' zeigt also 42 als Ergebnis, ohne dass return noetig waere. */
       var fn = new Function('console', '"use strict";return eval(' + JSON.stringify(String(src)) + ');');
       var r = fn(con);
-      if (r !== undefined) { lines.push('⮐ ' + fmt(r)); }
+      if (r !== undefined) { lines.push('⮐ ' + fmtVal(r)); }
     } catch (e) {
       lines.push('✖ ' + (e && e.message ? e.message : String(e)));
     }
@@ -3075,7 +3244,9 @@
     if (srcEl) {
       src = String(srcEl.tagName === 'TEXTAREA' ? srcEl.value : (srcEl.textContent || ''));
     }
-    window.IC_RUN_CODE(outEl, src);
+    /* Sprache (#81): am Knopf gepflegt (Editor synct sie, der Lesemodus
+     * rendert sie mit), Standard Java. */
+    window.IC_RUN_CODE(outEl, src, btn.getAttribute('data-lang') || 'java');
   });
 })();
 
@@ -3282,11 +3453,18 @@
     }
   };
   if (typeof document === 'undefined') { return; }
-  /* Lesemodus: fertige Diagramm-Boxen (div.icv-diagram-ro[data-src]) einmalig
-   * zeichnen. Lief das Skript vor dem DOM,holt DOMContentLoaded nach. */
+  /* Lesemodus: fertige Diagramm-Boxen (div.icv-diagram-ro[data-src] und
+   * geteilte Boxen .icv-diagram-split-ro) einmalig zeichnen. Lief das
+   * Skript vor dem DOM,holt DOMContentLoaded nach. */
   function renderRoBoxes() {
     if (!document.querySelectorAll) { return; }
-    var boxes = document.querySelectorAll('.icv-diagram-ro');
+    /* Beide Lesemodus-Varianten (#77/#79): pur (nur Diagramm) und geteilt
+     * (Code + Diagramm mit Trenner). */
+    var boxes = [];
+    var boxesA = document.querySelectorAll('.icv-diagram-ro');
+    for (var bi = 0; boxesA && bi < boxesA.length; bi++) { boxes.push(boxesA[bi]); }
+    var boxesB = document.querySelectorAll('.icv-diagram-split-ro');
+    for (var bj = 0; boxesB && bj < boxesB.length; bj++) { boxes.push(boxesB[bj]); }
     for (var i = 0; i < boxes.length; i++) {
       var b = boxes[i];
       var prev = b.querySelector ? b.querySelector('.icv-diagram-prev') : null;
@@ -3300,4 +3478,86 @@
   if (document.addEventListener && (!document.readyState || document.readyState === 'loading')) {
     document.addEventListener('DOMContentLoaded', function () { renderRoBoxes(); });
   }
+})();
+
+
+/* InfoBook Seitenleiste einklappbar (#82): Der Knopf an der Navigation
+ * klappt die komplette Leiste ein, die Seite nutzt dann die volle Breite.
+ * Der Zustand bleibt pro Browser gespeichert (localStorage). */
+(function () {
+  'use strict';
+  if (typeof window === 'undefined') { return; }
+  function wireNavFold(aside, btn) {
+    if (!aside || !btn || !aside.classList || !btn.addEventListener) { return null; }
+    var KEY = 'ic-ibook-navfold';
+    function apply(off) {
+      if (off) {
+        aside.classList.add('ibook-pagenav-off');
+        btn.textContent = '▶';
+        btn.setAttribute('aria-expanded', 'false');
+        btn.title = 'Seitenleiste ausklappen';
+      } else {
+        aside.classList.remove('ibook-pagenav-off');
+        btn.textContent = '◀';
+        btn.setAttribute('aria-expanded', 'true');
+        btn.title = 'Seitenleiste einklappen (gibt der Seite die volle Breite)';
+      }
+    }
+    var saved = null;
+    try { saved = localStorage.getItem(KEY); } catch (eFold) { saved = null; }
+    apply(saved === '1');
+    btn.addEventListener('click', function () {
+      var off = !aside.classList.contains('ibook-pagenav-off');
+      apply(off);
+      try { localStorage.setItem(KEY, off ? '1' : '0'); } catch (eFold2) { /* privater Modus */ }
+    });
+    return true;
+  }
+  window.IC_IBOOK_NAVFOLD = wireNavFold;
+  if (typeof document === 'undefined' || !document.getElementById) { return; }
+  var aside = document.getElementById('ibook-pagenav');
+  var btn = document.getElementById('ibook-pagenav-fold');
+  if (aside && btn) { wireNavFold(aside, btn); }
+})();
+
+
+/* InfoBook Diagramm geteilt (#79): Im Lesemodus der Variante "geteilt"
+ * laesst sich der Balken zwischen Code und Diagramm ziehen. Beide Fenster
+ * behalten mindestens 15% der Breite, nichts wird unbedienbar. */
+(function () {
+  'use strict';
+  if (typeof document === 'undefined' || !document.addEventListener) { return; }
+  document.addEventListener('pointerdown', function (ev) {
+    var node = ev.target;
+    var bar = null;
+    while (node) {
+      if (node.classList && node.classList.contains && node.classList.contains('icv-diagram-split-bar')) { bar = node; break; }
+      node = node.parentNode;
+    }
+    if (!bar) { return; }
+    if (typeof ev.clientX !== 'number') { return; } /* Test-Harness */
+    if (ev.preventDefault) { ev.preventDefault(); }
+    var wrap = bar.parentNode;
+    if (!wrap || !wrap.querySelector) { return; }
+    var code = wrap.querySelector('.icv-diagram-code');
+    if (!code || !wrap.getBoundingClientRect) { return; }
+    var rect = null;
+    try { rect = wrap.getBoundingClientRect(); } catch (eRect) { rect = null; }
+    if (!rect || typeof rect.width !== 'number' || rect.width <= 0) { return; }
+    function onMove(ev2) {
+      if (typeof ev2.clientX !== 'number') { return; }
+      var pct = ((ev2.clientX - rect.left) / rect.width) * 100;
+      pct = Math.max(15, Math.min(85, pct));
+      code.style.width = pct + '%';
+      code.style.flexBasis = pct + '%';
+    }
+    function onUp() {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+    }
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+  });
 })();

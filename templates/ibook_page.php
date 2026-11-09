@@ -10,7 +10,10 @@
  * Seite des Abschnitts, wenn der Abschnitt Seiten hat. */ ?>
 <?php $navLesen = $preview ? '?lesen=1' : ''; ?>
 <div class="ibook-page-layout">
-<aside class="ibook-pagenav" aria-label="Navigation dieses InfoBooks">
+<aside class="ibook-pagenav" id="ibook-pagenav" aria-label="Navigation dieses InfoBooks">
+    <?php /* #82: Knopf klappt die komplette Leiste ein, die Seite bekommt
+     * die volle Breite. Zustand bleibt im Browser gespeichert (app.js). */ ?>
+    <button type="button" class="btn btn-ghost ibook-pagenav-fold" id="ibook-pagenav-fold" aria-expanded="true" title="Seitenleiste einklappen (gibt der Seite die volle Breite)">◀</button>
     <?php /* #71: Die Navigation klappt auf und zu: Kopfzeile antippen. Ohne
      * Javascript nutzbar (details/summary), Standardzustand offen. */ ?>
     <details class="ibook-pagenav-box" open>
@@ -68,6 +71,12 @@
 <section class="hero ibook-hero-compact">
     <div class="btn-row ibook-topnav">
         <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '?abschnitt=' . (int) $section['id']) ?>">← <?= e($book->title) ?></a>
+        <?php /* #83: Titel und Meta rutschen in die Kopfzeile zu den Buttons,
+         * die Seite verliert vertikalen Platz. IDs bleiben (Autospeichern). */ ?>
+        <div class="ibook-topnav-title">
+            <h1>📄 <span id="ibook-page-title"><?= e((string) $page['title']) ?></span></h1>
+            <p class="muted" id="ibook-page-meta"><?= e($section['title']) ?> · Letzte Änderung: <?= e((string) ($page['updated_at'] ?? 'gerade eben')) ?></p>
+        </div>
         <div class="ibook-topnav-right">
             <?php if ($canWrite): ?>
             <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id'] . '?lesen=1') ?>" target="_blank" rel="noopener" title="Seite im Lesemodus in einem neuen Tab öffnen">👀 Vorschau (Lesemodus)</a>
@@ -103,8 +112,6 @@
             <?php endif; ?>
         </div>
     </div>
-    <h1>📄 <span id="ibook-page-title"><?= e((string) $page['title']) ?></span></h1>
-    <p class="muted" id="ibook-page-meta"><?= e($section['title']) ?> · Letzte Änderung: <?= e((string) ($page['updated_at'] ?? 'gerade eben')) ?></p>
 </section>
 
 <?php if (!$canWrite): ?>
@@ -127,7 +134,7 @@
         <label class="field"><input type="text" name="title" id="ibook-title" maxlength="160" value="<?= e((string) $page['title']) ?>" placeholder="Titel der Seite"></label>
 
         <h3>Freie Fläche</h3>
-        <div id="ibook-editor" data-book-id="<?= (int) $book->id ?>" data-page-id="<?= (int) $page['id'] ?>" data-nav="<?= e(json_encode($navPages, JSON_UNESCAPED_UNICODE)) ?>" data-blocks="<?= e(json_encode($blocks, JSON_UNESCAPED_UNICODE)) ?>"></div>
+        <div id="ibook-editor" data-book-id="<?= (int) $book->id ?>" data-page-id="<?= (int) $page['id'] ?>" data-nav="<?= e(json_encode($navPages, JSON_UNESCAPED_UNICODE)) ?>" data-diagrams="<?= e(json_encode($diagrams, JSON_UNESCAPED_UNICODE)) ?>" data-dbtemplates="<?= e(json_encode($dbTemplates, JSON_UNESCAPED_UNICODE)) ?>" data-blocks="<?= e(json_encode($blocks, JSON_UNESCAPED_UNICODE)) ?>"></div>
         <p class="muted ibook-hint">Alles auf einer Fläche: Bilder per Drag &amp; Drop ablegen, mit dem Stift überall zeichnen (auch über Bildern), Textfelder frei platzieren. Oben in der Symbolleiste wechselst du zwischen Auswahl, Stift und Radierer und fügst Text, Bild, Audio, Video und Einbettungen hinzu. Änderungen speichern sich automatisch, ein Speichern-Button ist nicht nötig.</p>
 
         <input type="hidden" name="blocks" id="ibook-blocks-json" value="[]">
@@ -150,4 +157,18 @@
 <?php if ($hasDiagram): ?>
 <script src="<?= vendor_asset('assets/vendor/mermaid.min.js', 'https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js', 3000000) ?>"></script>
 <script>if (window.mermaid) { mermaid.initialize({ startOnLoad: false }); }</script>
+<?php endif; ?>
+<?php /* #81: Die Java-VM laedt nur, wenn die Seite Code-Fenster hat oder
+ * gerade bearbeitet wird (Standard-Sprache Java, System.out funktioniert). */ ?>
+<?php $hasCode = $canWrite; ?>
+<?php if (!$hasCode): ?>
+    <?php foreach ($blocks as $block): ?>
+        <?php $codeItems = is_array($block) && isset($block['items']) && is_array($block['items']) ? $block['items'] : []; ?>
+        <?php foreach ($codeItems as $codeItem): ?>
+            <?php if (is_array($codeItem) && (string) ($codeItem['kind'] ?? '') === 'code') { $hasCode = true; break 2; } ?>
+        <?php endforeach; ?>
+    <?php endforeach; ?>
+<?php endif; ?>
+<?php if ($hasCode): ?>
+<script src="<?= asset_url('assets/js/java-vm.js') ?>"></script>
 <?php endif; ?>

@@ -1149,6 +1149,8 @@ setTimeout(function () {
               ibEditor.setAttribute('data-book-id', '77');
               ibEditor.setAttribute('data-page-id', '42');
               ibEditor.setAttribute('data-nav', JSON.stringify([{ id: 42, t: 'Aktuelle Seite', s: 'Abschnitt A' }, { id: 43, t: 'Zielseite', s: 'Abschnitt A' }]));
+              ibEditor.setAttribute('data-diagrams', JSON.stringify([{ id: 5, t: 'Klassendiagramm Auto', kind: 'java', src: 'classDiagram\nAuto <|-- BMW' }]));
+              ibEditor.setAttribute('data-dbtemplates', JSON.stringify([{ slug: 'shop', t: 'Kaufhaus Laden', sql: "CREATE TABLE artikel (name TEXT, preis INT); INSERT INTO artikel VALUES ('Kaugummi', 1)" }]));
               ibEditor.setAttribute('data-blocks', '[]');
               ibDoc.register(ibEditor, 'ibook-editor');
               ibDoc.register(new FakeEl('input'), 'ibook-blocks-json');
@@ -1494,16 +1496,49 @@ setTimeout(function () {
                   var ibCodeBox57 = ibStage.querySelector('.icv-code');
                   ok(ibCodeBox57 !== null && ibCodeBox57.querySelector('.icv-code-ta') !== null && ibCodeBox57.querySelector('.icv-code-out') !== null, 'T57b das Code-Fenster hat Editor, Ausfuehren-Knopf und Konsole');
                   if (ibCodeBox57) {
+                    var ibLang57 = ibCodeBox57.querySelector('.icv-code-langsel');
+                    ok(ibLang57 !== null && ibLang57.value === 'java', 'T57b2 Sprachauswahl ist da, Standard Java');
+                    if (ibLang57) {
+                      ibLang57.value = 'javascript';
+                      ibLang57.dispatch('change');
+                      ok(ibCodeBox57.querySelector('.icv-code-run').getAttribute('data-lang') === 'javascript', 'T57b3 die Sprache wandert an den Ausfuehren-Knopf');
+                    }
                     var ibCodeTa57 = ibCodeBox57.querySelector('.icv-code-ta');
                     ibCodeTa57.value = "console.log('Hallo InfoBook'); 6 * 7;";
                     ibCodeTa57.dispatch('input');
                     var cv57 = ibCollect();
                     var t57 = cv57 && cv57.items ? cv57.items.filter(function (it) { return it.kind === 'code'; })[0] : null;
-                    ok(t57 && t57.code === "console.log('Hallo InfoBook'); 6 * 7;", 'T57c der Quelltext wird mit serialisiert');
+                    ok(t57 && t57.code === "console.log('Hallo InfoBook'); 6 * 7;" && t57.lang === 'javascript', 'T57c der Quelltext wird mit Sprache serialisiert');
                     ibCodeBox57.querySelector('.icv-code-run').dispatch('click');
                     var ibCodeOut57 = ibCodeBox57.querySelector('.icv-code-out');
                     ok(ibCodeOut57 !== null && ibCodeOut57.textContent.indexOf('Hallo InfoBook') !== -1 && ibCodeOut57.textContent.indexOf('42') !== -1, 'T57d Ausfuehren schreibt console-Ausgaben und Ergebnis in die Konsole');
                   }
+                }
+
+                /* T62 (#81): Java laeuft ueber die Java-VM (kein "System is
+                 * not defined" mehr), Compiler-Fehler zeigen Zeile und Datei,
+                 * ohne VM gibt es einen klaren Hinweis. */
+                if (ibCodeBox57 && ibLang57) {
+                  global.window.InfoCraftJavaVM = {
+                    run: function (files) {
+                      ok(files && files[0] && files[0].name === 'Main.java' && String(files[0].text).indexOf('System.out.println') !== -1, 'T62 Java-Quelltext geht als Main.java an die Java-VM');
+                      return { output: 'Hallo aus Java', errors: [], ok: true };
+                    }
+                  };
+                  ibLang57.value = 'java';
+                  ibLang57.dispatch('change');
+                  ibCodeBox57.querySelector('.icv-code-ta').value = 'System.out.println("Hallo Java");';
+                  ibCodeBox57.querySelector('.icv-code-ta').dispatch('input');
+                  ibCodeBox57.querySelector('.icv-code-run').dispatch('click');
+                  ok(ibCodeOut57.textContent.indexOf('Hallo aus Java') !== -1, 'T62b Sprache Java: die Ausgabe der Java-VM landet in der Konsole');
+                  global.window.InfoCraftJavaVM = {
+                    run: function () { return { output: '', errors: [{ kind: 'error', message: 'Semikolon fehlt', line: 3, file: 'Main.java' }], ok: false }; }
+                  };
+                  ibCodeBox57.querySelector('.icv-code-run').dispatch('click');
+                  ok(ibCodeOut57.textContent.indexOf('✖ Semikolon fehlt') !== -1 && ibCodeOut57.textContent.indexOf('Zeile 3') !== -1, 'T62c Compiler-Fehler kommen mit Zeilennummer zurueck');
+                  delete global.window.InfoCraftJavaVM;
+                  ibCodeBox57.querySelector('.icv-code-run').dispatch('click');
+                  ok(ibCodeOut57.textContent.indexOf('nicht geladen') !== -1, 'T62d ohne Java-VM gibt es einen klaren Hinweis statt "System is not defined"');
                 }
 
                 /* T58 (#76): Datenbank-Element mit Schema und SQL-Abfrage.
@@ -1561,6 +1596,14 @@ setTimeout(function () {
                   if (ibDiagBox59) {
                     var ibDiagTa59 = ibDiagBox59.querySelector('.icv-diagram-src');
                     ok(String(ibDiagTa59.value).indexOf('graph TD') !== -1, 'T59c neuer Code startet mit einer Mermaid-Vorlage');
+                    /* #79: pur ist Standard (im Editor keine Vorschau), fuer den
+                     * Live-Test wird auf geteilt gestellt. */
+                    var ibDiagMode59 = ibDiagBox59.querySelector('.icv-diagram-mode');
+                    ok(ibDiagMode59 !== null && ibDiagMode59.value === 'pur', 'T59b2 Varianten-Auswahl ist da, Standard pur (im Editor keine Vorschau)');
+                    if (ibDiagMode59) {
+                      ibDiagMode59.value = 'split';
+                      ibDiagMode59.dispatch('change');
+                    }
                     ibDiagTa59.value = 'graph LR\nCI_A --> CI_B';
                     ibDiagTa59.dispatch('input');
                     ok(String(ibDiagBox59.querySelector('.icv-diagram-prev').innerHTML).indexOf('<svg class="icv-dg-test">') === 0, 'T59d die Vorschau rendert live mit');
@@ -1569,6 +1612,7 @@ setTimeout(function () {
                     var cv59 = ibCollect();
                     var t59 = cv59 && cv59.items ? cv59.items.filter(function (it) { return it.kind === 'diagram'; })[0] : null;
                     ok(t59 && t59.src.indexOf('CI_A --> CI_B') !== -1, 'T59f der Diagramm-Code wird serialisiert');
+                    ok(t59 && t59.dmode === 'split', 'T59f2 die Variante geteilt wird serialisiert');
                     /* Lesemodus: div.icv-diagram-ro[data-src] zeichnet einmalig
                      * beim DOMContentLoaded-Lauf. */
                     var ibRoBox59 = new FakeEl('div');
@@ -1585,6 +1629,126 @@ setTimeout(function () {
                     window.IC_RENDER_DIAGRAM(ibOffPrev59, 'graph TD\nX --> Y');
                     ok(ibOffPrev59.textContent.indexOf('graph TD') !== -1 && ibOffPrev59.getAttribute('data-mermaid-missing') === '1', 'T59h ohne Mermaid bleibt der Quelltext als Fallback lesbar');
                   }
+                }
+
+                /* T60 (#78): Die Quelltext-Fenster von Diagramm, Code und DB
+                 * sind frei klickbar: Die Elementflaeche ist kein Verschiebe-
+                 * Griff mehr, preventDefault (blockierte den Textarea-Fokus)
+                 * wird nicht mehr gerufen. Verschieben geht ueber die Leiste. */
+                var pd60 = false;
+                ibDiagBox59.dispatch('pointerdown', { clientX: 5, clientY: 5, preventDefault: function () { pd60 = true; } });
+                ok(pd60 === false, 'T60 Diagramm-Element ruft preventDefault nicht mehr: Quelltext laesst sich anklicken');
+                var ibCodeBox60 = ibStage.querySelector('.icv-code');
+                var pdCode60 = false;
+                if (ibCodeBox60) { ibCodeBox60.dispatch('pointerdown', { clientX: 5, clientY: 5, preventDefault: function () { pdCode60 = true; } }); }
+                ok(pdCode60 === false, 'T60b Code-Fenster: Flaeche blockiert das Anklicken der Textarea nicht mehr');
+                var ibDbBox60 = ibStage.querySelector('.icv-db');
+                var pdDb60 = false;
+                if (ibDbBox60) { ibDbBox60.dispatch('pointerdown', { clientX: 5, clientY: 5, preventDefault: function () { pdDb60 = true; } }); }
+                ok(pdDb60 === false, 'T60c DB-Element: Schema-Feld bleibt frei klickbar');
+                ok(ibDiagBox59.querySelector('.icv-move') !== null, 'T60d Verschieben bleibt: Jedes Element hat seine Leiste oben');
+
+                /* T61 (#82): Seitenleiste komplett einklappbar: Der Knopf
+                 * schaltet die Leiste, der Zustand bleibt gespeichert. */
+                ok(typeof window.IC_IBOOK_NAVFOLD === 'function', 'T61 app.js stellt die Einklapp-Logik bereit');
+                var ibStore61 = {};
+                global.localStorage = {
+                  getItem: function (k) { return k in ibStore61 ? ibStore61[k] : null; },
+                  setItem: function (k, v) { ibStore61[k] = v; }
+                };
+                var ibAside61 = new FakeEl('aside');
+                ibAside61.className = 'ibook-pagenav';
+                var ibFoldBtn61 = new FakeEl('button');
+                window.IC_IBOOK_NAVFOLD(ibAside61, ibFoldBtn61);
+                ok(ibFoldBtn61.textContent === '◀' && !ibAside61.classList.contains('ibook-pagenav-off'), 'T61b Standard ist aufgeklappt');
+                ibFoldBtn61.dispatch('click');
+                ok(ibAside61.classList.contains('ibook-pagenav-off') === true && ibFoldBtn61.textContent === '▶' && ibFoldBtn61.getAttribute('aria-expanded') === 'false', 'T61c Klick klappt die komplette Leiste ein');
+                ok(ibStore61['ic-ibook-navfold'] === '1', 'T61d der Zustand wird im Browser gespeichert');
+                ibFoldBtn61.dispatch('click');
+                ok(ibAside61.classList.contains('ibook-pagenav-off') === false && ibFoldBtn61.getAttribute('aria-expanded') === 'true', 'T61e zweiter Klick klappt wieder auf');
+                global.localStorage = { getItem: function () { return '1'; }, setItem: function () {} };
+                var ibAside61b = new FakeEl('aside');
+                var ibFoldBtn61b = new FakeEl('button');
+                window.IC_IBOOK_NAVFOLD(ibAside61b, ibFoldBtn61b);
+                ok(ibAside61b.classList.contains('ibook-pagenav-off') === true && ibFoldBtn61b.textContent === '▶', 'T61f gespeicherter eingeklappter Zustand wird beim Laden wiederhergestellt');
+                global.localStorage = { getItem: function () { return null; }, setItem: function () {} };
+
+                /* T63 (#79): Bibliothek am Diagramm-Element: Auswahl uebernimmt
+                 * den Mermaid-Code, pur bleibt pur (kein Rendern im Editor). */
+                global.window.mermaid = { render: function (id) { return { svg: '<svg class="icv-dg-t63">' + id + '</svg>' }; } };
+                ibDiagBtn59.dispatch('click');
+                var ibDiagBoxes63 = ibStage.querySelectorAll('.icv-diagram');
+                var ibDiagBox63 = ibDiagBoxes63[ibDiagBoxes63.length - 1];
+                ok(ibDiagBox63 !== null && ibDiagBox63.querySelector('.icv-diagram-lib') !== null, 'T63 neues Diagramm-Element bietet die eigene Bibliothek an');
+                if (ibDiagBox63) {
+                  var ibDiagWrap63 = ibDiagBox63.querySelector('.icv-diagram-wrap');
+                  ok(ibDiagWrap63.classList.contains('icv-diagram-noprev') === true, 'T63b pur (Standard): im Editor steht nur der Quelltext, keine Vorschau');
+                  var ibDiagLib63 = ibDiagBox63.querySelector('.icv-diagram-lib');
+                  ibDiagLib63.value = '5';
+                  ibDiagLib63.dispatch('change');
+                  ok(String(ibDiagBox63.querySelector('.icv-diagram-src').value).indexOf('classDiagram') !== -1, 'T63c die Bibliotheks-Auswahl uebernimmt den Mermaid-Code');
+                  ok(ibDiagLib63.value === '', 'T63d das Bibliotheks-Dropdown springt zurueck auf die neutrale Auswahl');
+                  var cv63 = ibCollect();
+                  var t63 = cv63 && cv63.items ? cv63.items.filter(function (it) { return it.kind === 'diagram'; })[cv63.items.filter(function (it) { return it.kind === 'diagram'; }).length - 1] : null;
+                  ok(t63 && String(t63.src).indexOf('Auto <|-- BMW') !== -1 && t63.dmode === undefined, 'T63e der uebernommene Code wird serialisiert, Variante bleibt pur');
+                  /* Lesemodus geteilt (#79): die Split-Box zeichnet auch, der
+                   * Balken zwischen Code und Diagramm laesst sich ziehen und
+                   * begrenzt beide Fenster (nichts wird unbedienbar). */
+                  var ibRoSplit63 = new FakeEl('div');
+                  ibRoSplit63.className = 'icv-item icv-diagram icv-diagram-split-ro';
+                  ibRoSplit63.setAttribute('data-src', 'graph TD\nS63[SPLIT]');
+                  var ibRoSplitPrev63 = new FakeEl('div');
+                  ibRoSplitPrev63.className = 'icv-diagram-prev';
+                  ibRoSplit63.appendChild(ibRoSplitPrev63);
+                  ibDoc.body.appendChild(ibRoSplit63);
+                  ibDoc._fire('DOMContentLoaded', { type: 'DOMContentLoaded' });
+                  ok(String(ibRoSplitPrev63.innerHTML).indexOf('<svg class="icv-dg-t63">') === 0, 'T63g die geteilte Lesemodus-Box zeichnet ihr Diagramm');
+                  var ibSplitWrap63 = new FakeEl('div');
+                  ibSplitWrap63.className = 'icv-diagram-split';
+                  var ibSplitCode63 = new FakeEl('pre');
+                  ibSplitCode63.className = 'icv-diagram-code';
+                  var ibSplitBar63 = new FakeEl('div');
+                  ibSplitBar63.className = 'icv-diagram-split-bar';
+                  var ibSplitPrev63 = new FakeEl('div');
+                  ibSplitPrev63.className = 'icv-diagram-prev';
+                  ibSplitWrap63.appendChild(ibSplitCode63);
+                  ibSplitWrap63.appendChild(ibSplitBar63);
+                  ibSplitWrap63.appendChild(ibSplitPrev63);
+                  ibDoc.body.appendChild(ibSplitWrap63);
+                  ibSplitBar63.dispatch('pointerdown', { clientX: 8, clientY: 8 });
+                  ibDoc._fire('pointermove', { clientX: 218, clientY: 8 });
+                  ok(String(ibSplitCode63.style.width) === '50%', 'T63h der Balken teilt Code und Diagramm nach Zug');
+                  ibDoc._fire('pointermove', { clientX: 5000, clientY: 8 });
+                  ok(String(ibSplitCode63.style.width) === '85%', 'T63i der Balken begrenzt: Code hoechstens 85%, das Diagramm bleibt bedienbar');
+                  ibDoc._fire('pointermove', { clientX: -5000, clientY: 8 });
+                  ok(String(ibSplitCode63.style.width) === '15%', 'T63j nach unten bleibt dem Code mindestens 15% - nichts geht verloren');
+                  ibDoc._fire('pointerup', {});
+                  delete global.window.mermaid;
+                }
+
+                /* T64 (#80): Vorhandene Datenbanken der SQL-Werkstatt fuellen
+                 * das DB-Element: Schema und Beispieldaten landen im Seed-Feld,
+                 * Abfragen laufen damit auf den echten Vorlagen-Tabellen. */
+                ibDbBtn58.dispatch('click');
+                var ibDbBoxes64 = ibStage.querySelectorAll('.icv-db');
+                var ibDbBox64 = ibDbBoxes64[ibDbBoxes64.length - 1];
+                ok(ibDbBox64 !== null && ibDbBox64.querySelector('.icv-db-libsel') !== null, 'T64 neues DB-Element bietet vorhandene Datenbanken an');
+                if (ibDbBox64) {
+                  var ibDbLib64 = ibDbBox64.querySelector('.icv-db-libsel');
+                  ibDbLib64.value = 'shop';
+                  ibDbLib64.dispatch('change');
+                  var ibDbSeedTa64 = ibDbBox64.querySelector('.icv-db-seed-ta');
+                  ok(String(ibDbSeedTa64.value).indexOf('CREATE TABLE artikel') !== -1 && ibDbSeedTa64.value.indexOf('Kaugummi') !== -1, 'T64b die Vorlage laedt Schema und Beispieldaten ins Feld');
+                  ok(ibDbBox64.querySelector('.icv-db-schema').textContent.indexOf('artikel') !== -1, 'T64c die Schema-Anzeige aktualisiert sich aus der Vorlage');
+                  ok(ibDbLib64.value === '', 'T64d das Vorlagen-Dropdown springt zurueck');
+                  var ibDbQ64 = ibDbBox64.querySelector('.icv-db-in');
+                  ibDbQ64.value = 'SELECT name FROM artikel WHERE preis < 5';
+                  ibDbQ64.dispatch('input');
+                  ibDbBox64.querySelector('.icv-db-run').dispatch('click');
+                  ok(ibDbBox64.querySelector('.icv-db-out').textContent.indexOf('Kaugummi') !== -1, 'T64e Abfragen laufen gegen die Tabellen der Vorlage');
+                  var cv64 = ibCollect();
+                  var t64 = cv64 && cv64.items ? cv64.items.filter(function (it) { return it.kind === 'db'; })[cv64.items.filter(function (it) { return it.kind === 'db'; }).length - 1] : null;
+                  ok(t64 && t64.dbseed.indexOf('Kaugummi') !== -1, 'T64f der Vorlagen-Seed wird serialisiert');
                 }
 
                 /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */

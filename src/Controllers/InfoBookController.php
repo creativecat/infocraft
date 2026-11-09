@@ -4,10 +4,13 @@ declare(strict_types=1);
 namespace Infocraft\Controllers;
 
 use Infocraft\Auth;
+use Infocraft\Models\ClassDiagram;
 use Infocraft\Models\InfoBook;
 use Infocraft\Models\Presentation;
 use Infocraft\Models\SchoolClass;
+use Infocraft\Models\SqlTemplate;
 use Infocraft\Models\User;
+use Infocraft\SqlWorkshop;
 
 /**
  * InfoBook (#62): Notizbuecher im OneNote-Stil.
@@ -340,6 +343,31 @@ final class InfoBookController
             $blocks[$i]['html'] = self::renderBlock($block, (int) $book->id, $linkPages);
         }
         $media = self::canManage($book, $user) || $canWrite ? InfoBook::mediaOfBook($book->id) : [];
+        /* #79: Eigene Diagramm-Bibliothek fuer den Editor - Auswahl uebernimmt
+         * den Mermaid-Code in ein Diagramm-Element. */
+        $diagrams = [];
+        if ($canWrite && $user !== null) {
+            foreach (ClassDiagram::all((int) $user->id) as $diagram) {
+                $diagrams[] = ['id' => (int) $diagram->id, 't' => (string) $diagram->title, 'kind' => (string) $diagram->kind, 'src' => (string) $diagram->mermaid];
+            }
+        }
+        /* #80: Vorhandene Datenbanken der SQL-Werkstatt als Vorlage: Schema
+         * und Beispieldaten fuellen das DB-Element per Dropdown. */
+        $dbTemplates = [];
+        if ($canWrite) {
+            $tplTitles = [];
+            foreach (SqlTemplate::all() as $tpl) {
+                $tplTitles[(string) $tpl->slug] = (string) $tpl->title;
+            }
+            foreach (glob(SqlWorkshop::templatePath('*')) as $tplFile) {
+                $slug = basename($tplFile, '.sql');
+                $seed = (string) @file_get_contents($tplFile);
+                if ($seed === '') {
+                    continue;
+                }
+                $dbTemplates[] = ['slug' => $slug, 't' => $tplTitles[$slug] ?? ucfirst($slug), 'sql' => $seed];
+            }
+        }
         render('ibook_page', [
             'title' => (string) $page['title'],
             'active' => 'module-infobuecher',
@@ -352,6 +380,8 @@ final class InfoBookController
             'preview' => $preview,
             'nav' => $nav,
             'navPages' => $navPages,
+            'diagrams' => $diagrams,
+            'dbTemplates' => $dbTemplates,
             'isTeacher' => Auth::isTeacher(),
             'user' => $user,
         ]);
@@ -921,13 +951,17 @@ final class InfoBookController
                 $inner .= $pre . '<div class="icv-item icv-video" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%;height:' . self::pct($item['h'] ?? 270, $h) . '%">'
                     . '<video controls preload="metadata" src="' . e(url('/infobuecher/medium/' . $mediaId)) . '"></video></div>';
             } elseif ($kind === 'code') {
-                /* Code-Fenster mit Konsole (#75): Der Quelltext wird unveraendert
+                /* Code-Fenster mit Konsole (#75/#81): Der Quelltext wird unveraendert
                  * ausgegeben, ausgefuehrt wird er erst im Browser (window.IC_RUN_CODE
-                 * in app.js) - der Server fuehrt nie fremden Code aus. */
+                 * in app.js) - der Server fuehrt nie fremden Code aus. Die Sprache
+                 * steht als Tag am Fenster und steuert die Ausfuehrung. */
                 $code = (string) ($item['code'] ?? '');
-                $inner .= $pre . '<div class="icv-item icv-code" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 520, $w) . '%">'
+                $codeLang = in_array((string) ($item['lang'] ?? 'java'), ['java', 'javascript', 'python'], true) ? (string) ($item['lang'] ?? 'java') : 'java';
+                $codeLangLabel = $codeLang === 'javascript' ? 'JavaScript' : ($codeLang === 'python' ? 'Python' : 'Java');
+                $inner .= $pre . '<div class="icv-item icv-code" data-lang="' . e($codeLang) . '" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 520, $w) . '%">'
+                    . '<div class="icv-code-head"><span class="icv-code-langtag">' . e($codeLangLabel) . '</span></div>'
                     . '<pre class="code icv-code-src">' . e($code) . '</pre>'
-                    . '<button type="button" class="icv-code-run">▶ Ausführen</button>'
+                    . '<button type="button" class="icv-code-run" data-lang="' . e($codeLang) . '">▶ Ausführen</button>'
                     . '<pre class="icv-code-out" aria-live="polite"></pre></div>';
             } elseif ($kind === 'db') {
                 /* Datenbank-Element (#76): Schema serverseitig aus den CREATE-
@@ -943,12 +977,19 @@ final class InfoBookController
                     . '<pre class="icv-db-out" aria-live="polite"></pre>'
                     . '<pre class="icv-db-seed-src" hidden>' . e($seed) . '</pre></div>';
             } elseif ($kind === 'diagram') {
-                /* Diagramm-Element (#77): Der Mermaid-Code steht im data-src-
-                 * Attribut, gerendert wird im Client (IC_RENDER_DIAGRAM in
-                 * app.js + Mermaid.js aus dem Template). */
+                /* Diagramm-Element (#77/#79): pur (Standard) zeigt im
+                 * Lesemodus nur das Diagramm, geteilt zeigt Code und
+                 * Diagramm nebeneinander mit ziehbarem Trenner. */
                 $src = (string) ($item['src'] ?? '');
-                $inner .= $pre . '<div class="icv-item icv-diagram icv-diagram-ro" data-src="' . e($src) . '" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%">'
-                    . '<div class="icv-diagram-prev" aria-live="polite"></div></div>';
+                if ((string) ($item['dmode'] ?? '') === 'split') {
+                    $inner .= $pre . '<div class="icv-item icv-diagram icv-diagram-split-ro" data-src="' . e($src) . '" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%">'
+                        . '<div class="icv-diagram-split"><pre class="code icv-diagram-code">' . e($src) . '</pre>'
+                        . '<div class="icv-diagram-split-bar" title="Ziehen: Fenstergröße anpassen"></div>'
+                        . '<div class="icv-diagram-prev" aria-live="polite"></div></div></div>';
+                } else {
+                    $inner .= $pre . '<div class="icv-item icv-diagram icv-diagram-ro" data-src="' . e($src) . '" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%">'
+                        . '<div class="icv-diagram-prev" aria-live="polite"></div></div>';
+                }
             }
             /* Nur schliessen, wenn der Zweig wirklich etwas angehaengt hat. */
             if ($itemLink > 0 && strlen($inner) > $lenBefore) {

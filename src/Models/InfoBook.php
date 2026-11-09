@@ -307,11 +307,13 @@ final class InfoBook
                 if ($link > 0) { $it['link'] = $link; }
                 $clean[] = $it;
             } elseif ($kind === 'code') {
-                /* Code-Fenster mit Konsole (#75): Quelltext wird im Editor und
-                 * Lesemodus clientseitig ausgefuehrt, nie auf dem Server. */
+                /* Code-Fenster mit Konsole (#75/#81): Quelltext wird im Editor und
+                 * Lesemodus clientseitig ausgefuehrt, nie auf dem Server. Die
+                 * Sprache (Standard Java) entscheidet ueber VM/Pyodide/eval. */
                 $it = [
                     'kind' => 'code',
                     'code' => mb_substr((string) ($item['code'] ?? ''), 0, 20000),
+                    'lang' => in_array((string) ($item['lang'] ?? 'java'), ['java', 'javascript', 'python'], true) ? (string) ($item['lang'] ?? 'java') : 'java',
                     'x' => $left,
                     'y' => $top,
                     'w' => self::cvNum($item['w'] ?? 520, 120, $w),
@@ -322,8 +324,9 @@ final class InfoBook
                 if ($link > 0) { $it['link'] = $link; }
                 $clean[] = $it;
             } elseif ($kind === 'diagram') {
-                /* Diagramm-Element (#77): Mermaid-Code, gerendert wird im
-                 * Client (Mermaid.js), der Server speichert nur den Text. */
+                /* Diagramm-Element (#77/#79): Mermaid-Code, gerendert wird im
+                 * Client (Mermaid.js), der Server speichert nur den Text.
+                 * dmode 'split' zeigt im Lesemodus Code + Diagramm nebeneinander. */
                 $it = [
                     'kind' => 'diagram',
                     'src' => mb_substr((string) ($item['src'] ?? ''), 0, 8000),
@@ -331,6 +334,9 @@ final class InfoBook
                     'y' => $top,
                     'w' => self::cvNum($item['w'] ?? 480, 160, $w),
                 ];
+                if ((string) ($item['dmode'] ?? '') === 'split') {
+                    $it['dmode'] = 'split';
+                }
                 if ($grp > 0) {
                     $it['g'] = $grp;
                 }
