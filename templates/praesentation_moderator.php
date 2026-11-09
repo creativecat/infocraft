@@ -98,7 +98,7 @@
     <?php endif; ?>
 </section>
 
-<script src="<?= asset_url('assets/vendor/highlight.min.js') ?>"></script>
+<script src="<?= vendor_asset('assets/vendor/highlight.min.js', 'https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.12.0/highlight.min.js', 100000) ?>"></script>
 <script>
 (function () {
   var deck = document.getElementById('mod-deck');

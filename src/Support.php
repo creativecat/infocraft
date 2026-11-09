@@ -37,6 +37,22 @@ function asset_url(string $path): string
 }
 
 /**
+ * Vendor-Skript (highlight.js, mermaid) lokal ausliefern, damit die Werkstatt
+ * auch in Schulnetzen ohne freigeschaltete CDNs laeuft. Fehlt die Datei oder
+ * ist sie unvollstaendig (abgebrochener Download), greift ersatzweise das CDN:
+ * Die Seite bleibt damit immer bedienbar, offline laeuft sie sobald die Datei
+ * einmal im Repo liegt (der CI-Runner legt sie automatisch bereit).
+ */
+function vendor_asset(string $repoRel, string $cdn, int $minBytes = 1000): string
+{
+    $file = (defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__, 2)) . '/public/' . ltrim($repoRel, '/');
+    if (is_file($file) && (int) filesize($file) >= $minBytes) {
+        return asset_url($repoRel);
+    }
+    return $cdn;
+}
+
+/**
  * Jahrgangsstufen mit Informatik am Gymnasium Bayern (LehrplanPLUS):
  * Informatik ist ein eigenstaendiges Fach erst ab Jahrgangsstufe 9,
  * in der 8. Jahrgangsstufe gibt es keinen Informatikunterricht.

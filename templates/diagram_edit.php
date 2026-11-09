@@ -163,6 +163,6 @@ speicher "Schuelerliste" -->|Noten| senke "Zeugnis"</code></pre>
     </details>
 </section>
 </div>
-<script src="<?= asset_url('assets/vendor/mermaid.min.js') ?>"></script>
+<script src="<?= vendor_asset('assets/vendor/mermaid.min.js', 'https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js', 3000000) ?>"></script>
 <script>if (window.mermaid) { mermaid.initialize({ startOnLoad: false }); }</script>
-<script src="<?= asset_url('assets/vendor/highlight.min.js') ?>"></script>
+<script src="<?= vendor_asset('assets/vendor/highlight.min.js', 'https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.12.0/highlight.min.js', 100000) ?>"></script>

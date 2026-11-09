@@ -729,7 +729,7 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
     <?php endif; ?>
 </section>
 <?php endif; ?>
-<script src="<?= asset_url('assets/vendor/highlight.min.js') ?>"></script>
+<script src="<?= vendor_asset('assets/vendor/highlight.min.js', 'https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.12.0/highlight.min.js', 100000) ?>"></script>
 
 <?php if ($project->type === 'code' && $project->language === 'python'): ?>
 <section class="panel">
