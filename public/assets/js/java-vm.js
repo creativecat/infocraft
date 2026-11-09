@@ -6860,6 +6860,12 @@
         if (Object.prototype.hasOwnProperty.call(tables, k)) { all.push(tables[k]); }
       }
       all.sort(function (a, b) { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
+      /* Tabellennamen fuer die Autovervollstaendigung der DB-Konsole (#45 Nacharbeit). */
+      try {
+        var acNames = [];
+        for (var ai = 0; ai < all.length; ai++) { acNames.push(all[ai].name); }
+        window.IC_DB_TABLES = acNames;
+      } catch (e2) { /* kein window im Harness: egal */ }
       if (all.length === 0) {
         if (DB_SEED_ERRORS > 0) {
           var warn = document.createElement('div');
@@ -6872,58 +6878,121 @@
         dbSchemaBox.appendChild(document.createTextNode('Noch keine Tabellen: Lege sie im Programm an, z. B. Database.execute("CREATE TABLE schueler (name TEXT, punkte INT)"); danach erscheinen sie hier nach jedem Ausführen.'));
         return;
       }
+      /* Reines Tabellenschema (#45 Nacharbeit): jede Tabelle als eigene
+       * uebersichtliche Tabelle mit Spaltenname und Typ, keine Kacheln. */
+      var wrap = document.createElement('div');
+      wrap.className = 'schema-grid';
       for (var ti2 = 0; ti2 < all.length; ti2++) {
         var t = all[ti2];
-        var box = document.createElement('div');
-        box.className = 'uml-class db-table';
-        var head = document.createElement('div');
-        head.className = 'uml-name';
-        head.textContent = t.name;
-        head.title = 'Tabelle ' + t.name;
-        box.appendChild(head);
-        var sec = document.createElement('div');
-        sec.className = 'uml-sec';
+        var tbl = document.createElement('table');
+        tbl.className = 'db-schema-table';
+        tbl.title = 'Tabelle ' + t.name;
+        var thead = document.createElement('thead');
+        var hrow = document.createElement('tr');
+        var hcell = document.createElement('th');
+        hcell.colSpan = 2;
+        hcell.textContent = t.name;
+        hrow.appendChild(hcell);
+        thead.appendChild(hrow);
+        var sub = document.createElement('tr');
+        var sub1 = document.createElement('th');
+        sub1.textContent = 'Spalte';
+        var sub2 = document.createElement('th');
+        sub2.textContent = 'Typ';
+        sub.appendChild(sub1);
+        sub.appendChild(sub2);
+        thead.appendChild(sub);
+        tbl.appendChild(thead);
+        var tbody = document.createElement('tbody');
         for (var ci2 = 0; ci2 < t.cols.length; ci2++) {
-          var row = document.createElement('div');
-          row.className = 'uml-row';
+          var row = document.createElement('tr');
+          var c1 = document.createElement('td');
+          c1.textContent = t.cols[ci2].name;
+          var c2 = document.createElement('td');
           var kindName = { text: 'TEXT', int: 'INT', double: 'DOUBLE' }[t.cols[ci2].kind] || t.cols[ci2].kind;
-          row.textContent = t.cols[ci2].name + ' : ' + kindName;
-          sec.appendChild(row);
+          c2.textContent = kindName;
+          row.appendChild(c1);
+          row.appendChild(c2);
+          tbody.appendChild(row);
         }
         if (t.cols.length === 0) {
-          var empty = document.createElement('div');
-          empty.className = 'uml-row uml-empty';
-          empty.textContent = '(keine Spalten)';
-          sec.appendChild(empty);
+          var erow = document.createElement('tr');
+          var ecell = document.createElement('td');
+          ecell.colSpan = 2;
+          ecell.textContent = '(keine Spalten)';
+          erow.appendChild(ecell);
+          tbody.appendChild(erow);
         }
-        box.appendChild(sec);
-        dbSchemaBox.appendChild(box);
+        tbl.appendChild(tbody);
+        wrap.appendChild(tbl);
       }
+      dbSchemaBox.appendChild(wrap);
+    }
+    /* SQL-Text an Semikolons auf oberster Ebene trennen (Anführungszeichen
+     * respektieren), damit auch mehrere Befehle am Stueck klappen. */
+    function dbConsoleSplit(sqlText) {
+      var parts = [];
+      var current = '';
+      var inStr = false;
+      for (var i = 0; i < sqlText.length; i++) {
+        var ch = sqlText.charAt(i);
+        if (inStr) {
+          current += ch;
+          if (ch === "'") { inStr = false; }
+          continue;
+        }
+        if (ch === "'") { inStr = true; current += ch; continue; }
+        if (ch === ';') {
+          parts.push(current);
+          current = '';
+          continue;
+        }
+        current += ch;
+      }
+      parts.push(current);
+      return parts;
     }
     function dbConsoleRun() {
       if (!dbIn || !dbOut) { return; }
-      var sql = String(dbIn.value == null ? '' : dbIn.value).replace(/^\s+/, '').replace(/\s+$/, '');
-      if (sql === '') {
+      var sqlAll = String(dbIn.value == null ? '' : dbIn.value).replace(/^\s+/, '').replace(/\s+$/, '');
+      if (sqlAll === '') {
         dbOut.textContent = 'Schreibe zuerst eine Abfrage, z. B. SELECT * FROM tabelle;';
         return;
       }
       var ctx2 = { file: 'DB-Konsole', line: 1, cls: null, thisVal: null, vm: RUN_VM };
+      var lines = [];
       try {
-        var kwM = /^\s*([A-Za-z]+)/.exec(sql);
-        var kw = kwM ? kwM[1].toUpperCase() : '';
-        if (kw === 'SELECT') {
-          dbOut.textContent = dbFormat(dbSelect(sql, ctx2, 1));
-        } else {
-          dbExec(sql, ctx2, 1);
-          dbOut.textContent = 'Befehl ausgeführt (' + kw + '). Die Datenbank wird automatisch mit deinem Projekt gespeichert: INSERT, UPDATE und DELETE siehst du mit SELECT, neue Tabellen erscheinen oben.';
+        var parts = dbConsoleSplit(sqlAll);
+        var lastSelect = null;
+        var ran = 0;
+        for (var pi = 0; pi < parts.length; pi++) {
+          var sql = parts[pi].replace(/^\s+/, '').replace(/\s+$/, '');
+          if (sql === '') { continue; }
+          var kwM = /^\s*([A-Za-z]+)/.exec(sql);
+          var kw = kwM ? kwM[1].toUpperCase() : '';
+          if (kw === 'SELECT') {
+            lastSelect = dbFormat(dbSelect(sql, ctx2, 1));
+            lines.push('✅ SELECT ausgeführt.');
+          } else {
+            dbExec(sql, ctx2, 1);
+            ran++;
+          }
         }
+        if (ran > 0) {
+          lines.push('✅ ' + ran + ' Befehl(e) ausgeführt. Die Datenbank wird automatisch mit deinem Projekt gespeichert: INSERT, UPDATE und DELETE siehst du mit SELECT, neue Tabellen erscheinen oben.');
+        }
+        if (lastSelect !== null) { lines.push(lastSelect); }
+        dbOut.textContent = lines.join('\n');
       } catch (e) {
         if (e && e.jerr) {
           dbOut.textContent = e.jerr.message + (e.jerr.hint ? '  Tipp: ' + e.jerr.hint : '');
         }
-        else { throw e; }
+        else {
+          /* Kein stiller Absturz: Jede Rueckmeldung ist besser als nichts. */
+          dbOut.textContent = 'Unerwarteter Fehler beim Ausführen: ' + (e && e.message ? e.message : String(e));
+        }
       }
-      renderDbSchema();
+      try { renderDbSchema(); } catch (e2) { /* Schema-Anzeige darf die Konsole nicht blockieren */ }
       /* Änderungen aus der DB-Konsole automatisch mitspeichern (#44). */
       if (typeof autoSaveSoon === 'function') { autoSaveSoon(); }
     }
