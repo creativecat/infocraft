@@ -11,7 +11,7 @@ $areaIcons = ['lernbereich' => '📖', 'gemeinsam' => '🤝', 'eigen' => '🔒']
 <div class="btn-row ibook-topnav">
     <a class="btn btn-ghost" href="<?= url('infobuecher') ?>">← Alle InfoBooks</a>
     <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation' . ($activeSection !== null ? '?abschnitt=' . (int) $activeSection['id'] : '')) ?>" title="Alle Seiten als Präsentation anzeigen (ohne Kopie)">🎬 Als Präsentation anzeigen</a>
-    <?php if (Auth::isTeacher()): ?>
+    <?php if (\Infocraft\Auth::isTeacher()): ?>
     <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/als-praesentation') ?>" class="inline-form">
         <?= csrf_field() ?>
         <?php if ($activeSection !== null): ?><input type="hidden" name="section_id" value="<?= (int) $activeSection['id'] ?>"><?php endif; ?>

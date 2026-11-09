@@ -21,7 +21,7 @@
 <?php endif; ?>
 <?php else: ?>
 
-<?php if (Auth::isTeacher()): ?>
+<?php if (\Infocraft\Auth::isTeacher()): ?>
 <section class="panel ibook-distribute">
     <h3>📤 An Klasse verteilen</h3>
     <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/verteilen') ?>" class="form ibook-distribute-form">
