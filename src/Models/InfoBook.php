@@ -413,7 +413,7 @@ final class InfoBook
     }
 
     /**
-     * Einbettungs-URLs: Nur YouTube (nocookie) und LearningApps erlauben,
+     * Einbettungs-URLs: Nur YouTube (nocookie), LearningApps und H5P erlauben,
      * sonst nichts einbetten (Schulnetz-Sicherheit, keine offene iframe-Bastellei).
      */
     public static function cleanEmbedUrl(string $url): string
@@ -445,6 +445,16 @@ final class InfoBook
         }
         if ($host === 'learningapps.org' || $host === 'www.learningapps.org') {
             return $url;
+        }
+        if ($host === 'h5p.org' || $host === 'www.h5p.org' || $host === 'h5p.com' || $host === 'www.h5p.com') {
+            $path = (string) (parse_url($url, PHP_URL_PATH) ?? '');
+            if (preg_match('#^/(node|content)/(\d+)/?$#', $path, $m)) {
+                return 'https://' . $host . '/' . $m[1] . '/' . $m[2] . '/embed';
+            }
+            if (str_ends_with($path, '/embed')) {
+                return $url;
+            }
+            return '';
         }
         return '';
     }

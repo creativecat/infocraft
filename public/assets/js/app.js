@@ -2084,8 +2084,8 @@
         th.setAttribute('alt', 'Vorschau');
         div.appendChild(th);
       }
-      div.appendChild(el('div', 'icv-ph', '🔗 ' + ((item.url || '').indexOf('learningapps') >= 0 ? 'LearningApps' : (item.url || '').indexOf('youtube') >= 0 ? 'YouTube' : 'Einbettung')));
-      div.appendChild(el('div', 'muted icv-ph-sub', (item.title ? item.title + ' · ' : '') + (item.url || 'Adresse in der Leiste oben eingeben (YouTube oder LearningApps)')));
+      div.appendChild(el('div', 'icv-ph', '🔗 ' + ((item.url || '').indexOf('learningapps') >= 0 ? 'LearningApps' : (item.url || '').indexOf('h5p') >= 0 ? 'H5P' : (item.url || '').indexOf('youtube') >= 0 ? 'YouTube' : 'Einbettung')));
+      div.appendChild(el('div', 'muted icv-ph-sub', (item.title ? item.title + ' · ' : '') + (item.url || 'Adresse in der Leiste oben eingeben (YouTube, LearningApps oder H5P)')));
     } else if (item.kind === 'audio') {
       div.appendChild(el('div', 'icv-ph', '🔊 Audio'));
       div.appendChild(el('div', 'muted icv-ph-sub', (item.name || 'Audio') + ' · im Lesemodus abspielbar'));
@@ -2164,7 +2164,7 @@
   var ctxEmbed = el('div', 'icv-ctx-group');
   var ctxUrl = el('input', 'icv-ctx-input');
   ctxUrl.type = 'text';
-  ctxUrl.placeholder = 'https://www.youtube.com/watch?v=... oder https://learningapps.org/...';
+  ctxUrl.placeholder = 'https://www.youtube.com/watch?v=..., https://learningapps.org/... oder https://h5p.com/content/...';
   var ctxTitle = el('input', 'icv-ctx-input');
   ctxTitle.type = 'text';
   ctxTitle.placeholder = 'Titel (optional)';
@@ -2462,7 +2462,7 @@
   toolbar.appendChild(vidBtn);
   toolbar.appendChild(vidFile);
   var embBtn = el('button', 'btn btn-ghost', '🔗'); embBtn.type = 'button';
-  embBtn.title = 'Einbettung einfügen: YouTube (ohne Cookies) oder LearningApps';
+  embBtn.title = 'Einbettung einfügen: YouTube (ohne Cookies), LearningApps oder H5P';
   embBtn.addEventListener('click', function () { addEmbedAt(block.w / 2 - 240, block.h / 2 - 40); });
   toolbar.appendChild(embBtn);
   toolbar.appendChild(ctxBar);
