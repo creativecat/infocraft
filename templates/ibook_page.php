@@ -32,7 +32,36 @@
     <?php foreach ($navEntry['pages'] as $navPage): ?>
     <a class="ibook-pagenav-page<?= (int) $navPage['id'] === (int) $page['id'] ? ' active' : '' ?>" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $navPage['id'] . $navLesen) ?>" title="Seite öffnen"><?= e((string) $navPage['title']) ?></a>
     <?php endforeach; ?>
+    <?php /* #72: Seite direkt im Abschnitt anlegen, ohne Umweg ueber die
+     * Buch-Uebersicht. Nach dem Anlegen oeffnet sich die neue Seite. */ ?>
+    <?php if (!empty($navEntry['canWrite'])): ?>
+    <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/seite') ?>" class="ibook-navnew">
+        <?= csrf_field() ?>
+        <input type="hidden" name="section_id" value="<?= (int) $navSec['id'] ?>">
+        <input type="text" name="title" maxlength="160" placeholder="Neue Seite" aria-label="Neue Seite in diesem Abschnitt anlegen">
+        <button class="btn btn-ghost" type="submit" title="Neue Seite in diesem Abschnitt anlegen (öffnet sich danach direkt)">➕</button>
+    </form>
+    <?php endif; ?>
     <?php endforeach; ?>
+    <?php /* #72: Abschnitt direkt hier anlegen; Lehrkraefte waehlen den Bereich. */ ?>
+    <?php if ($canWrite): ?>
+    <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/abschnitt') ?>" class="form ibook-navnewsec">
+        <?= csrf_field() ?>
+        <label class="field"><span>Neuer Abschnitt</span>
+            <input type="text" name="title" maxlength="160" placeholder="z. B. Schleifen">
+            <?php if (\Infocraft\Auth::isTeacher()): ?>
+            <select name="area">
+                <option value="lernbereich">📖 Lernbereich</option>
+                <option value="gemeinsam">🤝 Zusammenarbeit</option>
+                <option value="eigen">🔒 Mein Bereich</option>
+            </select>
+            <?php else: ?>
+            <input type="hidden" name="area" value="gemeinsam">
+            <?php endif; ?>
+        </label>
+        <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Abschnitt anlegen">➕ Abschnitt anlegen</button></div>
+    </form>
+    <?php endif; ?>
     </details>
 </aside>
 <div class="ibook-pagemain">

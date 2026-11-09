@@ -320,7 +320,9 @@ final class InfoBookController
          * auf der Seitenseite zwischen den Seiten springen kann. */
         $nav = [];
         foreach (InfoBook::sections($book->id) as $navSection) {
-            $nav[] = ['section' => $navSection, 'pages' => InfoBook::pages((int) $navSection['id'])];
+            /* #72: Schreibrecht je Abschnitt mitgeben, damit die Sidebar nur
+             * dort das "Neue Seite"-Formular zeigt, wo es erlaubt ist. */
+            $nav[] = ['section' => $navSection, 'pages' => InfoBook::pages((int) $navSection['id']), 'canWrite' => self::canWriteSection($navSection, $user)];
         }
         $blocks = InfoBook::pageBlocks($page);
         foreach ($blocks as $i => $block) {
