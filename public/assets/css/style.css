@@ -1315,3 +1315,182 @@ span.hlwrap { display: block; }
 .asm-commands table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .asm-commands td { border-top: 1px solid var(--border); padding: 6px 8px; vertical-align: top; }
 .asm-commands pre { margin: 0; }
+
+/* ===== Objektkonsole: Anweisungsfeld ueber die volle Breite (#61 Nacharbeit).
+ * Zwischen Gutter und Textarea liegt ein .hlwrap (Syntaxfarben-Wrapper), das
+ * ohne flex-Anteil auf die Textbreite schrumpft und das Feld schmal macht. */
+.repl-edit > .hlwrap { flex: 1; min-width: 0; }
+.repl-edit > .hlwrap > #java-repl-in { width: 100%; }
+
+/* ===== Grafik-Fenster im Dock: volle Breite statt fester Pixelbreite.
+ * Position erbt vom Dock (keine absolute Breite mehr), der Canvas misst
+ * die Zeilenbreite 1:1 mit (java-vm.js passt canvas.width an). */
+.gfx-dock .gfx-window { width: 100%; max-width: none; }
+.gfx-dock .gfx-canvas { width: 100%; height: auto; }
+
+/* ===== InfoBook (#62): OneNote-artige Seiten mit Medien ===== */
+
+/* Buch-Ansicht: Abschnitts-Sidebar links, Seiten rechts */
+.ibook-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 18px;
+    align-items: start;
+}
+.ibook-side {
+    position: sticky;
+    top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: calc(100vh - 28px);
+    overflow-y: auto;
+    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+.ibook-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.ibook-side-forms { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.ibook-area-head {
+    margin: 10px 0 2px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+.ibook-area-head:first-child { margin-top: 0; }
+.ibook-area-list { display: flex; flex-direction: column; gap: 4px; }
+.ibook-section {
+    display: block;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    color: var(--text);
+    font-size: 0.92rem;
+    line-height: 1.35;
+}
+.ibook-section:hover { background: #eef0fe; }
+.ibook-section.active { background: var(--primary); color: #fff; font-weight: 600; border-color: var(--primary-2); }
+.ibook-section-title { display: block; }
+.ibook-inline-label { font-size: 0.78rem; opacity: 0.75; }
+.ibook-section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0 0 4px; }
+.ibook-page-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+.ibook-page-card:hover { border-color: #a5b4fc; }
+.ibook-page-title { font-weight: 600; color: var(--text); }
+.ibook-hero-compact h1 { margin-bottom: 2px; }
+.ibook-newsection, .ibook-newpage { margin: 0; }
+.ibook-topnav { margin-bottom: 8px; }
+
+/* Seiteneditor: Bausteine untereinander, jede mit Kopfzeile und Steuerung */
+#ibook-editor { display: flex; flex-direction: column; gap: 14px; }
+.iblock {
+    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.iblock-head { display: flex; align-items: center; gap: 10px; }
+.iblock-name { font-weight: 700; font-size: 0.9rem; color: var(--primary-2); }
+.iblock-bar { margin-left: auto; display: flex; gap: 4px; }
+.iblock-ta {
+    width: 100%;
+    min-height: 130px;
+    resize: vertical;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text);
+}
+.iblock-input, .iblock-file {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    font: inherit;
+    color: var(--text);
+}
+.iblock-hint { font-size: 0.82rem; }
+.iblock-preview { display: flex; flex-direction: column; gap: 6px; }
+.iblock-preview-img { max-width: 100%; max-height: 420px; border-radius: 10px; border: 1px solid var(--border); }
+.iblock-preview-video { width: 100%; max-height: 420px; border-radius: 10px; background: #000; }
+.ibook-status { font-size: 0.85rem; color: var(--muted); min-height: 1.2em; }
+.ibook-status-err { color: #b91c1c; font-weight: 600; }
+
+/* Freihand-Zeichnen (Apple Pencil, Pointer Events mit Druck) */
+.ibook-draw-wrap { display: flex; flex-direction: column; gap: 8px; }
+.ibook-draw {
+    width: 100%;
+    max-width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fff;
+    touch-action: none; /* Zeichnen statt Scrollen auf dem Tablet */
+}
+.ibook-draw-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ibook-draw-color, .ibook-draw-width { padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); font: inherit; }
+
+/* Lesen-Ansicht und Präsentation: gerenderte Bausteine */
+.iblock-text { margin: 12px 0; }
+.iblock-text img { max-width: 100%; border-radius: 10px; }
+figure.iblock-image, figure.iblock-embed, figure.iblock-audio, figure.iblock-video { margin: 14px 0; }
+.iblock-image img { max-width: 100%; border-radius: 12px; border: 1px solid var(--border); }
+.embed-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: #0f172a;
+}
+.embed-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.iblock-audio audio { width: 100%; }
+.iblock-video video { width: 100%; max-height: 480px; border-radius: 12px; background: #000; }
+figure.iblock-image figcaption, figure.iblock-embed figcaption {
+    margin-top: 6px;
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+
+/* InfoBook als Präsentation: Medien in Folien groesser zeichnen */
+.slide .iblock-image img { max-height: 62vh; object-fit: contain; }
+.slide .embed-frame { max-height: 62vh; aspect-ratio: 16 / 9; margin: 0 auto; }
+.slide .iblock-video video { max-height: 62vh; }
+
+/* ===== Tablet / Apple-Pencil (#62): groessere Tastziele und mehr Luft ===== */
+@media (pointer: coarse) {
+    .iblock { padding: 14px; gap: 12px; }
+    .iblock-bar .btn, .ibook-draw-tools .btn { min-width: 44px; min-height: 44px; }
+    .ibook-draw-color, .ibook-draw-width { min-height: 44px; }
+    .iblock-ta { min-height: 180px; font-size: 1rem; }
+    .ibook-section { padding: 12px 12px; }
+    .ibook-page-card { padding: 14px 16px; }
+    #ibook-editor + .btn-row .btn { min-height: 44px; }
+}
+
+/* Schmale Screens: Sidebar des InfoBooks nach oben */
+@media (max-width: 900px) {
+    .ibook-layout { grid-template-columns: 1fr; }
+    .ibook-side { position: static; max-height: none; }
+}

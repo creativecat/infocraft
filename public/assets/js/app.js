@@ -1641,7 +1641,24 @@
       else if (e.key === 'Escape') { close(); }
     });
     ta.addEventListener('blur', function () { setTimeout(close, 120); });
-    drop.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    drop.addEventListener('mousedown', function (e) {
+      /* Klick auf einen Vorschlag: Fokus halten, der uebernimmt den Eintrag. */
+      var onItem = e.target && e.target.classList && e.target.classList.contains('ac-item');
+      if (onItem) { e.preventDefault(); return; }
+      /* Klick auf die freie Flaeche der Vorschlagsbox (#60): Die Box liegt
+       * als Layer direkt UEBER der Zeile mit dem Ausfuehren-Button und hat
+       * den Klick bisher komplett geschluckt - die Abfrage lief dann nie.
+       * Jetzt: Box schliessen und den Klick an das Element darunter
+       * durchreichen, z. B. an "Abfrage ausfuehren". */
+      e.preventDefault();
+      close();
+      try {
+        if (document.elementFromPoint && typeof e.clientX === 'number') {
+          var below = document.elementFromPoint(e.clientX, e.clientY);
+          if (below && below !== drop && below !== ta && below.click) { below.click(); }
+        }
+      } catch (e2) { /* Harness ohne elementFromPoint: Box ist zu, das genuegt */ }
+    });
     drop.addEventListener('click', function (e) {
       var item = e.target && e.target.getAttribute ? e.target : (e.target.parentNode);
       var idx = item && item.getAttribute ? parseInt(item.getAttribute('data-idx'), 10) : NaN;
@@ -1671,4 +1688,292 @@
     if (ta) { attach(ta, kind); }
   });
   window.IC_AUTOCOMPLETE = { attach: attach };
+})();
+
+/* =====================================================================
+ * InfoBook-Seiteneditor (#62): Bloecke fuer Text, Bild, Audio, Video,
+ * Einbettung (YouTube/LearningApps) und Freihand-Zeichnung (Apple Pencil,
+ * Druckempfindlich ueber Pointer Events, optimiert fuer Tablets).
+ * ===================================================================== */
+(function () {
+  'use strict';
+  var editor = typeof document !== 'undefined' ? document.getElementById('ibook-editor') : null;
+  if (!editor) { return; }
+  var bookId = parseInt(editor.getAttribute('data-book-id') || '0', 10) || 0;
+  var blocks = [];
+  try { blocks = JSON.parse(editor.getAttribute('data-blocks') || '[]') || []; } catch (e) { blocks = []; }
+  if (!Array.isArray(blocks)) { blocks = []; }
+  var csrf = '';
+  try { csrf = document.body.getAttribute('data-csrf') || ''; } catch (e) { /* Harness */ }
+  var status = null;
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) { n.className = cls; }
+    if (text !== undefined) { n.textContent = text; }
+    return n;
+  }
+  function say(msg, isErr) {
+    if (!status) { return; }
+    status.textContent = msg;
+    status.className = 'ibook-status' + (isErr ? ' ibook-status-err' : '');
+  }
+  function mediaUrl(id) { return '/infobuecher/medium/' + id; }
+
+  function upload(kind, file, done) {
+    var fd = new FormData();
+    fd.append('csrf', csrf);
+    fd.append('kind', kind);
+    fd.append('file', file, file.name);
+    fetch('/infobuecher/' + bookId + '/medium', { method: 'POST', body: fd })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data && data.ok) { done(data); say((kind === 'image' ? 'Bild' : kind === 'audio' ? 'Audio' : 'Video') + ' hochgeladen: ' + data.name); }
+        else { say('Upload fehlgeschlagen: ' + ((data && data.error) || 'unbekannter Fehler'), true); }
+      })
+      .catch(function (err) { say('Upload fehlgeschlagen: ' + err, true); });
+  }
+
+  function drawBlockControls(row, block, refresh) {
+    var bar = el('div', 'iblock-bar');
+    var up = el('button', 'btn btn-ghost', '↑'); up.type = 'button'; up.title = 'Nach oben';
+    var down = el('button', 'btn btn-ghost', '↓'); down.type = 'button'; down.title = 'Nach unten';
+    var del = el('button', 'btn btn-danger', '🗑'); del.type = 'button'; del.title = 'Baustein entfernen';
+    up.addEventListener('click', function () {
+      var i = blocks.indexOf(block);
+      if (i > 0) { blocks.splice(i, 1); blocks.splice(i - 1, 0, block); renderAll(); }
+    });
+    down.addEventListener('click', function () {
+      var i = blocks.indexOf(block);
+      if (i >= 0 && i < blocks.length - 1) { blocks.splice(i, 1); blocks.splice(i + 1, 0, block); renderAll(); }
+    });
+    del.addEventListener('click', function () {
+      var i = blocks.indexOf(block);
+      if (i >= 0) { blocks.splice(i, 1); renderAll(); }
+    });
+    bar.appendChild(up); bar.appendChild(down); bar.appendChild(del);
+    row.appendChild(bar);
+  }
+
+  function blockRow(block) {
+    var row = el('div', 'iblock iblock-' + block.type);
+    var head = el('div', 'iblock-head');
+    var names = { text: '✍️ Text', image: '🖼 Bild', audio: '🔊 Audio', video: '🎞 Video', embed: '🔗 Einbettung', zeichnen: '✏️ Zeichnen' };
+    head.appendChild(el('span', 'iblock-name', names[block.type] || block.type));
+    row.appendChild(head);
+    drawBlockControls(row, block);
+
+    if (block.type === 'text') {
+      var ta = el('textarea', 'mono iblock-ta');
+      ta.rows = 6;
+      ta.value = block.body || '';
+      ta.setAttribute('data-ac-md', '1');
+      if (typeof window !== 'undefined' && window.IC_AUTOCOMPLETE && window.IC_AUTOCOMPLETE.attach) {
+        try { window.IC_AUTOCOMPLETE.attach(ta, 'md'); } catch (eAC) { /* harmlos */ }
+      }
+      ta.addEventListener('input', function () { block.body = ta.value; });
+      row.appendChild(ta);
+    } else if (block.type === 'embed') {
+      var urlIn = el('input', 'iblock-input'); urlIn.type = 'text'; urlIn.placeholder = 'https://www.youtube.com/watch?v=... oder https://learningapps.org/...';
+      urlIn.value = block.url || '';
+      urlIn.addEventListener('input', function () { block.url = urlIn.value; });
+      var titleIn = el('input', 'iblock-input'); titleIn.type = 'text'; titleIn.placeholder = 'Titel (optional)';
+      titleIn.value = block.title || '';
+      titleIn.addEventListener('input', function () { block.title = titleIn.value; });
+      row.appendChild(urlIn); row.appendChild(titleIn);
+      row.appendChild(el('div', 'muted iblock-hint', 'Erlaubt sind YouTube-Videos und LearningApps. Die Adresse wird geprüft, alles Andere wird nicht eingebettet.'));
+    } else if (block.type === 'zeichnen') {
+      var wrap = el('div', 'ibook-draw-wrap');
+      var canvas = el('canvas', 'ibook-draw');
+      canvas.width = 960; canvas.height = 640;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (block.media) {
+        var img = new Image();
+        img.onload = function () { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); };
+        img.src = mediaUrl(block.media);
+      }
+      var tools = el('div', 'ibook-draw-tools');
+      var color = el('select', 'ibook-draw-color');
+      [['#1f2937', 'Stift'], ['#ef4444', 'Rot'], ['#3b82f6', 'Blau'], ['#059669', 'Grün'], ['#ffffff', 'Radierer']].forEach(function (opt) {
+        var o = el('option', '', opt[1]); o.value = opt[0]; color.appendChild(o);
+      });
+      var width = el('select', 'ibook-draw-width');
+      [['2', 'Dünn'], ['4', 'Mittel'], ['8', 'Dick'], ['16', 'Extra dick (Pencil)']].forEach(function (opt) {
+        var o = el('option', '', opt[1]); o.value = opt[0]; width.appendChild(o);
+      });
+      var clear = el('button', 'btn btn-ghost', 'Leeren'); clear.type = 'button';
+      clear.addEventListener('click', function () {
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      });
+      var saveBtn = el('button', 'btn btn-primary', 'Zeichnung übernehmen'); saveBtn.type = 'button';
+      saveBtn.addEventListener('click', function () {
+        try {
+          var dataUrl = canvas.toDataURL('image/png');
+          var fd = new FormData();
+          fd.append('csrf', csrf);
+          fd.append('name', 'zeichnung');
+          fd.append('data', dataUrl);
+          fetch('/infobuecher/' + bookId + '/zeichnung', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              if (data && data.ok) {
+                block.media = data.id; block.name = data.name;
+                say('Zeichnung übernommen.');
+                renderAll();
+              } else { say('Zeichnung konnte nicht gespeichert werden: ' + ((data && data.error) || '?'), true); }
+            })
+            .catch(function (err) { say('Zeichnung konnte nicht gespeichert werden: ' + err, true); });
+        } catch (e) { say('Zeichnung konnte nicht gelesen werden.', true); }
+      });
+      tools.appendChild(color); tools.appendChild(width); tools.appendChild(clear); tools.appendChild(saveBtn);
+      wrap.appendChild(canvas); wrap.appendChild(tools);
+      row.appendChild(wrap);
+      /* Freihand: Pointer Events statt Maus-Events, damit Apple Pencil
+       * (und Finger) sauber zeichnen; touch-action verhindert Scroll-Gesten
+       * ueber der Zeichenflaeche. Linke Breite folgt dem Stiftdruck. */
+      var drawing = false;
+      canvas.style.touchAction = 'none';
+      function pos(ev) {
+        var r = canvas.getBoundingClientRect();
+        return { x: (ev.clientX - r.left) * (canvas.width / r.width), y: (ev.clientY - r.top) * (canvas.height / r.height) };
+      }
+      canvas.addEventListener('pointerdown', function (ev) {
+        drawing = true;
+        try { canvas.setPointerCapture(ev.pointerId); } catch (e) { /* aeltere Browser */ }
+        var p = pos(ev);
+        ctx.strokeStyle = color.value;
+        var pr = ev.pressure && ev.pressure > 0 ? ev.pressure : 1;
+        ctx.lineWidth = Math.max(1, parseInt(width.value, 10) * (0.5 + pr));
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+      });
+      canvas.addEventListener('pointermove', function (ev) {
+        if (!drawing) { return; }
+        ev.preventDefault();
+        var p = pos(ev);
+        var pr = ev.pressure && ev.pressure > 0 ? ev.pressure : 1;
+        ctx.lineWidth = Math.max(1, parseInt(width.value, 10) * (0.5 + pr));
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      });
+      canvas.addEventListener('pointerup', function () { drawing = false; });
+      canvas.addEventListener('pointercancel', function () { drawing = false; });
+    } else {
+      /* Bild, Audio, Video: Datei hochladen, Vorschau direkt abspielbar. */
+      var kind = block.type;
+      var fileIn = el('input', 'iblock-file'); fileIn.type = 'file';
+      fileIn.accept = kind === 'image' ? 'image/png,image/jpeg,image/gif,image/webp' : kind === 'audio' ? 'audio/*' : 'video/*';
+      fileIn.addEventListener('change', function () {
+        if (fileIn.files && fileIn.files[0]) {
+          say('Lade ' + (kind === 'image' ? 'Bild' : kind === 'audio' ? 'Audio' : 'Video') + ' hoch ...');
+          upload(kind, fileIn.files[0], function (data) {
+            block.media = data.id; block.name = data.name;
+            renderAll();
+          });
+        }
+      });
+      var pick = el('button', 'btn btn-ghost', kind === 'image' ? '🖼 Datei wählen' : kind === 'audio' ? '🔊 Datei wählen' : '🎞 Datei wählen');
+      pick.type = 'button';
+      pick.addEventListener('click', function () { fileIn.click(); });
+      row.appendChild(pick);
+      row.appendChild(fileIn);
+      if (kind === 'image') {
+        var alt = el('input', 'iblock-input'); alt.type = 'text'; alt.placeholder = 'Bildbeschreibung (optional, fürs Lesen mit Vorlesefunktion)';
+        alt.value = block.alt || '';
+        alt.addEventListener('input', function () { block.alt = alt.value; });
+        row.appendChild(alt);
+      }
+      var preview = el('div', 'iblock-preview');
+      function renderPreview() {
+        preview.textContent = '';
+        if (!block.media) {
+          preview.appendChild(el('div', 'muted', 'Noch keine Datei.'));
+          return;
+        }
+        if (kind === 'image') {
+          var im = el('img'); im.src = mediaUrl(block.media); im.alt = block.alt || block.name || 'Bild';
+          im.className = 'iblock-preview-img';
+          preview.appendChild(im);
+        } else if (kind === 'audio') {
+          var au = el('audio'); au.controls = true; au.src = mediaUrl(block.media); au.preload = 'metadata';
+          preview.appendChild(au);
+        } else {
+          var vi = el('video'); vi.controls = true; vi.src = mediaUrl(block.media); vi.preload = 'metadata';
+          vi.className = 'iblock-preview-video';
+          preview.appendChild(vi);
+        }
+      }
+      renderPreview();
+      row.appendChild(preview);
+    }
+    return row;
+  }
+
+  function renderAll() {
+    editor.textContent = '';
+    blocks.forEach(function (block) { editor.appendChild(blockRow(block)); });
+    collect();
+  }
+
+  function collect() {
+    var out = [];
+    blocks.forEach(function (block) {
+      var entry = { type: block.type };
+      if (block.type === 'text') { entry.body = block.body || ''; }
+      else if (block.type === 'embed') { entry.url = block.url || ''; entry.title = block.title || ''; }
+      else {
+        entry.media = block.media || 0;
+        entry.name = block.name || '';
+        if (block.alt) { entry.alt = block.alt; }
+      }
+      out.push(entry);
+    });
+    var jsonIn = document.getElementById('ibook-blocks-json');
+    if (jsonIn) { jsonIn.value = JSON.stringify(out); }
+  }
+
+  var addrow = document.getElementById('ibook-addrow');
+  if (addrow) {
+    addrow.addEventListener('click', function (ev) {
+      var btn = ev.target && ev.target.getAttribute ? ev.target : null;
+      var kind = btn ? btn.getAttribute('data-ib-add') : null;
+      if (!kind) { return; }
+      var block = { type: kind };
+      if (kind === 'text') { block.body = ''; }
+      if (kind === 'embed') { block.url = ''; block.title = ''; }
+      blocks.push(block);
+      renderAll();
+      var last = editor.lastChild;
+      if (last && last.scrollIntoView) { last.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    });
+  }
+
+  var saveform = document.getElementById('ibook-saveform');
+  if (saveform) {
+    saveform.addEventListener('submit', function () { collect(); });
+    var title = document.getElementById('ibook-title');
+    if (title && title.form) { /* Titel steckt im selben Formular */ }
+  }
+
+  status = el('div', 'ibook-status');
+  editor.parentNode.insertBefore(status, editor.nextSibling);
+  renderAll();
+})();
+
+/* Globaler data-confirm-Schutz: Formulare mit data-confirm fragen vor dem
+ * Absenden nach (z.B. InfoBook/Abschnitt loeschen). */
+(function () {
+  'use strict';
+  if (typeof document === 'undefined' || !document.addEventListener) { return; }
+  document.addEventListener('submit', function (ev) {
+    var form = ev.target;
+    if (!form || !form.getAttribute || !form.getAttribute('data-confirm')) { return; }
+    var msg = form.getAttribute('data-confirm');
+    var ok = false;
+    try { ok = window.confirm(msg); } catch (e) { ok = true; /* Harness ohne confirm */ }
+    if (!ok) { ev.preventDefault(); }
+  }, true);
 })();

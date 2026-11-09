@@ -3956,6 +3956,17 @@
     canvas.addEventListener('mousemove', function (ev) { gfxMouse(ev, 'move'); });
     close.addEventListener('click', function () { gfxHideWindow(); });
     vm.gfx.windowState = st;
+    /* Fensterbreite des Docks nachziehen, wenn das Browserfenster die
+     * Groesse aendert (Grafik-Fenster bleibt ueber die volle Breite). */
+    if (typeof window !== 'undefined' && window.addEventListener && !el.__gfxResizeHook) {
+      el.__gfxResizeHook = true;
+      window.addEventListener('resize', function () {
+        if (RUN_VM && RUN_VM.gfx && RUN_VM.gfx.world && st && !st.hidden) {
+          gfxApplyWorldSize(RUN_VM, RUN_VM.gfx.world);
+          gfxRedraw(RUN_VM);
+        }
+      });
+    }
     return st;
   }
   function gfxHideWindow() {
@@ -3971,11 +3982,21 @@
   function gfxApplyWorldSize(vm, w) {
     var st = vm.gfx.windowState || gfxWindowFind();
     if (!st || !st.canvas || !w || !(w.w > 0) || !(w.h > 0)) { return; }
-    var cw = Math.max(240, Math.min(960, Math.round(w.w)));
+    /* Im Dock fuellt das Grafik-Fenster die volle Breite der Zeile (#62-
+     * Nacharbeit): Das Fenster hat keine absolute Breite mehr (CSS regelt
+     * width:100%), und der Canvas bekommt genau die Dock-Breite als
+     * Pixelgroesse, damit Zeichnung, GUI-Elemente und Maus 1:1 bleiben.
+     * Ohne Dock (Overlay aelterer Seiten) gilt weiter die Weltbreite. */
+    var host = st.el && st.el.parentNode ? st.el.parentNode : null;
+    var docked = !!(host && host.id === 'gfx-dock' && host.clientWidth > 0);
+    var cw = docked ? Math.max(240, Math.round(host.clientWidth)) : Math.max(240, Math.min(960, Math.round(w.w)));
     var ch = Math.max(1, Math.round(cw * w.h / w.w));
     st.canvas.width = cw;
     st.canvas.height = ch;
-    if (st.el && st.el.style) { st.el.style.width = cw + 'px'; }
+    if (st.el && st.el.style) {
+      if (docked) { st.el.style.width = ''; }
+      else { st.el.style.width = cw + 'px'; }
+    }
   }
   function gfxShowWindow(vm) {
     var st = vm.gfx.windowState || gfxEnsureWindow(vm);
@@ -4878,8 +4899,12 @@
     var rect = st.canvas.getBoundingClientRect ? st.canvas.getBoundingClientRect() : null;
     if (!rect) { return; }
     var tr = gfxTransformOf(RUN_VM);
-    var wx = ((ev.clientX - rect.left) - tr.ox) / tr.s;
-    var wy = ((ev.clientY - rect.top) - tr.oy) / tr.s;
+    /* Falls der Canvas per CSS gestreckt ist (Dock in schmalen Screens),
+     * zaehlen client-Koordinaten in Anzeige- statt Canvas-Pixeln. */
+    var msx = rect.width > 0 ? st.canvas.width / rect.width : 1;
+    var msy = rect.height > 0 ? st.canvas.height / rect.height : 1;
+    var wx = (((ev.clientX - rect.left) * msx) - tr.ox) / tr.s;
+    var wy = (((ev.clientY - rect.top) * msy) - tr.oy) / tr.s;
     var hit = null;
     var i;
     for (i = RUN_VM.gfx.shapes.length - 1; i >= 0; i--) {
@@ -7399,17 +7424,29 @@ function dbConsoleRun() {
 /* Klick-Delegation (#60): Der Listener hängt am Dokument und greift jeden
  * Klick auf #java-db-run ab - auch dann, wenn der Button durch DOM-Umbauten
  * neu erstellt wurde und ein direkter Listener verlorengegangen ist.
- * Ohne document.addEventListener (Test-Harness) bleibt der direkte Listener. */
+ * ZUSATZ: Ein direkter Listener am Button laeuft IMMER mit (Ziel-Phase,
+ * vor der Delegation) und markiert den Klick mit __icDbRunDone; die
+ * Delegation prueft die Marke und laeuft dann nicht doppelt. So faengt
+ * der Button den Klick auch dann, wenn irgendetwas auf dem Weg zum
+ * Dokument den Event abfaengt. */
+if (dbRunBtn && typeof dbRunBtn.addEventListener === 'function') {
+  dbRunBtn.addEventListener('click', function (ev) {
+    if (ev && ev.__icDbRunDone) { return; }
+    if (ev) { ev.__icDbRunDone = true; }
+    dbConsoleRun();
+  });
+}
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
   document.addEventListener('click', function (ev) {
+    if (ev && ev.__icDbRunDone) { return; }
     var t = ev.target;
     while (t && t.tagName) {
-      if (t.id === 'java-db-run') { dbConsoleRun(); return; }
+      if (t.id === 'java-db-run') { if (ev) { ev.__icDbRunDone = true; } dbConsoleRun(); return; }
       if (t === document.body || !t.parentNode) { return; }
       t = t.parentNode;
     }
   });
-} else if (dbRunBtn) { dbRunBtn.addEventListener('click', dbConsoleRun); }
+}
 if (dbIn) {
   dbIn.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
