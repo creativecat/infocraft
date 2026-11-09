@@ -57,14 +57,14 @@ INSERT INTO likes (post_id, nutzer_id) VALUES
     (7, 1), (7, 6), (8, 2), (8, 3), (9, 6), (9, 8),
     (10, 1), (10, 3), (10, 8), (11, 2), (12, 3), (12, 5);
 INSERT INTO kommentare (id, post_id, nutzer_id, text, datum) VALUES
-    (1, 1, 3, 'Wunderschön!'),
-    (2, 2, 4, 'War ein toller Ausflug'),
-    (3, 3, 1, 'Coole Konstruktion'),
-    (4, 4, 5, 'Das kannst du super'),
-    (5, 6, 7, 'Rezept bitte!'),
-    (6, 7, 1, 'Glückwunsch zum Sieg'),
-    (7, 9, 6, 'Wann kommt das nächste Konzert?'),
-    (8, 12, 5, 'Magischer Moment');
+    (1, 1, 3, 'Wunderschön!', '2026-09-12'),
+    (2, 2, 4, 'War ein toller Ausflug', '2026-09-18'),
+    (3, 3, 1, 'Coole Konstruktion', '2026-09-25'),
+    (4, 4, 5, 'Das kannst du super', '2026-10-05'),
+    (5, 6, 7, 'Rezept bitte!', '2026-10-11'),
+    (6, 7, 1, 'Glückwunsch zum Sieg', '2026-10-12'),
+    (7, 9, 6, 'Wann kommt das nächste Konzert?', '2026-10-17'),
+    (8, 12, 5, 'Magischer Moment', '2026-10-24');
 INSERT INTO folgt (folger_id, folgt_id) VALUES
     (2, 1), (3, 1), (4, 1), (5, 1), (6, 1), (7, 1), (8, 1),
     (1, 2), (4, 2), (5, 2), (8, 2),
