@@ -514,7 +514,7 @@ jobs:
           CVJSON=$(sqlite3 "$DB" "SELECT content FROM ibook_pages WHERE id = $IBKCVPG")
           printf '%s' "$CVJSON" | grep -q '"x":0' && printf '%s' "$CVJSON" | grep -q '"y":1000' && printf '%s' "$CVJSON" | grep -q '"h":16' && IBK_CV_CLAMP_OK=1 || IBK_CV_CLAMP_OK=0
           CODE_IBKCVVIEW=$(curl -sS -o ibkcvview.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/infobuecher/$SEEDBOOK/seite/$IBKCVPG)
-          grep -q '"type":"canvas"' ibkcvview.html && IBK_CV_EDITOR_OK=1 || IBK_CV_EDITOR_OK=0
+          grep -q '&quot;canvas&quot;' ibkcvview.html && IBK_CV_EDITOR_OK=1 || IBK_CV_EDITOR_OK=0
           CODE_IBKCVDIST=$(curl -sS -L -o ibkcvdist.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "page_id=$IBKCVPG" -d "class_id=$CLASS6" -d "bereich=lernbereich" http://127.0.0.1:8080/infobuecher/$SEEDBOOK/verteilen)
           grep -q "Seite verteilt" ibkcvdist.html && IBK_CV_DIST_OK=1 || IBK_CV_DIST_OK=0
           IBKCVT=$(sqlite3 "$DB" "SELECT p.id FROM ibook_pages p JOIN ibook_sections s ON s.id = p.section_id WHERE s.book_id = $IBKID6 AND p.title = 'CI Freie Flaeche' LIMIT 1")
