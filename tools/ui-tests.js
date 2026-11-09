@@ -963,7 +963,13 @@ setTimeout(function () {
               ok(!hidden(paneDb) && hidden(paneObjects), 'T36a Datenbank-Tab oeffnet');
               var schemaTxt = dbSchemaBox.textOf();
               ok(schemaTxt.indexOf('schueler') !== -1, 'T36b angelegte Tabelle erscheint als Schema-Kachel');
-              ok(schemaTxt.indexOf('name : TEXT') !== -1 && schemaTxt.indexOf('punkte : INT') !== -1, 'T36c Spalten der Tabelle stehen mit Typ im Schema');
+              ok(schemaTxt.indexOf('name') !== -1 && schemaTxt.indexOf('TEXT') !== -1 && schemaTxt.indexOf('punkte') !== -1 && schemaTxt.indexOf('INT') !== -1, 'T36c Spalten der Tabelle stehen mit Typ im Schema');
+                  var schemaTbl = dbSchemaBox.querySelector('table.db-schema-table');
+                  ok(schemaTbl !== null, 'T36f das Schema ist eine echte Tabelle (kein Diagramm)');
+                  if (schemaTbl) {
+                    var schRows = schemaTbl.querySelectorAll('tbody tr');
+                    ok(schRows.length === 2 && schRows[0].children.length === 2 && schRows[0].children[0].textContent === 'name' && schRows[0].children[1].textContent === 'TEXT', 'T36g Tabellenzeilen zeigen Spalte und Typ getrennt');
+                  }
               dbIn.value = 'SELECT * FROM schueler';
               dbRunBtn.dispatch('click');
               ok(dbOut.textContent.indexOf('Anna') !== -1 && dbOut.textContent.indexOf('12') !== -1, 'T36d SELECT in der DB-Konsole zeigt die Zeilen');

@@ -18,7 +18,7 @@ Zusätzlich kann jede Lehrkraft pro Klasse und Arbeitsbereich zwischen drei Eins
 ## SQL-Werkstatt im Detail
 
 - **Online-Shop (Schreiben):** SELECT mit WHERE und ORDER BY, COUNT, JOIN, Summen. Einführung in Datenbankschemata mit Kunden, Produkten, Bestellungen.
-- **Instagram-Modell (Lesen):** Datenmodell eines bekannten Dienstes nachbauen, Unterabfragen, JOINs, Rechte "nur lesen" als geschützte Übungsform.
+- **InstaCraft (Lesen):** Datenmodell eines Social-Feeds nachbauen, Unterabfragen, JOINs, Rechte "nur lesen" als geschützte Übungsform.
 - **Dateninsel-Adventure (Schreiben):** Erzählte Missionen im Stil von SQL Island; UPDATE-Aufgaben prüfen automatisch das Ergebnis in der Kopie der Schülerin oder des Schülers.
 
 Die konkrete Zuordnung zu Kompetenzen ("Die Schülerinnen und Schüler ...") wird pro Funktion ergänzt, sobald die Werkstätten ausgebaut werden.

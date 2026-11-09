@@ -6,7 +6,7 @@ Digitale Informatik-Werkstatt für den bayerischen LehrplanPLUS (Gymnasium): SQL
 
 | Bereich | Ab Jahrgangsstufe | Status |
 | --- | --- | --- |
-| SQL-Werkstatt (Shop, Instagram, Dateninsel-Adventure) | 9 | fertig (Basis) |
+| SQL-Werkstatt (Shop, InstaCraft, Dateninsel-Adventure) | 9 | fertig (Basis) |
 | Code-Werkstatt (Projekte, Ordner, Austeilen; Python und Java laufen im Browser; Java-IDE über die volle Breite mit Dateifenster und kombiniertem Editor-/Konsolenfenster, Dateiwechsel per Klick, Klassendiagramm live in der IDE nach dem BlueJ-Prinzip, mehrere Klassen pro Datei, Objekte direkt in der Datei erzeugbar, Objektkonsole im Ausgabe-Tab, Klassen- und Objektdiagramm als eigene Tabs mit klickbaren Methoden, Sprite-Bibliothek mit eigenen Bildern, Mini-Datenbank für SQL mit Schema-Ansicht und DB-Konsole; Zeilennummern im Editor, Einzelschritt-Debugger, Auto-Formatierung, API-Hilfe, Grafik-Fenster mit Figuren und Sprites nach dem Vorbild der OnlineIDE; Online-IDE-Klassenbibliothek übernommen: Input, Key, Random, Assertions, MathTools, Vector2, Position, Direction, CollisionPair, SystemTools, Sound, Gamepad sowie die Grafik-Figuren Arc und Sector; eigene Punkt-Figur zum Markieren von Positionen (new Punkt(x, y, durchmesser)); Typ-Prüfung bei Attributen, Parametern und Rückgabewerten; Autosave beim Tippen, Klammer-Automatik, immer sichtbare Laufleiste und Fehlerkonsole; Java ist Standard, Python vorerst ausgeblendet; Projekte nach Ordnern gruppiert) | 6 | in Arbeit (Java fertig, Python läuft weiter) |
 | Aufgaben / Meine Aufgaben (Pool mit Filtern nach Klasse und Themengebiet, Themengebiete nach LehrplanPLUS, Katalog, Austeilen an Klassen und mehrere einzelne Personen mit Start- und Abgabetermin, WYSIWYG-Beschreibung, ToDos, Materialien, Abgaben, Korrektur, KI, Austausch zwischen Lehrkräften, Java/Python-Varianten) | 6 | fertig (Phase 1 + 2 + 3; Phase-4-Ideen in docs/AUFGABEN.md und als GitHub-Issues #11 bis #18) |
 | HTML-Werkstatt (Gestalten/Quelltext/Vorschau, Tag-Erklärungen, HTML öffnen/herunterladen, Vorlagen, Projekte nach Ordnern gruppiert) | 6 | fertig (Basis) |
@@ -55,7 +55,7 @@ Passwort jeweils **demo1234**. Ein-Klick-Anmeldung auf der Login-Seite, wenn dem
 | stefan.schmidt | Lehrkraft | unterrichtet 6R |
 | claudia.fischer | Lehrkraft | unterrichtet 9R, hat alle SQL-Vorlagen |
 | lena.müller | Schülerin, 6R | sieht kein SQL (erst ab Jgst. 9) |
-| emma.krueger | Schülerin, 9R | sieht SQL: Shop (schreiben), Instagram (lesen), Adventure (schreiben) |
+| emma.krueger | Schülerin, 9R | sieht SQL: Shop (schreiben), InstaCraft (lesen), Adventure (schreiben) |
 
 ## Installation auf Webspace (PHP 8.3+, auch 8.5)
 
