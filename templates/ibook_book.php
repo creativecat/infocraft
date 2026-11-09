@@ -105,7 +105,7 @@ $areaIcons = ['lernbereich' => '📖', 'gemeinsam' => '🤝', 'eigen' => '🔒']
         <?php foreach ($pages as $page): ?>
         <a class="ibook-page-card" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id']) ?>">
             <span class="ibook-page-title">📄 <?= e($page['title']) ?></span>
-            <span class="muted"><?= count(\Infocraft\Models\InfoBook::pageBlocks($page)) ?> Baustein<?= count(\Infocraft\Models\InfoBook::pageBlocks($page)) === 1 ? '' : 'e' ?></span>
+            <?php /* #69: Blockanzahl weg - seit der freien Flaeche steht dort nur noch "1 Baustein". */ ?>
         </a>
         <?php endforeach; ?>
         <?php if ($canWriteSection): ?>
