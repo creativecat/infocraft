@@ -155,6 +155,7 @@ FakeEl.prototype.dispatch = function (type, opts) {
   for (var i = 0; i < list.length; i++) { list[i](ev); }
 };
 FakeEl.prototype.setSelectionRange = function (s, e) { this.selectionStart = s; this.selectionEnd = e; };
+FakeEl.prototype.getBoundingClientRect = function () { return { left: 8, top: 8, width: 420, height: 20 }; };
 
 /* Canvas-Mock: gfxRedraw zeichnet ins 2d-Objekt, hier nur Aufzeichnung */
 function fakeCtx() {
@@ -386,10 +387,27 @@ global.fetch = function (url, opts) {
   return Promise.resolve({ ok: true });
 };
 
+/* ---------- Gespeicherte Beispieldatenbank (hidden field, wie code_project.php) ---------- */
+var dbSeed = new FakeEl('input');
+dbSeed.value = 'CREATE TABLE produkte (name TEXT, preis INT);' + String.fromCharCode(10) +
+  "INSERT INTO produkte VALUES ('Heft', 2);" + String.fromCharCode(10) +
+  "INSERT INTO produkte VALUES ('Radiergummi', 1);";
+doc.register(dbSeed, 'java-db-seed');
+
 /* ---------- java-vm.js laden: wireUi() laeuft sofort ---------- */
 global.document = doc;
 global.window = undefined;
 var vm = require('../public/assets/js/java-vm.js');
+/* Fenster-Attrappe erst NACH dem Laden: java-vm.js prueft beim Boot noch
+ * window === undefined (keine globalen Listener im Fake-DOM), aber die
+ * Autovervollstaendigung rechnet die Box-Position ueber getComputedStyle
+ * aus (T38). Ohne Attrappe liefert edAcCaretPos null und die Box bliebe zu. */
+global.window = {
+  getComputedStyle: function () { return {}; },
+  pageXOffset: 0,
+  pageYOffset: 0,
+  setTimeout: function () { return 0; }
+};
 
 /* ---------- Tests ---------- */
 var failures = [];
@@ -410,6 +428,60 @@ ok(pane2.querySelector('textarea')._focused === true, 'T1e Cursor springt in den
 
 f1.btn.dispatch('click');
 ok(!hidden(pane1) && hidden(pane2), 'T1f zurueck zu Auto.java schaltet ebenfalls');
+
+/* T37: DB-Konsole ohne Programmlauf (#60): Der gemeldete Ablauf - Tabelle ist
+ * geladen (gespeicherter Seed), SELECT eintippen, Button klicken, ohne dass
+ * das Programm je lief - muss Zeilen in die Ausgabe-Box schreiben. */
+ok(dbSchemaBox.textOf().indexOf('produkte') !== -1, 'T37a Seed-Tabelle erscheint im Schema, bevor das Programm je lief');
+dbIn.value = 'SELECT * FROM produkte';
+dbOut.textContent = '';
+dbRunBtn.dispatch('click');
+ok(dbOut.textContent.indexOf('Heft') !== -1 && dbOut.textContent.indexOf('Radiergummi') !== -1, 'T37b SELECT ueber den Button zeigt die Zeilen (auch ohne vorheriges ▶)');
+ok(dbOut.textContent.length > 0, 'T37c die Ausgabe-Box bleibt nach dem Klick nie leer');
+dbIn.value = '';
+dbOut.textContent = '';
+dbRunBtn.dispatch('click');
+ok(dbOut.textContent.length > 0, 'T37d leere Abfrage meldet sich sichtbar statt still');
+
+/* T38: Autovervollstaendigung trotz kaputtem Zwischenstand (#59): Die Klasse
+ * in der zweiten Datei muss auch dann vorgeschlagen werden, wenn der Quelltext
+ * gerade syntaktisch ungueltig ist - die Symbole kommen per Muster aus dem
+ * Quelltext, nicht nur aus dem Compiler. */
+var NLt38 = String.fromCharCode(10);
+var ta38 = pane1.querySelector('textarea');
+var ta2 = pane2.querySelector('textarea');
+var keep1 = ta38.value;
+var keep2 = ta2.value;
+ta38.value = 'class Auto {' + NLt38 + '  String marke' + NLt38 + '  // (mitten im Tippen: kein Semikolon, kein Ende';
+ta38.setSelectionRange(ta38.value.length, ta38.value.length);
+ta38.dispatch('input');
+ta2.value = 'class Garage {' + NLt38 + '    String ort;' + NLt38 + '    void abstellen(String ortNeu) { ort = ortNeu; }' + NLt38 + '}' + NLt38;
+ta2.setSelectionRange(ta2.value.length, ta2.value.length);
+ta2.dispatch('input');
+ta2.setSelectionRange(ta2.value.length, ta2.value.length);
+ta2.dispatch('keydown', { key: ' ', ctrlKey: true });
+(function () {
+  var boxes = doc.body.querySelectorAll('.ac-box');
+  var visibleBox = null;
+  var bi;
+  for (bi = 0; bi < boxes.length; bi++) {
+    if (!boxes[bi].hasAttribute('hidden')) { visibleBox = boxes[bi]; }
+  }
+  ok(visibleBox !== null, 'T38a Vorschlagsbox oeffnet sich trotz kaputtem Quelltext');
+  if (visibleBox) {
+    var txt = visibleBox.textOf();
+    ok(txt.indexOf('Garage') !== -1, 'T38b Klasse aus der anderen Projektdatei wird vorgeschlagen');
+    ok(txt.indexOf('abstellen') !== -1, 'T38c Methode aus der anderen Projektdatei wird vorgeschlagen');
+  }
+})();
+/* Projekt-Dateien fuer alle nachfolgenden Tests wiederherstellen */
+ta2.dispatch('keydown', { key: 'Escape' });
+ta38.value = keep1;
+ta38.setSelectionRange(0, 0);
+ta38.dispatch('input');
+ta2.value = keep2;
+ta2.setSelectionRange(0, 0);
+ta2.dispatch('input');
 
 /* T2: Konsolen-Tabs schalten die Panes (Klassendiagramm-Tab inklusive). */
 tabClasses.dispatch('click');

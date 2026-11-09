@@ -398,6 +398,53 @@ body.sidebar-mini .nav-item { justify-content: center; padding: 10px 8px; }
 .slide-edit { margin-top: 14px; }
 .slide-edit .hlwrap { margin-top: 6px; }
 
+/* Folien-Inhalt frischer (#58): Überschriften mit Akzentfarbe, Listen mit
+   farbigen Punkten, Code-Blöcke mit Rand. Gilt automatisch für alle Folien. */
+.slide-text h2 { font-size: 1.6rem; margin: 0 0 12px; background: linear-gradient(90deg, var(--primary), #7c3aed); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.slide-text h3 { font-size: 1.25rem; margin: 18px 0 8px; color: var(--primary-2); }
+.slide-text h4 { margin: 14px 0 6px; }
+.slide-text ul { margin: 10px 0; padding-left: 4px; list-style: none; }
+.slide-text li { margin: 7px 0; padding-left: 26px; position: relative; }
+.slide-text li::before { content: ""; position: absolute; left: 2px; top: 0.5em; width: 11px; height: 11px; border-radius: 4px; background: linear-gradient(135deg, var(--primary), #7c3aed); }
+.slide-text li li::before { background: var(--border); width: 8px; height: 8px; }
+.slide-text pre.code { border-left: 4px solid var(--primary); border-radius: 10px; }
+.slide-text code { background: #eef2ff; border-radius: 5px; padding: 1px 5px; }
+.slide-text pre.code code { background: none; padding: 0; border-radius: 0; }
+
+/* Folien-Bausteine (:::name ... :::ende, #58). */
+.sblock { margin: 14px 0; }
+.sblock-titel { text-align: center; padding: 34px 20px; border-radius: var(--radius);
+    background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 55%, #ecfeff 100%);
+    border: 1px solid #c7d2fe; }
+.sblock-titel h2 { font-size: 2.2rem; background: linear-gradient(90deg, var(--primary), #7c3aed, #0ea5e9); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sblock-titel p { font-size: 1.15rem; color: var(--muted); margin: 8px 0 0; }
+.sblock-merksatz { background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; border-left: 6px solid #f59e0b; border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow); }
+.sblock-merksatz::before { content: "📌 Merksatz"; display: block; font-weight: 700; color: #92400e; font-size: 0.85rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 6px; }
+.sblock-merksatz p { margin: 0; }
+.sblock-uebung { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1px solid #86efac; border-left: 6px solid #16a34a; border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow); }
+.sblock-uebung::before { content: "✏️ Übung"; display: block; font-weight: 700; color: #14532d; font-size: 0.85rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 6px; }
+.sblock-uebung ol, .sblock-uebung ul { margin: 6px 0 0; }
+.sblock-uebung li { padding-left: 24px; }
+.sblock-loesung { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #93c5fd; border-left: 6px solid #2563eb; border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow); }
+.sblock-loesung::before { content: "✅ Musterlösung"; display: block; font-weight: 700; color: #1e40af; font-size: 0.85rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 6px; }
+.sblock-hinweis { background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 1px solid #c4b5fd; border-left: 6px solid #7c3aed; border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow); }
+.sblock-hinweis::before { content: "💡 Hinweis"; display: block; font-weight: 700; color: #4c1d95; font-size: 0.85rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 6px; }
+.sblock-vergleich { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.sblock-vergleich .sb-col { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); }
+.sblock-vergleich .sb-col:first-child { border-top: 4px solid var(--primary); }
+.sblock-vergleich .sb-col:last-child { border-top: 4px solid #f59e0b; }
+.sblock-karten ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.sblock-karten li { background: var(--surface); border: 1px solid var(--border); border-top: 4px solid var(--primary); border-radius: 12px; padding: 14px 16px 14px 16px; margin: 0; box-shadow: var(--shadow); }
+.sblock-karten li::before { content: none; }
+.sblock-statistik ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.sblock-statistik li { background: linear-gradient(135deg, #eef2ff, #f5f3ff); border: 1px solid #c7d2fe; border-radius: 12px; padding: 16px; margin: 0; text-align: center; }
+.sblock-statistik li::before { content: none; }
+.sblock-statistik strong { display: block; font-size: 2.1rem; line-height: 1.1; background: linear-gradient(90deg, var(--primary), #7c3aed); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sblock-zitat { text-align: center; padding: 30px 26px; border-radius: var(--radius); background: linear-gradient(135deg, #f8fafc, #eef2ff); border: 1px dashed #c7d2fe; }
+.sblock-zitat p { font-size: 1.35rem; font-style: italic; line-height: 1.5; margin: 0 0 10px; color: var(--text); }
+.sblock-zitat p + p { font-size: 1rem; font-style: normal; color: var(--muted); margin: 0; }
+.sblock h2, .sblock h3 { margin-top: 0; }
+
 /* Vollbild über der Folien-Bühne: nur Folien und Steuerung, nichts sonst. */
 .slide-stage:fullscreen { border-radius: 0; border: none; padding: 28px 48px; overflow-y: auto; background: #fff; }
 .slide-stage:fullscreen .slide-title { font-size: 2rem; margin-top: 20px; }
@@ -606,7 +653,7 @@ span.hlwrap { display: block; }
 }
 .repl-gutter {
     flex: none; width: 36px; padding: 8px 6px;
-    text-align: right; font-size: 0.85rem; line-height: 1.45;
+    text-align: right; font-size: 0.9rem; line-height: 1.45;
     color: var(--muted); background: var(--bg);
     border-right: 1px solid var(--border);
     white-space: pre; overflow: hidden; user-select: none;
@@ -616,19 +663,13 @@ span.hlwrap { display: block; }
     border: none; outline: none; resize: vertical;
     padding: 8px 10px; background: transparent;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 0.88rem; line-height: 1.45; color: var(--text);
+    font-size: 0.9rem; line-height: 1.45; color: var(--text);
 }
 .repl-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0 10px; position: relative; }
-#java-repl-in {
-    flex: 1;
-    min-width: 0;
-    font-size: 0.92rem;
-    padding: 9px 11px;
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    background: var(--bg);
-}
-#java-repl-in:focus { outline: 2px solid #c7d2fe; background: var(--surface); }
+/* Fokus-Rand liegt am .repl-edit-Container, nicht an der Textarea selbst:
+   Die Textarea füllt die umgebende Fläche komplett, ohne eigenen Rahmen (#61). */
+#java-repl-in:focus { outline: none; }
+.repl-edit:focus-within { border-color: #6366f1; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.18); }
 .ac-box {
     position: absolute;
     bottom: calc(100% + 2px);
