@@ -929,6 +929,19 @@ final class InfoBookController
                     . '<pre class="code icv-code-src">' . e($code) . '</pre>'
                     . '<button type="button" class="icv-code-run">▶ Ausführen</button>'
                     . '<pre class="icv-code-out" aria-live="polite"></pre></div>';
+            } elseif ($kind === 'db') {
+                /* Datenbank-Element (#76): Schema serverseitig aus den CREATE-
+                 * TABLE-Zeilen, Seed als versteckter Quelltext. Abfragen laufen
+                 * clientseitig (IC_DB_RUN in app.js), der Server bleibt raus. */
+                $seed = (string) ($item['dbseed'] ?? '');
+                $query = (string) ($item['dbq'] ?? '');
+                $inner .= $pre . '<div class="icv-item icv-db" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 420, $w) . '%">'
+                    . '<div class="icv-db-head">🗄️ Datenbank-Schema</div>'
+                    . '<pre class="icv-db-schema">' . e(self::dbSchemaText($seed)) . '</pre>'
+                    . '<textarea class="icv-db-in mono" rows="2" spellcheck="false">' . e($query) . '</textarea>'
+                    . '<button type="button" class="icv-db-run">▶ Abfrage ausführen</button>'
+                    . '<pre class="icv-db-out" aria-live="polite"></pre>'
+                    . '<pre class="icv-db-seed-src" hidden>' . e($seed) . '</pre></div>';
             }
             /* Nur schliessen, wenn der Zweig wirklich etwas angehaengt hat. */
             if ($itemLink > 0 && strlen($inner) > $lenBefore) {
@@ -954,6 +967,28 @@ final class InfoBookController
             $n = 0.0;
         }
         return rtrim(rtrim(number_format($n, 2, '.', ''), '0'), '.') ?: '0';
+    }
+
+    /** Datenbank-Schema (#76): alle CREATE-TABLE-Zeilen des Seeds als
+     * lesbare Auflistung "tabelle (spalte TYP, ...)". */
+    private static function dbSchemaText(string $seed): string
+    {
+        if (!preg_match_all('/CREATE\s+TABLE\s+(\w+)\s*\(([^)]*)\)/is', $seed, $m, PREG_SET_ORDER)) {
+            return 'Noch keine Tabellen: CREATE TABLE ... im Element definieren.';
+        }
+        $lines = [];
+        foreach ($m as $tbl) {
+            $cols = [];
+            foreach (preg_split('/,/', $tbl[2]) ?: [] as $col) {
+                $parts = preg_split('/\s+/', trim($col)) ?: [];
+                if ($parts[0] === '') {
+                    continue;
+                }
+                $cols[] = $parts[0] . ' ' . strtoupper($parts[1] ?? 'TEXT');
+            }
+            $lines[] = $tbl[1] . ' (' . implode(', ', $cols) . ')';
+        }
+        return implode("\n", $lines);
     }
 
     /** Einen Block als HTML rendern (fuer Seitenansicht und Präsentationsmodus).

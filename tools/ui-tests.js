@@ -1506,6 +1506,44 @@ setTimeout(function () {
                   }
                 }
 
+                /* T58 (#76): Datenbank-Element mit Schema und SQL-Abfrage.
+                 * Seed baut die Beispieldatenbank im Browser auf, die kleine
+                 * Engine versteht WHERE, LIKE, ORDER BY und LIMIT. */
+                var ibDbBtn58 = null;
+                var ibBarBtns58 = ibBar.querySelectorAll('button');
+                for (var ci58 = 0; ci58 < ibBarBtns58.length; ci58++) {
+                  if (String(ibBarBtns58[ci58].title || '').indexOf('Datenbank') !== -1) { ibDbBtn58 = ibBarBtns58[ci58]; }
+                }
+                ok(ibDbBtn58 !== null && ibDbBtn58.textOf() === '🗄️', 'T58 Datenbank-Knopf in der Leiste zeigt nur das Icon');
+                if (ibDbBtn58) {
+                  ibDbBtn58.dispatch('click');
+                  var ibDbBox58 = ibStage.querySelector('.icv-db');
+                  ok(ibDbBox58 !== null && ibDbBox58.querySelector('.icv-db-seed-ta') !== null && ibDbBox58.querySelector('.icv-db-in') !== null && ibDbBox58.querySelector('.icv-db-run') !== null && ibDbBox58.querySelector('.icv-db-out') !== null, 'T58b das Datenbank-Element hat Seed-Feld, Abfrage, Ausfuehren und Ausgabe');
+                  if (ibDbBox58) {
+                    var ibDbSeed58 = ibDbBox58.querySelector('.icv-db-seed-ta');
+                    ibDbSeed58.value = "CREATE TABLE schueler (name TEXT, punkte INT); INSERT INTO schueler VALUES ('Anna', 12); INSERT INTO schueler VALUES ('Ben', 9)";
+                    ibDbSeed58.dispatch('input');
+                    ok(ibDbBox58.querySelector('.icv-db-schema').textContent.indexOf('schueler') !== -1 && ibDbBox58.querySelector('.icv-db-schema').textContent.indexOf('punkte INT') !== -1, 'T58c das Schema aktualisiert sich live aus den CREATE-TABLE-Zeilen');
+                    var ibDbQ58 = ibDbBox58.querySelector('.icv-db-in');
+                    ibDbQ58.value = 'SELECT name, punkte FROM schueler WHERE punkte > 10';
+                    ibDbQ58.dispatch('input');
+                    ibDbBox58.querySelector('.icv-db-run').dispatch('click');
+                    var ibDbOut58 = ibDbBox58.querySelector('.icv-db-out');
+                    ok(ibDbOut58.textContent.indexOf('Anna') !== -1 && ibDbOut58.textContent.indexOf('Ben') === -1 && ibDbOut58.textContent.indexOf('1 Zeile') !== -1, 'T58d WHERE punkte > 10 liefert nur Anna (1 Zeile)');
+                    ibDbQ58.value = 'SELECT * FROM schueler ORDER BY punkte ASC';
+                    ibDbQ58.dispatch('input');
+                    ibDbBox58.querySelector('.icv-db-run').dispatch('click');
+                    ok(ibDbOut58.textContent.indexOf('Ben') !== -1 && ibDbOut58.textContent.indexOf('Ben') < ibDbOut58.textContent.indexOf('Anna'), 'T58e ORDER BY punkte ASC sortiert Ben (9) vor Anna (12)');
+                    ibDbQ58.value = "SELECT name FROM schueler WHERE name LIKE 'A%'";
+                    ibDbQ58.dispatch('input');
+                    ibDbBox58.querySelector('.icv-db-run').dispatch('click');
+                    ok(ibDbOut58.textContent.indexOf('Anna') !== -1 && ibDbOut58.textContent.indexOf('Ben') === -1, 'T58f LIKE A% findet Anna');
+                    var cv58 = ibCollect();
+                    var t58 = cv58 && cv58.items ? cv58.items.filter(function (it) { return it.kind === 'db'; })[0] : null;
+                    ok(t58 && t58.dbseed.indexOf('CREATE TABLE schueler') !== -1 && t58.dbq.indexOf('LIKE') !== -1, 'T58g Seed und Abfrage werden serialisiert');
+                  }
+                }
+
                 /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */
                 var NL41 = String.fromCharCode(10);
                 replIn.value = ['a', 'b', 'c', 'd', 'e', 'f'].join(NL41);

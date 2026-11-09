@@ -1729,6 +1729,38 @@ a.icv-item-link:hover .icv-item { outline: 2px dashed #1d4ed8; outline-offset: 2
     background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 6px;
     font-family: var(--mono, ui-monospace, monospace); font-size: 0.82rem; white-space: pre-wrap;
 }
+/* Datenbank-Element (#76): Schema, Abfrage, Ergebnis */
+.icv-db {
+    display: flex; flex-direction: column; gap: 6px;
+    background: #f8fafc; border: 1px solid var(--border, #d7dce5); border-radius: 10px; padding: 10px;
+}
+.icv-db .icv-db-head { font-size: 0.82rem; font-weight: 600; color: #1e293b; }
+.icv-db .icv-db-schema {
+    margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;
+    background: #ffffff; border: 1px solid var(--border, #d7dce5); border-radius: 6px; padding: 6px;
+    font-family: var(--mono, ui-monospace, monospace); font-size: 0.8rem; color: #334155;
+}
+.icv-db .icv-db-seed-ta {
+    width: 100%; min-height: 72px; box-sizing: border-box; resize: vertical;
+    background: #ffffff; color: #1e293b; border: 1px solid var(--border, #d7dce5); border-radius: 6px;
+    font-family: var(--mono, ui-monospace, monospace); font-size: 0.82rem; padding: 6px; outline: none;
+}
+.icv-db .icv-db-in {
+    width: 100%; box-sizing: border-box; resize: vertical;
+    background: #ffffff; color: #1e293b; border: 1px solid var(--border, #d7dce5); border-radius: 6px;
+    font-family: var(--mono, ui-monospace, monospace); font-size: 0.82rem; padding: 6px; outline: none;
+}
+.icv-db .icv-db-run {
+    align-self: flex-start; cursor: pointer; border: 1px solid #334155;
+    background: #334155; color: #ffffff; border-radius: 6px; padding: 3px 10px; font-size: 0.82rem;
+}
+.icv-db .icv-db-run:hover { background: #475569; }
+.icv-db .icv-db-out {
+    margin: 0; min-height: 20px; max-height: 220px; overflow: auto;
+    background: #ffffff; border: 1px solid var(--border, #d7dce5); border-radius: 6px; padding: 6px;
+    font-family: var(--mono, ui-monospace, monospace); font-size: 0.8rem; white-space: pre-wrap; color: #1e293b;
+}
+.icv-db .icv-db-seed-src { display: none; }
 /* Lesen/Präsentation: gleiche Geometrie, ohne Editor-Griffe */
 .icv-readonly .icv-ink { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
 .icv-readonly .icv-text { padding: 8px 10px; border-radius: 8px; }

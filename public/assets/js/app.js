@@ -2114,6 +2114,39 @@
       crun.type = 'button';
       div.appendChild(crun);
       div.appendChild(el('pre', 'mono icv-code-out'));
+    } else if (item.kind === 'db') {
+      /* Datenbank-Element (#76): Schema/Beispieldaten pflegen, Abfrage dazu,
+       * Ausfuehren uebernimmt der globale .icv-db-run-Delegations-Listener. */
+      div.appendChild(el('div', 'icv-db-head', '🗄️ Schema und Beispieldaten (SQL)'));
+      var dbSeedTa = el('textarea', 'mono icv-db-seed-ta');
+      dbSeedTa.value = item.dbseed || '';
+      dbSeedTa.setAttribute('spellcheck', 'false');
+      dbSeedTa.addEventListener('input', function () {
+        item.dbseed = dbSeedTa.value;
+        var sch = div.querySelector('.icv-db-schema');
+        if (sch && window.IC_DB_SCHEMA) { sch.textContent = window.IC_DB_SCHEMA(item.dbseed); }
+        collect(); markDirty();
+      });
+      div.appendChild(dbSeedTa);
+      var dbSchPre = el('pre', 'mono icv-db-schema');
+      dbSchPre.textContent = 'Schema';
+      div.appendChild(dbSchPre);
+      setTimeout(function () { /* Engine steht erst am Dateiende: einmalig fuellen */
+        if (window.IC_DB_SCHEMA) { dbSchPre.textContent = window.IC_DB_SCHEMA(item.dbseed || ''); }
+      }, 0);
+      var dbQTa = el('textarea', 'mono icv-db-in');
+      dbQTa.value = item.dbq || '';
+      dbQTa.setAttribute('rows', '2');
+      dbQTa.setAttribute('spellcheck', 'false');
+      dbQTa.addEventListener('input', function () {
+        item.dbq = dbQTa.value;
+        collect(); markDirty();
+      });
+      div.appendChild(dbQTa);
+      var dbRun = el('button', 'icv-db-run', '▶ Abfrage ausführen');
+      dbRun.type = 'button';
+      div.appendChild(dbRun);
+      div.appendChild(el('pre', 'mono icv-db-out'));
     }
     refreshLinkBadge(div, item); /* verlinktes Element zeigt das Badge (#73) */
     /* Vier Ecken zum Skalieren (#67), sichtbar nur bei Auswahl (CSS). */
@@ -2484,6 +2517,10 @@
   codeBtn.title = 'Code-Fenster einfügen (JavaScript mit Konsole)';
   codeBtn.addEventListener('click', function () { addCodeAt(block.w / 2 - 260, block.h / 2 - 90); });
   toolbar.appendChild(codeBtn);
+  var dbBtn = el('button', 'btn btn-ghost', '🗄️'); dbBtn.type = 'button';
+  dbBtn.title = 'Datenbank einfügen (Schema und SQL-Abfragen)';
+  dbBtn.addEventListener('click', function () { addDbAt(block.w / 2 - 210, block.h / 2 - 110); });
+  toolbar.appendChild(dbBtn);
   toolbar.appendChild(ctxBar);
   /* Flaechenhoehe (#67): nach unten wachst automatisch, hier geht es
    * manuell: groesser immer, kleiner nur bis knapp unter das unterste
@@ -2575,6 +2612,15 @@
     selectItem(item);
     var cta = selDiv && selDiv.querySelector ? selDiv.querySelector('.icv-code-ta') : null;
     if (cta && cta.focus) { cta.focus(); }
+    collect(); markDirty();
+  }
+  function addDbAt(x, y) {
+    var item = { kind: 'db', dbseed: '', dbq: '', x: clampN(x, 0, block.w - 160), y: clampN(y, 0, block.h - 60), w: 420 };
+    block.items.push(item);
+    renderStage();
+    selectItem(item);
+    var ta = selDiv && selDiv.querySelector ? selDiv.querySelector('.icv-db-seed-ta') : null;
+    if (ta && ta.focus) { ta.focus(); }
     collect(); markDirty();
   }
 
@@ -2822,6 +2868,9 @@
           e.title = item.title || '';
         } else if (item.kind === 'code') {
           e.code = item.code || '';
+        } else if (item.kind === 'db') {
+          e.dbseed = item.dbseed || '';
+          e.dbq = item.dbq || '';
         } else {
           e.media = item.media || 0;
           e.name = item.name || '';
@@ -2991,5 +3040,171 @@
       src = String(srcEl.tagName === 'TEXTAREA' ? srcEl.value : (srcEl.textContent || ''));
     }
     window.IC_RUN_CODE(outEl, src);
+  });
+})();
+
+
+/* InfoBook Datenbank-Element (#76): eine kleine SQL-Engine fuer den Unterricht.
+ * Der Seed (CREATE TABLE + INSERT) baut die Beispieldatenbank im Browser auf,
+ * SELECT-Abfragen mit WHERE/LIKE, ORDER BY und LIMIT laufen dagegen. Der Server
+ * fuehrt nichts aus, alles bleibt clientseitig. */
+(function () {
+  'use strict';
+  if (typeof window === 'undefined') { return; }
+  function splitOn(txt, keepQuotes) {
+    var out = [], cur = '', inStr = false;
+    var s = String(txt || '');
+    for (var i = 0; i < s.length; i++) {
+      var ch = s[i];
+      if (ch === "'") {
+        if (inStr && s[i + 1] === "'") { cur += "''"; i++; continue; }
+        inStr = !inStr;
+        cur += ch;
+      } else if ((ch === ';' || (ch === ',' && !keepQuotes)) && !inStr) {
+        if (cur.trim() !== '') { out.push(cur.trim()); }
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    if (cur.trim() !== '') { out.push(cur.trim()); }
+    return out;
+  }
+  function coerce(v) {
+    var s = String(v).trim();
+    if (/^'.*'$/.test(s)) { return s.slice(1, -1).replace(/''/g, "'"); }
+    if (/^-?\d+(\.\d+)?$/.test(s)) { return parseFloat(s); }
+    if (/^null$/i.test(s)) { return null; }
+    return s;
+  }
+  function parseSeed(txt) {
+    var tables = {};
+    splitOn(txt, true).forEach(function (st) {
+      var s = st.replace(/\s+/g, ' ').trim();
+      var m;
+      if ((m = s.match(/^CREATE\s+TABLE\s+(\S+)\s*\(([\s\S]*)\)\s*$/i))) {
+        var cols = [];
+        String(m[2] || '').split(',').forEach(function (colDef) {
+          var parts = colDef.trim().split(/\s+/).filter(Boolean);
+          if (parts.length > 0) { cols.push({ name: parts[0], type: (parts[1] || 'TEXT').toUpperCase() }); }
+        });
+        tables[m[1].toLowerCase()] = { name: m[1], cols: cols, rows: [] };
+      } else if ((m = s.match(/^INSERT\s+INTO\s+(\S+)\s*(?:\(([^)]*)\))?\s*VALUES\s*\(([\s\S]*)\)\s*$/i))) {
+        var t = tables[m[1].toLowerCase()];
+        if (!t) { return; }
+        var vals = splitOn(m[3], false).map(coerce);
+        var targetCols = m[2] ? m[2].split(',').map(function (cn) { return cn.trim().toLowerCase(); }) : null;
+        t.rows.push(t.cols.map(function (c) {
+          var pos = targetCols ? targetCols.indexOf(c.name.toLowerCase()) : t.cols.indexOf(c);
+          return (pos >= 0 && pos < vals.length) ? vals[pos] : null;
+        }));
+      }
+    });
+    return tables;
+  }
+  window.IC_DB_SCHEMA = function (seedSrc) {
+    var tables = parseSeed(seedSrc);
+    var names = Object.keys(tables).sort();
+    if (names.length === 0) { return 'Noch keine Tabellen: CREATE TABLE tabelle (spalte TYP, ...) definieren.'; }
+    return names.map(function (n) {
+      var t = tables[n];
+      return t.name + ' (' + t.cols.map(function (c) { return c.name + ' ' + c.type; }).join(', ') + ')';
+    }).join('\n');
+  };
+  function parseVal(v) {
+    return coerce(v);
+  }
+  function matchCond(row, cols, cond) {
+    var c = String(cond).trim();
+    var m = c.match(/^(\S+)\s*(LIKE|!=|<=|>=|=|<|>)\s*(.+)$/i);
+    if (!m) { throw new Error('Verstehe die Bedingung nicht: ' + c); }
+    var col = cols.filter(function (x) { return x.name.toLowerCase() === m[1].toLowerCase(); })[0];
+    if (!col) { throw new Error('Unbekannte Spalte: ' + m[1]); }
+    var val = row[cols.indexOf(col)];
+    var rhs = parseVal(m[3]);
+    var op = m[2].toUpperCase();
+    if (op === 'LIKE') {
+      var pat = String(rhs).replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*').replace(/_/g, '.');
+      return new RegExp('^' + pat + '$', 'i').test(String(val));
+    }
+    var a = val, b = rhs;
+    if (typeof a === 'number' && typeof b !== 'number') { a = String(a); }
+    if (typeof b === 'number' && typeof a !== 'number') { b = String(b); }
+    if (op === '=') { return a === b; }
+    if (op === '!=') { return a !== b; }
+    if (op === '<') { return a < b; }
+    if (op === '>') { return a > b; }
+    if (op === '<=') { return a <= b; }
+    return a >= b;
+  }
+  window.IC_DB_RUN = function (outEl, seedSrc, query) {
+    if (!outEl) { return ''; }
+    var tables = parseSeed(seedSrc);
+    var text;
+    try {
+      var s = String(query || '').replace(/\s+/g, ' ').trim().replace(/;+$/, '');
+      var m, limit = 0, orderCol = null, orderDesc = false, where = null;
+      var lm = s.match(/\sLIMIT\s+(\d+)\s*$/i);
+      if (lm) { limit = parseInt(lm[1], 10) || 0; s = s.slice(0, lm.index).trim(); }
+      var om = s.match(/\sORDER\s+BY\s+(\S+)(\s+(?:ASC|DESC))?\s*$/i);
+      if (om) { orderCol = om[1]; orderDesc = /DESC/i.test(om[2] || ''); s = s.slice(0, om.index).trim(); }
+      var wm = s.match(/\sWHERE\s+(.+)$/i);
+      if (wm) { where = wm[1]; s = s.slice(0, wm.index).trim(); }
+      m = s.match(/^SELECT\s+(.+?)\s+FROM\s+(\S+)\s*$/i);
+      if (!m) { throw new Error('Nur SELECT moeglich: SELECT spalten FROM tabelle [WHERE ...] [ORDER BY ...] [LIMIT n]'); }
+      var table = tables[m[2].toLowerCase()];
+      if (!table) { throw new Error('Unbekannte Tabelle: ' + m[2]); }
+      var wanted = m[1].trim() === '*' ? table.cols.map(function (c) { return c.name; }) : m[1].split(',').map(function (c) { return c.trim(); });
+      var idxOf = {};
+      wanted.forEach(function (w) {
+        var f = table.cols.filter(function (c) { return c.name.toLowerCase() === w.toLowerCase(); })[0];
+        if (!f) { throw new Error('Unbekannte Spalte: ' + w); }
+        idxOf[w] = table.cols.indexOf(f);
+      });
+      var rows = table.rows.slice();
+      if (where !== null) {
+        rows = rows.filter(function (r) { return matchCond(r, table.cols, where); });
+      }
+      if (orderCol !== null) {
+        var oc = table.cols.filter(function (c) { return c.name.toLowerCase() === String(orderCol).toLowerCase(); })[0];
+        if (!oc) { throw new Error('Unbekannte ORDER-BY-Spalte: ' + orderCol); }
+        var oi = table.cols.indexOf(oc);
+        rows.sort(function (a, b) {
+          var av = a[oi], bv = b[oi];
+          var cmp = (typeof av === 'number' && typeof bv === 'number') ? av - bv : String(av).localeCompare(String(bv));
+          return orderDesc ? -cmp : cmp;
+        });
+      }
+      if (limit > 0 && rows.length > limit) { rows = rows.slice(0, limit); }
+      function strVal(v) { return v === null || v === undefined ? 'NULL' : String(v); }
+      var body = rows.map(function (r) {
+        return wanted.map(function (w) { return strVal(r[idxOf[w]]); }).join(' | ');
+      });
+      text = wanted.join(' | ') + (body.length ? '\n' + body.join('\n') : '') + '\n(' + rows.length + ' Zeile' + (rows.length === 1 ? '' : 'n') + ')';
+    } catch (e) {
+      text = '✖ ' + (e && e.message ? e.message : String(e));
+    }
+    outEl.textContent = text;
+    return text;
+  };
+  if (typeof document === 'undefined' || !document.addEventListener) { return; }
+  document.addEventListener('click', function (ev) {
+    var node = ev.target;
+    var btn = null;
+    while (node) {
+      if (node.classList && node.classList.contains && node.classList.contains('icv-db-run')) { btn = node; break; }
+      node = node.parentNode;
+    }
+    if (!btn) { return; }
+    var box = btn.parentNode;
+    if (!box || !box.querySelector) { return; }
+    var seedEl = box.querySelector('.icv-db-seed-ta') || box.querySelector('.icv-db-seed-src');
+    var qEl = box.querySelector('.icv-db-in');
+    var outEl = box.querySelector('.icv-db-out');
+    if (!outEl) { return; }
+    var seed = '';
+    if (seedEl) { seed = String(seedEl.tagName === 'TEXTAREA' ? seedEl.value : (seedEl.textContent || '')); }
+    var query = qEl ? String(qEl.value || '') : '';
+    window.IC_DB_RUN(outEl, seed, query);
   });
 })();
