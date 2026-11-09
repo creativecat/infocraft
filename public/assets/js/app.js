@@ -1691,21 +1691,32 @@
 })();
 
 /* =====================================================================
- * InfoBook-Seiteneditor (#62): Bloecke fuer Text, Bild, Audio, Video,
- * Einbettung (YouTube/LearningApps) und Freihand-Zeichnung (Apple Pencil,
- * Druckempfindlich ueber Pointer Events, optimiert fuer Tablets).
+ * InfoBook-Seiteneditor (#62/#63/#64): Eine Seite ist EINE freie Flaeche
+ * wie in OneNote. Bilder per Drag & Drop ablegen, Textfelder frei
+ * platzieren, mit dem Stift ueberall zeichnen (auch ueber Bildern,
+ * druckempfindlich via Pointer Events, ideal fuer Apple Pencil).
+ * Zeichnungen sind einzelne Strich-Objekte: auswaehlbar, verschieben,
+ * skalieren, Farbe und Strichstaerke nachtraeglich aendern, Radierer
+ * entfernt einzelne Striche. Die Symbolleiste oben aehnelt GoodNotes:
+ * Werkzeug (Auswahl/Stift/Radierer), Farben, Strichstaerken, Einfuegen
+ * und ein Kontextbereich, der je nach Auswahl passende Einstellungen
+ * zeigt (Textfeld: Hintergrund und Ausrichtung, Einbettung: Adresse).
+ * Alte Baustein-Seiten werden beim Laden automatisch in Elemente der
+ * freien Flaeche umgewandelt. Striche werden mit der Seite gespeichert,
+ * kein separates PNG und kein manueller "uebernehmen"-Schritt mehr.
  * ===================================================================== */
 (function () {
   'use strict';
   var editor = typeof document !== 'undefined' ? document.getElementById('ibook-editor') : null;
   if (!editor) { return; }
   var bookId = parseInt(editor.getAttribute('data-book-id') || '0', 10) || 0;
-  var blocks = [];
-  try { blocks = JSON.parse(editor.getAttribute('data-blocks') || '[]') || []; } catch (e) { blocks = []; }
-  if (!Array.isArray(blocks)) { blocks = []; }
+  var raw = [];
+  try { raw = JSON.parse(editor.getAttribute('data-blocks') || '[]') || []; } catch (e) { raw = []; }
+  if (!Array.isArray(raw)) { raw = []; }
   var csrf = '';
   try { csrf = document.body.getAttribute('data-csrf') || ''; } catch (e) { /* Harness */ }
   var status = null;
+  var dirty = false;
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -1718,7 +1729,10 @@
     status.textContent = msg;
     status.className = 'ibook-status' + (isErr ? ' ibook-status-err' : '');
   }
+  function markDirty() { dirty = true; }
   function mediaUrl(id) { return '/infobuecher/medium/' + id; }
+  function num(v, d) { var p = Math.pow(10, d || 2); return Math.round((v || 0) * p) / p; }
+  function clampN(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
   function upload(kind, file, done) {
     var fd = new FormData();
@@ -1734,537 +1748,646 @@
       .catch(function (err) { say('Upload fehlgeschlagen: ' + err, true); });
   }
 
-  function drawBlockControls(row, block, refresh) {
-    var bar = el('div', 'iblock-bar');
-    var up = el('button', 'btn btn-ghost', '↑'); up.type = 'button'; up.title = 'Nach oben';
-    var down = el('button', 'btn btn-ghost', '↓'); down.type = 'button'; down.title = 'Nach unten';
-    var del = el('button', 'btn btn-danger', '🗑'); del.type = 'button'; del.title = 'Baustein entfernen';
-    up.addEventListener('click', function () {
-      var i = blocks.indexOf(block);
-      if (i > 0) { blocks.splice(i, 1); blocks.splice(i - 1, 0, block); renderAll(); }
+  /* ---------- Genau EIN Canvas-Block (#64): alte Bausteine werden beim
+   * Laden in Elemente der freien Flaeche umgewandelt. ---------- */
+  var block = { type: 'canvas', w: 1600, h: 1000, items: [], ink: 0, inkName: '' };
+  (function normalize() {
+    var y = 40;
+    raw.forEach(function (b) {
+      if (!b || typeof b !== 'object') { return; }
+      var t = b.type || 'text';
+      if (t === 'canvas') {
+        block.w = b.w || block.w;
+        block.h = b.h || block.h;
+        block.items = Array.isArray(b.items) ? b.items : [];
+        block.ink = b.ink || 0;
+        block.inkName = b.inkName || '';
+        return;
+      }
+      if (t === 'text') {
+        block.items.push({ kind: 'text', body: b.body || '', x: 80, y: y, w: 600, bg: '', align: 'left' });
+        y += 200;
+      } else if (t === 'image') {
+        if (b.media) { block.items.push({ kind: 'image', media: b.media, name: b.name || 'Bild', alt: b.alt || '', x: 320, y: y, w: 400, h: 300 }); }
+        y += 340;
+      } else if (t === 'embed') {
+        block.items.push({ kind: 'embed', url: b.url || '', title: b.title || '', x: 320, y: y, w: 480 });
+        y += 300;
+      } else if (t === 'audio') {
+        if (b.media) { block.items.push({ kind: 'audio', media: b.media, name: b.name || 'Audio', x: 320, y: y, w: 360 }); }
+        y += 140;
+      } else if (t === 'video') {
+        if (b.media) { block.items.push({ kind: 'video', media: b.media, name: b.name || 'Video', x: 320, y: y, w: 480, h: 270 }); }
+        y += 320;
+      } else if (t === 'zeichnen') {
+        if (b.media) { block.items.push({ kind: 'image', media: b.media, name: b.name || 'Zeichnung', alt: 'Freihandzeichnung', x: 320, y: y, w: 480, h: 320 }); }
+        y += 360;
+      }
     });
-    down.addEventListener('click', function () {
-      var i = blocks.indexOf(block);
-      if (i >= 0 && i < blocks.length - 1) { blocks.splice(i, 1); blocks.splice(i + 1, 0, block); renderAll(); }
-    });
-    del.addEventListener('click', function () {
-      var i = blocks.indexOf(block);
-      if (i >= 0) { blocks.splice(i, 1); renderAll(); }
-    });
-    bar.appendChild(up); bar.appendChild(down); bar.appendChild(del);
-    row.appendChild(bar);
+  })();
+
+  /* ---------- Zustand ---------- */
+  var stage = el('div', 'icv-stage');
+  stage.setAttribute('style', 'aspect-ratio:' + block.w + '/' + block.h);
+  var mode = 'select';
+  var penColor = '#1f2937';
+  var penSw = 4;
+  var sel = null;
+  var selDiv = null;
+  var PEN_COLORS = ['#1f2937', '#ef4444', '#3b82f6', '#059669', '#f59e0b'];
+  var TEXT_BGS = ['', '#fffbe6', '#ffffff', '#eff6ff', '#f0fdf4', '#fef2f2'];
+  var KIND_NAMES = { text: 'Textfeld', image: 'Bild', ink: 'Strich', embed: 'Einbettung', audio: 'Audio', video: 'Video' };
+
+  function pctOf(v, total) { return (Math.round((v || 0) / total * 10000) / 100) + '%'; }
+  function stageRect() {
+    var r = null;
+    try { r = stage.getBoundingClientRect(); } catch (e) { /* Harness */ }
+    if (!r || typeof r.width !== 'number') { return { left: 0, top: 0, width: block.w, height: block.h }; }
+    return r;
+  }
+  function toLogical(clientX, clientY) {
+    var r = stageRect();
+    return {
+      x: (clientX - r.left) * (block.w / (r.width || block.w)),
+      y: (clientY - r.top) * (block.h / (r.height || block.h))
+    };
+  }
+  function styleItem(div, item) {
+    div.style.left = pctOf(item.x, block.w);
+    div.style.top = pctOf(item.y, block.h);
+    div.style.width = pctOf(item.w, block.w);
+    if ((item.kind === 'image' || item.kind === 'ink' || item.kind === 'video') && item.h) {
+      div.style.height = pctOf(item.h, block.h);
+    }
+  }
+  function svgEl(name) {
+    if (typeof document.createElementNS === 'function') {
+      return document.createElementNS('http://www.w3.org/2000/svg', name);
+    }
+    return document.createElement(name); /* Harness-Fallback */
+  }
+  function buildInkSvg(item) {
+    var svg = svgEl('svg');
+    svg.setAttribute('class', 'icv-ink-svg');
+    svg.setAttribute('viewBox', '0 0 ' + Math.max(4, item.w || 4) + ' ' + Math.max(4, item.h || 4));
+    svg.setAttribute('preserveAspectRatio', 'none');
+    var path = svgEl('path');
+    var p = item.p || [];
+    var d = '';
+    for (var i = 0; i + 1 < p.length; i += 2) {
+      d += (i === 0 ? 'M ' : 'L ') + num(p[i], 1) + ' ' + num(p[i + 1], 1) + ' ';
+    }
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', item.c || '#1f2937');
+    path.setAttribute('stroke-width', item.sw || 4);
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(path);
+    return svg;
+  }
+  function applyInkStyle(item) {
+    if (selDiv && selDiv.querySelector) {
+      var path = null;
+      try { path = selDiv.querySelector('path'); } catch (e) { /* Harness */ }
+      if (path) {
+        path.setAttribute('stroke', item.c || '#1f2937');
+        path.setAttribute('stroke-width', item.sw || 4);
+      }
+    }
   }
 
-  function blockRow(block) {
-    var row = el('div', 'iblock iblock-' + block.type);
-    var head = el('div', 'iblock-head');
-    var names = { text: '✍️ Text', image: '🖼 Bild', audio: '🔊 Audio', video: '🎞 Video', embed: '🔗 Einbettung', zeichnen: '✏️ Zeichnen', canvas: '🧩 Freie Fläche' };
-    head.appendChild(el('span', 'iblock-name', names[block.type] || block.type));
-    row.appendChild(head);
-    drawBlockControls(row, block);
-
-    if (block.type === 'text') {
-      var ta = el('textarea', 'mono iblock-ta');
-      ta.rows = 6;
-      ta.value = block.body || '';
-      ta.setAttribute('data-ac-md', '1');
+  /* ---------- Elemente aufbauen ---------- */
+  function attachMove(handle, item, div) {
+    handle.addEventListener('pointerdown', function (ev) {
+      if (mode !== 'select') { return; }
+      if (ev.preventDefault) { ev.preventDefault(); }
+      var rect = stageRect();
+      var sx = ev.clientX, sy = ev.clientY, ox = item.x, oy = item.y;
+      function onMove(ev2) {
+        item.x = clampN(ox + (ev2.clientX - sx) * (block.w / (rect.width || block.w)), 0, Math.max(0, block.w - 24));
+        item.y = clampN(oy + (ev2.clientY - sy) * (block.h / (rect.height || block.h)), 0, Math.max(0, block.h - 24));
+        styleItem(div, item);
+      }
+      function onUp() {
+        if (handle.removeEventListener) {
+          handle.removeEventListener('pointermove', onMove);
+          handle.removeEventListener('pointerup', onUp);
+        }
+        collect(); markDirty();
+      }
+      try { if (handle.setPointerCapture) { handle.setPointerCapture(ev.pointerId); } } catch (e) { /* aeltere Browser */ }
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp);
+    });
+  }
+  function attachResize(handle, item, div) {
+    handle.addEventListener('pointerdown', function (ev) {
+      if (mode !== 'select') { return; }
+      if (ev.preventDefault) { ev.preventDefault(); }
+      var rect = stageRect();
+      var sx = ev.clientX, sy = ev.clientY, ow = item.w, oh = item.h || 0;
+      var prop = item.kind === 'image' || item.kind === 'ink' || item.kind === 'video';
+      function onMove(ev2) {
+        var dw = (ev2.clientX - sx) * (block.w / (rect.width || block.w));
+        if (prop) {
+          var f = ow > 0 ? Math.max(0.05, (ow + dw) / ow) : 1;
+          item.w = clampN(ow * f, 24, block.w);
+          item.h = clampN(oh * f, 18, block.h);
+        } else {
+          item.w = clampN(ow + dw, 60, block.w);
+        }
+        styleItem(div, item);
+      }
+      function onUp() {
+        if (handle.removeEventListener) {
+          handle.removeEventListener('pointermove', onMove);
+          handle.removeEventListener('pointerup', onUp);
+        }
+        collect(); markDirty();
+      }
+      try { if (handle.setPointerCapture) { handle.setPointerCapture(ev.pointerId); } } catch (e) { /* aeltere Browser */ }
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp);
+    });
+  }
+  function buildItem(item) {
+    var div = el('div', 'icv-item ' + (item.kind === 'ink' ? 'icv-stroke' : 'icv-' + item.kind) + (item === sel ? ' icv-selected' : ''));
+    styleItem(div, item);
+    /* Verschieben-Leiste, sichtbar bei Auswahl (CSS) */
+    var bar = el('div', 'icv-move');
+    bar.title = 'Ziehen zum Verschieben';
+    bar.appendChild(el('span', 'icv-grip', '⋮⋮'));
+    attachMove(bar, item, div);
+    div.appendChild(bar);
+    if (item.kind === 'text') {
+      var ta = el('textarea', 'mono icv-ta');
+      ta.value = item.body || '';
+      if (item.bg) { ta.style.background = item.bg; }
+      if (item.align && item.align !== 'left') { ta.style.textAlign = item.align; }
       if (typeof window !== 'undefined' && window.IC_AUTOCOMPLETE && window.IC_AUTOCOMPLETE.attach) {
         try { window.IC_AUTOCOMPLETE.attach(ta, 'md'); } catch (eAC) { /* harmlos */ }
       }
-      ta.addEventListener('input', function () { block.body = ta.value; });
-      row.appendChild(ta);
-    } else if (block.type === 'embed') {
-      var urlIn = el('input', 'iblock-input'); urlIn.type = 'text'; urlIn.placeholder = 'https://www.youtube.com/watch?v=... oder https://learningapps.org/...';
-      urlIn.value = block.url || '';
-      urlIn.addEventListener('input', function () { block.url = urlIn.value; });
-      var titleIn = el('input', 'iblock-input'); titleIn.type = 'text'; titleIn.placeholder = 'Titel (optional)';
-      titleIn.value = block.title || '';
-      titleIn.addEventListener('input', function () { block.title = titleIn.value; });
-      row.appendChild(urlIn); row.appendChild(titleIn);
-      row.appendChild(el('div', 'muted iblock-hint', 'Erlaubt sind YouTube-Videos und LearningApps. Die Adresse wird geprüft, alles Andere wird nicht eingebettet.'));
-    } else if (block.type === 'zeichnen') {
-      var wrap = el('div', 'ibook-draw-wrap');
-      var canvas = el('canvas', 'ibook-draw');
-      canvas.width = 960; canvas.height = 640;
-      var ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      if (block.media) {
-        var img = new Image();
-        img.onload = function () { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); };
-        img.src = mediaUrl(block.media);
-      }
-      var tools = el('div', 'ibook-draw-tools');
-      var color = el('select', 'ibook-draw-color');
-      [['#1f2937', 'Stift'], ['#ef4444', 'Rot'], ['#3b82f6', 'Blau'], ['#059669', 'Grün'], ['#ffffff', 'Radierer']].forEach(function (opt) {
-        var o = el('option', '', opt[1]); o.value = opt[0]; color.appendChild(o);
-      });
-      var width = el('select', 'ibook-draw-width');
-      [['2', 'Dünn'], ['4', 'Mittel'], ['8', 'Dick'], ['16', 'Extra dick (Pencil)']].forEach(function (opt) {
-        var o = el('option', '', opt[1]); o.value = opt[0]; width.appendChild(o);
-      });
-      var clear = el('button', 'btn btn-ghost', 'Leeren'); clear.type = 'button';
-      clear.addEventListener('click', function () {
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      });
-      var saveBtn = el('button', 'btn btn-primary', 'Zeichnung übernehmen'); saveBtn.type = 'button';
-      saveBtn.addEventListener('click', function () {
-        try {
-          var dataUrl = canvas.toDataURL('image/png');
-          var fd = new FormData();
-          fd.append('csrf', csrf);
-          fd.append('name', 'zeichnung');
-          fd.append('data', dataUrl);
-          fetch('/infobuecher/' + bookId + '/zeichnung', { method: 'POST', body: fd })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-              if (data && data.ok) {
-                block.media = data.id; block.name = data.name;
-                say('Zeichnung übernommen.');
-                renderAll();
-              } else { say('Zeichnung konnte nicht gespeichert werden: ' + ((data && data.error) || '?'), true); }
-            })
-            .catch(function (err) { say('Zeichnung konnte nicht gespeichert werden: ' + err, true); });
-        } catch (e) { say('Zeichnung konnte nicht gelesen werden.', true); }
-      });
-      tools.appendChild(color); tools.appendChild(width); tools.appendChild(clear); tools.appendChild(saveBtn);
-      wrap.appendChild(canvas); wrap.appendChild(tools);
-      row.appendChild(wrap);
-      /* Freihand: Pointer Events statt Maus-Events, damit Apple Pencil
-       * (und Finger) sauber zeichnen; touch-action verhindert Scroll-Gesten
-       * ueber der Zeichenflaeche. Linke Breite folgt dem Stiftdruck. */
-      var drawing = false;
-      canvas.style.touchAction = 'none';
-      function pos(ev) {
-        var r = canvas.getBoundingClientRect();
-        return { x: (ev.clientX - r.left) * (canvas.width / r.width), y: (ev.clientY - r.top) * (canvas.height / r.height) };
-      }
-      canvas.addEventListener('pointerdown', function (ev) {
-        drawing = true;
-        try { canvas.setPointerCapture(ev.pointerId); } catch (e) { /* aeltere Browser */ }
-        var p = pos(ev);
-        ctx.strokeStyle = color.value;
-        var pr = ev.pressure && ev.pressure > 0 ? ev.pressure : 1;
-        ctx.lineWidth = Math.max(1, parseInt(width.value, 10) * (0.5 + pr));
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(p.x, p.y);
-      });
-      canvas.addEventListener('pointermove', function (ev) {
-        if (!drawing) { return; }
-        ev.preventDefault();
-        var p = pos(ev);
-        var pr = ev.pressure && ev.pressure > 0 ? ev.pressure : 1;
-        ctx.lineWidth = Math.max(1, parseInt(width.value, 10) * (0.5 + pr));
-        ctx.lineTo(p.x, p.y);
-        ctx.stroke();
-      });
-      canvas.addEventListener('pointerup', function () { drawing = false; });
-      canvas.addEventListener('pointercancel', function () { drawing = false; });
-    } else if (block.type === 'canvas') {
-      /* Freie Flaeche (#63), OneNote-artig: Bilder per Drag & Drop an der
-       * Ablege-Position, Elemente frei verschieben/skalieren, Text frei
-       * platzieren, Freihand ueber allem (auch ueber Bildern, zum
-       * Beschriften). Logische Flaeche block.w x block.h, angezeigt wird
-       * alles in Prozent mitgewalkt (aspect-ratio), gespeichert in
-       * Flaechen-Koordinaten. */
-      if (!block.w) { block.w = 1600; }
-      if (!block.h) { block.h = 1000; }
-      if (!Array.isArray(block.items)) { block.items = []; }
-      var stage = el('div', 'icv-stage');
-      stage.setAttribute('style', 'aspect-ratio:' + block.w + '/' + block.h);
-      var mode = 'select';
-      var clampN = function (v, min, max) { return Math.max(min, Math.min(max, v)); };
-      var pctOf = function (v, total) { return (Math.round(v / total * 10000) / 100) + '%'; };
-      function styleItem(div, item) {
-        div.style.left = pctOf(item.x, block.w);
-        div.style.top = pctOf(item.y, block.h);
-        div.style.width = pctOf(item.w, block.w);
-        if (item.h) { div.style.height = pctOf(item.h, block.h); }
-      }
-      function removeItem(item, div) {
-        var i = block.items.indexOf(item);
-        if (i >= 0) { block.items.splice(i, 1); }
-        if (div && div.parentNode && div.parentNode.removeChild) { div.parentNode.removeChild(div); }
-        collect();
-      }
-      function dragMove(handle, item, div) {
-        handle.addEventListener('pointerdown', function (ev) {
-          if (mode !== 'select') { return; }
-          if (ev.preventDefault) { ev.preventDefault(); }
-          var rect = stage.getBoundingClientRect();
-          var sx = ev.clientX, sy = ev.clientY, ox = item.x, oy = item.y;
-          function onMove(ev2) {
-            item.x = clampN(ox + (ev2.clientX - sx) * (block.w / rect.width), 0, Math.max(0, block.w - 24));
-            item.y = clampN(oy + (ev2.clientY - sy) * (block.h / rect.height), 0, Math.max(0, block.h - 24));
-            styleItem(div, item);
-          }
-          function onUp() {
-            if (handle.removeEventListener) {
-              handle.removeEventListener('pointermove', onMove);
-              handle.removeEventListener('pointerup', onUp);
-            }
-            collect();
-          }
-          try { if (handle.setPointerCapture) { handle.setPointerCapture(ev.pointerId); } } catch (e) { /* aeltere Browser */ }
-          handle.addEventListener('pointermove', onMove);
-          handle.addEventListener('pointerup', onUp);
-        });
-      }
-      function itemBar(item, div) {
-        var bar = el('div', 'icv-move');
-        bar.title = 'Ziehen zum Verschieben';
-        bar.appendChild(el('span', 'icv-grip', '⋮⋮'));
-        var del = el('button', 'icv-del', '✕'); del.type = 'button'; del.title = 'Element entfernen';
-        del.addEventListener('click', function () { removeItem(item, div); });
-        bar.appendChild(del);
-        return bar;
-      }
-      function buildTextItem(item) {
-        var div = el('div', 'icv-item icv-text');
-        styleItem(div, item);
-        div.appendChild(itemBar(item, div));
-        var ta = el('textarea', 'mono icv-ta');
-        ta.value = item.body || '';
-        if (typeof window !== 'undefined' && window.IC_AUTOCOMPLETE && window.IC_AUTOCOMPLETE.attach) {
-          try { window.IC_AUTOCOMPLETE.attach(ta, 'md'); } catch (eAC) { /* harmlos */ }
-        }
-        ta.addEventListener('input', function () { item.body = ta.value; collect(); });
-        div.appendChild(ta);
-        dragMove(div.querySelector('.icv-move') || div, item, div);
-        return div;
-      }
-      function buildImageItem(item) {
-        var div = el('div', 'icv-item icv-image');
-        styleItem(div, item);
-        div.appendChild(itemBar(item, div));
-        var im = el('img', 'icv-img');
-        im.src = mediaUrl(item.media); im.alt = item.alt || item.name || 'Bild';
-        div.appendChild(im);
-        var rs = el('div', 'icv-rs'); rs.title = 'Ecke ziehen zum Skalieren';
-        rs.addEventListener('pointerdown', function (ev) {
-          if (mode !== 'select') { return; }
-          if (ev.preventDefault) { ev.preventDefault(); }
-          var rect = stage.getBoundingClientRect();
-          var sx = ev.clientX, sy = ev.clientY, ow = item.w, oh = item.h;
-          function onMove(ev2) {
-            var dw = (ev2.clientX - sx) * (block.w / rect.width);
-            var f = ow > 0 ? (ow + dw) / ow : 1;
-            item.w = clampN(ow * f, 24, block.w);
-            item.h = clampN(oh * f, 18, block.h);
-            styleItem(div, item);
-          }
-          function onUp() {
-            if (rs.removeEventListener) {
-              rs.removeEventListener('pointermove', onMove);
-              rs.removeEventListener('pointerup', onUp);
-            }
-            collect();
-          }
-          try { if (rs.setPointerCapture) { rs.setPointerCapture(ev.pointerId); } } catch (e) { /* aeltere Browser */ }
-          rs.addEventListener('pointermove', onMove);
-          rs.addEventListener('pointerup', onUp);
-        });
-        div.appendChild(rs);
-        dragMove(div.querySelector('.icv-move') || div, item, div);
-        return div;
-      }
-      /* Freihand-Ebene: transparentes PNG ueber allem. Neu gezeichnete
-       * Striche werden beim Neuaufbau der Blockreihe aus block.__ink
-       * (Daten-URL) zurueckgeholt, damit sie bei Block-Operationen
-       * (Baustein verschieben/loeschen) nicht verloren gehen. */
-      var inkCanvas = el('canvas', 'icv-inkcanvas');
-      inkCanvas.width = block.w; inkCanvas.height = block.h;
-      inkCanvas.style.touchAction = 'none';
-      var inkCtx = inkCanvas.getContext('2d');
-      var inkSrc = block.__ink || (block.ink ? mediaUrl(block.ink) : '');
-      if (inkSrc) {
-        var inkImg = el('img');
-        inkImg.onload = function () { try { inkCtx.drawImage(inkImg, 0, 0, block.w, block.h); } catch (e) { /* Harness */ } };
-        inkImg.src = inkSrc;
-      }
-      var drawing = false;
-      function inkPos(ev) {
-        var r = inkCanvas.getBoundingClientRect();
-        return { x: (ev.clientX - r.left) * (block.w / (r.width || block.w)), y: (ev.clientY - r.top) * (block.h / (r.height || block.h)) };
-      }
-      inkCanvas.addEventListener('pointerdown', function (ev) {
-        if (mode !== 'draw') { return; }
-        drawing = true;
-        try { inkCanvas.setPointerCapture(ev.pointerId); } catch (e) { /* aeltere Browser */ }
-        var p = inkPos(ev);
-        inkCtx.strokeStyle = color.value;
-        var pr = ev.pressure && ev.pressure > 0 ? ev.pressure : 1;
-        inkCtx.lineWidth = Math.max(1, parseInt(width.value, 10) * (0.5 + pr));
-        inkCtx.lineCap = 'round';
-        inkCtx.beginPath();
-        inkCtx.moveTo(p.x, p.y);
-      });
-      inkCanvas.addEventListener('pointermove', function (ev) {
-        if (!drawing || mode !== 'draw') { return; }
-        if (ev.preventDefault) { ev.preventDefault(); }
-        var p = inkPos(ev);
-        var pr = ev.pressure && ev.pressure > 0 ? ev.pressure : 1;
-        inkCtx.lineWidth = Math.max(1, parseInt(width.value, 10) * (0.5 + pr));
-        inkCtx.lineTo(p.x, p.y);
-        inkCtx.stroke();
-      });
-      function inkDone() {
-        drawing = false;
-        try { block.__ink = inkCanvas.toDataURL('image/png'); } catch (e) { /* Harness ohne toDataURL */ }
-        collect();
-      }
-      inkCanvas.addEventListener('pointerup', inkDone);
-      inkCanvas.addEventListener('pointercancel', function () { drawing = false; });
-      /* Werkzeugleiste: Auswahl/Zeichnen, Stift, Farbe, Breite, Freihand
-       * speichern/leeren, Bild einfuegen (Dateiauswahl fuer Tablets),
-       * Text einfuegen. */
-      var tools = el('div', 'icv-tools');
-      var selBtn = el('button', 'btn btn-ghost icv-mode-btn icv-mode-btn-active', '🖱️ Auswahl'); selBtn.type = 'button'; selBtn.title = 'Elemente verschieben, Text bearbeiten';
-      var drawBtn = el('button', 'btn btn-ghost icv-mode-btn', '✏️ Zeichnen'); drawBtn.type = 'button'; drawBtn.title = 'Freihand ueber allem zeichnen, auch ueber Bildern';
-      var color = el('select', 'ibook-draw-color');
-      [['#1f2937', 'Stift'], ['#ef4444', 'Rot'], ['#3b82f6', 'Blau'], ['#059669', 'Grün'], ['#ffffff', 'Radierer']].forEach(function (opt) {
-        var o = el('option', '', opt[1]); o.value = opt[0]; color.appendChild(o);
-      });
-      var width = el('select', 'ibook-draw-width');
-      [['2', 'Dünn'], ['4', 'Mittel'], ['8', 'Dick'], ['16', 'Extra dick (Pencil)']].forEach(function (opt) {
-        var o = el('option', '', opt[1]); o.value = opt[0]; width.appendChild(o);
-      });
-      var inkClear = el('button', 'btn btn-ghost', 'Freihand leeren'); inkClear.type = 'button';
-      inkClear.addEventListener('click', function () {
-        try { inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height); } catch (e) { /* Harness */ }
-        block.ink = 0; block.__ink = '';
-        say('Freihand geleert. Mit „Freihand übernehmen“ sichern.');
-      });
-      var inkSave = el('button', 'btn btn-primary', '✅ Freihand übernehmen'); inkSave.type = 'button';
-      inkSave.title = 'Freihand-Ebene als PNG speichern (bleibt beim Speichern der Seite dabei)';
-      inkSave.addEventListener('click', function () {
-        try {
-          var dataUrl = inkCanvas.toDataURL('image/png');
-          var fd = new FormData();
-          fd.append('csrf', csrf);
-          fd.append('name', 'freie-flaeche');
-          fd.append('data', dataUrl);
-          fetch('/infobuecher/' + bookId + '/zeichnung', { method: 'POST', body: fd })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-              if (data && data.ok) {
-                block.ink = data.id; block.inkName = data.name; block.__ink = '';
-                say('Freihand übernommen.');
-                collect();
-              } else { say('Freihand konnte nicht gespeichert werden: ' + ((data && data.error) || '?'), true); }
-            })
-            .catch(function (err) { say('Freihand konnte nicht gespeichert werden: ' + err, true); });
-        } catch (e) { say('Freihand konnte nicht gelesen werden.', true); }
-      });
-      var imgBtn = el('button', 'btn btn-ghost', '🖼️ Bild'); imgBtn.type = 'button'; imgBtn.title = 'Bild einfuegen (oder einfach auf die Flaeche ziehen)';
-      var imgFile = el('input', 'iblock-file icv-file'); imgFile.type = 'file';
-      imgFile.accept = 'image/png,image/jpeg,image/gif,image/webp';
-      imgBtn.addEventListener('click', function () { imgFile.click(); });
-      imgFile.addEventListener('change', function () {
-        if (imgFile.files && imgFile.files[0]) { addImageAt(imgFile.files[0], block.w / 2 - 160, block.h / 2 - 120); }
-      });
-      var txtBtn = el('button', 'btn btn-ghost', '✍️ Text'); txtBtn.type = 'button'; txtBtn.title = 'Text an beliebiger Stelle platzieren (oder Flaeche doppelt antippen)';
-      txtBtn.addEventListener('click', function () { addTextAt(block.w / 2 - 170, block.h / 2 - 60); });
-      function setMode(m) {
-        mode = m;
-        stage.classList.toggle('icv-mode-draw', m === 'draw');
-        selBtn.classList.toggle('icv-mode-btn-active', m === 'select');
-        drawBtn.classList.toggle('icv-mode-btn-active', m === 'draw');
-      }
-      selBtn.addEventListener('click', function () { setMode('select'); });
-      drawBtn.addEventListener('click', function () { setMode('draw'); });
-      tools.appendChild(selBtn); tools.appendChild(drawBtn);
-      tools.appendChild(color); tools.appendChild(width);
-      tools.appendChild(inkClear); tools.appendChild(inkSave);
-      tools.appendChild(imgBtn); tools.appendChild(imgFile);
-      tools.appendChild(txtBtn);
-      /* Bilder und Text einfuegen */
-      function addTextAt(x, y) {
-        var item = { kind: 'text', body: '', x: clampN(x, 0, block.w - 60), y: clampN(y, 0, block.h - 24), w: 340 };
-        block.items.push(item);
-        var div = buildTextItem(item);
-        stage.appendChild(div);
-        var ta = div.querySelector('textarea');
-        if (ta && ta.focus) { ta.focus(); }
-        collect();
-      }
-      function addImageAt(file, x, y) {
-        say('Lade Bild hoch ...');
-        upload('image', file, function (data) {
-          var item = { kind: 'image', media: data.id, name: data.name, alt: '', x: clampN(x, 0, block.w - 32), y: clampN(y, 0, block.h - 32), w: 320, h: 240 };
-          block.items.push(item);
-          var div = buildImageItem(item);
-          stage.appendChild(div);
-          /* Natuerliche Bildgroesse uebernehmen, auf 45% der Flaechenbreite begrenzen */
-          var probe = el('img');
-          probe.onload = function () {
-            if (probe.naturalWidth > 0) {
-              var f = Math.min((block.w * 0.45) / probe.naturalWidth, 1);
-              item.w = Math.max(24, Math.round(probe.naturalWidth * f));
-              item.h = Math.max(18, Math.round(probe.naturalHeight * f));
-              styleItem(div, item);
-            }
-            collect();
-          };
-          probe.src = mediaUrl(data.id);
-          collect();
-        });
-      }
-      /* Drag & Drop aus Finder/Explorer direkt auf die Flaeche (#63) */
-      stage.addEventListener('dragover', function (ev) {
-        if (ev.preventDefault) { ev.preventDefault(); }
-        stage.classList.add('icv-drop');
-      });
-      stage.addEventListener('dragleave', function () { stage.classList.remove('icv-drop'); });
-      stage.addEventListener('drop', function (ev) {
-        if (ev.preventDefault) { ev.preventDefault(); }
-        stage.classList.remove('icv-drop');
-        var f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
-        if (!f) { return; }
-        setMode('select');
-        var rect = stage.getBoundingClientRect();
-        var lx = (ev.clientX - rect.left) * (block.w / (rect.width || block.w));
-        var ly = (ev.clientY - rect.top) * (block.h / (rect.height || block.h));
-        addImageAt(f, lx - 160, ly - 120);
-      });
-      /* Doppeltipp/Doppelklick auf freie Stelle: Text genau dort anlegen */
-      stage.addEventListener('dblclick', function (ev) {
-        if (mode !== 'select' || (ev.target && ev.target !== stage)) { return; }
-        var rect = stage.getBoundingClientRect();
-        var lx = (ev.clientX - rect.left) * (block.w / (rect.width || block.w));
-        var ly = (ev.clientY - rect.top) * (block.h / (rect.height || block.h));
-        addTextAt(lx - 170, ly - 14);
-      });
-      /* Bestehende Elemente aufbauen */
-      block.items.forEach(function (item) {
-        if (item.kind === 'text') { stage.appendChild(buildTextItem(item)); }
-        else if (item.kind === 'image') { stage.appendChild(buildImageItem(item)); }
-      });
-      stage.appendChild(inkCanvas);
-      row.appendChild(el('div', 'muted iblock-hint', 'Bilder einfach aus Finder/Explorer auf die Fläche ziehen oder 🖼️ Bild antippen. Doppeltipp auf eine freie Stelle legt Text an. Mit ✏️ Zeichnen schreibst du überall frei, auch über Bildern (Ideal für Apple Pencil). Freihand mit „✅ Freihand übernehmen“ sichern, dann Seite speichern.'));
-      row.appendChild(tools);
-      row.appendChild(stage);
-    } else {
-      /* Bild, Audio, Video: Datei hochladen, Vorschau direkt abspielbar. */
-      var kind = block.type;
-      var fileIn = el('input', 'iblock-file'); fileIn.type = 'file';
-      fileIn.accept = kind === 'image' ? 'image/png,image/jpeg,image/gif,image/webp' : kind === 'audio' ? 'audio/*' : 'video/*';
-      fileIn.addEventListener('change', function () {
-        if (fileIn.files && fileIn.files[0]) {
-          say('Lade ' + (kind === 'image' ? 'Bild' : kind === 'audio' ? 'Audio' : 'Video') + ' hoch ...');
-          upload(kind, fileIn.files[0], function (data) {
-            block.media = data.id; block.name = data.name;
-            renderAll();
-          });
-        }
-      });
-      var pick = el('button', 'btn btn-ghost', kind === 'image' ? '🖼 Datei wählen' : kind === 'audio' ? '🔊 Datei wählen' : '🎞 Datei wählen');
-      pick.type = 'button';
-      pick.addEventListener('click', function () { fileIn.click(); });
-      row.appendChild(pick);
-      row.appendChild(fileIn);
-      if (kind === 'image') {
-        var alt = el('input', 'iblock-input'); alt.type = 'text'; alt.placeholder = 'Bildbeschreibung (optional, fürs Lesen mit Vorlesefunktion)';
-        alt.value = block.alt || '';
-        alt.addEventListener('input', function () { block.alt = alt.value; });
-        row.appendChild(alt);
-      }
-      var preview = el('div', 'iblock-preview');
-      function renderPreview() {
-        preview.textContent = '';
-        if (!block.media) {
-          preview.appendChild(el('div', 'muted', 'Noch keine Datei.'));
-          return;
-        }
-        if (kind === 'image') {
-          var im = el('img'); im.src = mediaUrl(block.media); im.alt = block.alt || block.name || 'Bild';
-          im.className = 'iblock-preview-img';
-          preview.appendChild(im);
-        } else if (kind === 'audio') {
-          var au = el('audio'); au.controls = true; au.src = mediaUrl(block.media); au.preload = 'metadata';
-          preview.appendChild(au);
-        } else {
-          var vi = el('video'); vi.controls = true; vi.src = mediaUrl(block.media); vi.preload = 'metadata';
-          vi.className = 'iblock-preview-video';
-          preview.appendChild(vi);
-        }
-      }
-      renderPreview();
-      row.appendChild(preview);
+      ta.addEventListener('input', function () { item.body = ta.value; collect(); markDirty(); });
+      div.appendChild(ta);
+    } else if (item.kind === 'image') {
+      var im = el('img', 'icv-img');
+      im.src = mediaUrl(item.media); im.alt = item.alt || item.name || 'Bild';
+      div.appendChild(im);
+    } else if (item.kind === 'ink') {
+      div.appendChild(buildInkSvg(item));
+    } else if (item.kind === 'embed') {
+      div.appendChild(el('div', 'icv-ph', '🔗 ' + ((item.url || '').indexOf('learningapps') >= 0 ? 'LearningApps' : (item.url || '').indexOf('youtube') >= 0 ? 'YouTube' : 'Einbettung')));
+      div.appendChild(el('div', 'muted icv-ph-sub', (item.title ? item.title + ' · ' : '') + (item.url || 'Adresse in der Leiste oben eingeben (YouTube oder LearningApps)')));
+    } else if (item.kind === 'audio') {
+      div.appendChild(el('div', 'icv-ph', '🔊 Audio'));
+      div.appendChild(el('div', 'muted icv-ph-sub', (item.name || 'Audio') + ' · im Lesemodus abspielbar'));
+    } else if (item.kind === 'video') {
+      div.appendChild(el('div', 'icv-ph', '🎞 Video'));
+      div.appendChild(el('div', 'muted icv-ph-sub', (item.name || 'Video') + ' · im Lesemodus abspielbar'));
     }
-    return row;
+    var rs = el('div', 'icv-rs');
+    rs.title = 'Ecke ziehen zum Skalieren';
+    attachResize(rs, item, div);
+    div.appendChild(rs);
+    div.addEventListener('pointerdown', function () {
+      if (mode === 'select' && sel !== item) { selectItem(item); }
+    });
+    return div;
+  }
+  var overlay = el('canvas', 'icv-inkcanvas');
+  overlay.width = block.w; overlay.height = block.h;
+  overlay.style.touchAction = 'none';
+  var ctx = null;
+  try { ctx = overlay.getContext ? overlay.getContext('2d') : null; } catch (e) { ctx = null; /* Harness */ }
+
+  function renderStage() {
+    selDiv = null;
+    stage.textContent = '';
+    block.items.forEach(function (item) {
+      var div = buildItem(item);
+      if (item === sel) { selDiv = div; }
+      stage.appendChild(div);
+    });
+    stage.appendChild(overlay);
   }
 
-  function renderAll() {
-    editor.textContent = '';
-    blocks.forEach(function (block) { editor.appendChild(blockRow(block)); });
-    collect();
+  /* ---------- Selektion und Kontextbereich ---------- */
+  var ctxBar = el('div', 'icv-ctx');
+  var ctxLabel = el('span', 'icv-ctx-label', '');
+  var ctxText = el('div', 'icv-ctx-group');
+  var ctxEmbed = el('div', 'icv-ctx-group');
+  var ctxUrl = el('input', 'icv-ctx-input');
+  ctxUrl.type = 'text';
+  ctxUrl.placeholder = 'https://www.youtube.com/watch?v=... oder https://learningapps.org/...';
+  var ctxTitle = el('input', 'icv-ctx-input');
+  ctxTitle.type = 'text';
+  ctxTitle.placeholder = 'Titel (optional)';
+  ctxUrl.addEventListener('input', function () { if (sel && sel.kind === 'embed') { sel.url = ctxUrl.value; collect(); markDirty(); } });
+  ctxTitle.addEventListener('input', function () { if (sel && sel.kind === 'embed') { sel.title = ctxTitle.value; collect(); markDirty(); } });
+  TEXT_BGS.forEach(function (bg, i) {
+    var b = el('button', 'icv-bgbtn', ['', 'Ohne', 'Weiß', 'Gelb', 'Blau', 'Grün', 'Rosé'][i + 1] || 'Ohne');
+    b.type = 'button';
+    b.title = 'Hintergrund des Textfelds';
+    b.setAttribute('data-icv-bg', bg);
+    if (bg) { b.style.background = bg; }
+    b.addEventListener('click', function () {
+      if (!sel || sel.kind !== 'text') { return; }
+      sel.bg = bg;
+      var ta = selDiv && selDiv.querySelector ? selDiv.querySelector('textarea') : null;
+      if (ta) { ta.style.background = bg || ''; }
+      collect(); markDirty();
+    });
+    ctxText.appendChild(b);
+  });
+  [['left', '⯇ Links'], ['center', '⯆ Zentriert'], ['right', '⯈ Rechts']].forEach(function (a) {
+    var b = el('button', 'icv-bgbtn', a[1]);
+    b.type = 'button';
+    b.title = 'Textausrichtung im Textfeld';
+    b.setAttribute('data-icv-align', a[0]);
+    b.addEventListener('click', function () {
+      if (!sel || sel.kind !== 'text') { return; }
+      sel.align = a[0];
+      var ta = selDiv && selDiv.querySelector ? selDiv.querySelector('textarea') : null;
+      if (ta) { ta.style.textAlign = a[0]; }
+      collect(); markDirty();
+    });
+    ctxText.appendChild(b);
+  });
+  ctxEmbed.appendChild(ctxUrl);
+  ctxEmbed.appendChild(ctxTitle);
+  ctxBar.appendChild(ctxLabel);
+  ctxBar.appendChild(ctxText);
+  ctxBar.appendChild(ctxEmbed);
+
+  function updateCtx() {
+    if (!ctxBar.classList) { return; }
+    if (!sel) {
+      ctxBar.classList.remove('icv-toolbar-show');
+      return;
+    }
+    ctxBar.classList.add('icv-toolbar-show');
+    ctxLabel.textContent = 'Ausgewählt: ' + (KIND_NAMES[sel.kind] || sel.kind);
+    if (ctxText.style) { ctxText.style.display = sel.kind === 'text' ? '' : 'none'; }
+    if (ctxEmbed.style) { ctxEmbed.style.display = sel.kind === 'embed' ? '' : 'none'; }
+    if (sel.kind === 'embed') { ctxUrl.value = sel.url || ''; ctxTitle.value = sel.title || ''; }
+  }
+  function selectItem(item) {
+    sel = item;
+    renderStage();
+    updateCtx();
+  }
+  function deselect() {
+    sel = null;
+    if (selDiv && selDiv.classList) { selDiv.classList.remove('icv-selected'); }
+    selDiv = null;
+    updateCtx();
+  }
+  function removeItem(item) {
+    var i = block.items.indexOf(item);
+    if (i >= 0) { block.items.splice(i, 1); }
+    if (sel === item) { sel = null; selDiv = null; }
+    renderStage();
+    updateCtx();
+    collect(); markDirty();
   }
 
+  /* ---------- Symbolleiste (GoodNotes-artig, sticky oben) ---------- */
+  var toolbar = el('div', 'icv-toolbar');
+  var toolBtns = {};
+  [['select', '🖱️ Auswahl', 'Elemente auswählen, verschieben, Text bearbeiten'],
+   ['draw', '✏️ Stift', 'Freihand zeichnen, auch über Bildern (Apple Pencil: druckempfindlich)'],
+   ['eraser', '🧽 Radierer', 'Gezeichnete Striche wegradieren']].forEach(function (t) {
+    var b = el('button', 'btn btn-ghost icv-mode-btn' + (t[0] === 'select' ? ' icv-mode-btn-active' : ''), t[1]);
+    b.type = 'button';
+    b.title = t[2];
+    b.setAttribute('data-icv-tool', t[0]);
+    b.addEventListener('click', function () { setMode(t[0]); });
+    toolBtns[t[0]] = b;
+    toolbar.appendChild(b);
+  });
+  function setMode(m) {
+    mode = m;
+    ['select', 'draw', 'eraser'].forEach(function (k) {
+      if (toolBtns[k] && toolBtns[k].classList) { toolBtns[k].classList.toggle('icv-mode-btn-active', k === m); }
+    });
+    if (stage.classList) {
+      stage.classList.remove('icv-mode-draw');
+      stage.classList.remove('icv-mode-eraser');
+      if (m === 'draw') { stage.classList.add('icv-mode-draw'); }
+      if (m === 'eraser') { stage.classList.add('icv-mode-eraser'); }
+    }
+  }
+  var swatchWrap = el('div', 'icv-swatches');
+  function refreshSwatches() {
+    var btns = swatchWrap.children || [];
+    for (var i = 0; i < btns.length; i++) {
+      if (btns[i].classList) { btns[i].classList.toggle('icv-swatch-active', btns[i].getAttribute('data-icv-color') === penColor); }
+    }
+  }
+  PEN_COLORS.forEach(function (c) {
+    var s = el('button', 'icv-swatch', '');
+    s.type = 'button';
+    s.title = 'Stiftfarbe' + (sel && sel.kind === 'ink' ? ' (ändert den ausgewählten Strich)' : '');
+    s.setAttribute('data-icv-color', c);
+    s.style.background = c;
+    s.addEventListener('click', function () {
+      penColor = c;
+      refreshSwatches();
+      if (sel && sel.kind === 'ink') { sel.c = c; applyInkStyle(sel); collect(); markDirty(); }
+    });
+    swatchWrap.appendChild(s);
+  });
+  var swWrap = el('div', 'icv-sws');
+  function refreshSw() {
+    var btns = swWrap.children || [];
+    for (var i = 0; i < btns.length; i++) {
+      if (btns[i].classList) { btns[i].classList.toggle('icv-sw-active', parseInt(btns[i].getAttribute('data-icv-sw'), 10) === penSw); }
+    }
+  }
+  [[2, 'Fein'], [4, 'Mittel'], [8, 'Dick'], [16, 'Extra dick']].forEach(function (w) {
+    var b = el('button', 'icv-swbtn', w[1]);
+    b.type = 'button';
+    b.title = 'Strichstärke';
+    b.setAttribute('data-icv-sw', String(w[0]));
+    b.addEventListener('click', function () {
+      penSw = w[0];
+      refreshSw();
+      if (sel && sel.kind === 'ink') { sel.sw = w[0]; applyInkStyle(sel); collect(); markDirty(); }
+    });
+    swWrap.appendChild(b);
+  });
+  toolbar.appendChild(swatchWrap);
+  toolbar.appendChild(swWrap);
+  /* Einfuegen */
+  var txtBtn = el('button', 'btn btn-ghost', '✍️ Textfeld'); txtBtn.type = 'button';
+  txtBtn.title = 'Textfeld anlegen (oder freie Stelle doppelt antippen)';
+  txtBtn.addEventListener('click', function () { setMode('select'); addTextAt(block.w / 2 - 170, block.h / 2 - 60); });
+  toolbar.appendChild(txtBtn);
+  var imgBtn = el('button', 'btn btn-ghost', '🖼️ Bild'); imgBtn.type = 'button';
+  imgBtn.title = 'Bild hochladen (oder einfach auf die Fläche ziehen)';
+  var imgFile = el('input', 'iblock-file icv-file'); imgFile.type = 'file';
+  imgFile.accept = 'image/png,image/jpeg,image/gif,image/webp';
+  imgBtn.addEventListener('click', function () { if (imgFile.click) { imgFile.click(); } });
+  imgFile.addEventListener('change', function () {
+    if (imgFile.files && imgFile.files[0]) { addImageAt(imgFile.files[0], block.w / 2 - 160, block.h / 2 - 120); }
+  });
+  toolbar.appendChild(imgBtn);
+  toolbar.appendChild(imgFile);
+  var audBtn = el('button', 'btn btn-ghost', '🔊 Audio'); audBtn.type = 'button';
+  audBtn.title = 'Audiodatei hochladen, im Lesemodus abspielbar';
+  var audFile = el('input', 'iblock-file icv-file'); audFile.type = 'file';
+  audFile.accept = 'audio/*';
+  audBtn.addEventListener('click', function () { if (audFile.click) { audFile.click(); } });
+  audFile.addEventListener('change', function () {
+    if (audFile.files && audFile.files[0]) { addMediaAt('audio', audFile.files[0]); }
+  });
+  toolbar.appendChild(audBtn);
+  toolbar.appendChild(audFile);
+  var vidBtn = el('button', 'btn btn-ghost', '🎞️ Video'); vidBtn.type = 'button';
+  vidBtn.title = 'Video hochladen, im Lesemodus abspielbar';
+  var vidFile = el('input', 'iblock-file icv-file'); vidFile.type = 'file';
+  vidFile.accept = 'video/*';
+  vidBtn.addEventListener('click', function () { if (vidFile.click) { vidFile.click(); } });
+  vidFile.addEventListener('change', function () {
+    if (vidFile.files && vidFile.files[0]) { addMediaAt('video', vidFile.files[0]); }
+  });
+  toolbar.appendChild(vidBtn);
+  toolbar.appendChild(vidFile);
+  var embBtn = el('button', 'btn btn-ghost', '🔗 Einbettung'); embBtn.type = 'button';
+  embBtn.title = 'YouTube (ohne Cookies) oder LearningApps einbetten';
+  embBtn.addEventListener('click', function () { addEmbedAt(block.w / 2 - 240, block.h / 2 - 40); });
+  toolbar.appendChild(embBtn);
+  toolbar.appendChild(ctxBar);
+  var delBtn = el('button', 'btn btn-danger icv-delbtn', '🗑'); delBtn.type = 'button';
+  delBtn.title = 'Ausgewähltes Element entfernen';
+  delBtn.addEventListener('click', function () { if (sel) { removeItem(sel); } });
+  toolbar.appendChild(delBtn);
+
+  /* ---------- Einfuegen ---------- */
+  function addTextAt(x, y) {
+    var item = { kind: 'text', body: '', x: clampN(x, 0, block.w - 60), y: clampN(y, 0, block.h - 24), w: 340, bg: '', align: 'left' };
+    block.items.push(item);
+    selectItem(item);
+    var ta = selDiv && selDiv.querySelector ? selDiv.querySelector('textarea') : null;
+    if (ta && ta.focus) { ta.focus(); }
+    collect(); markDirty();
+  }
+  function addImageAt(file, x, y) {
+    say('Lade Bild hoch ...');
+    upload('image', file, function (data) {
+      var item = { kind: 'image', media: data.id, name: data.name, alt: '', x: clampN(x, 0, block.w - 32), y: clampN(y, 0, block.h - 32), w: 320, h: 240 };
+      block.items.push(item);
+      var probe = el('img');
+      probe.onload = function () {
+        if (probe.naturalWidth > 0) {
+          var f = Math.min((block.w * 0.45) / probe.naturalWidth, 1);
+          item.w = Math.max(24, Math.round(probe.naturalWidth * f));
+          item.h = Math.max(18, Math.round(probe.naturalHeight * f));
+        }
+        renderStage(); collect(); markDirty();
+      };
+      probe.src = mediaUrl(data.id);
+      selectItem(item); collect(); markDirty();
+    });
+  }
+  function addMediaAt(kind, file) {
+    say('Lade ' + (kind === 'audio' ? 'Audio' : 'Video') + ' hoch ...');
+    upload(kind, file, function (data) {
+      var item = kind === 'audio'
+        ? { kind: 'audio', media: data.id, name: data.name, x: clampN(block.w / 2 - 180, 0, block.w - 60), y: clampN(block.h / 2 - 40, 0, block.h - 24), w: 360 }
+        : { kind: 'video', media: data.id, name: data.name, x: clampN(block.w / 2 - 240, 0, block.w - 60), y: clampN(block.h / 2 - 135, 0, block.h - 24), w: 480, h: 270 };
+      block.items.push(item);
+      selectItem(item); collect(); markDirty();
+    });
+  }
+  function addEmbedAt(x, y) {
+    var item = { kind: 'embed', url: '', title: '', x: clampN(x, 0, block.w - 100), y: clampN(y, 0, block.h - 40), w: 480 };
+    block.items.push(item);
+    selectItem(item);
+    if (ctxUrl && ctxUrl.focus) { ctxUrl.focus(); }
+    collect(); markDirty();
+  }
+
+  /* ---------- Stift: Strich-Objekte zeichnen (#64) ---------- */
+  var stroke = null;
+  function inkSeg(x0, y0, x1, y1, c, w) {
+    if (!ctx) { return; }
+    try {
+      ctx.strokeStyle = c;
+      ctx.lineWidth = Math.max(1, w);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+    } catch (e) { /* Harness */ }
+  }
+  function clearOverlay() {
+    if (!ctx) { return; }
+    try { ctx.clearRect(0, 0, overlay.width, overlay.height); } catch (e) { /* Harness */ }
+  }
+  function commitStroke() {
+    if (!stroke) { return; }
+    var p = stroke.pts;
+    if (p.length < 2) { stroke = null; return; }
+    if (p.length === 2) { p.push(p[0] + 1, p[1] + 1); } /* einzelner Tipp: sichtbarer Punkt */
+    var minX = p[0], minY = p[1], maxX = p[0], maxY = p[1];
+    for (var i = 0; i < p.length; i += 2) {
+      if (p[i] < minX) { minX = p[i]; }
+      if (p[i] > maxX) { maxX = p[i]; }
+      if (p[i + 1] < minY) { minY = p[i + 1]; }
+      if (p[i + 1] > maxY) { maxY = p[i + 1]; }
+    }
+    var rel = [];
+    for (var j = 0; j < p.length; j += 2) { rel.push(num(p[j] - minX, 1), num(p[j + 1] - minY, 1)); }
+    var item = { kind: 'ink', c: stroke.c, sw: stroke.sw, x: num(minX, 2), y: num(minY, 2), w: Math.max(4, num(maxX - minX, 2)), h: Math.max(4, num(maxY - minY, 2)), p: rel };
+    block.items.push(item);
+    stroke = null;
+    clearOverlay();
+    selectItem(item);
+    collect(); markDirty();
+  }
+  overlay.addEventListener('pointerdown', function (ev) {
+    if (mode === 'draw') {
+      var p = toLogical(ev.clientX, ev.clientY);
+      stroke = { pts: [p.x, p.y], c: penColor, sw: penSw };
+      inkSeg(p.x, p.y, p.x, p.y, penColor, penSw);
+      try { if (overlay.setPointerCapture) { overlay.setPointerCapture(ev.pointerId); } } catch (e) { /* aeltere Browser */ }
+    } else if (mode === 'eraser') {
+      eraseAt(toLogical(ev.clientX, ev.clientY));
+      overlay.__icErase = true;
+      try { if (overlay.setPointerCapture) { overlay.setPointerCapture(ev.pointerId); } } catch (e) { /* aeltere Browser */ }
+    }
+  });
+  overlay.addEventListener('pointermove', function (ev) {
+    if (mode === 'eraser' && overlay.__icErase) {
+      if (ev.preventDefault) { ev.preventDefault(); }
+      eraseAt(toLogical(ev.clientX, ev.clientY));
+      return;
+    }
+    if (mode !== 'draw' || !stroke) { return; }
+    if (ev.preventDefault) { ev.preventDefault(); }
+    var p = toLogical(ev.clientX, ev.clientY);
+    var n = stroke.pts.length;
+    /* Druckempfindlichkeit wirkt live (Datensatz bleibt schlank) */
+    var pr = ev.pressure && ev.pressure > 0 ? ev.pressure : 1;
+    inkSeg(stroke.pts[n - 2], stroke.pts[n - 1], p.x, p.y, stroke.c, stroke.sw * (0.5 + pr));
+    stroke.pts.push(p.x, p.y);
+    if (stroke.pts.length > 4000) { commitStroke(); stroke = { pts: [p.x, p.y], c: penColor, sw: penSw }; } /* sehr lange Zuege teilen */
+  });
+  overlay.addEventListener('pointerup', function () {
+    if (mode === 'draw') { commitStroke(); }
+    overlay.__icErase = false;
+  });
+  overlay.addEventListener('pointercancel', function () {
+    stroke = null;
+    overlay.__icErase = false;
+  });
+
+  /* ---------- Radierer: getroffene Striche entfernen ---------- */
+  function eraseAt(p) {
+    var removed = false;
+    for (var i = block.items.length - 1; i >= 0; i--) {
+      var it = block.items[i];
+      if (it.kind !== 'ink') { continue; }
+      var pad = (it.sw || 4) + 6;
+      if (p.x >= it.x - pad && p.x <= it.x + (it.w || 0) + pad && p.y >= it.y - pad && p.y <= it.y + (it.h || 0) + pad) {
+        block.items.splice(i, 1);
+        if (sel === it) { sel = null; selDiv = null; }
+        removed = true;
+      }
+    }
+    if (removed) { renderStage(); updateCtx(); collect(); markDirty(); }
+  }
+
+  /* ---------- Drag & Drop und Doppeltipp ---------- */
+  stage.addEventListener('dragover', function (ev) {
+    if (ev.preventDefault) { ev.preventDefault(); }
+    if (stage.classList) { stage.classList.add('icv-drop'); }
+  });
+  stage.addEventListener('dragleave', function () {
+    if (stage.classList) { stage.classList.remove('icv-drop'); }
+  });
+  stage.addEventListener('drop', function (ev) {
+    if (ev.preventDefault) { ev.preventDefault(); }
+    if (stage.classList) { stage.classList.remove('icv-drop'); }
+    var f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+    if (!f) { return; }
+    setMode('select');
+    var p = toLogical(ev.clientX, ev.clientY);
+    addImageAt(f, p.x - 160, p.y - 120);
+  });
+  stage.addEventListener('dblclick', function (ev) {
+    if (mode !== 'select' || (ev.target && ev.target !== stage)) { return; }
+    var p = toLogical(ev.clientX, ev.clientY);
+    addTextAt(p.x - 170, p.y - 14);
+  });
+  stage.addEventListener('pointerdown', function (ev) {
+    if (mode !== 'select') { return; }
+    if (ev.target && ev.target !== stage) { return; }
+    deselect();
+  });
+
+  /* ---------- Speichern: alles wird mit der Seite gesichert ---------- */
   function collect() {
-    var out = [];
-    blocks.forEach(function (block) {
-      var entry = { type: block.type };
-      if (block.type === 'text') { entry.body = block.body || ''; }
-      else if (block.type === 'embed') { entry.url = block.url || ''; entry.title = block.title || ''; }
-      else if (block.type === 'canvas') {
-        entry.w = block.w || 1600;
-        entry.h = block.h || 1000;
-        entry.items = (block.items || []).map(function (item) {
-          var e = { kind: item.kind };
-          if (item.kind === 'text') { e.body = item.body || ''; }
-          else {
-            e.media = item.media || 0;
-            e.name = item.name || '';
-            if (item.alt) { e.alt = item.alt; }
-            e.h = Math.round((item.h || 120) * 100) / 100;
-          }
-          e.x = Math.round((item.x || 0) * 100) / 100;
-          e.y = Math.round((item.y || 0) * 100) / 100;
-          e.w = Math.round((item.w || 320) * 100) / 100;
-          return e;
-        });
-        if (block.ink) { entry.ink = block.ink; entry.inkName = block.inkName || ''; }
-      }
-      else {
-        entry.media = block.media || 0;
-        entry.name = block.name || '';
-        if (block.alt) { entry.alt = block.alt; }
-      }
-      out.push(entry);
-    });
+    var entry = {
+      type: 'canvas',
+      w: num(block.w, 2),
+      h: num(block.h, 2),
+      items: block.items.map(function (item) {
+        var e = { kind: item.kind };
+        if (item.kind === 'text') {
+          e.body = item.body || '';
+          e.bg = item.bg || '';
+          e.align = item.align || 'left';
+        } else if (item.kind === 'ink') {
+          e.c = item.c || '#1f2937';
+          e.sw = item.sw || 4;
+          e.p = (item.p || []).map(function (n) { return num(n, 1); });
+        } else if (item.kind === 'embed') {
+          e.url = item.url || '';
+          e.title = item.title || '';
+        } else {
+          e.media = item.media || 0;
+          e.name = item.name || '';
+          if (item.alt) { e.alt = item.alt; }
+        }
+        e.x = num(item.x, 2);
+        e.y = num(item.y, 2);
+        e.w = num(item.w || 320, 2);
+        if (item.kind === 'image' || item.kind === 'ink' || item.kind === 'video') { e.h = num(item.h || 120, 2); }
+        return e;
+      })
+    };
+    if (block.ink) { entry.ink = block.ink; entry.inkName = block.inkName || ''; }
     var jsonIn = document.getElementById('ibook-blocks-json');
-    if (jsonIn) { jsonIn.value = JSON.stringify(out); }
+    if (jsonIn) { jsonIn.value = JSON.stringify([entry]); }
   }
-
-  var addrow = document.getElementById('ibook-addrow');
-  if (addrow) {
-    addrow.addEventListener('click', function (ev) {
-      var btn = ev.target && ev.target.getAttribute ? ev.target : null;
-      var kind = btn ? btn.getAttribute('data-ib-add') : null;
-      if (!kind) { return; }
-      var block = { type: kind };
-      if (kind === 'text') { block.body = ''; }
-      if (kind === 'embed') { block.url = ''; block.title = ''; }
-      blocks.push(block);
-      renderAll();
-      var last = editor.lastChild;
-      if (last && last.scrollIntoView) { last.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
-    });
-  }
-
   var saveform = document.getElementById('ibook-saveform');
   if (saveform) {
-    saveform.addEventListener('submit', function () { collect(); });
-    var title = document.getElementById('ibook-title');
-    if (title && title.form) { /* Titel steckt im selben Formular */ }
+    saveform.addEventListener('submit', function () { collect(); dirty = false; });
+  }
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('beforeunload', function (ev) {
+      if (!dirty) { return; }
+      if (ev.preventDefault) { ev.preventDefault(); }
+      ev.returnValue = '';
+    });
   }
 
   status = el('div', 'ibook-status');
   editor.parentNode.insertBefore(status, editor.nextSibling);
-  renderAll();
+  editor.appendChild(toolbar);
+  editor.appendChild(stage);
+  renderStage();
+  refreshSwatches();
+  refreshSw();
+  updateCtx();
+  collect();
 })();
+
 
 /* Globaler data-confirm-Schutz: Formulare mit data-confirm fragen vor dem
  * Absenden nach (z.B. InfoBook/Abschnitt loeschen). */

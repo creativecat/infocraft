@@ -1499,9 +1499,47 @@ figure.iblock-image figcaption, figure.iblock-embed figcaption {
    InfoBook: Freie Flaeche (#63) - OneNote-artige Seite: Bilder per
    Drag & Drop, Text frei platzieren, Freihand ueber allem (Apple Pencil).
    ===================================================================== */
-.icv-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
-.icv-tools .icv-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+/* GoodNotes-artige Symbolleiste (#64): sticky oben, wrappt auf Tablets */
+.icv-toolbar {
+    position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; gap: 8px;
+    align-items: center; margin: 8px 0 12px; padding: 8px 10px;
+    background: var(--panel, #ffffff); border: 1px solid var(--border, #d7dce5);
+    border-radius: 14px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+.icv-toolbar .btn { min-height: 36px; }
+.icv-toolbar .icv-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .icv-mode-btn-active { border-color: var(--primary-2, #1d4ed8); box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.15); }
+/* Farb-Swatches: Farbe fuer neue Striche, umfaerbt auch die Auswahl */
+.icv-swatches { display: flex; gap: 6px; align-items: center; padding: 0 2px; }
+.icv-swatch {
+    width: 26px; height: 26px; border-radius: 50%; border: 2px solid #ffffff; cursor: pointer;
+    box-shadow: 0 0 0 1px var(--border, #d7dce5); padding: 0;
+}
+.icv-swatch-active { box-shadow: 0 0 0 2px var(--primary-2, #1d4ed8); transform: scale(1.08); }
+/* Strichstaerken */
+.icv-sws { display: flex; gap: 4px; align-items: center; }
+.icv-swbtn {
+    border: 1px solid var(--border, #d7dce5); background: #ffffff; border-radius: 8px;
+    padding: 4px 8px; cursor: pointer; font-size: 0.8rem; min-height: 30px;
+}
+.icv-sw-active { border-color: var(--primary-2, #1d4ed8); box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.15); }
+/* Kontextbereich: zeigt Einstellungen je nach Auswahl */
+.icv-ctx {
+    display: none; flex-wrap: wrap; gap: 6px; align-items: center;
+    padding: 6px 8px; background: #f1f5f9; border-radius: 10px;
+}
+.icv-ctx.icv-toolbar-show { display: flex; }
+.icv-ctx-label { font-size: 0.8rem; font-weight: 600; color: #334155; margin-right: 4px; }
+.icv-ctx-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.icv-bgbtn {
+    border: 1px solid var(--border, #d7dce5); background: #ffffff; border-radius: 8px;
+    padding: 4px 8px; cursor: pointer; font-size: 0.78rem; min-height: 28px;
+}
+.icv-ctx-input {
+    flex: 1; min-width: 220px; border: 1px solid var(--border, #d7dce5); border-radius: 8px;
+    padding: 6px 8px; font: inherit; font-size: 0.85rem; min-height: 32px;
+}
+.icv-delbtn { margin-left: auto; }
 .icv-stage {
     position: relative; width: 100%; background: #ffffff;
     border: 1px solid var(--border, #d7dce5); border-radius: 12px;
@@ -1509,7 +1547,11 @@ figure.iblock-image figcaption, figure.iblock-embed figcaption {
 }
 .icv-stage.icv-drop { outline: 3px dashed #1d4ed8; outline-offset: -3px; }
 .icv-stage.icv-mode-draw { cursor: crosshair; touch-action: none; }
+.icv-stage.icv-mode-eraser { cursor: cell; touch-action: none; }
+.icv-stage.icv-mode-eraser .icv-item { pointer-events: none; }
+.icv-stage.icv-mode-eraser .icv-inkcanvas { pointer-events: auto; cursor: cell; }
 .icv-item { position: absolute; z-index: 1; }
+.icv-selected { outline: 2px solid #1d4ed8; outline-offset: 2px; border-radius: 10px; }
 .icv-image img {
     width: 100%; height: 100%; object-fit: fill; display: block;
     border-radius: 8px; border: 1px solid var(--border, #d7dce5);
@@ -1528,7 +1570,7 @@ figure.iblock-image figcaption, figure.iblock-embed figcaption {
     background: linear-gradient(rgba(29, 78, 216, 0.08), rgba(29, 78, 216, 0));
     opacity: 0; transition: opacity 0.15s ease; border-radius: 10px 10px 0 0; touch-action: none;
 }
-.icv-item:hover .icv-move, .icv-move:focus-within, .icv-move:active { opacity: 1; }
+.icv-item:hover .icv-move, .icv-selected .icv-move, .icv-move:focus-within, .icv-move:active { opacity: 1; }
 .icv-grip { font-size: 0.75rem; color: #475569; user-select: none; letter-spacing: 2px; padding-left: 4px; }
 .icv-del {
     margin-left: auto; border: 0; background: #e11d48; color: #ffffff; cursor: pointer;
@@ -1542,18 +1584,36 @@ figure.iblock-image figcaption, figure.iblock-embed figcaption {
 }
 .icv-inkcanvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
 .icv-stage.icv-mode-draw .icv-item { pointer-events: none; }
-.icv-stage.icv-mode-draw .icv-inkcanvas { pointer-events: auto; }
+.icv-stage.icv-mode-draw .icv-inkcanvas { pointer-events: auto; cursor: crosshair; }
+/* Strich-Objekte (#64): SVG fuellt die Bounding-Box, Klicks landen auf dem Item */
+.icv-stroke .icv-ink-svg, .icv-ink-svg { width: 100%; height: 100%; display: block; pointer-events: none; overflow: visible; }
+.icv-selected.icv-stroke { outline: 1px dashed #1d4ed8; outline-offset: 3px; }
+/* Platzhalter im Editor: echte Player gibt es im Lesemodus */
+.icv-embed, .icv-audio, .icv-video {
+    background: #f8fafc; border: 1px dashed var(--border, #d7dce5); border-radius: 10px;
+    display: flex; flex-direction: column; justify-content: center; gap: 4px;
+    padding: 10px; min-height: 60px; text-align: center;
+}
+.icv-ph { font-size: 0.95rem; font-weight: 600; color: #1e293b; }
+.icv-ph-sub { font-size: 0.78rem; overflow-wrap: anywhere; }
 /* Lesen/Präsentation: gleiche Geometrie, ohne Editor-Griffe */
 .icv-readonly .icv-ink { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
-.icv-readonly .icv-text { padding: 8px 10px; }
+.icv-readonly .icv-text { padding: 8px 10px; border-radius: 8px; }
 .icv-readonly .icv-text img { max-width: 100%; border-radius: 8px; }
+.icv-readonly .icv-text .slide-body { text-align: inherit; }
+.icv-readonly .icv-embed .embed-frame { width: 100%; aspect-ratio: 16 / 9; }
+.icv-readonly .icv-audio audio { width: 100%; }
+.icv-readonly .icv-video video { width: 100%; height: 100%; border-radius: 8px; background: #000000; }
+.icv-readonly .icv-image img { width: 100%; height: 100%; object-fit: fill; border-radius: 8px; }
 .icv-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 .slide .icv-stage { max-width: 100%; margin: 0 auto; background: #ffffff; }
 .slide .icv-readonly .icv-text img { max-width: 100%; }
 @media (pointer: coarse) {
-    .icv-move { height: 30px; opacity: 1; }
-    .icv-del { width: 30px; height: 30px; }
-    .icv-rs { width: 22px; height: 22px; }
-    .icv-tools .btn, .icv-tools select { min-height: 44px; }
+    .icv-move { height: 32px; opacity: 1; }
+    .icv-del { width: 32px; height: 32px; }
+    .icv-rs { width: 24px; height: 24px; }
+    .icv-toolbar .btn, .icv-swbtn, .icv-bgbtn { min-height: 44px; }
+    .icv-swatch { width: 34px; height: 34px; }
+    .icv-ctx-input { min-height: 44px; }
     .icv-ta { min-height: 100px; font-size: 1rem; }
 }
