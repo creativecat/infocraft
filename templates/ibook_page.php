@@ -136,3 +136,18 @@
 <?php endif; ?>
 </div>
 </div>
+<?php /* #77: Mermaid nur laden, wenn die Seite Diagramm-Elemente hat oder
+ * gerade bearbeitet wird (der Editor rendert die Vorschau live). */ ?>
+<?php $hasDiagram = $canWrite; ?>
+<?php if (!$hasDiagram): ?>
+    <?php foreach ($blocks as $block): ?>
+        <?php $dgItems = is_array($block) && isset($block['items']) && is_array($block['items']) ? $block['items'] : []; ?>
+        <?php foreach ($dgItems as $dgItem): ?>
+            <?php if (is_array($dgItem) && (string) ($dgItem['kind'] ?? '') === 'diagram') { $hasDiagram = true; break 2; } ?>
+        <?php endforeach; ?>
+    <?php endforeach; ?>
+<?php endif; ?>
+<?php if ($hasDiagram): ?>
+<script src="<?= vendor_asset('assets/vendor/mermaid.min.js', 'https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js', 3000000) ?>"></script>
+<script>if (window.mermaid) { mermaid.initialize({ startOnLoad: false }); }</script>
+<?php endif; ?>

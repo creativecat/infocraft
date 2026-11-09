@@ -2147,6 +2147,27 @@
       dbRun.type = 'button';
       div.appendChild(dbRun);
       div.appendChild(el('pre', 'mono icv-db-out'));
+    } else if (item.kind === 'diagram') {
+      /* Diagramm-Element (#77): Code links, Diagramm rechts, live. Der
+       * Doppelklick auf die Vorschau springt in den Code zurueck. */
+      var dgWrap = el('div', 'icv-diagram-wrap');
+      var dgTa = el('textarea', 'mono icv-diagram-src');
+      dgTa.value = item.src || '';
+      dgTa.setAttribute('spellcheck', 'false');
+      dgTa.addEventListener('input', function () {
+        item.src = dgTa.value;
+        if (window.IC_RENDER_DIAGRAM) { window.IC_RENDER_DIAGRAM(dgPrev, item.src || ''); }
+        collect(); markDirty();
+      });
+      dgWrap.appendChild(dgTa);
+      var dgPrev = el('div', 'icv-diagram-prev');
+      dgPrev.title = 'Doppelklick: Code bearbeiten';
+      dgPrev.addEventListener('dblclick', function () { if (dgTa.focus) { dgTa.focus(); } });
+      dgWrap.appendChild(dgPrev);
+      div.appendChild(dgWrap);
+      setTimeout(function () { /* Renderer steht erst am Dateiende: einmalig zeichnen */
+        if (window.IC_RENDER_DIAGRAM) { window.IC_RENDER_DIAGRAM(dgPrev, item.src || ''); }
+      }, 0);
     }
     refreshLinkBadge(div, item); /* verlinktes Element zeigt das Badge (#73) */
     /* Vier Ecken zum Skalieren (#67), sichtbar nur bei Auswahl (CSS). */
@@ -2521,6 +2542,10 @@
   dbBtn.title = 'Datenbank einfügen (Schema und SQL-Abfragen)';
   dbBtn.addEventListener('click', function () { addDbAt(block.w / 2 - 210, block.h / 2 - 110); });
   toolbar.appendChild(dbBtn);
+  var diagBtn = el('button', 'btn btn-ghost', '📊'); diagBtn.type = 'button';
+  diagBtn.title = 'Diagramm einfügen (Mermaid: Code links, Diagramm rechts)';
+  diagBtn.addEventListener('click', function () { addDiagramAt(block.w / 2 - 240, block.h / 2 - 120); });
+  toolbar.appendChild(diagBtn);
   toolbar.appendChild(ctxBar);
   /* Flaechenhoehe (#67): nach unten wachst automatisch, hier geht es
    * manuell: groesser immer, kleiner nur bis knapp unter das unterste
@@ -2620,6 +2645,15 @@
     renderStage();
     selectItem(item);
     var ta = selDiv && selDiv.querySelector ? selDiv.querySelector('.icv-db-seed-ta') : null;
+    if (ta && ta.focus) { ta.focus(); }
+    collect(); markDirty();
+  }
+  function addDiagramAt(x, y) {
+    var item = { kind: 'diagram', src: 'graph TD\nA[Start] --> B[Ziel]', x: clampN(x, 0, block.w - 160), y: clampN(y, 0, block.h - 60), w: 480 };
+    block.items.push(item);
+    renderStage();
+    selectItem(item);
+    var ta = selDiv && selDiv.querySelector ? selDiv.querySelector('.icv-diagram-src') : null;
     if (ta && ta.focus) { ta.focus(); }
     collect(); markDirty();
   }
@@ -2871,6 +2905,8 @@
         } else if (item.kind === 'db') {
           e.dbseed = item.dbseed || '';
           e.dbq = item.dbq || '';
+        } else if (item.kind === 'diagram') {
+          e.src = item.src || '';
         } else {
           e.media = item.media || 0;
           e.name = item.name || '';
@@ -3207,4 +3243,61 @@
     var query = qEl ? String(qEl.value || '') : '';
     window.IC_DB_RUN(outEl, seed, query);
   });
+})();
+
+
+/* InfoBook Diagramm-Element (#77): Mermaid-Code als Diagramm, live im Editor
+ * und einmalig beim Laden im Lesemodus. Ohne Mermaid (offline, blockiertes
+ * CDN) bleibt der Quelltext als lesbarer Fallback stehen. */
+(function () {
+  'use strict';
+  if (typeof window === 'undefined') { return; }
+  var dgSeq = 0;
+  window.IC_RENDER_DIAGRAM = function (box, src) {
+    if (!box) { return; }
+    var text = String(src || '').trim();
+    if (!window.mermaid || !window.mermaid.render) {
+      box.textContent = text !== '' ? text : '(noch kein Diagramm-Code)';
+      box.setAttribute('data-mermaid-missing', '1');
+      return;
+    }
+    if (text === '') {
+      box.textContent = '(noch kein Diagramm-Code)';
+      return;
+    }
+    dgSeq += 1;
+    try {
+      var p = window.mermaid.render('icv-dg-' + dgSeq, text);
+      if (p && typeof p.then === 'function') {
+        p.then(function (res) {
+          box.innerHTML = res && res.svg ? res.svg : '';
+        }).catch(function (err) {
+          box.textContent = '✖ ' + (err && err.message ? err.message : String(err));
+        });
+      } else if (p && p.svg) {
+        box.innerHTML = p.svg;
+      }
+    } catch (e) {
+      box.textContent = '✖ ' + (e && e.message ? e.message : String(e));
+    }
+  };
+  if (typeof document === 'undefined') { return; }
+  /* Lesemodus: fertige Diagramm-Boxen (div.icv-diagram-ro[data-src]) einmalig
+   * zeichnen. Lief das Skript vor dem DOM,holt DOMContentLoaded nach. */
+  function renderRoBoxes() {
+    if (!document.querySelectorAll) { return; }
+    var boxes = document.querySelectorAll('.icv-diagram-ro');
+    for (var i = 0; i < boxes.length; i++) {
+      var b = boxes[i];
+      var prev = b.querySelector ? b.querySelector('.icv-diagram-prev') : null;
+      if (prev && !prev.getAttribute('data-dg-done')) {
+        prev.setAttribute('data-dg-done', '1');
+        window.IC_RENDER_DIAGRAM(prev, b.getAttribute('data-src') || '');
+      }
+    }
+  }
+  renderRoBoxes();
+  if (document.addEventListener && (!document.readyState || document.readyState === 'loading')) {
+    document.addEventListener('DOMContentLoaded', function () { renderRoBoxes(); });
+  }
 })();

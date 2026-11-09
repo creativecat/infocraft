@@ -1544,6 +1544,49 @@ setTimeout(function () {
                   }
                 }
 
+                /* T59 (#77): Diagramm-Element (Mermaid): Code links, Diagramm
+                 * rechts, live beim Tippen, Doppelklick auf die Vorschau
+                 * springt zurueck in den Code. */
+                global.window.mermaid = { render: function (id, src) { return { svg: '<svg class="icv-dg-test">' + id + '</svg>' }; } };
+                var ibDiagBtn59 = null;
+                var ibBarBtns59 = ibBar.querySelectorAll('button');
+                for (var ci59 = 0; ci59 < ibBarBtns59.length; ci59++) {
+                  if (String(ibBarBtns59[ci59].title || '').indexOf('Diagramm') !== -1) { ibDiagBtn59 = ibBarBtns59[ci59]; }
+                }
+                ok(ibDiagBtn59 !== null && ibDiagBtn59.textOf() === '📊', 'T59 Diagramm-Knopf in der Leiste zeigt nur das Icon');
+                if (ibDiagBtn59) {
+                  ibDiagBtn59.dispatch('click');
+                  var ibDiagBox59 = ibStage.querySelector('.icv-diagram');
+                  ok(ibDiagBox59 !== null && ibDiagBox59.querySelector('.icv-diagram-src') !== null && ibDiagBox59.querySelector('.icv-diagram-prev') !== null, 'T59b das Diagramm-Element hat Code links und Vorschau rechts');
+                  if (ibDiagBox59) {
+                    var ibDiagTa59 = ibDiagBox59.querySelector('.icv-diagram-src');
+                    ok(String(ibDiagTa59.value).indexOf('graph TD') !== -1, 'T59c neuer Code startet mit einer Mermaid-Vorlage');
+                    ibDiagTa59.value = 'graph LR\nCI_A --> CI_B';
+                    ibDiagTa59.dispatch('input');
+                    ok(String(ibDiagBox59.querySelector('.icv-diagram-prev').innerHTML).indexOf('<svg class="icv-dg-test">') === 0, 'T59d die Vorschau rendert live mit');
+                    ibDiagBox59.querySelector('.icv-diagram-prev').dispatch('dblclick');
+                    ok(ibDiagTa59._focused === true, 'T59e Doppelklick auf die Vorschau fokussiert den Code');
+                    var cv59 = ibCollect();
+                    var t59 = cv59 && cv59.items ? cv59.items.filter(function (it) { return it.kind === 'diagram'; })[0] : null;
+                    ok(t59 && t59.src.indexOf('CI_A --> CI_B') !== -1, 'T59f der Diagramm-Code wird serialisiert');
+                    /* Lesemodus: div.icv-diagram-ro[data-src] zeichnet einmalig
+                     * beim DOMContentLoaded-Lauf. */
+                    var ibRoBox59 = new FakeEl('div');
+                    ibRoBox59.className = 'icv-item icv-diagram icv-diagram-ro';
+                    ibRoBox59.setAttribute('data-src', 'graph TD\nRO_A[RO_ZIEL]');
+                    var ibRoPrev59 = new FakeEl('div');
+                    ibRoPrev59.className = 'icv-diagram-prev';
+                    ibRoBox59.appendChild(ibRoPrev59);
+                    ibDoc.body.appendChild(ibRoBox59);
+                    ibDoc._fire('DOMContentLoaded', { type: 'DOMContentLoaded' });
+                    ok(String(ibRoPrev59.innerHTML).indexOf('<svg class="icv-dg-test">') === 0, 'T59g im Lesemodus zeichnet die fertige Diagramm-Box ohne Editor');
+                    delete global.window.mermaid;
+                    var ibOffPrev59 = new FakeEl('div');
+                    window.IC_RENDER_DIAGRAM(ibOffPrev59, 'graph TD\nX --> Y');
+                    ok(ibOffPrev59.textContent.indexOf('graph TD') !== -1 && ibOffPrev59.getAttribute('data-mermaid-missing') === '1', 'T59h ohne Mermaid bleibt der Quelltext als Fallback lesbar');
+                  }
+                }
+
                 /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */
                 var NL41 = String.fromCharCode(10);
                 replIn.value = ['a', 'b', 'c', 'd', 'e', 'f'].join(NL41);

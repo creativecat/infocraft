@@ -321,6 +321,21 @@ final class InfoBook
                 }
                 if ($link > 0) { $it['link'] = $link; }
                 $clean[] = $it;
+            } elseif ($kind === 'diagram') {
+                /* Diagramm-Element (#77): Mermaid-Code, gerendert wird im
+                 * Client (Mermaid.js), der Server speichert nur den Text. */
+                $it = [
+                    'kind' => 'diagram',
+                    'src' => mb_substr((string) ($item['src'] ?? ''), 0, 8000),
+                    'x' => $left,
+                    'y' => $top,
+                    'w' => self::cvNum($item['w'] ?? 480, 160, $w),
+                ];
+                if ($grp > 0) {
+                    $it['g'] = $grp;
+                }
+                if ($link > 0) { $it['link'] = $link; }
+                $clean[] = $it;
             } elseif ($kind === 'db') {
                 /* Datenbank-Element (#76): Schema/Seed als SQL-Text, Abfrage
                  * dazu. Ausgefuehrt wird alles clientseitig (IC_DB_RUN). */

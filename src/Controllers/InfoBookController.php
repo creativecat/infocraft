@@ -942,6 +942,13 @@ final class InfoBookController
                     . '<button type="button" class="icv-db-run">▶ Abfrage ausführen</button>'
                     . '<pre class="icv-db-out" aria-live="polite"></pre>'
                     . '<pre class="icv-db-seed-src" hidden>' . e($seed) . '</pre></div>';
+            } elseif ($kind === 'diagram') {
+                /* Diagramm-Element (#77): Der Mermaid-Code steht im data-src-
+                 * Attribut, gerendert wird im Client (IC_RENDER_DIAGRAM in
+                 * app.js + Mermaid.js aus dem Template). */
+                $src = (string) ($item['src'] ?? '');
+                $inner .= $pre . '<div class="icv-item icv-diagram icv-diagram-ro" data-src="' . e($src) . '" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%">'
+                    . '<div class="icv-diagram-prev" aria-live="polite"></div></div>';
             }
             /* Nur schliessen, wenn der Zweig wirklich etwas angehaengt hat. */
             if ($itemLink > 0 && strlen($inner) > $lenBefore) {

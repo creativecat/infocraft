@@ -1761,6 +1761,23 @@ a.icv-item-link:hover .icv-item { outline: 2px dashed #1d4ed8; outline-offset: 2
     font-family: var(--mono, ui-monospace, monospace); font-size: 0.8rem; white-space: pre-wrap; color: #1e293b;
 }
 .icv-db .icv-db-seed-src { display: none; }
+/* Diagramm-Element (#77): Code links, Diagramm rechts */
+.icv-diagram {
+    display: flex; flex-direction: column;
+    background: #f8fafc; border: 1px solid var(--border, #d7dce5); border-radius: 10px; padding: 10px;
+}
+.icv-diagram-wrap { display: flex; flex-direction: row; gap: 6px; width: 100%; }
+.icv-diagram .icv-diagram-src {
+    flex: 1 1 45%; min-height: 110px; box-sizing: border-box; resize: vertical;
+    background: #ffffff; color: #1e293b; border: 1px solid var(--border, #d7dce5); border-radius: 6px;
+    font-family: var(--mono, ui-monospace, monospace); font-size: 0.8rem; padding: 6px; outline: none;
+}
+.icv-diagram .icv-diagram-prev {
+    flex: 1 1 55%; min-height: 110px; overflow: auto;
+    background: #ffffff; border: 1px solid var(--border, #d7dce5); border-radius: 6px; padding: 6px;
+}
+.icv-diagram .icv-diagram-prev svg { max-width: 100%; height: auto; }
+@media (max-width: 700px) { .icv-diagram-wrap { flex-direction: column; } }
 /* Lesen/Präsentation: gleiche Geometrie, ohne Editor-Griffe */
 .icv-readonly .icv-ink { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
 .icv-readonly .icv-text { padding: 8px 10px; border-radius: 8px; }
