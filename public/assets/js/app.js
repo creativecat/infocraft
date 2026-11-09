@@ -1181,6 +1181,9 @@
   document.querySelectorAll('[data-hl]').forEach(function (wrap) {
     var area = wrap.querySelector('textarea');
     if (!area) { return; }
+    /* Verschachtelte Wrapper (SQL-Werkstatt): nur der innerste bekommt das Overlay,
+     * sonst liegen zwei farbige Ebenen uebereinander (#49). */
+    if (wrap.querySelector('[data-hl]')) { return; }
     var lang = wrap.getAttribute('data-hl');
     if (!hljs.getLanguage(lang)) { return; }
     var pre = document.createElement('pre');
@@ -1271,6 +1274,10 @@
     /* Java-IDE: eigene Zeilennummern mit Einzelschritt- und Fehlermarkierung. */
     if (wrap.closest && wrap.closest('[data-file-pane]')) { return; }
     if (wrap.querySelector('.ln-gutter')) { return; }
+    /* Verschachtelte Wrapper (SQL-Werkstatt): nur der innerste bekommt Nummern (#49). */
+    if (wrap.querySelector('[data-hl]')) { return; }
+    /* Felder mit eigener Gutter daneben (Objektkonsole): keine zweite Spalte (#49). */
+    if (wrap.previousElementSibling && String(wrap.previousElementSibling.className || '').indexOf('repl-gutter') !== -1) { return; }
     var box = document.createElement('div');
     box.className = 'ln-gutter';
     var inner = document.createElement('div');
@@ -1284,6 +1291,78 @@
     ta.addEventListener('input', function () { updateGutter(rec); });
     ta.addEventListener('scroll', function () { box.scrollTop = ta.scrollTop; });
   });
+})();
+
+
+/* ---------- Ghost-Text: grauer Vorschlag direkt in der Zeile (#55) ----------
+ * Waehrend der Autovervollstaendigung steht der beste Vorschlag ausgegraut
+ * hinter dem Cursor, wie in modernen Editoren. Tab oder Enter uebernimmt ihn.
+ * Technik: ein Layer im hlwrap unter dem Textarea, gleiche Schrift und Breite;
+ * der getippte Teil ist unsichtbar (visibility), nur der Rest erscheint grau. */
+(function () {
+  'use strict';
+  var records = [];
+
+  function recFor(ta) {
+    var i;
+    for (i = 0; i < records.length; i++) { if (records[i].ta === ta) { return records[i]; } }
+    return null;
+  }
+
+  function hide(ta) {
+    var rec = recFor(ta);
+    if (!rec) { return; }
+    if (rec.el && rec.el.parentNode) { rec.el.parentNode.removeChild(rec.el); }
+    records.splice(records.indexOf(rec), 1);
+  }
+
+  function sync(rec) {
+    /* Gleicher Bildausschnitt wie im Textarea (pre-Overlay macht es genauso). */
+    try {
+      rec.el.scrollTop = rec.ta.scrollTop || 0;
+      rec.el.scrollLeft = rec.ta.scrollLeft || 0;
+    } catch (e) { /* ohne Scroll-API: egal */ }
+  }
+
+  function show(ta, text) {
+    if (!ta || !text) { hide(ta); return; }
+    if (typeof document === 'undefined' || !document.createElement) { return; }
+    try {
+      var wrap = ta.closest ? (ta.closest('[data-hl]') || ta.parentNode) : ta.parentNode;
+      if (!wrap || !wrap.appendChild || !wrap.querySelector || wrap.querySelector('textarea') !== ta) { return; }
+      var rec = recFor(ta);
+      if (!rec) {
+        var el = document.createElement('pre');
+        el.className = 'ic-ghost';
+        el.setAttribute('aria-hidden', 'true');
+        rec = { ta: ta, el: el };
+        records.push(rec);
+        ta.addEventListener('scroll', function () { sync(rec); });
+      }
+      var cs = null;
+      try { cs = window.getComputedStyle ? window.getComputedStyle(ta) : null; } catch (e2) { cs = null; }
+      if (cs) {
+        var props = ['fontFamily', 'fontSize', 'lineHeight', 'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom', 'tabSize', 'whiteSpace'];
+        for (var pi = 0; pi < props.length; pi++) {
+          try { rec.el.style[props[pi]] = cs[props[pi]]; } catch (e3) { /* aeltere Browser */ }
+        }
+      }
+      var pos = ta.selectionStart === undefined ? String(ta.value == null ? '' : ta.value).length : ta.selectionStart;
+      rec.el.textContent = '';
+      var pre = document.createElement('span');
+      pre.className = 'ic-ghost-pre';
+      pre.textContent = String(ta.value == null ? '' : ta.value).slice(0, pos);
+      var tail = document.createElement('span');
+      tail.className = 'ic-ghost-txt';
+      tail.textContent = String(text);
+      rec.el.appendChild(pre);
+      rec.el.appendChild(tail);
+      if (!rec.el.parentNode) { wrap.appendChild(rec.el); }
+      sync(rec);
+    } catch (e) { hide(ta); }
+  }
+
+  window.IC_GHOST = { show: show, hide: hide };
 })();
 
 
@@ -1426,6 +1505,7 @@
     var matches = [];
     var active = -1;
     var tokenStart = -1;
+    var lastToken = '';
 
     function tokenInfo() {
       var pos = ta.selectionStart === undefined ? taValue(ta).length : ta.selectionStart;
@@ -1440,6 +1520,15 @@
       active = -1;
       drop.style.display = 'none';
       drop.innerHTML = '';
+      try { if (window.IC_GHOST) { window.IC_GHOST.hide(ta); } } catch (e) { /* optional */ }
+    }
+
+    /* Rest des Vorschlags, der noch hinter dem Cursor fehlt (#55). */
+    function ghostRemainder(match, token) {
+      var ins = String(match.insert);
+      var t = String(token || '');
+      if (t !== '' && ins.toLowerCase().indexOf(t.toLowerCase()) === 0) { return ins.slice(t.length); }
+      return ins;
     }
 
     function render() {
@@ -1447,11 +1536,21 @@
       for (var i = 0; i < matches.length; i++) {
         var item = document.createElement('div');
         item.className = 'ac-item' + (i === active ? ' ac-active' : '');
-        item.textContent = matches[i].label + (matches[i].detail ? '  ' + matches[i].detail : '');
+        /* Nur der Bezeichner steht im Vorschlag, die Erklaerung als Tooltip (#54). */
+        item.textContent = matches[i].label;
+        if (matches[i].detail) { item.title = String(matches[i].detail); }
         item.setAttribute('data-idx', String(i));
         drop.appendChild(item);
       }
       drop.style.display = matches.length > 0 ? '' : 'none';
+    }
+
+    function ghost() {
+      try {
+        if (!window.IC_GHOST || matches.length === 0) { if (window.IC_GHOST) { window.IC_GHOST.hide(ta); } return; }
+        var idx = active >= 0 ? active : 0;
+        window.IC_GHOST.show(ta, ghostRemainder(matches[idx], lastToken));
+      } catch (e) { /* Ghost ist rein optisch */ }
     }
 
     function update() {
@@ -1473,7 +1572,9 @@
       }
       active = matches.length > 0 ? 0 : -1;
       tokenStart = info.start;
+      lastToken = info.token;
       render();
+      ghost();
       try {
         if (typeof ta.getBoundingClientRect === 'function' && drop.style) {
           var rect = ta.getBoundingClientRect();
@@ -1515,8 +1616,8 @@
     ta.addEventListener('input', update);
     ta.addEventListener('keydown', function (e) {
       if (matches.length === 0) { return; }
-      if (e.key === 'ArrowDown') { e.preventDefault(); active = (active + 1) % matches.length; render(); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); active = active <= 0 ? matches.length - 1 : active - 1; render(); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); active = (active + 1) % matches.length; render(); ghost(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); active = active <= 0 ? matches.length - 1 : active - 1; render(); ghost(); }
       else if (e.key === 'Tab' || e.key === 'Enter') { e.preventDefault(); accept(active); }
       else if (e.key === 'Escape') { close(); }
     });
