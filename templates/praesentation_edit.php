@@ -56,7 +56,7 @@
             <span class="hlwrap" data-hl="<?= e($slide['lang']) ?>"><textarea name="code" rows="10" class="mono" spellcheck="false"><?= e($slide['code']) ?></textarea></span>
         </label>
         <?php else: ?>
-        <label class="field"><span>Text (Markdown-lite: # Überschrift, **fett**, *kursiv*, `Code`, - Liste, ``` Block)</span>
+        <label class="field"><span>Text (Markdown-lite: # Überschrift, **fett**, *kursiv*, `Code`, - Liste, ``` Block; Bausteine: :::titel, :::merksatz, :::uebung, :::loesung, :::hinweis, :::vergleich, :::karten, :::statistik, :::zitat, je mit :::ende)</span>
             <textarea name="body" rows="8" class="mono" spellcheck="true"><?= e($slide['body']) ?></textarea>
         </label>
         <?php endif; ?>
@@ -70,14 +70,25 @@
 
 <section class="panel">
     <h3>Folie anfügen</h3>
-    <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie') ?>" class="form-inline form">
+    <p class="muted">Einfach leer: Typ wählen und ➕ klicken. Für einen schnellen, aufgeräumten Aufbau gibt es Vorlagen (Bausteine wie Merksatz, Übung mit Lösung, Vergleich und Karten werden automatisch eingerichtet):</p>
+    <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie') ?>" class="form">
         <?= csrf_field() ?>
-        <label class="field"><span>Typ</span>
-            <select name="type">
-                <option value="text">📄 Text-Folie (Überschrift, Merksatz, Liste)</option>
-                <option value="code">💻 Code-Folie (Java, Python oder SQL mit Highlighting)</option>
-            </select>
-        </label>
-        <button class="btn btn-primary" type="submit" title="Folie anfügen">➕</button>
+        <div class="form-row form">
+            <label class="field"><span>Typ</span>
+                <select name="type">
+                    <option value="text">📄 Text-Folie (Überschrift, Merksatz, Liste)</option>
+                    <option value="code">💻 Code-Folie (Java, Python oder SQL mit Highlighting)</option>
+                </select>
+            </label>
+            <label class="field"><span>Vorlage (optional)</span>
+                <select name="template" onchange="this.form.type.value = (this.value === 'codedemo' ? 'code' : 'text');">
+                    <option value="">Ohne Vorlage: leere Folie</option>
+                    <?php foreach (\Infocraft\Controllers\PresentationController::slideTemplates() as $tplKey => $tpl): ?>
+                    <option value="<?= e($tplKey) ?>"><?= e($tpl['label']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Folie anfügen">➕ Folie anfügen</button></div>
+        </div>
     </form>
 </section>

@@ -334,7 +334,7 @@
         <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
     </form>
 </section>
-<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
+<script src="<?= asset_url('assets/vendor/highlight.min.js') ?>"></script>
 
 <?php if (($presentationTask ?? null) !== null): ?>
 <script>

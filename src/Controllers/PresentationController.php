@@ -132,7 +132,7 @@ final class PresentationController
         $rendered = [];
         foreach ($slides as $slide) {
             $slide['html'] = ($slide['type'] ?? 'text') === 'text'
-                ? WikiController::renderMarkdown((string) ($slide['body'] ?? ''))
+                ? self::renderSlideBody((string) ($slide['body'] ?? ''))
                 : '';
             $rendered[] = $slide;
         }
@@ -172,7 +172,7 @@ final class PresentationController
         $rendered = [];
         foreach ($slides as $slide) {
             $slide['html'] = ($slide['type'] ?? 'text') === 'text'
-                ? WikiController::renderMarkdown((string) ($slide['body'] ?? ''))
+                ? self::renderSlideBody((string) ($slide['body'] ?? ''))
                 : '';
             $rendered[] = $slide;
         }
@@ -185,10 +185,88 @@ final class PresentationController
         ]);
     }
 
+    /**
+     * Folien-Text rendern (#58): Markdown-lite plus Bausteine für den Aufbau.
+     * Ein Baustein beginnt mit einer Zeile ":::name" und endet mit ":::ende":
+     *   :::titel     große Titelfolie (Farbverlauf, zentriert)
+     *   :::merksatz  hervorgehobener Merksatz (gold)
+     *   :::uebung    Übungsaufgabe (grün)
+     *   :::loesung   Musterlösung (blau)
+     *   :::hinweis   Tipp/Callout (violett)
+     *   :::vergleich zwei Spalten nebeneinander, Trennzeile ":::|"
+     *   :::karten    Kartenraster (je "- Punkt" eine Karte)
+     *   :::statistik große Zahlen (je "- **42** Text" eine Karte)
+     *   :::zitat     Zitat, zentriert und groß
+     * Alles außerhalb der Bausteine wird wie bisher als Markdown-lite
+     * gerendert; ungeöffnete oder nicht geschlossene Bausteine schaden nicht.
+     */
+    public static function renderSlideBody(string $body): string
+    {
+        $body = str_replace(["\r\n", "\r"], "\n", $body);
+        $lines = explode("\n", $body);
+        $html = '';
+        $plain = [];
+        $open = '';
+        $buf = [];
+        $count = count($lines);
+        for ($i = 0; $i < $count; $i++) {
+            $t = trim($lines[$i]);
+            if ($open === '') {
+                if (preg_match('/^:::(titel|merksatz|uebung|loesung|hinweis|vergleich|karten|statistik|zitat)$/', $t, $m) === 1) {
+                    $html .= WikiController::renderMarkdown(implode("\n", $plain));
+                    $plain = [];
+                    $open = $m[1];
+                    $buf = [];
+                    continue;
+                }
+                $plain[] = $lines[$i];
+                continue;
+            }
+            if ($t === ':::ende') {
+                $html .= self::renderSlideBlock($open, implode("\n", $buf));
+                $open = '';
+                $buf = [];
+                continue;
+            }
+            $buf[] = $lines[$i];
+        }
+        if ($open !== '') {
+            $html .= self::renderSlideBlock($open, implode("\n", $buf));
+        }
+        $html .= WikiController::renderMarkdown(implode("\n", $plain));
+        return $html;
+    }
+
+    /** Einen Baustein rendern (siehe renderSlideBody). */
+    private static function renderSlideBlock(string $kind, string $content): string
+    {
+        if ($kind === 'vergleich') {
+            $parts = preg_split('/\n?\Q:::|\E\n?/', $content) ?: [];
+            $left = WikiController::renderMarkdown(trim((string) ($parts[0] ?? '')));
+            $right = WikiController::renderMarkdown(trim((string) ($parts[1] ?? '')));
+            if (trim((string) ($parts[1] ?? '')) === '') {
+                $right = $left;
+                $left = '';
+            }
+            return '<div class="sblock sblock-vergleich"><div class="sb-col">' . $left . '</div><div class="sb-col">' . $right . '</div></div>';
+        }
+        $inner = WikiController::renderMarkdown($content);
+        $classes = [
+            'titel' => 'sblock sblock-titel',
+            'merksatz' => 'sblock sblock-merksatz',
+            'uebung' => 'sblock sblock-uebung',
+            'loesung' => 'sblock sblock-loesung',
+            'hinweis' => 'sblock sblock-hinweis',
+            'karten' => 'sblock sblock-karten',
+            'statistik' => 'sblock sblock-statistik',
+            'zitat' => 'sblock sblock-zitat',
+        ];
+        return '<div class="' . ($classes[$kind] ?? 'sblock') . '">' . $inner . '</div>';
+    }
+
     /** Folie anfügen (Text oder Code), ohne JavaScript. */
     public static function addSlide(array $params): void
-    {
-        $user = Auth::user();
+    {        $user = Auth::user();
         if ($user === null) {
             redirect('/login');
         }
@@ -196,14 +274,77 @@ final class PresentationController
         $presentation = self::editable($user, (int) ($params['id'] ?? 0));
         $slides = $presentation->slides();
         $type = ($_POST['type'] ?? '') === 'code' ? 'code' : 'text';
+        $template = (string) ($_POST['template'] ?? '');
+        $templates = self::slideTemplates();
         if ($type === 'code') {
             $slides[] = ['type' => 'code', 'title' => 'Code zeigen', 'lang' => 'java', 'code' => ''];
+        } elseif ($template === 'codedemo') {
+            $slides[] = ['type' => 'code', 'title' => 'Live-Demo', 'lang' => 'java', 'code' => '// Live tippen oder vorbereitet zeigen' . "\n" . 'System.out.println("Hallo!");'];
+        } elseif (isset($templates[$template])) {
+            $slides[] = ['type' => 'text', 'title' => $templates[$template]['title'], 'body' => $templates[$template]['body']];
         } else {
             $slides[] = ['type' => 'text', 'title' => '', 'body' => ''];
         }
         $presentation->setSlides($slides);
         flash('success', 'Folie angefügt.');
         redirect('/praesentationen/' . $presentation->id);
+    }
+
+    /**
+     * Fertige Folien-Vorlagen (#58): Im Editor mit einem Klick anlegbar.
+     * Jede Vorlage nutzt die Bausteine aus renderSlideBody, damit Folien
+     * sofort aufgeräumt aussehen - ohne Formatierungsarbeit.
+     * @return array<string, array{title: string, body: string, label: string}>
+     */
+    public static function slideTemplates(): array
+    {
+        return [
+            'titelfolie' => [
+                'label' => '🚀 Titelfolie (groß, Farbverlauf)',
+                'title' => 'Titel der Präsentation',
+                'body' => ":::titel\n# Titel hier eintragen\nUntertitel: Ein Satz, worum es geht\n:::ende\n",
+            ],
+            'agenda' => [
+                'label' => '🗺️ Agenda (Kartenraster)',
+                'title' => 'Das kommt heute dran',
+                'body' => ":::karten\n- **Teil 1** – Einstieg mit Beispiel\n- **Teil 2** – Erarbeiten am Rechner\n- **Teil 3** – Üben und Festigen\n:::ende\n",
+            ],
+            'merksatz' => [
+                'label' => '📌 Merksatz (gold hervorgehoben)',
+                'title' => 'Merksatz',
+                'body' => ":::merksatz\n**Merksatz:** Hier steht der eine Satz, den sich alle merken sollen.\n:::ende\n",
+            ],
+            'uebungloesung' => [
+                'label' => '✏️ Übung mit Musterlösung',
+                'title' => 'Übung',
+                'body' => ":::uebung\n**Übung:** Beschreibe hier die Aufgabe in ein bis drei Sätzen.\n\n1. Erster Schritt\n2. Zweiter Schritt\n:::ende\n\n:::loesung\n**Musterlösung:** So sieht ein guter Weg aus - zum Aufklappen nach der Übung.\n:::ende\n",
+            ],
+            'vergleich' => [
+                'label' => '⚖️ Vergleich (zwei Spalten)',
+                'title' => 'Vergleich: links gegen rechts',
+                'body' => ":::vergleich\n## Links\n- Punkt auf der linken Seite\n- Noch ein Punkt\n:::|\n## Rechts\n- Punkt auf der rechten Seite\n- Noch ein Punkt\n:::ende\n",
+            ],
+            'hinweis' => [
+                'label' => '💡 Hinweis / Tipp (violett)',
+                'title' => 'Hinweis',
+                'body' => ":::hinweis\n**Tipp:** Typische Stolperfalle oder guter Hinweis an dieser Stelle.\n:::ende\n",
+            ],
+            'statistik' => [
+                'label' => '📊 Statistik (große Zahlen)',
+                'title' => 'Zahlen, die beeindrucken',
+                'body' => ":::statistik\n- **42** Erklärung zur Zahl\n- **7** Zweite Zahl mit Erklärung\n- **100 %** Dritte Zahl mit Erklärung\n:::ende\n",
+            ],
+            'zitat' => [
+                'label' => '💬 Zitat (groß, zentriert)',
+                'title' => '',
+                'body' => ":::zitat\n\"Ein Zitat, das zum Nachdenken anregt.\"\n– Namensnennung\n:::ende\n",
+            ],
+            'codedemo' => [
+                'label' => '💻 Code-Demo (Java mit Highlighting)',
+                'title' => 'Live-Demo',
+                'body' => '',
+            ],
+        ];
     }
 
     /** Folie speichern (aus dem Editor oder direkt aus dem Präsentationsmodus). */

@@ -54,7 +54,7 @@
     <div class="poll-box" id="poll-box" data-status="<?= url('praesentationen/' . (int) $presentation->id . '/abstimmung/status') ?>" data-vote="<?= url('praesentationen/' . (int) $presentation->id . '/abstimmung/stimme') ?>" data-csrf="<?= e(csrf_token()) ?>" hidden></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
+<script src="<?= asset_url('assets/vendor/highlight.min.js') ?>"></script>
 <script>
 (function () {
   var stage = document.getElementById('slide-stage');

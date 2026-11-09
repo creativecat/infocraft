@@ -20,6 +20,23 @@ final class ModuleController
     public static function modules(): array
     {
         return [
+            'html' => [
+                'slug' => 'html',
+                'title' => 'HTML-Werkstatt',
+                'icon' => '🎨',
+                'phase' => 'Phase 3',
+                'status' => 'fertig',
+                'level' => 6,
+                'route' => 'werkstatt/html',
+                'description' => 'Webseiten bauen mit sofort sichtbarem Ergebnis.',
+                'features' => [
+                    'WYSIWYG-Editor mit Sofortvorschau (live beim Tippen)',
+                    'Vorlagen: Grundgerüst, Bildergalerie, Kontaktformular',
+                    'Projekte in Ordnern, Austeilen über die Code-Werkstatt',
+                    'Präsentationsmodus; Prüfungsmodus folgt (Phase 5)',
+                ],
+                'lehrplan' => 'Webseiten gestalten: HTML, CSS, Layout und Gestaltung.',
+            ],
             'sql' => [
                 'slug' => 'sql',
                 'title' => 'SQL-Werkstatt',
@@ -74,23 +91,6 @@ final class ModuleController
                     'Lehrkräfte deaktivieren die automatische Erzeugung pro Klasse (selbst zeichnen bleibt erlaubt)',
                 ],
                 'lehrplan' => 'Objektorientierte Modellierung: Klassen, Objekte, Attribute, Methoden, Beziehungen; funktionale Modellierung: Datenfluss; Kontrollstrukturen: Struktogramme.',
-            ],
-            'html' => [
-                'slug' => 'html',
-                'title' => 'HTML-Werkstatt',
-                'icon' => '🎨',
-                'phase' => 'Phase 3',
-                'status' => 'fertig',
-                'level' => 6,
-                'route' => 'werkstatt/html',
-                'description' => 'Webseiten bauen mit sofort sichtbarem Ergebnis.',
-                'features' => [
-                    'WYSIWYG-Editor mit Sofortvorschau (live beim Tippen)',
-                    'Vorlagen: Grundgerüst, Bildergalerie, Kontaktformular',
-                    'Projekte in Ordnern, Austeilen über die Code-Werkstatt',
-                    'Präsentationsmodus; Prüfungsmodus folgt (Phase 5)',
-                ],
-                'lehrplan' => 'Webseiten gestalten: HTML, CSS, Layout und Gestaltung.',
             ],
             'quiz' => [
                 'slug' => 'quiz',
