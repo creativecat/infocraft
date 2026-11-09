@@ -25,15 +25,26 @@ function url(string $path = ''): string
 const ASSET_VERSION = '45.6';
 
 /**
+ * Dateisystem-Pfad eines Assets unter public/. __DIR__ ist hier src/, der
+ * Projektstamm liegt also EIN Verzeichnis hoeher (dirname(__DIR__) genuegt,
+ * nicht dirname(__DIR__, 2), das waere das Verzeichnis UEBER dem Stamm).
+ * INFOCRAFT_ROOT aus bootstrap.php wird bevorzugt, der Fallback deckt
+ * direktes require von Support.php ab.
+ */
+function ic_public_file(string $rel): string
+{
+    $root = defined('INFOCRAFT_ROOT') ? INFOCRAFT_ROOT : dirname(__DIR__);
+    return $root . '/public/' . ltrim($rel, '/');
+}
+
+/**
  * Asset-URL mit Cache-Busting: haengt die Aenderungszeit der Datei als
  * Versionsparameter an, damit Browser nach einem Update die neue Datei
  * laden und keine alte Version aus dem Cache zeigen.
  */
 function asset_url(string $path): string
 {
-    /* BASE_PATH ist ein URL-Praefix, kein Dateisystem-Pfad: Der Datei-Lookup
-     * geht immer vom Projektstamm (ueber src/) aus. */
-    $file = dirname(__DIR__, 2) . '/public/' . ltrim($path, '/');
+    $file = ic_public_file($path);
     $v = is_file($file) ? (string) filemtime($file) : '0';
     return url($path) . '?v=' . ASSET_VERSION . '.' . $v;
 }
@@ -47,7 +58,7 @@ function asset_url(string $path): string
  */
 function vendor_asset(string $repoRel, string $cdn, int $minBytes = 1000): string
 {
-    $file = dirname(__DIR__, 2) . '/public/' . ltrim($repoRel, '/');
+    $file = ic_public_file($repoRel);
     if (is_file($file) && (int) filesize($file) >= $minBytes) {
         return asset_url($repoRel);
     }
