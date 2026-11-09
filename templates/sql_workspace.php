@@ -11,7 +11,7 @@
         <label class="field">
             <span>SQL-Anweisung (Strg + Enter führt aus)</span>
             <div class="hlwrap sql" data-hl="sql">
-                <textarea name="sql" rows="5" class="mono sql-input" placeholder="SELECT * FROM ..."><?= e($lastSql) ?></textarea>
+                <div class="hlwrap" data-hl="sql" data-ac="sql"><textarea name="sql" rows="5" class="mono sql-input" data-tables="<?= e(implode(',', $sqlTableNames)) ?>" placeholder="SELECT * FROM ..."><?= e($lastSql) ?></textarea></div>
             </div>
         </label>
         <div class="btn-row"><button class="btn btn-primary" type="submit" title="Ausführen">▶</button></div>
@@ -38,6 +38,7 @@
     <?php endif; ?>
 </section>
 
+<?php $sqlTableNames = array_map(static fn (array $t): string => (string) $t['name'], $tables); ?>
 <div class="two-col">
     <section class="panel">
         <h3>📋 Tabellen der Datenbank</h3>
@@ -97,7 +98,7 @@
             <label class="field">
                 <span>Deine SQL-Anweisung<?= ($mission['kind'] ?? 'query') === 'action' ? ' (verändert die Daten, Schreibrechte nötig)' : '' ?></span>
                 <div class="hlwrap sql" data-hl="sql">
-                    <textarea name="mission_sql" rows="3" class="mono" placeholder="SELECT ..."></textarea>
+                    <div class="hlwrap" data-hl="sql" data-ac="sql"><textarea name="mission_sql" rows="3" class="mono" placeholder="SELECT ..."></textarea></div>
                 </div>
             </label>
             <div class="btn-row"><button class="btn btn-primary" type="submit" title="Prüfen">✅</button></div>

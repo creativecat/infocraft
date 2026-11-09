@@ -16,7 +16,7 @@
             </label>
         </div>
         <label class="field"><span>Inhalt (Markdown-lite: # Überschrift, **fett**, *kursiv*, `Code`, - Liste, ``` Block)</span>
-            <textarea name="content" rows="14" class="mono" spellcheck="true"><?= e($page->content) ?></textarea>
+            <div class="hlwrap" data-hl="markdown" data-ac="md"><textarea name="content" rows="14" class="mono" spellcheck="true"><?= e($page->content) ?></textarea></div>
         </label>
         <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
     </form>

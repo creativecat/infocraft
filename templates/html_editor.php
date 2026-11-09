@@ -322,7 +322,7 @@
                     </div>
                 </div>
             </div>
-            <div class="hlwrap" data-hl="xml">
+            <div class="hlwrap" data-hl="xml" data-ac="html">
                 <textarea name="content" id="html-editor" rows="24" class="mono code-editor" spellcheck="false"><?= e($project->content) ?></textarea>
             </div>
         </div>

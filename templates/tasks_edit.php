@@ -219,6 +219,32 @@ foreach ($classes as $class) {
             </details>
         </section>
         <section class="panel">
+            <h3>📝 Eigene ToDo-Notizen (nur für dich sichtbar)</h3>
+            <p class="muted">Deine persönliche Checkliste zu dieser Aufgabe, z. B. beim gemeinsamen Lesen der Aufgabenstellung mit der Klasse. Schülerinnen und Schüler sehen diese Notizen nicht.</p>
+            <?php if (($ownTodos ?? []) === []): ?>
+            <p class="muted">Noch keine eigenen Notizen angelegt.</p>
+            <?php else: ?>
+            <ul class="todo-list">
+                <?php foreach ($ownTodos as $ownTodo): ?>
+                <li class="todo-item">
+                    <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/todos/eigene') ?>" class="form-inline">
+                        <?= csrf_field() ?>
+                        <label style="display:flex;gap:8px;align-items:center;font-weight:normal;">
+                            <input type="checkbox" onchange="this.form.submit()" name="toggle_todo_id" value="<?= (int) $ownTodo->id ?>"<?= $ownTodo->done === 1 ? ' checked' : '' ?>>
+                            <span<?= $ownTodo->done === 1 ? ' style="text-decoration:line-through;"' : '' ?>><?= e($ownTodo->title) ?></span>
+                        </label>
+                        <button class="btn btn-ghost" type="submit" name="delete_todo_id" value="<?= (int) $ownTodo->id ?>" title="Notiz löschen">🗑</button>
+                    </form>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+            <?php endif; ?>
+            <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/todos/eigene') ?>" class="form-inline">
+                <?= csrf_field() ?>
+                <input type="text" name="todo_title" placeholder="Eigene Notiz ergänzen" maxlength="200" required>
+                <button class="btn btn-ghost" type="submit" title="Legt eine eigene Notiz an">➕ Notiz</button>
+            </form>
+
             <h3>📋 ToDos (Vorlage für Schülerinnen und Schüler)</h3>
             <?php if ($todos === []): ?>
             <p class="muted">Noch keine ToDos angelegt.</p>

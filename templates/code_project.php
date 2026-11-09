@@ -98,9 +98,12 @@
                     <?php endforeach; ?>
                 </ul>
             </form>
-            <?php if (($workingOwnTodos ?? []) === []): ?>
-            <p class="muted">Eigene ToDos ergänzt du in der Aufgaben-Sicht unter „Meine Aufgaben“.</p>
-            <?php endif; ?>
+            <form method="post" action="<?= url('aufgaben/' . (int) $workingTask->id . '/todos/schueler') ?>" class="form-inline" style="margin-top:8px;">
+                <?= csrf_field() ?>
+                <input type="hidden" name="back" value="<?= url('werkstatt/code/' . (int) $project->id) ?>">
+                <input type="text" name="todo_title" placeholder="Eigenes ToDo ergänzen, z. B. Schleife nochmal üben" maxlength="200">
+                <button class="btn btn-ghost" type="submit" title="Legt ein eigenes ToDo an, das nur du siehst">➕ ToDo</button>
+            </form>
             <?php if (($workingMaterials ?? []) !== []): ?>
             <h4 class="diag-head">📎 Materialien der Aufgabe</h4>
             <ul class="material-list">
@@ -162,7 +165,7 @@
             <div class="ide-editors">
             <?php foreach ($files as $i => $file): ?>
             <div class="file-pane" data-file-pane="<?= (int) $file->id ?>" data-file-name="<?= e($file->name) ?>"<?= $i === 0 ? '' : ' hidden' ?>>
-                <div class="hlwrap ide-hlwrap" data-hl="java">
+                <div class="hlwrap ide-hlwrap" data-hl="java" data-ac="java">
                     <textarea name="files[<?= (int) $file->id ?>]" form="code-save-form" rows="26" class="mono code-editor ide-editor" spellcheck="false"><?= e($file->content) ?></textarea>
                 </div>
             </div>
@@ -197,7 +200,7 @@
                 <p class="muted" id="java-repl-hint">Erst ▶ Ausführen klicken. Dann schreibst du hier auf mehrere Zeilen, was dein Programm tun soll: Objekte erzeugen und Methoden aufrufen, getrennt vom Entwurf deiner Klassen im Codefenster.</p>
                 <div class="repl-edit">
                     <div class="repl-gutter mono" id="java-repl-gutter">1</div>
-                    <textarea id="java-repl-in" class="mono" rows="4" autocomplete="off" spellcheck="false"><?= e($replText ?? '') ?></textarea>
+                    <div class="hlwrap" data-hl="java" data-ac="java"><textarea id="java-repl-in" class="mono" rows="4" autocomplete="off" spellcheck="false"><?= e($replText ?? '') ?></textarea></div>
                 </div>
                 <div class="repl-actions">
                     <button class="btn btn-primary" id="java-repl-run" type="button" title="Anweisungen ausführen (Strg + Enter): erzeugt die Objekte und ruft die Methoden auf, je Zeile eine Anweisung.">▶ Anweisungen ausführen</button>
@@ -600,7 +603,7 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
             <div class="ide-editors">
             <?php foreach ($files as $i => $file): ?>
             <div class="file-pane" data-file-pane="<?= (int) $file->id ?>" data-file-name="<?= e($file->name) ?>"<?= $i === 0 ? '' : ' hidden' ?>>
-                <div class="hlwrap ide-hlwrap">
+                <div class="hlwrap ide-hlwrap" data-hl="asm" data-ac="asm">
                     <textarea name="files[<?= (int) $file->id ?>]" form="code-save-form" rows="26" class="mono code-editor ide-editor" spellcheck="false"><?= e($file->content) ?></textarea>
                 </div>
             </div>
@@ -800,12 +803,17 @@ System.out.println(Database.tables());                     // alle Tabellen</pre
                 <p class="muted">Noch keine Tabellen: Lade oben eine Beispieldatenbank oder lade eine eigene SQL-Datei hoch - die Tabellen erscheinen dann sofort hier (und bleiben mit jedem ▶ Ausführen erhalten).</p>
                 <?php else: ?>
                 <?php foreach ($seedTables as $seedTable): ?>
-                <div class="uml-class db-table">
-                    <div class="uml-name"><?= e($seedTable['name']) ?></div>
-                    <?php foreach ($seedTable['cols'] as $seedCol): ?>
-                    <div class="uml-row"><?= e($seedCol['name']) ?> : <?= e($seedCol['type']) ?></div>
-                    <?php endforeach; ?>
-                </div>
+                <table class="db-schema-table">
+                    <thead>
+                        <tr><th colspan="2"><?= e($seedTable['name']) ?></th></tr>
+                        <tr><th>Spalte</th><th>Typ</th></tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($seedTable['cols'] as $seedCol): ?>
+                        <tr><td><?= e($seedCol['name']) ?></td><td><?= e($seedCol['type']) ?></td></tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
                 <?php endforeach; ?>
                 <?php endif; ?>
             </div>
@@ -816,7 +824,7 @@ System.out.println(Database.tables());                     // alle Tabellen</pre
             <details class="db-console-details">
             <summary class="diag-head">🧪 DB-Konsole: eigene Abfragen und Tabellen ausprobieren (aufklappen)</summary>
                         <p class="muted"><?php if (empty($dbReadOnly)): ?>Schicke Abfragen direkt an die Datenbank, ohne dein Programm zu ändern: <code>SELECT</code> zeigt das Ergebnis an, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>CREATE TABLE</code> und <code>DROP TABLE</code> ändern die Datenbank dauerhaft (sie wird automatisch mit deinem Projekt gespeichert). Damit legst du hier auch neue Daten an und prüfst sofort, was dein Programm daraus liest.<?php else: ?>Schicke Abfragen an die angehängte Datenbank: <code>SELECT</code> zeigt das Ergebnis an. Schreibende Befehle sind gesperrt, weil deine Lehrkraft nur Leserechte vergeben hat - alle arbeiten mit denselben Daten.<?php endif; ?></p>
-            <textarea id="java-db-in" class="mono db-console-in" rows="3" autocomplete="off" spellcheck="false"></textarea>
+            <div class="hlwrap" data-hl="sql" data-ac="sqldb"><textarea id="java-db-in" class="mono db-console-in" rows="3" autocomplete="off" spellcheck="false"></textarea></div>
             <div class="repl-actions">
                 <button class="btn btn-primary" id="java-db-run" type="button" title="Abfrage ausführen (Strg + Enter): schickt den SQL-Befehl an die Datenbank und zeigt das Ergebnis.">▶ Abfrage ausführen</button>
             </div>
