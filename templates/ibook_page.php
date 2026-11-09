@@ -11,7 +11,10 @@
 <?php $navLesen = $preview ? '?lesen=1' : ''; ?>
 <div class="ibook-page-layout">
 <aside class="ibook-pagenav" aria-label="Navigation dieses InfoBooks">
-    <div class="ibook-pagenav-head">📓 <?= e($book->title) ?></div>
+    <?php /* #71: Die Navigation klappt auf und zu: Kopfzeile antippen. Ohne
+     * Javascript nutzbar (details/summary), Standardzustand offen. */ ?>
+    <details class="ibook-pagenav-box" open>
+    <summary class="ibook-pagenav-head" title="Navigation ein- und ausklappen">📓 <?= e($book->title) ?></summary>
     <?php
     $navArea = null;
     foreach ($nav as $navEntry):
@@ -30,6 +33,7 @@
     <a class="ibook-pagenav-page<?= (int) $navPage['id'] === (int) $page['id'] ? ' active' : '' ?>" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $navPage['id'] . $navLesen) ?>" title="Seite öffnen"><?= e((string) $navPage['title']) ?></a>
     <?php endforeach; ?>
     <?php endforeach; ?>
+    </details>
 </aside>
 <div class="ibook-pagemain">
 <section class="hero ibook-hero-compact">

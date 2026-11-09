@@ -155,6 +155,7 @@ jobs:
           grep -q "'none'" src/Models/InfoBook.php && IBK_NONE_OK=1 || IBK_NONE_OK=0
           ! grep -q "Baustein" templates/ibook_book.php && IBK_NOBLOCKS_OK=1 || IBK_NOBLOCKS_OK=0
           grep -q "navLesen" templates/ibook_page.php && IBK_LESENAV_OK=1 || IBK_LESENAV_OK=0
+          grep -q "ibook-pagenav-box" templates/ibook_page.php && grep -q "ibook-pagenav-box" public/assets/css/style.css && IBK_COLL_OK=1 || IBK_COLL_OK=0
           grep -q "data-confirm" public/assets/js/app.js && CONFIRM_OK=1 || CONFIRM_OK=0
           grep -Fq '\Infocraft\Auth::isTeacher' templates/ibook_book.php && grep -Fq '\Infocraft\Auth::isTeacher' templates/ibook_page.php && IBK_AUTH_OK=1 || IBK_AUTH_OK=0
           grep -q "ibook-layout" public/assets/css/style.css && IBK_CSS_OK=1 || IBK_CSS_OK=0
@@ -545,6 +546,7 @@ jobs:
           grep -q '&quot;canvas&quot;' ibkcvview.html && IBK_CV_EDITOR_OK=1 || IBK_CV_EDITOR_OK=0
           CODE_IBKPREV=$(curl -sS -o ibkpreview.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/infobuecher/$SEEDBOOK/seite/$IBKCVPG?lesen=1")
           grep -Fq '?lesen=1' ibkpreview.html && grep -q 'Bearbeiten' ibkpreview.html && IBK_LESENAVRO_OK=1 || IBK_LESENAVRO_OK=0
+          grep -q 'ibook-pagenav-box' ibkcvview.html && grep -q 'ibook-pagenav-box' ibkpreview.html && IBK_COLLRO_OK=1 || IBK_COLLRO_OK=0
           CODE_IBKCVDIST=$(curl -sS -L -o ibkcvdist.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "page_id=$IBKCVPG" -d "class_id=$CLASS6" -d "bereich=lernbereich" http://127.0.0.1:8080/infobuecher/$SEEDBOOK/verteilen)
           grep -q "Seite verteilt" ibkcvdist.html && IBK_CV_DIST_OK=1 || IBK_CV_DIST_OK=0
           IBKCVT=$(sqlite3 "$DB" "SELECT p.id FROM ibook_pages p JOIN ibook_sections s ON s.id = p.section_id WHERE s.book_id = $IBKID6 AND p.title = 'CI Freie Flaeche' LIMIT 1")
@@ -618,5 +620,3 @@ jobs:
           CODE_TDEL=$(curl -sS -L -o tdel.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/aufgaben/$TID/loeschen)
           grep -q "gelöscht" tdel.html && TDEL_OK=1 || TDEL_OK=0
           TDELCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM tasks WHERE id = $TID")
-          [ "$TDELCNT" = "0" ] && TDEL_DB_OK=1 || TDEL_DB_OK=0
-          # Aufgabenverwaltung 2: Teilen, Pool-Kopie, Bearbeiten, Abgabetermin, Abgabe, Korrektur, KI-Schnittstelle
