@@ -168,15 +168,20 @@ final class InfoBookController
             flash('error', 'Für dieses InfoBook hast du keinen Zugriff.');
             redirect('/infobuecher');
         }
-        $sections = InfoBook::sections($book->id);
+        $sections = [];
         if ($user->role === 'student') {
-            // Privater Schuelerbereich sicherstellen (existiert danach dauerhaft).
+            // Privater Schuelerbereich sicherstellen (existiert danach dauerhaft)
+            // und ERST DANACH die Abschnitte laden, sonst fehlt der frisch
+            // angelegte "Mein Bereich" im ersten Seitenaufruf.
             if ($book->classId !== null && $book->classId === $user->classId) {
                 InfoBook::ensureOwnSection($book->id, $user->id);
             }
+            $sections = InfoBook::sections($book->id);
             $sections = array_values(array_filter($sections, static function (array $s) use ($user): bool {
                 return self::visibleSectionForStudent($s, $user);
             }));
+        } else {
+            $sections = InfoBook::sections($book->id);
         }
         $activeId = (int) ($_GET['abschnitt'] ?? 0);
         $active = null;
@@ -563,6 +568,12 @@ final class InfoBookController
         }
         $sections = InfoBook::sections($book->id);
         if ($user->role === 'student') {
+            // Eigener Bereich gehoert auch in die Präsentation: sicherstellen
+            // und danach neu laden (show() legt ihn beim ersten Buchbesuch an).
+            if ($book->classId !== null && $book->classId === $user->classId) {
+                InfoBook::ensureOwnSection($book->id, $user->id);
+                $sections = InfoBook::sections($book->id);
+            }
             $sections = array_values(array_filter($sections, static function (array $s) use ($user): bool {
                 return self::visibleSectionForStudent($s, $user);
             }));
