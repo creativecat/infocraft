@@ -134,7 +134,7 @@
         <label class="field"><input type="text" name="title" id="ibook-title" maxlength="160" value="<?= e((string) $page['title']) ?>" placeholder="Titel der Seite"></label>
 
         <h3>Freie Fläche</h3>
-        <div id="ibook-editor" data-book-id="<?= (int) $book->id ?>" data-page-id="<?= (int) $page['id'] ?>" data-nav="<?= e(json_encode($navPages, JSON_UNESCAPED_UNICODE)) ?>" data-diagrams="<?= e(json_encode($diagrams, JSON_UNESCAPED_UNICODE)) ?>" data-dbtemplates="<?= e(json_encode($dbTemplates, JSON_UNESCAPED_UNICODE)) ?>" data-blocks="<?= e(json_encode($blocks, JSON_UNESCAPED_UNICODE)) ?>"></div>
+        <div id="ibook-editor" data-book-id="<?= (int) $book->id ?>" data-page-id="<?= (int) $page['id'] ?>" data-nav="<?= e(json_encode($navPages, JSON_UNESCAPED_UNICODE)) ?>" data-diagrams="<?= e(json_encode($diagrams, JSON_UNESCAPED_UNICODE)) ?>" data-dbtemplates="<?= e(json_encode($dbTemplates, JSON_UNESCAPED_UNICODE)) ?>" data-codeclasses="<?= e(json_encode($codeClasses, JSON_UNESCAPED_UNICODE)) ?>" data-blocks="<?= e(json_encode($blocks, JSON_UNESCAPED_UNICODE)) ?>"></div>
         <p class="muted ibook-hint">Alles auf einer Fläche: Bilder per Drag &amp; Drop ablegen, mit dem Stift überall zeichnen (auch über Bildern), Textfelder frei platzieren. Oben in der Symbolleiste wechselst du zwischen Auswahl, Stift und Radierer und fügst Text, Bild, Audio, Video und Einbettungen hinzu. Änderungen speichern sich automatisch, ein Speichern-Button ist nicht nötig.</p>
 
         <input type="hidden" name="blocks" id="ibook-blocks-json" value="[]">

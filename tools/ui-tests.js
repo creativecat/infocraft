@@ -1151,6 +1151,7 @@ setTimeout(function () {
               ibEditor.setAttribute('data-nav', JSON.stringify([{ id: 42, t: 'Aktuelle Seite', s: 'Abschnitt A' }, { id: 43, t: 'Zielseite', s: 'Abschnitt A' }]));
               ibEditor.setAttribute('data-diagrams', JSON.stringify([{ id: 5, t: 'Klassendiagramm Auto', kind: 'java', src: 'classDiagram\nAuto <|-- BMW' }]));
               ibEditor.setAttribute('data-dbtemplates', JSON.stringify([{ slug: 'shop', t: 'Kaufhaus Laden', sql: "CREATE TABLE artikel (name TEXT, preis INT); INSERT INTO artikel VALUES ('Kaugummi', 1)" }]));
+              ibEditor.setAttribute('data-codeclasses', JSON.stringify([{ project: 'Fahrzeuge', name: 'Auto.java', code: 'class Auto {\n  void fahren() {}\n}\n' }]));
               ibEditor.setAttribute('data-blocks', '[]');
               ibDoc.register(ibEditor, 'ibook-editor');
               ibDoc.register(new FakeEl('input'), 'ibook-blocks-json');
@@ -1521,7 +1522,7 @@ setTimeout(function () {
                 if (ibCodeBox57 && ibLang57) {
                   global.window.InfoCraftJavaVM = {
                     run: function (files) {
-                      ok(files && files[0] && files[0].name === 'Main.java' && String(files[0].text).indexOf('System.out.println') !== -1, 'T62 Java-Quelltext geht als Main.java an die Java-VM');
+                      ok(files && typeof files === 'object' && !Array.isArray(files) && typeof files['Main.java'] === 'string' && files['Main.java'].indexOf('System.out.println') !== -1, 'T62 Java-Quelltext geht als Objekt mit Main.java-String an die Java-VM (kein Array mehr)');
                       return { output: 'Hallo aus Java', errors: [], ok: true };
                     }
                   };
@@ -1564,15 +1565,16 @@ setTimeout(function () {
                     ibDbQ58.dispatch('input');
                     ibDbBox58.querySelector('.icv-db-run').dispatch('click');
                     var ibDbOut58 = ibDbBox58.querySelector('.icv-db-out');
-                    ok(ibDbOut58.textContent.indexOf('Anna') !== -1 && ibDbOut58.textContent.indexOf('Ben') === -1 && ibDbOut58.textContent.indexOf('1 Zeile') !== -1, 'T58d WHERE punkte > 10 liefert nur Anna (1 Zeile)');
+                    ok(ibDbOut58.innerHTML.indexOf('<table class="icv-db-table">') !== -1 && ibDbOut58.innerHTML.indexOf('<th>name</th>') !== -1 && ibDbOut58.innerHTML.indexOf('<th>punkte</th>') !== -1, 'T58d DB-Ausgabe ist eine echte HTML-Tabelle mit Kopfzeile');
+                    ok(ibDbOut58.innerHTML.indexOf('Anna') !== -1 && ibDbOut58.innerHTML.indexOf('Ben') === -1 && ibDbOut58.innerHTML.indexOf('1 Zeile') !== -1, 'T58d2 WHERE punkte > 10 liefert nur Anna (1 Zeile)');
                     ibDbQ58.value = 'SELECT * FROM schueler ORDER BY punkte ASC';
                     ibDbQ58.dispatch('input');
                     ibDbBox58.querySelector('.icv-db-run').dispatch('click');
-                    ok(ibDbOut58.textContent.indexOf('Ben') !== -1 && ibDbOut58.textContent.indexOf('Ben') < ibDbOut58.textContent.indexOf('Anna'), 'T58e ORDER BY punkte ASC sortiert Ben (9) vor Anna (12)');
+                    ok(ibDbOut58.innerHTML.indexOf('Ben') !== -1 && ibDbOut58.innerHTML.indexOf('Ben') < ibDbOut58.innerHTML.indexOf('Anna'), 'T58e ORDER BY punkte ASC sortiert Ben (9) vor Anna (12)');
                     ibDbQ58.value = "SELECT name FROM schueler WHERE name LIKE 'A%'";
                     ibDbQ58.dispatch('input');
                     ibDbBox58.querySelector('.icv-db-run').dispatch('click');
-                    ok(ibDbOut58.textContent.indexOf('Anna') !== -1 && ibDbOut58.textContent.indexOf('Ben') === -1, 'T58f LIKE A% findet Anna');
+                    ok(ibDbOut58.innerHTML.indexOf('Anna') !== -1 && ibDbOut58.innerHTML.indexOf('Ben') === -1, 'T58f LIKE A% findet Anna');
                     var cv58 = ibCollect();
                     var t58 = cv58 && cv58.items ? cv58.items.filter(function (it) { return it.kind === 'db'; })[0] : null;
                     ok(t58 && t58.dbseed.indexOf('CREATE TABLE schueler') !== -1 && t58.dbq.indexOf('LIKE') !== -1, 'T58g Seed und Abfrage werden serialisiert');
@@ -1705,8 +1707,9 @@ setTimeout(function () {
                   ok(String(ibRoSplitPrev63.innerHTML).indexOf('<svg class="icv-dg-t63">') === 0, 'T63g die geteilte Lesemodus-Box zeichnet ihr Diagramm');
                   var ibSplitWrap63 = new FakeEl('div');
                   ibSplitWrap63.className = 'icv-diagram-split';
-                  var ibSplitCode63 = new FakeEl('pre');
+                  var ibSplitCode63 = new FakeEl('textarea');
                   ibSplitCode63.className = 'icv-diagram-code';
+                  ibSplitCode63.value = 'graph TD\nS63[SPLIT]';
                   var ibSplitBar63 = new FakeEl('div');
                   ibSplitBar63.className = 'icv-diagram-split-bar';
                   var ibSplitPrev63 = new FakeEl('div');
@@ -1722,6 +1725,15 @@ setTimeout(function () {
                   ok(String(ibSplitCode63.style.width) === '85%', 'T63i der Balken begrenzt: Code hoechstens 85%, das Diagramm bleibt bedienbar');
                   ibDoc._fire('pointermove', { clientX: -5000, clientY: 8 });
                   ok(String(ibSplitCode63.style.width) === '15%', 'T63j nach unten bleibt dem Code mindestens 15% - nichts geht verloren');
+                  ibDoc._fire('pointerup', {});
+                  /* #85: Der Quelltext bleibt im Lesemodus bearbeitbar,
+                   * jede Aenderung zeichnet das Diagramm sofort neu. */
+                  global.window.mermaid = { render: function (id, src) { return { svg: '<svg class="icv-dg-t63">' + id + '|' + String(src) + '</svg>' }; } };
+                  ibSplitCode63.value = 'graph TD\nS63[NEU]';
+                  ibSplitCode63.dispatch('input');
+                  ibSplitCode63.value = 'graph TD\nS63[NOCHNEU]';
+                  ibSplitCode63.dispatch('input');
+                  ok(String(ibSplitPrev63.innerHTML).indexOf('S63[NOCHNEU]') !== -1, 'T63k geteilt im Lesemodus: Tippen am Quelltext zeichnet das Diagramm live neu');
                   ibDoc._fire('pointerup', {});
                   delete global.window.mermaid;
                 }
@@ -1745,10 +1757,32 @@ setTimeout(function () {
                   ibDbQ64.value = 'SELECT name FROM artikel WHERE preis < 5';
                   ibDbQ64.dispatch('input');
                   ibDbBox64.querySelector('.icv-db-run').dispatch('click');
-                  ok(ibDbBox64.querySelector('.icv-db-out').textContent.indexOf('Kaugummi') !== -1, 'T64e Abfragen laufen gegen die Tabellen der Vorlage');
+                  var ibDbOut64 = ibDbBox64.querySelector('.icv-db-out');
+                  ok(ibDbOut64.innerHTML.indexOf('<table class="icv-db-table">') !== -1 && ibDbOut64.innerHTML.indexOf('<th>name</th>') !== -1 && ibDbOut64.innerHTML.indexOf('Kaugummi') !== -1, 'T64e Abfragen laufen gegen die Tabellen der Vorlage (als echte Tabelle)');
                   var cv64 = ibCollect();
                   var t64 = cv64 && cv64.items ? cv64.items.filter(function (it) { return it.kind === 'db'; })[cv64.items.filter(function (it) { return it.kind === 'db'; }).length - 1] : null;
                   ok(t64 && t64.dbseed.indexOf('Kaugummi') !== -1, 'T64f der Vorlagen-Seed wird serialisiert');
+                }
+
+                /* T65 (#86): Klassen aus vorhandenen Java-Projekten lassen
+                 * sich ins Code-Fenster einfuegen: Dropdown haengt den
+                 * Klassentext an, danach laesst er sich weiter bearbeiten. */
+                ibCodeBtn57.dispatch('click');
+                var ibCodeBoxes65 = ibStage.querySelectorAll('.icv-code');
+                var ibCodeBox65 = ibCodeBoxes65[ibCodeBoxes65.length - 1];
+                var ibProj65 = ibCodeBox65 ? ibCodeBox65.querySelector('.icv-code-projsel') : null;
+                ok(ibProj65 !== null, 'T65 das Code-Fenster bietet Klassen aus Java-Projekten an');
+                if (ibProj65) {
+                  var ibCodeTa65 = ibCodeBox65.querySelector('.icv-code-ta');
+                  ibCodeTa65.value = 'System.out.println("Los");';
+                  ibCodeTa65.dispatch('input');
+                  ibProj65.value = '0';
+                  ibProj65.dispatch('change');
+                  ok(String(ibCodeTa65.value).indexOf('System.out.println("Los");') !== -1 && ibCodeTa65.value.indexOf('class Auto') !== -1 && String(ibCodeTa65.value).indexOf('void fahren') !== -1, 'T65b die Klassen-Auswahl haengt den Quelltext hinten an');
+                  ok(ibProj65.value === '', 'T65c das Projekt-Dropdown springt zurueck auf die neutrale Auswahl');
+                  var cv65 = ibCollect();
+                  var t65 = cv65 && cv65.items ? cv65.items.filter(function (it) { return it.kind === 'code'; })[cv65.items.filter(function (it) { return it.kind === 'code'; }).length - 1] : null;
+                  ok(t65 && String(t65.code).indexOf('class Auto') !== -1 && String(t65.code).indexOf('System.out.println("Los");') !== -1, 'T65d der gemischte Quelltext wird serialisiert');
                 }
 
                 /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */

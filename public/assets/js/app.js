@@ -1733,6 +1733,11 @@
   var dbTemplates = [];
   try { dbTemplates = JSON.parse(editor.getAttribute('data-dbtemplates') || '[]') || []; } catch (eDbTpl) { dbTemplates = []; }
   if (!Array.isArray(dbTemplates)) { dbTemplates = []; }
+  /* Java-Klassen aus eigenen Projekten (#86): [{project, name, code}] -
+   * die Auswahl fuegt den Klassentext in das Code-Fenster ein. */
+  var codeClasses = [];
+  try { codeClasses = JSON.parse(editor.getAttribute('data-codeclasses') || '[]') || []; } catch (eCls) { codeClasses = []; }
+  if (!Array.isArray(codeClasses)) { codeClasses = []; }
   var status = null;
   var dirty = false;
 
@@ -2134,6 +2139,31 @@
         collect(); markDirty();
       });
       cctl.appendChild(clang);
+      if (codeClasses.length > 0) {
+        /* Klassen aus der Code-Werkstatt (#86): Auswahl haengt den
+         * Klassentext an den Quelltext an, danach laesst er sich weiter
+         * bearbeiten und ausfuehren. */
+        var cproj = el('select', 'icv-code-projsel');
+        cproj.title = 'Eine Klasse aus einem deiner Java-Projekte einfügen';
+        var cprojNone = el('option', '', 'Klasse aus Projekt einfügen …');
+        cprojNone.value = '';
+        cproj.appendChild(cprojNone);
+        codeClasses.forEach(function (cc, ci) {
+          var o = el('option', '', (cc.name || 'Klasse') + (cc.project ? ' · ' + cc.project : ''));
+          o.value = String(ci);
+          cproj.appendChild(o);
+        });
+        cproj.addEventListener('change', function () {
+          var idx = parseInt(cproj.value, 10);
+          var picked = codeClasses[idx];
+          if (!picked) { return; }
+          item.code = (item.code ? item.code.replace(/\s+$/, '') + '\n\n' : '') + String(picked.code || '');
+          cta.value = item.code;
+          cproj.value = '';
+          collect(); markDirty();
+        });
+        cctl.appendChild(cproj);
+      }
       div.appendChild(cctl);
       var cta = el('textarea', 'mono icv-code-ta');
       cta.value = item.code || '';
@@ -2208,7 +2238,9 @@
       var dbRun = el('button', 'icv-db-run', '▶ Abfrage ausführen');
       dbRun.type = 'button';
       div.appendChild(dbRun);
-      div.appendChild(el('pre', 'mono icv-db-out'));
+      /* Ausgabe als echte Tabelle (#84): div statt pre, die Tabelle setzt
+       * IC_DB_RUN als HTML hinein. */
+      div.appendChild(el('div', 'mono icv-db-out'));
     } else if (item.kind === 'diagram') {
       /* Diagramm-Element (#77/#79): Zwei Varianten - pur (Standard): im
        * Editor nur der Quelltext (keine Vorschau), im Lesemodus nur das
@@ -3165,7 +3197,10 @@
     }
     var res;
     try {
-      res = window.InfoCraftJavaVM.run([{ name: 'Main.java', text: String(src) }]);
+      /* Die Java-VM erwartet ein Objekt {dateiname: quelltext} (#86):
+       * collectFiles() in java-vm.js baut genau diese Form, eine Liste
+       * fuehrt zu "files[name].split is not a function". */
+      res = window.InfoCraftJavaVM.run({ 'Main.java': String(src) });
     } catch (e) {
       outEl.textContent = '✖ ' + (e && e.message ? e.message : String(e));
       return outEl.textContent;
@@ -3348,6 +3383,7 @@
     if (!outEl) { return ''; }
     var tables = parseSeed(seedSrc);
     var text;
+    var isHtml = false;
     try {
       var s = String(query || '').replace(/\s+/g, ' ').trim().replace(/;+$/, '');
       var m, limit = 0, orderCol = null, orderDesc = false, where = null;
@@ -3384,14 +3420,27 @@
       }
       if (limit > 0 && rows.length > limit) { rows = rows.slice(0, limit); }
       function strVal(v) { return v === null || v === undefined ? 'NULL' : String(v); }
-      var body = rows.map(function (r) {
-        return wanted.map(function (w) { return strVal(r[idxOf[w]]); }).join(' | ');
-      });
-      text = wanted.join(' | ') + (body.length ? '\n' + body.join('\n') : '') + '\n(' + rows.length + ' Zeile' + (rows.length === 1 ? '' : 'n') + ')';
+      /* Echte Tabelle (#84): Spaltennamen als Kopf, jede Zeile ein tr,
+       * darunter die Zeilenzahl als Hinweis. */
+      function escHtml(v) {
+        return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+      var html = '<table class="icv-db-table"><thead><tr>';
+      for (var hi = 0; hi < wanted.length; hi++) { html += '<th>' + escHtml(wanted[hi]) + '</th>'; }
+      html += '</tr></thead><tbody>';
+      for (var ri = 0; ri < rows.length; ri++) {
+        html += '<tr>';
+        for (var ti = 0; ti < wanted.length; ti++) { html += '<td>' + escHtml(strVal(rows[ri][idxOf[wanted[ti]]])) + '</td>'; }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      text = html + '<div class="icv-db-count">' + rows.length + ' Zeile' + (rows.length === 1 ? '' : 'n') + '</div>';
+      isHtml = true;
     } catch (e) {
       text = '✖ ' + (e && e.message ? e.message : String(e));
     }
-    outEl.textContent = text;
+    /* Erfolgreiche Abfragen: echte Tabelle (#84), Fehler: Klartext. */
+    if (isHtml) { outEl.innerHTML = text; } else { outEl.textContent = text; }
     return text;
   };
   if (typeof document === 'undefined' || !document.addEventListener) { return; }
@@ -3559,5 +3608,23 @@
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
     document.addEventListener('pointercancel', onUp);
+  });
+})();
+
+
+/* InfoBook Diagramm geteilt im Lesemodus (#85): Der Quelltext bleibt
+ * bearbeitbar, um live zu präsentieren - jede Aenderung zeichnet das
+ * Diagramm sofort neu. Gespeichert wird nur in der Bearbeitung, hier
+ * bleibt die Seite selbst unveraendert. */
+(function () {
+  'use strict';
+  if (typeof window === 'undefined' || typeof document === 'undefined' || !document.addEventListener) { return; }
+  document.addEventListener('input', function (ev) {
+    var node = ev.target;
+    if (!node || !node.classList || !node.classList.contains || !node.classList.contains('icv-diagram-code')) { return; }
+    var wrap = node.parentNode;
+    var prev = wrap && wrap.querySelector ? wrap.querySelector('.icv-diagram-prev') : null;
+    if (!prev || !window.IC_RENDER_DIAGRAM) { return; }
+    window.IC_RENDER_DIAGRAM(prev, String(node.value || ''));
   });
 })();

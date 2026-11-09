@@ -1825,6 +1825,22 @@ a.icv-item-link:hover .icv-item { outline: 2px dashed #1d4ed8; outline-offset: 2
 }
 .icv-diagram-split .icv-diagram-prev { flex: 1 1 55%; min-width: 0; }
 @media (max-width: 700px) { .icv-diagram-split { flex-direction: column; } .icv-diagram-split-bar { display: none; } .icv-diagram-split .icv-diagram-code { flex: 1 1 auto; max-height: 200px; } }
+/* #85: Im Lesemodus geteilt bleibt der Quelltext bearbeitbar (Praesentation) */
+.icv-diagram-split textarea.icv-diagram-code {
+    resize: none; color: #1e293b; white-space: pre; line-height: 1.45;
+}
+.icv-diagram-split { min-height: 200px; }
+.icv-diagram-ro-hint { font-size: 0.7rem; color: #64748b; margin: 4px 0 0 0; }
+/* #84: DB-Ausgabe als echte Tabelle */
+.icv-db .icv-db-out table.icv-db-table { border-collapse: collapse; margin: 0; }
+.icv-db .icv-db-out table.icv-db-table th,
+.icv-db .icv-db-out table.icv-db-table td {
+    border: 1px solid var(--border, #d7dce5); padding: 3px 8px; font-size: 0.78rem;
+    text-align: left; white-space: nowrap;
+}
+.icv-db .icv-db-out table.icv-db-table th { background: #f1f5f9; }
+.icv-db .icv-db-out table.icv-db-table tbody tr:nth-child(2n) { background: #f8fafc; }
+.icv-db .icv-db-count { font-size: 0.72rem; color: #64748b; margin: 6px 0 0 0; }
 /* Lesen/Präsentation: gleiche Geometrie, ohne Editor-Griffe */
 .icv-readonly .icv-ink { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
 .icv-readonly .icv-text { padding: 8px 10px; border-radius: 8px; }
