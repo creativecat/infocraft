@@ -54,18 +54,9 @@
         <h3>Titel</h3>
         <label class="field"><input type="text" name="title" id="ibook-title" maxlength="160" value="<?= e((string) $page['title']) ?>" placeholder="Titel der Seite"></label>
 
-        <h3>Bausteine</h3>
+        <h3>Freie Fläche</h3>
         <div id="ibook-editor" data-book-id="<?= (int) $book->id ?>" data-page-id="<?= (int) $page['id'] ?>" data-blocks="<?= e(json_encode($blocks, JSON_UNESCAPED_UNICODE)) ?>"></div>
-
-        <div class="btn-row ibook-addrow" id="ibook-addrow">
-            <button type="button" class="btn btn-ghost" data-ib-add="text" title="Textbaustein: Markdown und Folien-Bausteine wie :::merksatz">✍️ Text</button>
-            <button type="button" class="btn btn-ghost" data-ib-add="image" title="Bild hochladen">🖼 Bild</button>
-            <button type="button" class="btn btn-ghost" data-ib-add="audio" title="Audiodatei hochladen, direkt abspielbar">🔊 Audio</button>
-            <button type="button" class="btn btn-ghost" data-ib-add="video" title="Video hochladen, direkt abspielbar">🎞 Video</button>
-            <button type="button" class="btn btn-ghost" data-ib-add="embed" title="YouTube oder LearningApps einbetten">🔗 Einbettung</button>
-            <button type="button" class="btn btn-ghost" data-ib-add="zeichnen" title="Freihand schreiben und zeichnen, optimal für Apple Pencil">✏️ Zeichnen</button>
-            <button type="button" class="btn btn-ghost" data-ib-add="canvas" title="Freie Fläche wie OneNote: Bilder per Drag &amp; Drop ablegen, überall zeichnen (auch über Bildern), Text frei platzieren">🧩 Freie Fläche</button>
-        </div>
+        <p class="muted ibook-hint">Alles auf einer Fläche: Bilder per Drag &amp; Drop ablegen, mit dem Stift überall zeichnen (auch über Bildern), Textfelder frei platzieren. Oben in der Symbolleiste wechselst du zwischen Auswahl, Stift und Radierer und fügst Text, Bild, Audio, Video und Einbettungen hinzu.</p>
 
         <input type="hidden" name="blocks" id="ibook-blocks-json" value="[]">
         <div class="btn-row">

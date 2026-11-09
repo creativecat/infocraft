@@ -171,8 +171,10 @@ final class InfoBook
         $stmt = Database::pdo()->prepare('SELECT COALESCE(MAX(position), -1) + 1 FROM ibook_pages WHERE section_id = ?');
         $stmt->execute([$sectionId]);
         $pos = (int) $stmt->fetchColumn();
-        Database::pdo()->prepare('INSERT INTO ibook_pages (section_id, title, content, position) VALUES (?, ?, \'[]\', ?)')
-            ->execute([$sectionId, $title, $pos]);
+        /* Neue Seiten sind direkt eine Freie Flaeche (#64): Eine Seite, alle
+         * Elemente (Text, Stift-Streiche, Bilder, Medien) frei darauf platziert. */
+        Database::pdo()->prepare('INSERT INTO ibook_pages (section_id, title, content, position) VALUES (?, ?, ?, ?)')
+            ->execute([$sectionId, $title, '{"type":"canvas","w":1600,"h":1000,"items":[]}', $pos]);
         return (int) Database::pdo()->lastInsertId();
     }
 
@@ -192,19 +194,33 @@ final class InfoBook
         return (int) $n === $n ? (int) $n : $n;
     }
 
-    /** Elemente der Freien Flaeche (#63) bereinigen: Positionen begrenzen, nur gueltige Bilder/Texte. @param list<mixed> $items */
+    /** Elemente der Freien Flaeche (#63/#64) bereinigen: Positionen begrenzen, nur gueltige Elemente. @param list<mixed> $items */
     private static function cleanCanvasItems(mixed $items, float $w, float $h): array
     {
         if (!is_array($items)) {
             return [];
         }
         $clean = [];
+        $inkPoints = 0;
         foreach ($items as $item) {
             if (!is_array($item) || count($clean) >= 200) {
                 continue;
             }
             $kind = (string) ($item['kind'] ?? '');
-            if ($kind === 'image') {
+            $left = self::cvNum($item['x'] ?? 0, 0, $w);
+            $top = self::cvNum($item['y'] ?? 0, 0, $h);
+            if ($kind === 'text') {
+                $it = [
+                    'kind' => 'text',
+                    'body' => mb_substr((string) ($item['body'] ?? ''), 0, 20000),
+                    'x' => $left,
+                    'y' => $top,
+                    'w' => self::cvNum($item['w'] ?? 320, 60, $w),
+                    'bg' => self::cvColor((string) ($item['bg'] ?? ''), ''),
+                    'align' => in_array((string) ($item['align'] ?? 'left'), ['left', 'center', 'right'], true) ? (string) ($item['align'] ?? 'left') : 'left',
+                ];
+                $clean[] = $it;
+            } elseif ($kind === 'image') {
                 $media = (int) ($item['media'] ?? 0);
                 if ($media <= 0) {
                     continue;
@@ -213,8 +229,8 @@ final class InfoBook
                     'kind' => 'image',
                     'media' => $media,
                     'name' => mb_substr((string) ($item['name'] ?? ''), 0, 160),
-                    'x' => self::cvNum($item['x'] ?? 0, 0, $w),
-                    'y' => self::cvNum($item['y'] ?? 0, 0, $h),
+                    'x' => $left,
+                    'y' => $top,
                     'w' => self::cvNum($item['w'] ?? 160, 16, $w),
                     'h' => self::cvNum($item['h'] ?? 120, 16, $h),
                 ];
@@ -222,17 +238,74 @@ final class InfoBook
                     $it['alt'] = mb_substr((string) $item['alt'], 0, 200);
                 }
                 $clean[] = $it;
-            } elseif ($kind === 'text') {
+            } elseif ($kind === 'ink') {
+                /* Stift-Strich als echtes Objekt (#64): Punkte relativ zum
+                 * Ursprung des Strichs, flaches [x0,y0,x1,y1,...], Farbe aus
+                 * Allowlist, Begrenzung der Punktzahl je Strich und je Seite. */
+                $points = [];
+                if (is_array($item['p'] ?? null)) {
+                    $vals = array_values($item['p']);
+                    for ($i = 0; $i + 1 < count($vals); $i += 2) {
+                        if (count($points) >= 4000 || $inkPoints >= 30000) {
+                            break;
+                        }
+                        $points[] = self::cvNum($vals[$i], -4000, 4000);
+                        $points[] = self::cvNum($vals[$i + 1], -4000, 4000);
+                        $inkPoints++;
+                    }
+                }
+                if (count($points) >= 2) {
+                    $clean[] = [
+                        'kind' => 'ink',
+                        'c' => self::cvColor((string) ($item['c'] ?? ''), '#1f2937'),
+                        'sw' => self::cvNum($item['sw'] ?? 4, 1, 32),
+                        'p' => $points,
+                        'x' => $left,
+                        'y' => $top,
+                        'w' => self::cvNum($item['w'] ?? 40, 4, $w),
+                        'h' => self::cvNum($item['h'] ?? 40, 4, $h),
+                    ];
+                }
+            } elseif ($kind === 'embed') {
+                $url = self::cleanEmbedUrl((string) ($item['url'] ?? ''));
+                if ($url === '') {
+                    continue;
+                }
                 $clean[] = [
-                    'kind' => 'text',
-                    'body' => mb_substr((string) ($item['body'] ?? ''), 0, 20000),
-                    'x' => self::cvNum($item['x'] ?? 0, 0, $w),
-                    'y' => self::cvNum($item['y'] ?? 0, 0, $h),
-                    'w' => self::cvNum($item['w'] ?? 320, 60, $w),
+                    'kind' => 'embed',
+                    'url' => $url,
+                    'title' => mb_substr((string) ($item['title'] ?? ''), 0, 200),
+                    'x' => $left,
+                    'y' => $top,
+                    'w' => self::cvNum($item['w'] ?? 480, 120, $w),
                 ];
+            } elseif ($kind === 'audio' || $kind === 'video') {
+                $media = (int) ($item['media'] ?? 0);
+                if ($media <= 0) {
+                    continue;
+                }
+                $it = [
+                    'kind' => $kind,
+                    'media' => $media,
+                    'name' => mb_substr((string) ($item['name'] ?? ''), 0, 160),
+                    'x' => $left,
+                    'y' => $top,
+                    'w' => self::cvNum($item['w'] ?? 360, 80, $w),
+                ];
+                if ($kind === 'video') {
+                    $it['h'] = self::cvNum($item['h'] ?? 270, 60, $h);
+                }
+                $clean[] = $it;
             }
         }
         return $clean;
+    }
+
+    /** Freie-Flaeche-Farben: Nur bekannte Palette, sonst Rueckfallfarbe. */
+    private static function cvColor(string $wanted, string $fallback): string
+    {
+        $palette = ['#1f2937', '#ef4444', '#3b82f6', '#059669', '#f59e0b', '#fffbe6', '#ffffff', '#eff6ff', '#f0fdf4', '#fef2f2'];
+        return in_array($wanted, $palette, true) ? $wanted : $fallback;
     }
 
     /** Seite speichern: Titel und Bloecke (JSON wird serverseitig bereinigt). */
@@ -408,7 +481,7 @@ final class InfoBook
                     $ids[] = $ink;
                 }
                 foreach (($block['items'] ?? []) as $item) {
-                    if (is_array($item) && (string) ($item['kind'] ?? '') === 'image') {
+                    if (is_array($item)) {
                         $imgId = (int) ($item['media'] ?? 0);
                         if ($imgId > 0) {
                             $ids[] = $imgId;

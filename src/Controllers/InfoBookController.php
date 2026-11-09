@@ -647,16 +647,26 @@ final class InfoBookController
                     if ($type === 'text') {
                         $body[] = (string) ($block['body'] ?? '');
                     } elseif ($type === 'canvas') {
-                        /* Freie Flaeche (#63): Texte wandern als Markdown auf die
-                         * Folie, Bilder und Freihand bleiben als Hinweiszeile. */
+                        /* Freie Flaeche (#63/#64): Texte wandern als Markdown auf
+                         * die Folie, alles andere bleibt als Hinweiszeile. */
                         foreach (($block['items'] ?? []) as $item) {
                             if (!is_array($item)) {
                                 continue;
                             }
-                            if ((string) ($item['kind'] ?? '') === 'text') {
+                            $kind = (string) ($item['kind'] ?? '');
+                            if ($kind === 'text') {
                                 $body[] = (string) ($item['body'] ?? '');
-                            } elseif ((string) ($item['kind'] ?? '') === 'image') {
+                            } elseif ($kind === 'ink') {
+                                $body[] = '✏️ Freihandzeichnung (im InfoBook sichtbar)';
+                            } elseif ($kind === 'embed') {
+                                $url = InfoBook::cleanEmbedUrl((string) ($item['url'] ?? ''));
+                                if ($url !== '') {
+                                    $body[] = '🔗 [' . ((string) ($item['title'] ?? '') !== '' ? (string) ($item['title'] ?? 'Einbettung') : 'Einbettung') . '](' . $url . ')';
+                                }
+                            } elseif ($kind === 'image') {
                                 $body[] = '📎 Bild: *' . (string) ($item['name'] ?? 'Bild') . '* (im InfoBook auf der Freien Fläche)';
+                            } elseif ($kind === 'audio' || $kind === 'video') {
+                                $body[] = '📎 ' . ($kind === 'audio' ? 'Audio' : 'Video') . ': *' . (string) ($item['name'] ?? 'Medium') . '* (im InfoBook abspielbar)';
                             }
                         }
                         if ((int) ($block['ink'] ?? 0) > 0) {
@@ -784,9 +794,10 @@ final class InfoBookController
     }
 
     /**
-     * Freie Flaeche (#63) als HTML rendern: Bilder, Text und Freihand-Ebene
-     * absolut positioniert in Prozent, dadurch skaliert die Flaeche in jeder
-     * Breite mit (Lesen und Präsentationsmodus ohne JavaScript).
+     * Freie Flaeche (#63/#64) als HTML rendern: Text, Bilder, Stift-Striche
+     * (als SVG), Einbettungen und Audio/Video absolut positioniert in Prozent,
+     * dadurch skaliert die Flaeche in jeder Breite mit (Lesen und
+     * Präsentationsmodus ohne JavaScript).
      * @param array<string, mixed> $block
      */
     private static function renderCanvas(array $block): string
@@ -803,7 +814,10 @@ final class InfoBookController
             $top = self::pct($item['y'] ?? 0, $h);
             if ($kind === 'text') {
                 $width = self::pct($item['w'] ?? 320, $w);
-                $inner .= '<div class="icv-item icv-text" style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%">'
+                $bg = (string) ($item['bg'] ?? '');
+                $align = (string) ($item['align'] ?? 'left');
+                $inner .= '<div class="icv-item icv-text" style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%' . ($bg !== '' ? ';background:' . $bg : '')
+                    . ';text-align:' . ($align !== '' ? $align : 'left') . '">'
                     . PresentationController::renderSlideBody((string) ($item['body'] ?? '')) . '</div>';
             } elseif ($kind === 'image') {
                 $mediaId = (int) ($item['media'] ?? 0);
@@ -816,16 +830,66 @@ final class InfoBookController
                 $name = (string) ($item['name'] ?? '');
                 $inner .= '<div class="icv-item icv-image" style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%;height:' . $height . '%">'
                     . '<img src="' . e(url('/infobuecher/medium/' . $mediaId)) . '" alt="' . e($alt !== '' ? $alt : ($name !== '' ? $name : 'Bild')) . '"></div>';
+            } elseif ($kind === 'ink') {
+                /* Stift-Strich als SVG-Pfad (#64): Punkte sind relativ zum
+                 * Ursprung, das SVG skaliert mit dem Element mit. */
+                $points = is_array($item['p'] ?? null) ? $item['p'] : [];
+                if (count($points) < 2) {
+                    continue;
+                }
+                $iw = max(4.0, (float) ($item['w'] ?? 40));
+                $ih = max(4.0, (float) ($item['h'] ?? 40));
+                $d = '';
+                for ($i = 0; $i + 1 < count($points); $i += 2) {
+                    $d .= ($i === 0 ? 'M ' : 'L ') . self::svgNum($points[$i]) . ' ' . self::svgNum($points[$i + 1]) . ' ';
+                }
+                $inner .= '<div class="icv-item icv-stroke" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($iw, $w) . '%;height:' . self::pct($ih, $h) . '%">'
+                    . '<svg class="icv-ink-svg" viewBox="0 0 ' . self::svgNum($iw) . ' ' . self::svgNum($ih) . '" preserveAspectRatio="none" aria-hidden="true">'
+                    . '<path d="' . $d . '" fill="none" stroke="' . e((string) ($item['c'] ?? '#1f2937')) . '" stroke-width="' . self::svgNum($item['sw'] ?? 4)
+                    . '" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
+            } elseif ($kind === 'embed') {
+                $url = InfoBook::cleanEmbedUrl((string) ($item['url'] ?? ''));
+                if ($url === '') {
+                    continue;
+                }
+                $title = (string) ($item['title'] ?? '');
+                $inner .= '<div class="icv-item icv-embed" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%">'
+                    . '<div class="embed-frame"><iframe src="' . e($url) . '" title="' . e($title !== '' ? $title : 'Eingebetteter Inhalt') . '" loading="lazy" allowfullscreen referrerpolicy="no-referrer"></iframe></div></div>';
+            } elseif ($kind === 'audio') {
+                $mediaId = (int) ($item['media'] ?? 0);
+                if ($mediaId <= 0) {
+                    continue;
+                }
+                $inner .= '<div class="icv-item icv-audio" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 360, $w) . '%">'
+                    . '<audio controls preload="metadata" src="' . e(url('/infobuecher/medium/' . $mediaId)) . '"></audio></div>';
+            } elseif ($kind === 'video') {
+                $mediaId = (int) ($item['media'] ?? 0);
+                if ($mediaId <= 0) {
+                    continue;
+                }
+                $inner .= '<div class="icv-item icv-video" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%;height:' . self::pct($item['h'] ?? 270, $h) . '%">'
+                    . '<video controls preload="metadata" src="' . e(url('/infobuecher/medium/' . $mediaId)) . '"></video></div>';
             }
         }
         $ink = (int) ($block['ink'] ?? 0);
         if ($ink > 0) {
+            /* Alte Seiten (#63): komplette Freihand-Ebene als PNG ueber der Flaeche. */
             $inner .= '<img class="icv-ink" src="' . e(url('/infobuecher/medium/' . $ink)) . '" alt="Freihandzeichnung">';
         }
         if ($inner === '') {
             $inner = '<div class="icv-empty muted">Noch keine Inhalte auf dieser Fläche.</div>';
         }
         return '<div class="icv-stage icv-readonly" style="aspect-ratio:' . $w . '/' . $h . '">' . $inner . '</div>';
+    }
+
+    /** Zahl fuer SVG-Attribute: kompakt, ohne exponentiale Schreibweise. */
+    private static function svgNum(mixed $value): string
+    {
+        $n = round((float) $value, 2);
+        if (abs($n) < 0.01 && $n != 0.0) {
+            $n = 0.0;
+        }
+        return rtrim(rtrim(number_format($n, 2, '.', ''), '0'), '.') ?: '0';
     }
 
     /** Einen Block als HTML rendern (fuer Seitenansicht und Präsentationsmodus). @param array<string, mixed> $block */
