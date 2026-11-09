@@ -854,7 +854,7 @@
     }
     var target = mermaidBox();
     if (!target) { return; }
-    if (!window.mermaid) {
+    if (!window.mermaid || typeof window.mermaid.render !== 'function') {
       target.innerHTML = '<p class="muted">Vorschau offline: Die Diagramm-Bibliothek konnte nicht geladen werden. Der Quelltext bleibt speicherbar.</p>';
       return;
     }
@@ -873,14 +873,21 @@
         return;
       }
       text = t.mermaid;
-    } else if (!/^\s*classDiagram/i.test(text)) {
-      /* Klassendiagramm: die classDiagram-Zeile zaehlt der Editor mit dazu, ohne dass jemand sie tippt. */
-      text = 'classDiagram' + String.fromCharCode(10) + text;
+    } else {
+      /* Klassendiagramm ohne sichtbare Typzeile (#56): Vor dem Zeichnen wird
+         eine eventuell noch vorhandene alte Typzeile entfernt und danach
+         genau eine saubere classDiagram-Zeile wiederhergestellt. Der Rest des
+         Quelltexts bleibt unangetastet. */
+      text = restoreClassDiagramHeader(text);
     }
     seq += 1;
     window.mermaid.render('dg-svg-' + seq, text).then(function (out) {
       target.innerHTML = out.svg;
-      if (currentKind === 'manuell') { styleClassDiagramSvg(target); }
+      if (currentKind === 'manuell') {
+        /* Rein kosmetische Nachbearbeitung: Sie darf das fertige SVG nie
+           ueber den Fehlerpfad ersetzen (#56). */
+        try { styleClassDiagramSvg(target); } catch (eStyle) { /* Optik optional */ }
+      }
       lastGoodSvg = target.innerHTML;
       clearSourceError();
       hideStatus();
@@ -996,7 +1003,17 @@
   var DIAGRAM_RENDER_DELAY = 1200;
   /* Nach dieser Tipp-Pause sichert der Editor automatisch. */
   var DIAGRAM_AUTOSAVE_DELAY = 1500;
-  var KIND_LINE_RE = /^\s*(?:struktogramm|datenfluss|classDiagram)\s*\r?\n/i;
+  /* Typzeile (nur das Wort alleine in der ersten Zeile, ggf. mit Rest der
+     Zeile dahinter als Zeilenende). Zeilen mit weiterem Inhalt bleiben. */
+  var KIND_LINE_RE = /^[ \t]*(?:struktogramm|datenfluss|classDiagram)[ \t]*(?:\r?\n|$)/i;
+  /* Klassendiagramm-Quelltext zum Zeichnen vorbereiten (#56): Eine alte,
+     noch gespeicherte Typzeile fliegt raus, danach steht garantiert genau
+     eine saubere classDiagram-Zeile vornan. Die Auswahl des Typs haengt
+     am Diagramm (beim Anlegen gewaehlt), niemand tippt die Zeile. */
+  function restoreClassDiagramHeader(text) {
+    var body = String(text).replace(KIND_LINE_RE, '');
+    return 'classDiagram' + String.fromCharCode(10) + body;
+  }
 
   /* Einheitliche UML-Optik fuer Klassendiagramme: blauer Titelkopf, weisser
      Boxkoerper, harte Ecken und Trennstriche zwischen Titel, Attributen und
@@ -1076,8 +1093,10 @@
       }
     });
   }
-  render(false);
-  if (refreshBtn) { refreshBtn.addEventListener('click', function () { render(false); }); }
+  /* Erste Zeichnung (#56): Ein Fehler hier darf die Werkbank nicht
+     lahmlegen - Listener, Autosave und Neuzeichnen bleiben bedienbar. */
+  try { render(false); } catch (eRender) { /* siehe Konsole */ if (typeof console !== 'undefined' && console.error) { console.error('InfoCraft: Erste Diagramm-Zeichnung abgebrochen', eRender); } }
+  if (refreshBtn) { refreshBtn.addEventListener('click', function () { try { render(false); } catch (eR2) { /* refresh bleibt klickbar */ } }); }
   if (pngBtn) { pngBtn.addEventListener('click', exportPng); }
   if (fitBtn) {
     fitBtn.addEventListener('click', function () {
