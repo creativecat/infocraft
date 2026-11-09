@@ -1285,3 +1285,270 @@
     ta.addEventListener('scroll', function () { box.scrollTop = ta.scrollTop; });
   });
 })();
+
+
+/* ---------- Autovervollstaendigung (#45 Nacharbeit) ----------
+ * In jedem Code-Feld (Textareas mit data-ac): Vorschlaege zu Befehlen,
+ * Klassen, Methoden und Attributen waehrend des Tippens. Tab oder Enter
+ * uebernimmt den markierten Vorschlag direkt, Pfeiltasten blaettern,
+ * Esc schliesst. Enter/Tab verhalten sich normal, wenn kein Vorschlag offen ist.
+ * Quellen: statische Sprachlisten plus Bezeichner aus dem eigenen Code. */
+(function () {
+  'use strict';
+
+  var JAVA_KEYWORDS = ['class', 'interface', 'enum', 'extends', 'implements', 'public', 'private', 'protected', 'static', 'final', 'void', 'int', 'double', 'boolean', 'char', 'String', 'long', 'float', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'return', 'new', 'this', 'null', 'true', 'false', 'import', 'package', 'try', 'catch', 'finally', 'throw', 'instanceof', 'super'];
+  var JAVA_SNIPPETS = [
+    { label: 'System.out.println(...)', insert: 'System.out.println(', detail: 'Ausgabe in der Konsole' },
+    { label: 'Database.execute(...)', insert: 'Database.execute(', detail: 'SQL ausfuehren' },
+    { label: 'Database.query(...)', insert: 'Database.query(', detail: 'SELECT als Tabelle' },
+    { label: 'Database.count(...)', insert: 'Database.count(', detail: 'Zeilen zaehlen' },
+    { label: 'Database.value(...)', insert: 'Database.value(', detail: 'ersten Wert lesen' },
+    { label: 'Database.tables()', insert: 'Database.tables()', detail: 'alle Tabellen' },
+    { label: 'Math.random()', insert: 'Math.random()', detail: 'Zufallszahl 0..1' },
+    { label: 'ArrayList<>()', insert: 'ArrayList<>() ', detail: 'Liste anlegen' },
+    { label: 'ArrayList<String>', insert: 'ArrayList<String>', detail: 'Liste fuer Texte' },
+    { label: 'Scanner', insert: 'Scanner', detail: 'Eingaben lesen' },
+    { label: 'String.valueOf(...)', insert: 'String.valueOf(', detail: 'in Text umwandeln' }
+  ];
+  var SQL_KEYWORDS = ['SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT JOIN', 'ON', 'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT', 'INSERT INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE FROM', 'CREATE TABLE', 'DROP TABLE', 'COUNT(*)', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'DISTINCT', 'AS', 'AND', 'OR', 'NOT', 'NULL', 'IS NULL', 'IS NOT NULL', 'ASC', 'DESC', 'INNER JOIN', 'LIKE', 'IN', 'BETWEEN'];
+  var ASM_COMMANDS = ['MOV', 'ADD', 'SUB', 'MUL', 'DIV', 'INC', 'DEC', 'CMP', 'JMP', 'JE', 'JNE', 'JG', 'JL', 'JGE', 'JLE', 'JZ', 'JNZ', 'LOAD', 'STORE', 'PUSH', 'POP', 'CALL', 'RET', 'HLT', 'NOP', 'OUT', 'IN'];
+  var HTML_TAGS = ['p', 'h1', 'h2', 'h3', 'strong', 'em', 'br', 'a', 'img', 'ul', 'ol', 'li', 'table', 'tr', 'td', 'th', 'div', 'span', 'header', 'main', 'footer', 'section', 'form', 'input', 'button', 'style', 'script', 'title', 'link'];
+  var MD_SNIPPETS = ['# Ueberschrift', '## Abschnitt', '- Aufzaehlung', '1. Nummerierung', '**fett**', '*kursiv*', '`Code`', '``` Codeblock', '[Link](https://)', '> Zitat'];
+
+  function collectIdentifiers(scopeDoc) {
+    /* Klassen, Attribute und Methoden aus dem eigenen Java-Code sammeln. */
+    var found = {};
+    var sources = [];
+    try {
+      if (scopeDoc.querySelectorAll('[data-file-pane] textarea').length > 0) {
+        scopeDoc.querySelectorAll('[data-file-pane] textarea').forEach(function (ta) { sources.push(ta.value || ''); });
+      } else {
+        sources.push(taValue(currentTa));
+      }
+    } catch (e) { /* Harness ohne querySelectorAll: harmlos */ }
+    var code = sources.join(String.fromCharCode(10));
+    var re = /class\s+([A-Za-z_][A-Za-z0-9_]*)|([A-Za-z_][A-Za-z0-9_]*)\s*\(\s*\)/g;
+    var m;
+    while ((m = re.exec(code)) !== null) {
+      var name = m[1] || m[2];
+      if (name && !found[name]) { found[name] = true; }
+    }
+    var fields = code.match(/(?:private|public|protected|static)?\s*(?:final\s+)?[A-Za-z_][A-Za-z0-9_]*\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:=|;)/g) || [];
+    for (var i = 0; i < fields.length; i++) {
+      var fm = /([A-Za-z_][A-Za-z0-9_]*)\s*(?:=|;)\s*$/.exec(fields[i]);
+      if (fm && !found[fm[1]]) { found[fm[1]] = true; }
+    }
+    return found;
+  }
+
+  var currentTa = null;
+  function taValue(ta) { return ta && ta.value ? ta.value : ''; }
+
+  function memberItems(objectName) {
+    if (objectName === 'Database') {
+      return [
+        { label: 'execute(...)', insert: 'execute(', detail: 'SQL ausfuehren' },
+        { label: 'query(...)', insert: 'query(', detail: 'SELECT als Tabelle' },
+        { label: 'count(...)', insert: 'count(', detail: 'Zeilen zaehlen' },
+        { label: 'value(...)', insert: 'value(', detail: 'ersten Wert' },
+        { label: 'tables()', insert: 'tables()', detail: 'alle Tabellen' }
+      ];
+    }
+    if (objectName === 'out' || objectName === 'System' || objectName === 'err') {
+      return [
+        { label: 'println(...)', insert: 'println(', detail: 'Zeile ausgeben' },
+        { label: 'print(...)', insert: 'print(', detail: 'ohne Zeilenumbruch' }
+      ];
+    }
+    if (objectName === 'Math') {
+      return [
+        { label: 'random()', insert: 'random()', detail: 'Zufallszahl 0..1' },
+        { label: 'abs(...)', insert: 'abs(', detail: 'Betrag' },
+        { label: 'max(...)', insert: 'max(', detail: 'groesserer Wert' },
+        { label: 'min(...)', insert: 'min(', detail: 'kleinerer Wert' }
+      ];
+    }
+    return null;
+  }
+
+  function sourceItems(kind, ta) {
+    var items = [];
+    var kw;
+    var i;
+    if (kind === 'java') {
+      for (i = 0; i < JAVA_KEYWORDS.length; i++) { kw = JAVA_KEYWORDS[i]; items.push({ label: kw, insert: kw + ' ', detail: 'Java' }); }
+      for (i = 0; i < JAVA_SNIPPETS.length; i++) { items.push(JAVA_SNIPPETS[i]); }
+      var ids = collectIdentifiers(document);
+      for (var id in ids) {
+        if (Object.prototype.hasOwnProperty.call(ids, id)) {
+          items.push({ label: id, insert: id, detail: 'aus deinem Code' });
+        }
+      }
+    } else if (kind === 'sql' || kind === 'sqldb') {
+      for (i = 0; i < SQL_KEYWORDS.length; i++) { kw = SQL_KEYWORDS[i]; items.push({ label: kw, insert: kw + ' ', detail: 'SQL' }); }
+      var tables = [];
+      if (kind === 'sqldb' && window.IC_DB_TABLES) {
+        tables = window.IC_DB_TABLES;
+      } else if (ta) {
+        var attr = ta.getAttribute('data-tables');
+        if (attr) { tables = attr.split(','); }
+      }
+      for (i = 0; i < tables.length; i++) {
+        var tname = String(tables[i]).trim();
+        if (tname !== '') { items.push({ label: tname, insert: tname, detail: 'Tabelle' }); }
+      }
+    } else if (kind === 'asm') {
+      for (i = 0; i < ASM_COMMANDS.length; i++) { kw = ASM_COMMANDS[i]; items.push({ label: kw, insert: kw + ' ', detail: 'Befehl' }); }
+    } else if (kind === 'html') {
+      for (i = 0; i < HTML_TAGS.length; i++) {
+        var tag = HTML_TAGS[i];
+        items.push({ label: '<' + tag + '>', insert: '<' + tag + '>', detail: 'Tag' });
+        items.push({ label: '</' + tag + '>', insert: '</' + tag + '>', detail: 'Tag schliessen' });
+      }
+    } else if (kind === 'md') {
+      for (i = 0; i < MD_SNIPPETS.length; i++) { items.push({ label: MD_SNIPPETS[i], insert: MD_SNIPPETS[i], detail: 'Markdown' }); }
+    } else if (kind === 'python') {
+      var PY = ['def', 'return', 'if', 'elif', 'else', 'for', 'while', 'in', 'range', 'print', 'import', 'from', 'class', 'True', 'False', 'None', 'and', 'or', 'not', 'len', 'str', 'int', 'float', 'list', 'append'];
+      for (i = 0; i < PY.length; i++) { items.push({ label: PY[i], insert: PY[i], detail: 'Python' }); }
+    }
+    return items;
+  }
+
+  function attach(ta, kind) {
+    if (!ta || ta.__icAc) { return; }
+    ta.__icAc = true;
+    var wrap = ta.closest ? (ta.closest('[data-hl]') || ta.parentNode) : ta.parentNode;
+    var drop = document.createElement('div');
+    drop.className = 'ac-drop';
+    drop.style.display = 'none';
+    if (wrap && wrap.appendChild) { wrap.appendChild(drop); }
+    if (wrap && wrap.classList && wrap.classList.add) { wrap.classList.add('has-ac'); }
+    var matches = [];
+    var active = -1;
+    var tokenStart = -1;
+
+    function tokenInfo() {
+      var pos = ta.selectionStart === undefined ? taValue(ta).length : ta.selectionStart;
+      var before = taValue(ta).slice(0, pos);
+      var m = /([A-Za-z_][A-Za-z0-9_]*)(?:\.([A-Za-z_][A-Za-z0-9_]*))?$/.exec(before);
+      if (!m) { return null; }
+      return { objectName: m[1], memberPrefix: m[2] !== undefined ? m[2] : null, token: m[2] !== undefined ? m[2] : m[1], start: pos - (m[2] !== undefined ? m[2].length : m[1].length), dot: m[2] !== undefined, pos: pos };
+    }
+
+    function close() {
+      matches = [];
+      active = -1;
+      drop.style.display = 'none';
+      drop.innerHTML = '';
+    }
+
+    function render() {
+      drop.innerHTML = '';
+      for (var i = 0; i < matches.length; i++) {
+        var item = document.createElement('div');
+        item.className = 'ac-item' + (i === active ? ' ac-active' : '');
+        item.textContent = matches[i].label + (matches[i].detail ? '  ' + matches[i].detail : '');
+        item.setAttribute('data-idx', String(i));
+        drop.appendChild(item);
+      }
+      drop.style.display = matches.length > 0 ? '' : 'none';
+    }
+
+    function update() {
+      var info = tokenInfo();
+      if (!info || info.token.length < 1) { close(); return; }
+      var pool;
+      if (info.dot) {
+        pool = memberItems(info.objectName);
+        if (!pool) { close(); return; }
+      } else {
+        pool = sourceItems(kind, ta);
+      }
+      var prefix = info.token.toLowerCase();
+      matches = [];
+      for (var i = 0; i < pool.length; i++) {
+        var label = String(pool[i].label).toLowerCase();
+        if (label.indexOf(prefix) === 0 && pool[i].label !== info.token) { matches.push(pool[i]); }
+        if (matches.length >= 8) { break; }
+      }
+      active = matches.length > 0 ? 0 : -1;
+      tokenStart = info.start;
+      render();
+      try {
+        if (typeof ta.getBoundingClientRect === 'function' && drop.style) {
+          var rect = ta.getBoundingClientRect();
+          drop.style.left = '0px';
+          drop.style.top = '100%';
+          drop.style.maxWidth = '100%';
+          /* Position unter dem Textfeld rechtsbuendig begrenzen */
+          drop.style.right = 'auto';
+        }
+      } catch (e) { /* Positionierung optional */ }
+    }
+
+    function accept(idx) {
+      if (idx < 0 || idx >= matches.length) { return false; }
+      var ins = String(matches[idx].insert);
+      var pos = ta.selectionStart === undefined ? taValue(ta).length : ta.selectionStart;
+      var value = taValue(ta);
+      var after = value.slice(pos);
+      var before = value.slice(0, pos);
+      var m = /([A-Za-z_][A-Za-z0-9_]*)$/.exec(before);
+      var start = m ? pos - m[1].length : pos;
+      var next = value.slice(0, start) + ins + after;
+      ta.value = next;
+      var caret = start + ins.length;
+      try {
+        ta.setSelectionRange(caret, caret);
+      } catch (e) { /* Harness ohne Auswahl-API */ }
+      try {
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+      } catch (e) {
+        var ev = document.createEvent('Event');
+        ev.initEvent('input', true, false);
+        ta.dispatchEvent(ev);
+      }
+      close();
+      return true;
+    }
+
+    ta.addEventListener('input', update);
+    ta.addEventListener('keydown', function (e) {
+      if (matches.length === 0) { return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); active = (active + 1) % matches.length; render(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); active = active <= 0 ? matches.length - 1 : active - 1; render(); }
+      else if (e.key === 'Tab' || e.key === 'Enter') { e.preventDefault(); accept(active); }
+      else if (e.key === 'Escape') { close(); }
+    });
+    ta.addEventListener('blur', function () { setTimeout(close, 120); });
+    drop.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    drop.addEventListener('click', function (e) {
+      var item = e.target && e.target.getAttribute ? e.target : (e.target.parentNode);
+      var idx = item && item.getAttribute ? parseInt(item.getAttribute('data-idx'), 10) : NaN;
+      if (!isNaN(idx)) { accept(idx); }
+    });
+  }
+
+  /* Kleine ASM-Sprache fuer Syntaxfarben im Assembler-Editor (#45 Nacharbeit) */
+  if (typeof hljs !== 'undefined' && hljs.getLanguage && !hljs.getLanguage('asm')) {
+    hljs.registerLanguage('asm', function () {
+      return {
+        case_insensitive: true,
+        keywords: { keyword: 'MOV ADD SUB MUL DIV INC DEC CMP JMP JE JNE JG JL JGE JLE JZ JNZ LOAD STORE PUSH POP CALL RET HLT NOP OUT IN', built_in: 'R0 R1 R2 R3 R4 R5 R6 R7 ACC PC SP FLAG' },
+        contains: [
+          hljs.COMMENT(';', String.fromCharCode(10)),
+          { className: 'number', begin: '[0-9]+' },
+          { className: 'string', begin: '"', end: '"' }
+        ]
+      };
+    });
+  }
+
+  /* Alle Felder mit data-ac verbinden (zusaetzlich zu den Wrappern) */
+  document.querySelectorAll('[data-ac]').forEach(function (wrap) {
+    var ta = wrap.querySelector('textarea');
+    var kind = wrap.getAttribute('data-ac');
+    if (ta) { attach(ta, kind); }
+  });
+  window.IC_AUTOCOMPLETE = { attach: attach };
+})();

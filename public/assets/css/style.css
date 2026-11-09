@@ -773,6 +773,55 @@ span.hlwrap { display: block; }
 .proj-row .form-inline { flex-shrink: 0; }
 .proj-row .form-inline .btn { padding: 4px 8px; font-size: 0.8rem; }
 .proj-empty { margin: 0; font-size: 0.88rem; }
+/* Lange Ordnernamen und Projekttitel duerfen das Layout nicht sprengen */
+.folder-item { min-width: 0; }
+.folder-item > strong {
+    min-width: 0; max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.folder-children { flex: 1 1 100%; min-width: 0; }
+.folder-children .proj-row { max-width: 100%; min-width: 0; }
+.cards { grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); }
+.card { min-width: 0; }
+.card h2, .card-desc, .folder-item { overflow-wrap: anywhere; }
+
+/* ===== Autovervollstaendigung in allen Code-Feldern (#45 Nacharbeit) ===== */
+.has-ac { position: relative; }
+.ac-drop {
+    position: absolute; top: 100%; left: 0; z-index: 40;
+    min-width: 260px; max-height: 220px; overflow: auto;
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 10px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+}
+.ac-item { padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.ac-item .ac-detail { color: var(--muted); }
+.ac-active, .ac-item:hover { background: #eef2ff; color: var(--primary-2, #4338ca); }
+
+/* ===== Reines Tabellenschema der Mini-Datenbank (#45 Nacharbeit) ===== */
+.schema-grid { display: flex; flex-wrap: wrap; gap: 12px; padding: 4px 0; align-items: flex-start; }
+.db-schema-table {
+    border-collapse: collapse;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    min-width: 200px; max-width: 320px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+}
+.db-schema-table th {
+    background: #dbeafe; color: #1e3a8a;
+    border: 1px solid #93c5fd;
+    padding: 5px 10px; text-align: left; font-size: 0.8rem;
+}
+.db-schema-table thead tr:first-child th {
+    font-weight: 700; font-size: 0.88rem;
+}
+.db-schema-table td {
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+}
+.db-schema-table thead tr:first-child th { border-bottom: 2px solid #1d4ed8; }
 
 /* ===== Klassendiagramm direkt in der Java-IDE (BlueJ-Idee) ===== */
 /* Gleicher Look wie der Diagramm-Bereich: harte Ecken, blauer Kopf, Trennstriche. */
