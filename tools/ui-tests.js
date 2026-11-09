@@ -1151,7 +1151,7 @@ setTimeout(function () {
               ibEditor.setAttribute('data-nav', JSON.stringify([{ id: 42, t: 'Aktuelle Seite', s: 'Abschnitt A' }, { id: 43, t: 'Zielseite', s: 'Abschnitt A' }]));
               ibEditor.setAttribute('data-diagrams', JSON.stringify([{ id: 5, t: 'Klassendiagramm Auto', kind: 'java', src: 'classDiagram\nAuto <|-- BMW' }]));
               ibEditor.setAttribute('data-dbtemplates', JSON.stringify([{ slug: 'shop', t: 'Kaufhaus Laden', sql: "CREATE TABLE artikel (name TEXT, preis INT); INSERT INTO artikel VALUES ('Kaugummi', 1)" }]));
-              ibEditor.setAttribute('data-codeclasses', JSON.stringify([{ project: 'Fahrzeuge', name: 'Auto.java', code: 'class Auto {\n  void fahren() {}\n}\n' }]));
+              ibEditor.setAttribute('data-codeclasses', JSON.stringify([{ project: 'Fahrzeuge', name: 'Auto.java', code: 'class Auto {\n  String name;\n  void fahren() {}\n}\n' }]));
               ibEditor.setAttribute('data-blocks', '[]');
               ibDoc.register(ibEditor, 'ibook-editor');
               ibDoc.register(new FakeEl('input'), 'ibook-blocks-json');
@@ -1578,6 +1578,15 @@ setTimeout(function () {
                     var cv58 = ibCollect();
                     var t58 = cv58 && cv58.items ? cv58.items.filter(function (it) { return it.kind === 'db'; })[0] : null;
                     ok(t58 && t58.dbseed.indexOf('CREATE TABLE schueler') !== -1 && t58.dbq.indexOf('LIKE') !== -1, 'T58g Seed und Abfrage werden serialisiert');
+                    /* Mehrzeilige VALUES (#88): jede Klammergruppe ist eine
+                     * Zeile, ohne Klammerreste in der Ausgabe. */
+                    ibDbSeed58.value = "CREATE TABLE schueler (name TEXT, punkte INT); INSERT INTO schueler VALUES ('Anna', 12), ('Ben', 9)";
+                    ibDbSeed58.dispatch('input');
+                    ibDbQ58.value = 'SELECT * FROM schueler';
+                    ibDbQ58.dispatch('input');
+                    ibDbBox58.querySelector('.icv-db-run').dispatch('click');
+                    ok(ibDbOut58.innerHTML.indexOf('Anna') !== -1 && ibDbOut58.innerHTML.indexOf('Ben') !== -1 && ibDbOut58.innerHTML.indexOf(')') === -1, 'T58h mehrzeilige VALUES liefern saubere Zeilen ohne Klammerreste');
+                    ok(ibDbOut58.innerHTML.indexOf('2 Zeilen') !== -1, 'T58i beide Zeilen der mehrzeiligen VALUES kommen an');
                   }
                 }
 
@@ -1764,9 +1773,9 @@ setTimeout(function () {
                   ok(t64 && t64.dbseed.indexOf('Kaugummi') !== -1, 'T64f der Vorlagen-Seed wird serialisiert');
                 }
 
-                /* T65 (#86): Klassen aus vorhandenen Java-Projekten lassen
-                 * sich ins Code-Fenster einfuegen: Dropdown haengt den
-                 * Klassentext an, danach laesst er sich weiter bearbeiten. */
+                /* T65 (#87): Klassen aus Projekten erscheinen als Karte ueber
+                 * dem Code, nicht im Quelltext. Karte klappt Attribute und
+                 * Methoden auf, das x nimmt sie wieder mit. */
                 ibCodeBtn57.dispatch('click');
                 var ibCodeBoxes65 = ibStage.querySelectorAll('.icv-code');
                 var ibCodeBox65 = ibCodeBoxes65[ibCodeBoxes65.length - 1];
@@ -1775,14 +1784,69 @@ setTimeout(function () {
                 if (ibProj65) {
                   var ibCodeTa65 = ibCodeBox65.querySelector('.icv-code-ta');
                   ibCodeTa65.value = 'System.out.println("Los");';
+                  ibCodeTa65.selectionStart = 23;
                   ibCodeTa65.dispatch('input');
                   ibProj65.value = '0';
                   ibProj65.dispatch('change');
-                  ok(String(ibCodeTa65.value).indexOf('System.out.println("Los");') !== -1 && ibCodeTa65.value.indexOf('class Auto') !== -1 && String(ibCodeTa65.value).indexOf('void fahren') !== -1, 'T65b die Klassen-Auswahl haengt den Quelltext hinten an');
-                  ok(ibProj65.value === '', 'T65c das Projekt-Dropdown springt zurueck auf die neutrale Auswahl');
+                  var ibCard65 = ibCodeBox65.querySelector('.icv-code-card');
+                  ok(ibCard65 !== null, 'T65b die Klassen-Auswahl legt eine Karte ans Fenster');
+                  ok(String(ibCodeTa65.value).indexOf('class Auto') === -1 && ibCodeTa65.value.indexOf('System.out.println("Los");') !== -1, 'T65c der Klassen-Quelltext bleibt draussen, der eigene Code unangetastet');
+                  ok(ibCard65 && ibCodeBox65.querySelector('.icv-code-card-name') && ibCodeBox65.querySelector('.icv-code-card-name').textOf() === 'Auto', 'T65d die Karte zeigt nur den Klassennamen');
+                  ok(ibProj65.value === '', 'T65e das Projekt-Dropdown springt zurueck auf die neutrale Auswahl');
+                  var ibCardName65 = ibCodeBox65.querySelector('.icv-code-card-name');
+                  ok(ibCard65.classList.contains('open') === false, 'T65f die Karte startet zugeklappt');
+                  ibCardName65.dispatch('click');
+                  ok(ibCard65.classList.contains('open') === true, 'T65g Klick auf den Namen klappt Attribute und Methoden auf');
+                  ok(ibCard65.querySelector('.icv-code-card-field') !== null && ibCard65.querySelector('.icv-code-card-field').textOf().indexOf('name : String') !== -1, 'T65h das Attribut steht in den Details');
+                  ok(ibCard65.querySelector('.icv-code-card-method') !== null && ibCard65.querySelector('.icv-code-card-method').textOf().indexOf('fahren()') !== -1, 'T65i die Methode steht in den Details');
+                  ibCardName65.dispatch('click');
+                  ok(ibCard65.classList.contains('open') === false, 'T65j der zweite Klappt die Karte wieder zu');
                   var cv65 = ibCollect();
                   var t65 = cv65 && cv65.items ? cv65.items.filter(function (it) { return it.kind === 'code'; })[cv65.items.filter(function (it) { return it.kind === 'code'; }).length - 1] : null;
-                  ok(t65 && String(t65.code).indexOf('class Auto') !== -1 && String(t65.code).indexOf('System.out.println("Los");') !== -1, 'T65d der gemischte Quelltext wird serialisiert');
+                  ok(t65 && t65.cls && t65.cls.length === 1 && t65.cls[0].name === 'Auto.java' && t65.cls[0].project === 'Fahrzeuge' && String(t65.cls[0].code).indexOf('class Auto') !== -1, 'T65k die Karte wird mit Name, Projekt und Quelltext serialisiert');
+                  ibCard65.querySelector('.icv-code-card-x').dispatch('click');
+                  ok(ibCodeBox65.querySelector('.icv-code-card') === null, 'T65l das x entfernt die Karte wieder');
+                  var cv65b = ibCollect();
+                  var t65b = cv65b && cv65b.items ? cv65b.items.filter(function (it) { return it.kind === 'code'; })[cv65b.items.filter(function (it) { return it.kind === 'code'; }).length - 1] : null;
+                  ok(t65b && t65b.cls === undefined, 'T65m ohne Karte verschwindet die Klasse aus der Serialisierung');
+                  /* T66 (#87): Beim Ausfuehren reist die importierte Klasse als
+                   * eigene Datei mit zur Java-VM, der Hauptcode bleibt Main.java. */
+                  ibProj65.value = '0';
+                  ibProj65.dispatch('change');
+                  global.window.InfoCraftJavaVM = {
+                    run: function (files) {
+                      ok(files && typeof files === 'object' && typeof files['Main.java'] === 'string' && files['Main.java'].indexOf('System.out.println("Los");') !== -1, 'T66 der Hauptcode geht als Main.java an die Java-VM');
+                      ok(typeof files['Auto.java'] === 'string' && files['Auto.java'].indexOf('class Auto') !== -1 && files['Auto.java'].indexOf('void fahren') !== -1, 'T66b die importierte Klasse reist als eigene Datei Auto.java mit');
+                      return { output: 'Auto faehrt los', errors: [], ok: true };
+                    }
+                  };
+                  ibCodeBox65.querySelector('.icv-code-run').dispatch('click');
+                  ok(ibCodeBox65.querySelector('.icv-code-out').textContent.indexOf('Auto faehrt los') !== -1, 'T66c die Ausgabe der Java-VM landet in der Konsole');
+                  delete global.window.InfoCraftJavaVM;
+                  /* T67 (#87): Autovervollstaendigung: Klassennamen beim Tippen,
+                   * nach dem Punkt Attribute und Methoden, Tab/Enter fuegt ein. */
+                  var ibAc67 = ibCodeBox65.querySelector('.icv-code-ac');
+                  ibCodeTa65.value = 'Au';
+                  ibCodeTa65.selectionStart = 2;
+                  ibCodeTa65.selectionEnd = 2;
+                  ibCodeTa65.dispatch('input');
+                  ok(ibAc67.classList.contains('icv-code-ac-open') === true && ibAc67.children.length === 1 && ibAc67.children[0].textOf() === 'Auto', 'T67 tippen oeffnet die Vorschlaege mit dem Klassennamen');
+                  ibCodeTa65.dispatch('keydown', { key: 'Tab' });
+                  ok(ibCodeTa65.value === 'Auto', 'T67b Tab uebernimmt den Vorschlag ins Code-Feld');
+                  ok(ibAc67.classList.contains('icv-code-ac-open') === false, 'T67c nach der Uebernahme schliessen die Vorschlaege');
+                  ibCodeTa65.value = 'Auto.fa';
+                  ibCodeTa65.selectionStart = 8;
+                  ibCodeTa65.selectionEnd = 8;
+                  ibCodeTa65.dispatch('input');
+                  var acLabels67 = [];
+                  for (var ai67 = 0; ai67 < ibAc67.children.length; ai67++) { acLabels67.push(ibAc67.children[ai67].textOf()); }
+                  ok(ibAc67.classList.contains('icv-code-ac-open') === true && acLabels67.join('|').indexOf('fahren()') !== -1, 'T67d nach dem Punkt schlagen Attribute und Methoden vor');
+                  ibCodeTa65.dispatch('keydown', { key: 'ArrowDown' });
+                  ibCodeTa65.dispatch('keydown', { key: 'Enter' });
+                  ok(ibCodeTa65.value === 'Auto.fahren(', 'T67e Enter fuegt die gewaehlte Methode ein');
+                  var cv67 = ibCollect();
+                  var t67 = cv67 && cv67.items ? cv67.items.filter(function (it) { return it.kind === 'code'; })[cv67.items.filter(function (it) { return it.kind === 'code'; }).length - 1] : null;
+                  ok(t67 && t67.code === 'Auto.fahren(', 'T67f der ergaenzte Quelltext wird serialisiert');
                 }
 
                 /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */

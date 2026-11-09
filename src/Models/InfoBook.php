@@ -318,6 +318,29 @@ final class InfoBook
                     'y' => $top,
                     'w' => self::cvNum($item['w'] ?? 520, 120, $w),
                 ];
+                /* Importierte Klassen (#87): Karte mit Name, Projekt und
+                 * Quelltext. Die Java-VM bekommt sie im Browser als eigene
+                 * Dateien, der Server speichert nur den Text (wie code). */
+                $clsClean = [];
+                if (is_array($item['cls'] ?? null)) {
+                    foreach ($item['cls'] as $c) {
+                        if (!is_array($c) || (string) ($c['name'] ?? '') === '' || count($clsClean) >= 20) {
+                            continue;
+                        }
+                        $clsName = preg_replace('/[^A-Za-z0-9_.\-]/', '', basename((string) $c['name']));
+                        if ($clsName === '' || strlen($clsName) > 100) {
+                            continue;
+                        }
+                        $clsClean[] = [
+                            'name' => $clsName,
+                            'project' => mb_substr((string) ($c['project'] ?? ''), 0, 120),
+                            'code' => mb_substr((string) ($c['code'] ?? ''), 0, 20000),
+                        ];
+                    }
+                }
+                if ($clsClean) {
+                    $it['cls'] = $clsClean;
+                }
                 if ($grp > 0) {
                     $it['g'] = $grp;
                 }

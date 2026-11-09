@@ -982,10 +982,31 @@ final class InfoBookController
                 $code = (string) ($item['code'] ?? '');
                 $codeLang = in_array((string) ($item['lang'] ?? 'java'), ['java', 'javascript', 'python'], true) ? (string) ($item['lang'] ?? 'java') : 'java';
                 $codeLangLabel = $codeLang === 'javascript' ? 'JavaScript' : ($codeLang === 'python' ? 'Python' : 'Java');
+                /* Importierte Klassen (#87): Im Lesemodus als Chips ueber dem
+                 * Code, beim Ausfuehren reicht data-clsfiles sie der Java-VM
+                 * als eigene Dateien mit (der Quelltext bleibt unsichtbar). */
+                $clsList = [];
+                if (is_array($item['cls'] ?? null)) {
+                    foreach ($item['cls'] as $c) {
+                        if (!is_array($c) || (string) ($c['name'] ?? '') === '') { continue; }
+                        $clsList[] = ['name' => (string) $c['name'], 'code' => (string) ($c['code'] ?? '')];
+                    }
+                }
+                $clsAttr = '';
+                $clsChips = '';
+                if ($clsList) {
+                    $clsAttr = ' data-clsfiles="' . e(json_encode($clsList, JSON_UNESCAPED_UNICODE)) . '"';
+                    $clsChips = '<div class="icv-code-cards">';
+                    foreach ($clsList as $c) {
+                        $clsChips .= '<div class="icv-code-card icv-code-card-ro" title="' . e((string) ($c['name'] ?? 'Klasse')) . '">' . e(pathinfo((string) $c['name'], PATHINFO_FILENAME)) . '</div>';
+                    }
+                    $clsChips .= '</div>';
+                }
                 $inner .= $pre . '<div class="icv-item icv-code" data-lang="' . e($codeLang) . '" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 520, $w) . '%">'
                     . '<div class="icv-code-head"><span class="icv-code-langtag">' . e($codeLangLabel) . '</span></div>'
+                    . $clsChips
                     . '<pre class="code icv-code-src">' . e($code) . '</pre>'
-                    . '<button type="button" class="icv-code-run" data-lang="' . e($codeLang) . '">▶ Ausführen</button>'
+                    . '<button type="button" class="icv-code-run" data-lang="' . e($codeLang) . '"' . $clsAttr . '>▶ Ausführen</button>'
                     . '<pre class="icv-code-out" aria-live="polite"></pre></div>';
             } elseif ($kind === 'db') {
                 /* Datenbank-Element (#76): Schema serverseitig aus den CREATE-
@@ -1014,7 +1035,7 @@ final class InfoBookController
                         . '<div class="icv-diagram-split"><textarea class="mono icv-diagram-code" spellcheck="false" aria-label="Mermaid-Quelltext">' . e($src) . '</textarea>'
                         . '<div class="icv-diagram-split-bar" title="Ziehen: Fenstergröße anpassen"></div>'
                         . '<div class="icv-diagram-prev" aria-live="polite"></div></div>'
-                        . '<p class="muted icv-diagram-ro-hint">Quelltext hier live ändern, um zu präsentieren; gespeichert wird nur in der Bearbeitung.</p></div>';
+                    . '</div>';
                 } else {
                     $inner .= $pre . '<div class="icv-item icv-diagram icv-diagram-ro" data-src="' . e($src) . '" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%">'
                         . '<div class="icv-diagram-prev" aria-live="polite"></div></div>';

@@ -1830,7 +1830,6 @@ a.icv-item-link:hover .icv-item { outline: 2px dashed #1d4ed8; outline-offset: 2
     resize: none; color: #1e293b; white-space: pre; line-height: 1.45;
 }
 .icv-diagram-split { min-height: 200px; }
-.icv-diagram-ro-hint { font-size: 0.7rem; color: #64748b; margin: 4px 0 0 0; }
 /* #84: DB-Ausgabe als echte Tabelle */
 .icv-db .icv-db-out table.icv-db-table { border-collapse: collapse; margin: 0; }
 .icv-db .icv-db-out table.icv-db-table th,
@@ -1841,6 +1840,45 @@ a.icv-item-link:hover .icv-item { outline: 2px dashed #1d4ed8; outline-offset: 2
 .icv-db .icv-db-out table.icv-db-table th { background: #f1f5f9; }
 .icv-db .icv-db-out table.icv-db-table tbody tr:nth-child(2n) { background: #f8fafc; }
 .icv-db .icv-db-count { font-size: 0.72rem; color: #64748b; margin: 6px 0 0 0; }
+/* Klassenkarten (#87): importierte Klassen ueber dem Code-Fenster.
+ * Die Karte zeigt nur den Namen, Attribute und Methoden klappen auf Klick. */
+.icv-code-cards { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px 0; }
+.icv-code-cards.icv-code-cards-empty { display: none; }
+.icv-code-card {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap; position: relative;
+    background: #f1f5f9; border: 1px solid var(--border, #d7dce5); border-radius: 6px;
+    padding: 2px 4px 2px 8px;
+}
+.icv-code-card-name {
+    border: none; background: transparent; font-weight: 600; color: #1e293b;
+    cursor: pointer; padding: 2px 0; font-size: 0.78rem; font-family: inherit;
+}
+.icv-code-card-name::after { content: ' ▾'; color: #64748b; font-size: 0.7rem; font-weight: 400; }
+.icv-code-card.open .icv-code-card-name::after { content: ' ▴'; }
+.icv-code-card-x {
+    border: none; background: transparent; color: #64748b; cursor: pointer;
+    font-size: 0.9rem; line-height: 1; padding: 0 4px; border-radius: 4px;
+}
+.icv-code-card-x:hover { color: #b91c1c; background: #fee2e2; }
+.icv-code-card-detail {
+    display: none; width: 100%; box-sizing: border-box; background: #ffffff;
+    border: 1px solid var(--border, #d7dce5); border-radius: 6px; padding: 4px 8px;
+    font-family: var(--mono, ui-monospace, monospace); font-size: 0.72rem; color: #334155;
+}
+.icv-code-card.open .icv-code-card-detail { display: block; }
+.icv-code-card-field { color: #475569; }
+.icv-code-card-method { color: #1d4ed8; }
+/* Autovervollstaendigung (#87): Vorschlaege unter dem Code-Feld */
+.icv-code-ac {
+    display: none; margin-top: 4px; background: #ffffff; border: 1px solid #334155;
+    border-radius: 6px; max-height: 150px; overflow: auto; font-size: 0.78rem;
+    font-family: var(--mono, ui-monospace, monospace);
+}
+.icv-code-ac.icv-code-ac-open { display: block; }
+.icv-code-ac-item { padding: 3px 8px; cursor: pointer; color: #1e293b; }
+.icv-code-ac-item:hover, .icv-code-ac-item.sel { background: #e0e7ff; }
+/* Lesemodus (#87): importierte Klassen als Hinweis-Chips ohne Detail */
+.icv-code-card.icv-code-card-ro { padding: 2px 8px; font-size: 0.72rem; color: #475569; }
 /* Lesen/Präsentation: gleiche Geometrie, ohne Editor-Griffe */
 .icv-readonly .icv-ink { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
 .icv-readonly .icv-text { padding: 8px 10px; border-radius: 8px; }

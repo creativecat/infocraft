@@ -2140,9 +2140,8 @@
       });
       cctl.appendChild(clang);
       if (codeClasses.length > 0) {
-        /* Klassen aus der Code-Werkstatt (#86): Auswahl haengt den
-         * Klassentext an den Quelltext an, danach laesst er sich weiter
-         * bearbeiten und ausfuehren. */
+        /* Klassen aus der Code-Werkstatt (#86/#87): Auswahl fuegt die
+         * Klasse als Karte hinzu, der Quelltext bleibt draussen. */
         var cproj = el('select', 'icv-code-projsel');
         cproj.title = 'Eine Klasse aus einem deiner Java-Projekte einfügen';
         var cprojNone = el('option', '', 'Klasse aus Projekt einfügen …');
@@ -2156,26 +2155,176 @@
         cproj.addEventListener('change', function () {
           var idx = parseInt(cproj.value, 10);
           var picked = codeClasses[idx];
-          if (!picked) { return; }
-          item.code = (item.code ? item.code.replace(/\s+$/, '') + '\n\n' : '') + String(picked.code || '');
-          cta.value = item.code;
           cproj.value = '';
-          collect(); markDirty();
+          if (!picked) { return; }
+          var cNm = String(picked.name || 'Klasse.java');
+          if (cNm.slice(-5).toLowerCase() !== '.java') { cNm += '.java'; }
+          var dup = item.cls.filter(function (c) { return c.name === cNm; }).length > 0;
+          if (!dup) {
+            item.cls.push({ name: cNm, project: String(picked.project || ''), code: String(picked.code || '') });
+            rebuildCards(); syncClsFiles(); collect(); markDirty();
+          }
         });
         cctl.appendChild(cproj);
       }
       div.appendChild(cctl);
+      /* Klassenkarten (#87): Importierte Klassen stehen als Karten ueber
+       * dem Code. Die Karte zeigt nur den Namen, Attribute und Methoden
+       * klappen nach Klick auf. Beim Ausfuehren reicht data-clsfiles die
+       * Klassendateien an die Java-VM mit, der Hauptcode bleibt allein im
+       * Feld. */
+      if (!Array.isArray(item.cls)) { item.cls = []; }
+      var ccards = el('div', 'icv-code-cards');
       var cta = el('textarea', 'mono icv-code-ta');
       cta.value = item.code || '';
       cta.setAttribute('spellcheck', 'false');
+      var acBox = el('div', 'icv-code-ac');
+      var acItems = [];
+      var acSel = 0;
+      function clsTitle(nm) { return String(nm || 'Klasse').replace(/\.java$/i, ''); }
+      function clsMembers(code) {
+        var src = String(code || '');
+        var fields = [], methods = [];
+        var fRe = /(?:^|\n)\s*(?:(?:public|protected|private|static|final)\s+)*([A-Za-z_][\w<>\[\], .]*)\s+([a-zA-Z_]\w*)\s*(?:=[^;\n]*)?;/g;
+        var fM;
+        var fSkip = ['class', 'interface', 'enum', 'return', 'new', 'import', 'package', 'extends', 'implements', 'void', 'if', 'for', 'while', 'switch', 'catch'];
+        while ((fM = fRe.exec(src))) {
+          var fType = fM[1].trim();
+          if (fSkip.indexOf(fType.split(/\s+/)[0]) === -1) { fields.push({ name: fM[2], type: fType }); }
+        }
+        var mRe = /(?:^|[^\w.])([A-Za-z_]\w*)\s*\(([^)]*)\)/g;
+        var mM;
+        var mSkip = ['if', 'for', 'while', 'switch', 'catch', 'new', 'return', 'super', 'this', 'do', 'print', 'println', 'class'];
+        while ((mM = mRe.exec(src))) {
+          if (mSkip.indexOf(mM[1]) === -1 && methods.filter(function (x) { return x.name === mM[1]; }).length === 0) {
+            methods.push({ name: mM[1], args: mM[2].trim() });
+          }
+        }
+        return { fields: fields, methods: methods };
+      }
+      function acHide() {
+        acItems = []; acSel = 0;
+        acBox.innerHTML = '';
+        acBox.classList.remove('icv-code-ac-open');
+      }
+      function acInsert(si) {
+        var sug = acItems[si];
+        if (!sug) { acHide(); return; }
+        var pos = cta.selectionStart;
+        if (typeof pos !== 'number' || pos < 0) { pos = String(cta.value || '').length; }
+        var val = String(cta.value || '');
+        var before = val.slice(0, pos);
+        var after = val.slice(pos);
+        var tokM = /[A-Za-z_]\w*$/.exec(before);
+        var tok = tokM ? tokM[0] : '';
+        var rest = sug.insert.slice(Math.min(tok.length, sug.insert.length));
+        cta.value = before + rest + after;
+        cta.selectionStart = cta.selectionEnd = pos + rest.length;
+        item.code = cta.value;
+        acHide();
+        collect(); markDirty();
+      }
+      function acShow() {
+        var pos = cta.selectionStart;
+        if (typeof pos !== 'number' || pos < 0) { pos = String(cta.value || '').length; }
+        var before = String(cta.value || '').slice(0, pos);
+        var tokM = /[A-Za-z_]\w*$/.exec(before);
+        if (!tokM) { acHide(); return; }
+        var tok = tokM[0];
+        var memM = /([A-Za-z_]\w*)\.$/.exec(before.slice(0, before.length - tok.length));
+        var list = [];
+        if (memM) {
+          var cls = item.cls.filter(function (c) { return clsTitle(c.name) === memM[1]; })[0];
+          if (cls) {
+            var mem = clsMembers(cls.code);
+            mem.fields.forEach(function (f) {
+              if (f.name.toLowerCase().indexOf(tok.toLowerCase()) === 0) { list.push({ label: f.name + ' : ' + f.type, insert: f.name }); }
+            });
+            mem.methods.forEach(function (m) {
+              if (m.name.toLowerCase().indexOf(tok.toLowerCase()) === 0) { list.push({ label: m.name + '(' + m.args + ')', insert: m.name + '(' }); }
+            });
+          }
+        } else {
+          item.cls.forEach(function (c) {
+            var cn = clsTitle(c.name);
+            if (cn.toLowerCase().indexOf(tok.toLowerCase()) === 0) { list.push({ label: cn, insert: cn }); }
+          });
+        }
+        if (list.length === 0) { acHide(); return; }
+        acItems = list; acSel = 0;
+        acBox.innerHTML = '';
+        list.forEach(function (s2, sI) {
+          var it = el('div', 'icv-code-ac-item', s2.label);
+          if (sI === 0) { it.classList.add('sel'); }
+          it.addEventListener('click', function () { acInsert(sI); });
+          acBox.appendChild(it);
+        });
+        acBox.classList.add('icv-code-ac-open');
+      }
+      function syncClsFiles() {
+        crun.setAttribute('data-clsfiles', JSON.stringify(item.cls.map(function (c) { return { name: c.name, code: c.code }; })));
+      }
+      function rebuildCards() {
+        ccards.innerHTML = '';
+        item.cls.forEach(function (c, cI) {
+          var card = el('div', 'icv-code-card');
+          card.setAttribute('data-clsname', c.name);
+          var head = el('button', 'icv-code-card-name', clsTitle(c.name));
+          head.type = 'button';
+          head.title = 'Attribute und Methoden anzeigen';
+          head.addEventListener('click', function () { card.classList.toggle('open'); });
+          card.appendChild(head);
+          var xBtn = el('button', 'icv-code-card-x', '×');
+          xBtn.type = 'button';
+          xBtn.title = 'Klasse entfernen';
+          xBtn.addEventListener('click', function () {
+            item.cls.splice(cI, 1);
+            acHide(); rebuildCards(); syncClsFiles(); collect(); markDirty();
+          });
+          card.appendChild(xBtn);
+          var det = el('div', 'icv-code-card-detail');
+          var mem = clsMembers(c.code);
+          if (mem.fields.length === 0 && mem.methods.length === 0) {
+            det.appendChild(el('div', 'muted', 'keine Attribute oder Methoden erkannt'));
+          } else {
+            mem.fields.forEach(function (f) { det.appendChild(el('div', 'icv-code-card-field', f.name + ' : ' + f.type)); });
+            mem.methods.forEach(function (m) { det.appendChild(el('div', 'icv-code-card-method', m.name + '(' + m.args + ')')); });
+          }
+          card.appendChild(det);
+          ccards.appendChild(card);
+        });
+        ccards.classList.toggle('icv-code-cards-empty', item.cls.length === 0);
+      }
       cta.addEventListener('input', function () {
         item.code = cta.value;
         collect(); markDirty();
+        acShow();
       });
+      cta.addEventListener('keydown', function (ev) {
+        if (acItems.length === 0) { return; }
+        var k = ev && ev.key ? ev.key : '';
+        if (k === 'ArrowDown' || k === 'ArrowUp') {
+          acSel = (acSel + (k === 'ArrowDown' ? 1 : -1) + acItems.length) % acItems.length;
+          var kids = acBox.children;
+          for (var ki = 0; ki < kids.length; ki++) { kids[ki].classList.toggle('sel', ki === acSel); }
+          if (ev.preventDefault) { ev.preventDefault(); }
+          return;
+        }
+        if (k === 'Tab' || k === 'Enter') {
+          acInsert(acSel);
+          if (ev.preventDefault) { ev.preventDefault(); }
+          return;
+        }
+        if (k === 'Escape') { acHide(); }
+      });
+      div.appendChild(ccards);
       div.appendChild(cta);
+      div.appendChild(acBox);
       var crun = el('button', 'icv-code-run', '▶ Ausführen');
       crun.type = 'button';
       crun.setAttribute('data-lang', clangVal);
+      rebuildCards();
+      syncClsFiles();
       div.appendChild(crun);
       div.appendChild(el('pre', 'mono icv-code-out'));
     } else if (item.kind === 'db') {
@@ -3053,6 +3202,13 @@
           /* Sprache (#81): Standard Java, wird im Lesemodus als Tag gezeigt
            * und entscheidet ueber die Ausfuehrung (VM/Pyodide/eval). */
           e.lang = (item.lang === 'javascript' || item.lang === 'python') ? item.lang : 'java';
+          /* Importierte Klassen (#87): Karte mit Name/Projekt/Quelltext,
+           * die Java-VM bekommt sie beim Ausfuehren als eigene Dateien. */
+          if (Array.isArray(item.cls) && item.cls.length > 0) {
+            e.cls = item.cls.map(function (c) {
+              return { name: String(c.name || ''), project: String(c.project || ''), code: String(c.code || '') };
+            });
+          }
         } else if (item.kind === 'db') {
           e.dbseed = item.dbseed || '';
           e.dbq = item.dbq || '';
@@ -3190,7 +3346,7 @@
     if (typeof v === 'string') { return v; }
     try { return JSON.stringify(v); } catch (e) { return String(v); }
   }
-  function runJava(outEl, src) {
+  function runJava(outEl, src, clsFiles) {
     if (!window.InfoCraftJavaVM || !window.InfoCraftJavaVM.run) {
       outEl.textContent = '✖ Die Java-VM ist auf dieser Seite nicht geladen. Seite neu laden (Strg bzw. Cmd + Shift + R).';
       return outEl.textContent;
@@ -3199,8 +3355,17 @@
     try {
       /* Die Java-VM erwartet ein Objekt {dateiname: quelltext} (#86):
        * collectFiles() in java-vm.js baut genau diese Form, eine Liste
-       * fuehrt zu "files[name].split is not a function". */
-      res = window.InfoCraftJavaVM.run({ 'Main.java': String(src) });
+       * fuehrt zu "files[name].split is not a function". Importierte
+       * Klassen (#87) reisen als eigene Dateien mit, der Hauptcode
+       * liegt immer in Main.java. */
+      var files = {};
+      if (Array.isArray(clsFiles)) {
+        clsFiles.forEach(function (cf) {
+          if (cf && cf.name) { files[String(cf.name)] = String(cf.code || ''); }
+        });
+      }
+      files['Main.java'] = String(src);
+      res = window.InfoCraftJavaVM.run(files);
     } catch (e) {
       outEl.textContent = '✖ ' + (e && e.message ? e.message : String(e));
       return outEl.textContent;
@@ -3237,10 +3402,10 @@
     });
     return '';
   }
-  window.IC_RUN_CODE = function (outEl, src, lang) {
+  window.IC_RUN_CODE = function (outEl, src, lang, clsFiles) {
     if (!outEl) { return ''; }
     var mode = (lang === 'javascript' || lang === 'python') ? lang : 'java';
-    if (mode === 'java') { return runJava(outEl, src); }
+    if (mode === 'java') { return runJava(outEl, src, clsFiles); }
     if (mode === 'python') { return runPython(outEl, src); }
     var lines = [];
     var con = {
@@ -3280,8 +3445,12 @@
       src = String(srcEl.tagName === 'TEXTAREA' ? srcEl.value : (srcEl.textContent || ''));
     }
     /* Sprache (#81): am Knopf gepflegt (Editor synct sie, der Lesemodus
-     * rendert sie mit), Standard Java. */
-    window.IC_RUN_CODE(outEl, src, btn.getAttribute('data-lang') || 'java');
+     * rendert sie mit), Standard Java. Importierte Klassen (#87) hängen
+     * als data-clsfiles am Knopf (Editor und Lesemodus). */
+    var clsFiles = [];
+    try { clsFiles = JSON.parse(btn.getAttribute('data-clsfiles') || '[]') || []; } catch (eCf) { clsFiles = []; }
+    if (!Array.isArray(clsFiles)) { clsFiles = []; }
+    window.IC_RUN_CODE(outEl, src, btn.getAttribute('data-lang') || 'java', clsFiles);
   });
 })();
 
@@ -3319,6 +3488,33 @@
     if (/^null$/i.test(s)) { return null; }
     return s;
   }
+  /* Mehrzeilige VALUES (#88): VALUES (a, b), (c, d) - jede Klammergruppe
+   * auf Ebene 0 ist eine eigene Datenzeile. Anfuerungszeichen schuetzen
+   * Klammern und Kommas, '' ist ein escaptes '. */
+  function splitTuples(src) {
+    var out = [], cur = '', depth = 0, inStr = false;
+    var s = String(src || '');
+    for (var i = 0; i < s.length; i++) {
+      var ch = s[i];
+      if (ch === "'") {
+        if (inStr && s[i + 1] === "'") { cur += "''"; i++; continue; }
+        inStr = !inStr;
+        if (depth > 0) { cur += ch; }
+        continue;
+      }
+      if (!inStr) {
+        if (ch === '(') {
+          depth++;
+          if (depth === 1) { cur = ''; continue; }
+        } else if (ch === ')') {
+          depth--;
+          if (depth === 0) { out.push(cur.trim()); cur = ''; continue; }
+        }
+      }
+      if (depth > 0) { cur += ch; }
+    }
+    return out;
+  }
   function parseSeed(txt) {
     var tables = {};
     splitOn(txt, true).forEach(function (st) {
@@ -3331,15 +3527,19 @@
           if (parts.length > 0) { cols.push({ name: parts[0], type: (parts[1] || 'TEXT').toUpperCase() }); }
         });
         tables[m[1].toLowerCase()] = { name: m[1], cols: cols, rows: [] };
-      } else if ((m = s.match(/^INSERT\s+INTO\s+(\S+)\s*(?:\(([^)]*)\))?\s*VALUES\s*\(([\s\S]*)\)\s*$/i))) {
+      } else if ((m = s.match(/^INSERT\s+INTO\s+(\S+)\s*(?:\(([^)]*)\))?\s*VALUES\s*([\s\S]*)$/i))) {
         var t = tables[m[1].toLowerCase()];
         if (!t) { return; }
-        var vals = splitOn(m[3], false).map(coerce);
         var targetCols = m[2] ? m[2].split(',').map(function (cn) { return cn.trim().toLowerCase(); }) : null;
-        t.rows.push(t.cols.map(function (c) {
-          var pos = targetCols ? targetCols.indexOf(c.name.toLowerCase()) : t.cols.indexOf(c);
-          return (pos >= 0 && pos < vals.length) ? vals[pos] : null;
-        }));
+        /* Jede Klammergruppe ist eine Zeile (#88), auch bei
+         * VALUES (a, b), (c, d) in einem Statement. */
+        splitTuples(m[3]).forEach(function (tup) {
+          var vals = splitOn(tup, false).map(coerce);
+          t.rows.push(t.cols.map(function (c) {
+            var pos = targetCols ? targetCols.indexOf(c.name.toLowerCase()) : t.cols.indexOf(c);
+            return (pos >= 0 && pos < vals.length) ? vals[pos] : null;
+          }));
+        });
       }
     });
     return tables;
