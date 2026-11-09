@@ -31,7 +31,9 @@ const ASSET_VERSION = '45.6';
  */
 function asset_url(string $path): string
 {
-    $file = (defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__, 2)) . '/public/' . ltrim($path, '/');
+    /* BASE_PATH ist ein URL-Praefix, kein Dateisystem-Pfad: Der Datei-Lookup
+     * geht immer vom Projektstamm (ueber src/) aus. */
+    $file = dirname(__DIR__, 2) . '/public/' . ltrim($path, '/');
     $v = is_file($file) ? (string) filemtime($file) : '0';
     return url($path) . '?v=' . ASSET_VERSION . '.' . $v;
 }
@@ -45,7 +47,7 @@ function asset_url(string $path): string
  */
 function vendor_asset(string $repoRel, string $cdn, int $minBytes = 1000): string
 {
-    $file = (defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__, 2)) . '/public/' . ltrim($repoRel, '/');
+    $file = dirname(__DIR__, 2) . '/public/' . ltrim($repoRel, '/');
     if (is_file($file) && (int) filesize($file) >= $minBytes) {
         return asset_url($repoRel);
     }
