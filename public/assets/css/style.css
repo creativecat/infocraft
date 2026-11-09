@@ -1494,3 +1494,66 @@ figure.iblock-image figcaption, figure.iblock-embed figcaption {
     .ibook-layout { grid-template-columns: 1fr; }
     .ibook-side { position: static; max-height: none; }
 }
+
+/* =====================================================================
+   InfoBook: Freie Flaeche (#63) - OneNote-artige Seite: Bilder per
+   Drag & Drop, Text frei platzieren, Freihand ueber allem (Apple Pencil).
+   ===================================================================== */
+.icv-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.icv-tools .icv-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.icv-mode-btn-active { border-color: var(--primary-2, #1d4ed8); box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.15); }
+.icv-stage {
+    position: relative; width: 100%; background: #ffffff;
+    border: 1px solid var(--border, #d7dce5); border-radius: 12px;
+    overflow: hidden; touch-action: pan-y;
+}
+.icv-stage.icv-drop { outline: 3px dashed #1d4ed8; outline-offset: -3px; }
+.icv-stage.icv-mode-draw { cursor: crosshair; touch-action: none; }
+.icv-item { position: absolute; z-index: 1; }
+.icv-image img {
+    width: 100%; height: 100%; object-fit: fill; display: block;
+    border-radius: 8px; border: 1px solid var(--border, #d7dce5);
+}
+.icv-text {
+    background: #fffbe6; border: 1px solid #f0e6b8; border-radius: 10px;
+    padding: 6px 8px 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.icv-ta {
+    width: 100%; min-height: 56px; border: 0; background: transparent; resize: vertical;
+    font: inherit; color: inherit; padding: 2px; outline: none;
+}
+.icv-move {
+    position: absolute; top: 0; left: 0; right: 0; height: 24px; z-index: 6;
+    display: flex; align-items: center; gap: 6px; cursor: grab;
+    background: linear-gradient(rgba(29, 78, 216, 0.08), rgba(29, 78, 216, 0));
+    opacity: 0; transition: opacity 0.15s ease; border-radius: 10px 10px 0 0; touch-action: none;
+}
+.icv-item:hover .icv-move, .icv-move:focus-within, .icv-move:active { opacity: 1; }
+.icv-grip { font-size: 0.75rem; color: #475569; user-select: none; letter-spacing: 2px; padding-left: 4px; }
+.icv-del {
+    margin-left: auto; border: 0; background: #e11d48; color: #ffffff; cursor: pointer;
+    width: 22px; height: 22px; border-radius: 50%; font-size: 0.8rem; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+}
+.icv-rs {
+    position: absolute; right: -8px; bottom: -8px; width: 16px; height: 16px; z-index: 6;
+    background: #1d4ed8; border: 2px solid #ffffff; border-radius: 50%; cursor: nwse-resize;
+    touch-action: none;
+}
+.icv-inkcanvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
+.icv-stage.icv-mode-draw .icv-item { pointer-events: none; }
+.icv-stage.icv-mode-draw .icv-inkcanvas { pointer-events: auto; }
+/* Lesen/Präsentation: gleiche Geometrie, ohne Editor-Griffe */
+.icv-readonly .icv-ink { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
+.icv-readonly .icv-text { padding: 8px 10px; }
+.icv-readonly .icv-text img { max-width: 100%; border-radius: 8px; }
+.icv-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.slide .icv-stage { max-width: 100%; margin: 0 auto; background: #ffffff; }
+.slide .icv-readonly .icv-text img { max-width: 100%; }
+@media (pointer: coarse) {
+    .icv-move { height: 30px; opacity: 1; }
+    .icv-del { width: 30px; height: 30px; }
+    .icv-rs { width: 22px; height: 22px; }
+    .icv-tools .btn, .icv-tools select { min-height: 44px; }
+    .icv-ta { min-height: 100px; font-size: 1rem; }
+}

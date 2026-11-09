@@ -646,6 +646,22 @@ final class InfoBookController
                     $type = (string) ($block['type'] ?? 'text');
                     if ($type === 'text') {
                         $body[] = (string) ($block['body'] ?? '');
+                    } elseif ($type === 'canvas') {
+                        /* Freie Flaeche (#63): Texte wandern als Markdown auf die
+                         * Folie, Bilder und Freihand bleiben als Hinweiszeile. */
+                        foreach (($block['items'] ?? []) as $item) {
+                            if (!is_array($item)) {
+                                continue;
+                            }
+                            if ((string) ($item['kind'] ?? '') === 'text') {
+                                $body[] = (string) ($item['body'] ?? '');
+                            } elseif ((string) ($item['kind'] ?? '') === 'image') {
+                                $body[] = '📎 Bild: *' . (string) ($item['name'] ?? 'Bild') . '* (im InfoBook auf der Freien Fläche)';
+                            }
+                        }
+                        if ((int) ($block['ink'] ?? 0) > 0) {
+                            $body[] = '✏️ Freihandzeichnung (im InfoBook über der Fläche sichtbar)';
+                        }
                     } elseif ($type === 'embed') {
                         $body[] = '🔗 [' . ((string) ($block['title'] ?? 'Einbettung') !== '' ? (string) ($block['title'] ?? 'Einbettung') : 'Einbettung') . '](' . (string) ($block['url'] ?? '') . ')';
                     } else {
@@ -755,12 +771,72 @@ final class InfoBookController
         return false;
     }
 
+    /** Prozentwert (0 bis 100) ohne unnötige Nullen, fuer die Positionen der Freien Flaeche. */
+    private static function pct(mixed $value, float $total): string
+    {
+        if ($total <= 0) {
+            $total = 1;
+        }
+        $n = max(0.0, min(100.0, round(((float) $value) / $total * 100, 2)));
+        $s = number_format($n, 2, '.', '');
+        $s = rtrim(rtrim($s, '0'), '.');
+        return $s === '' ? '0' : $s;
+    }
+
+    /**
+     * Freie Flaeche (#63) als HTML rendern: Bilder, Text und Freihand-Ebene
+     * absolut positioniert in Prozent, dadurch skaliert die Flaeche in jeder
+     * Breite mit (Lesen und Präsentationsmodus ohne JavaScript).
+     * @param array<string, mixed> $block
+     */
+    private static function renderCanvas(array $block): string
+    {
+        $w = max(50.0, (float) ($block['w'] ?? 1600));
+        $h = max(50.0, (float) ($block['h'] ?? 1000));
+        $inner = '';
+        foreach (($block['items'] ?? []) as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $kind = (string) ($item['kind'] ?? '');
+            $left = self::pct($item['x'] ?? 0, $w);
+            $top = self::pct($item['y'] ?? 0, $h);
+            if ($kind === 'text') {
+                $width = self::pct($item['w'] ?? 320, $w);
+                $inner .= '<div class="icv-item icv-text" style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%">'
+                    . PresentationController::renderSlideBody((string) ($item['body'] ?? '')) . '</div>';
+            } elseif ($kind === 'image') {
+                $mediaId = (int) ($item['media'] ?? 0);
+                if ($mediaId <= 0) {
+                    continue;
+                }
+                $width = self::pct($item['w'] ?? 160, $w);
+                $height = self::pct($item['h'] ?? 120, $h);
+                $alt = (string) ($item['alt'] ?? '');
+                $name = (string) ($item['name'] ?? '');
+                $inner .= '<div class="icv-item icv-image" style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%;height:' . $height . '%">'
+                    . '<img src="' . e(url('/infobuecher/medium/' . $mediaId)) . '" alt="' . e($alt !== '' ? $alt : ($name !== '' ? $name : 'Bild')) . '"></div>';
+            }
+        }
+        $ink = (int) ($block['ink'] ?? 0);
+        if ($ink > 0) {
+            $inner .= '<img class="icv-ink" src="' . e(url('/infobuecher/medium/' . $ink)) . '" alt="Freihandzeichnung">';
+        }
+        if ($inner === '') {
+            $inner = '<div class="icv-empty muted">Noch keine Inhalte auf dieser Fläche.</div>';
+        }
+        return '<div class="icv-stage icv-readonly" style="aspect-ratio:' . $w . '/' . $h . '">' . $inner . '</div>';
+    }
+
     /** Einen Block als HTML rendern (fuer Seitenansicht und Präsentationsmodus). @param array<string, mixed> $block */
     public static function renderBlock(array $block): string
     {
         $type = (string) ($block['type'] ?? 'text');
         if ($type === 'text') {
             return '<div class="iblock-text">' . PresentationController::renderSlideBody((string) ($block['body'] ?? '')) . '</div>';
+        }
+        if ($type === 'canvas') {
+            return self::renderCanvas($block);
         }
         if ($type === 'embed') {
             $url = InfoBook::cleanEmbedUrl((string) ($block['url'] ?? ''));

@@ -64,6 +64,7 @@
             <button type="button" class="btn btn-ghost" data-ib-add="video" title="Video hochladen, direkt abspielbar">🎞 Video</button>
             <button type="button" class="btn btn-ghost" data-ib-add="embed" title="YouTube oder LearningApps einbetten">🔗 Einbettung</button>
             <button type="button" class="btn btn-ghost" data-ib-add="zeichnen" title="Freihand schreiben und zeichnen, optimal für Apple Pencil">✏️ Zeichnen</button>
+            <button type="button" class="btn btn-ghost" data-ib-add="canvas" title="Freie Fläche wie OneNote: Bilder per Drag &amp; Drop ablegen, überall zeichnen (auch über Bildern), Text frei platzieren">🧩 Freie Fläche</button>
         </div>
 
         <input type="hidden" name="blocks" id="ibook-blocks-json" value="[]">

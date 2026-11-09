@@ -1758,7 +1758,7 @@
   function blockRow(block) {
     var row = el('div', 'iblock iblock-' + block.type);
     var head = el('div', 'iblock-head');
-    var names = { text: '✍️ Text', image: '🖼 Bild', audio: '🔊 Audio', video: '🎞 Video', embed: '🔗 Einbettung', zeichnen: '✏️ Zeichnen' };
+    var names = { text: '✍️ Text', image: '🖼 Bild', audio: '🔊 Audio', video: '🎞 Video', embed: '🔗 Einbettung', zeichnen: '✏️ Zeichnen', canvas: '🧩 Freie Fläche' };
     head.appendChild(el('span', 'iblock-name', names[block.type] || block.type));
     row.appendChild(head);
     drawBlockControls(row, block);
@@ -1861,6 +1861,290 @@
       });
       canvas.addEventListener('pointerup', function () { drawing = false; });
       canvas.addEventListener('pointercancel', function () { drawing = false; });
+    } else if (block.type === 'canvas') {
+      /* Freie Flaeche (#63), OneNote-artig: Bilder per Drag & Drop an der
+       * Ablege-Position, Elemente frei verschieben/skalieren, Text frei
+       * platzieren, Freihand ueber allem (auch ueber Bildern, zum
+       * Beschriften). Logische Flaeche block.w x block.h, angezeigt wird
+       * alles in Prozent mitgewalkt (aspect-ratio), gespeichert in
+       * Flaechen-Koordinaten. */
+      if (!block.w) { block.w = 1600; }
+      if (!block.h) { block.h = 1000; }
+      if (!Array.isArray(block.items)) { block.items = []; }
+      var stage = el('div', 'icv-stage');
+      stage.setAttribute('style', 'aspect-ratio:' + block.w + '/' + block.h);
+      var mode = 'select';
+      var clampN = function (v, min, max) { return Math.max(min, Math.min(max, v)); };
+      var pctOf = function (v, total) { return (Math.round(v / total * 10000) / 100) + '%'; };
+      function styleItem(div, item) {
+        div.style.left = pctOf(item.x, block.w);
+        div.style.top = pctOf(item.y, block.h);
+        div.style.width = pctOf(item.w, block.w);
+        if (item.h) { div.style.height = pctOf(item.h, block.h); }
+      }
+      function removeItem(item, div) {
+        var i = block.items.indexOf(item);
+        if (i >= 0) { block.items.splice(i, 1); }
+        if (div && div.parentNode && div.parentNode.removeChild) { div.parentNode.removeChild(div); }
+        collect();
+      }
+      function dragMove(handle, item, div) {
+        handle.addEventListener('pointerdown', function (ev) {
+          if (mode !== 'select') { return; }
+          if (ev.preventDefault) { ev.preventDefault(); }
+          var rect = stage.getBoundingClientRect();
+          var sx = ev.clientX, sy = ev.clientY, ox = item.x, oy = item.y;
+          function onMove(ev2) {
+            item.x = clampN(ox + (ev2.clientX - sx) * (block.w / rect.width), 0, Math.max(0, block.w - 24));
+            item.y = clampN(oy + (ev2.clientY - sy) * (block.h / rect.height), 0, Math.max(0, block.h - 24));
+            styleItem(div, item);
+          }
+          function onUp() {
+            if (handle.removeEventListener) {
+              handle.removeEventListener('pointermove', onMove);
+              handle.removeEventListener('pointerup', onUp);
+            }
+            collect();
+          }
+          try { if (handle.setPointerCapture) { handle.setPointerCapture(ev.pointerId); } } catch (e) { /* aeltere Browser */ }
+          handle.addEventListener('pointermove', onMove);
+          handle.addEventListener('pointerup', onUp);
+        });
+      }
+      function itemBar(item, div) {
+        var bar = el('div', 'icv-move');
+        bar.title = 'Ziehen zum Verschieben';
+        bar.appendChild(el('span', 'icv-grip', '⋮⋮'));
+        var del = el('button', 'icv-del', '✕'); del.type = 'button'; del.title = 'Element entfernen';
+        del.addEventListener('click', function () { removeItem(item, div); });
+        bar.appendChild(del);
+        return bar;
+      }
+      function buildTextItem(item) {
+        var div = el('div', 'icv-item icv-text');
+        styleItem(div, item);
+        div.appendChild(itemBar(item, div));
+        var ta = el('textarea', 'mono icv-ta');
+        ta.value = item.body || '';
+        if (typeof window !== 'undefined' && window.IC_AUTOCOMPLETE && window.IC_AUTOCOMPLETE.attach) {
+          try { window.IC_AUTOCOMPLETE.attach(ta, 'md'); } catch (eAC) { /* harmlos */ }
+        }
+        ta.addEventListener('input', function () { item.body = ta.value; collect(); });
+        div.appendChild(ta);
+        dragMove(div.querySelector('.icv-move') || div, item, div);
+        return div;
+      }
+      function buildImageItem(item) {
+        var div = el('div', 'icv-item icv-image');
+        styleItem(div, item);
+        div.appendChild(itemBar(item, div));
+        var im = el('img', 'icv-img');
+        im.src = mediaUrl(item.media); im.alt = item.alt || item.name || 'Bild';
+        div.appendChild(im);
+        var rs = el('div', 'icv-rs'); rs.title = 'Ecke ziehen zum Skalieren';
+        rs.addEventListener('pointerdown', function (ev) {
+          if (mode !== 'select') { return; }
+          if (ev.preventDefault) { ev.preventDefault(); }
+          var rect = stage.getBoundingClientRect();
+          var sx = ev.clientX, sy = ev.clientY, ow = item.w, oh = item.h;
+          function onMove(ev2) {
+            var dw = (ev2.clientX - sx) * (block.w / rect.width);
+            var f = ow > 0 ? (ow + dw) / ow : 1;
+            item.w = clampN(ow * f, 24, block.w);
+            item.h = clampN(oh * f, 18, block.h);
+            styleItem(div, item);
+          }
+          function onUp() {
+            if (rs.removeEventListener) {
+              rs.removeEventListener('pointermove', onMove);
+              rs.removeEventListener('pointerup', onUp);
+            }
+            collect();
+          }
+          try { if (rs.setPointerCapture) { rs.setPointerCapture(ev.pointerId); } } catch (e) { /* aeltere Browser */ }
+          rs.addEventListener('pointermove', onMove);
+          rs.addEventListener('pointerup', onUp);
+        });
+        div.appendChild(rs);
+        dragMove(div.querySelector('.icv-move') || div, item, div);
+        return div;
+      }
+      /* Freihand-Ebene: transparentes PNG ueber allem. Neu gezeichnete
+       * Striche werden beim Neuaufbau der Blockreihe aus block.__ink
+       * (Daten-URL) zurueckgeholt, damit sie bei Block-Operationen
+       * (Baustein verschieben/loeschen) nicht verloren gehen. */
+      var inkCanvas = el('canvas', 'icv-inkcanvas');
+      inkCanvas.width = block.w; inkCanvas.height = block.h;
+      inkCanvas.style.touchAction = 'none';
+      var inkCtx = inkCanvas.getContext('2d');
+      var inkSrc = block.__ink || (block.ink ? mediaUrl(block.ink) : '');
+      if (inkSrc) {
+        var inkImg = el('img');
+        inkImg.onload = function () { try { inkCtx.drawImage(inkImg, 0, 0, block.w, block.h); } catch (e) { /* Harness */ } };
+        inkImg.src = inkSrc;
+      }
+      var drawing = false;
+      function inkPos(ev) {
+        var r = inkCanvas.getBoundingClientRect();
+        return { x: (ev.clientX - r.left) * (block.w / (r.width || block.w)), y: (ev.clientY - r.top) * (block.h / (r.height || block.h)) };
+      }
+      inkCanvas.addEventListener('pointerdown', function (ev) {
+        if (mode !== 'draw') { return; }
+        drawing = true;
+        try { inkCanvas.setPointerCapture(ev.pointerId); } catch (e) { /* aeltere Browser */ }
+        var p = inkPos(ev);
+        inkCtx.strokeStyle = color.value;
+        var pr = ev.pressure && ev.pressure > 0 ? ev.pressure : 1;
+        inkCtx.lineWidth = Math.max(1, parseInt(width.value, 10) * (0.5 + pr));
+        inkCtx.lineCap = 'round';
+        inkCtx.beginPath();
+        inkCtx.moveTo(p.x, p.y);
+      });
+      inkCanvas.addEventListener('pointermove', function (ev) {
+        if (!drawing || mode !== 'draw') { return; }
+        if (ev.preventDefault) { ev.preventDefault(); }
+        var p = inkPos(ev);
+        var pr = ev.pressure && ev.pressure > 0 ? ev.pressure : 1;
+        inkCtx.lineWidth = Math.max(1, parseInt(width.value, 10) * (0.5 + pr));
+        inkCtx.lineTo(p.x, p.y);
+        inkCtx.stroke();
+      });
+      function inkDone() {
+        drawing = false;
+        try { block.__ink = inkCanvas.toDataURL('image/png'); } catch (e) { /* Harness ohne toDataURL */ }
+        collect();
+      }
+      inkCanvas.addEventListener('pointerup', inkDone);
+      inkCanvas.addEventListener('pointercancel', function () { drawing = false; });
+      /* Werkzeugleiste: Auswahl/Zeichnen, Stift, Farbe, Breite, Freihand
+       * speichern/leeren, Bild einfuegen (Dateiauswahl fuer Tablets),
+       * Text einfuegen. */
+      var tools = el('div', 'icv-tools');
+      var selBtn = el('button', 'btn btn-ghost icv-mode-btn icv-mode-btn-active', '🖱️ Auswahl'); selBtn.type = 'button'; selBtn.title = 'Elemente verschieben, Text bearbeiten';
+      var drawBtn = el('button', 'btn btn-ghost icv-mode-btn', '✏️ Zeichnen'); drawBtn.type = 'button'; drawBtn.title = 'Freihand ueber allem zeichnen, auch ueber Bildern';
+      var color = el('select', 'ibook-draw-color');
+      [['#1f2937', 'Stift'], ['#ef4444', 'Rot'], ['#3b82f6', 'Blau'], ['#059669', 'Grün'], ['#ffffff', 'Radierer']].forEach(function (opt) {
+        var o = el('option', '', opt[1]); o.value = opt[0]; color.appendChild(o);
+      });
+      var width = el('select', 'ibook-draw-width');
+      [['2', 'Dünn'], ['4', 'Mittel'], ['8', 'Dick'], ['16', 'Extra dick (Pencil)']].forEach(function (opt) {
+        var o = el('option', '', opt[1]); o.value = opt[0]; width.appendChild(o);
+      });
+      var inkClear = el('button', 'btn btn-ghost', 'Freihand leeren'); inkClear.type = 'button';
+      inkClear.addEventListener('click', function () {
+        try { inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height); } catch (e) { /* Harness */ }
+        block.ink = 0; block.__ink = '';
+        say('Freihand geleert. Mit „Freihand übernehmen“ sichern.');
+      });
+      var inkSave = el('button', 'btn btn-primary', '✅ Freihand übernehmen'); inkSave.type = 'button';
+      inkSave.title = 'Freihand-Ebene als PNG speichern (bleibt beim Speichern der Seite dabei)';
+      inkSave.addEventListener('click', function () {
+        try {
+          var dataUrl = inkCanvas.toDataURL('image/png');
+          var fd = new FormData();
+          fd.append('csrf', csrf);
+          fd.append('name', 'freie-flaeche');
+          fd.append('data', dataUrl);
+          fetch('/infobuecher/' + bookId + '/zeichnung', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              if (data && data.ok) {
+                block.ink = data.id; block.inkName = data.name; block.__ink = '';
+                say('Freihand übernommen.');
+                collect();
+              } else { say('Freihand konnte nicht gespeichert werden: ' + ((data && data.error) || '?'), true); }
+            })
+            .catch(function (err) { say('Freihand konnte nicht gespeichert werden: ' + err, true); });
+        } catch (e) { say('Freihand konnte nicht gelesen werden.', true); }
+      });
+      var imgBtn = el('button', 'btn btn-ghost', '🖼️ Bild'); imgBtn.type = 'button'; imgBtn.title = 'Bild einfuegen (oder einfach auf die Flaeche ziehen)';
+      var imgFile = el('input', 'iblock-file icv-file'); imgFile.type = 'file';
+      imgFile.accept = 'image/png,image/jpeg,image/gif,image/webp';
+      imgBtn.addEventListener('click', function () { imgFile.click(); });
+      imgFile.addEventListener('change', function () {
+        if (imgFile.files && imgFile.files[0]) { addImageAt(imgFile.files[0], block.w / 2 - 160, block.h / 2 - 120); }
+      });
+      var txtBtn = el('button', 'btn btn-ghost', '✍️ Text'); txtBtn.type = 'button'; txtBtn.title = 'Text an beliebiger Stelle platzieren (oder Flaeche doppelt antippen)';
+      txtBtn.addEventListener('click', function () { addTextAt(block.w / 2 - 170, block.h / 2 - 60); });
+      function setMode(m) {
+        mode = m;
+        stage.classList.toggle('icv-mode-draw', m === 'draw');
+        selBtn.classList.toggle('icv-mode-btn-active', m === 'select');
+        drawBtn.classList.toggle('icv-mode-btn-active', m === 'draw');
+      }
+      selBtn.addEventListener('click', function () { setMode('select'); });
+      drawBtn.addEventListener('click', function () { setMode('draw'); });
+      tools.appendChild(selBtn); tools.appendChild(drawBtn);
+      tools.appendChild(color); tools.appendChild(width);
+      tools.appendChild(inkClear); tools.appendChild(inkSave);
+      tools.appendChild(imgBtn); tools.appendChild(imgFile);
+      tools.appendChild(txtBtn);
+      /* Bilder und Text einfuegen */
+      function addTextAt(x, y) {
+        var item = { kind: 'text', body: '', x: clampN(x, 0, block.w - 60), y: clampN(y, 0, block.h - 24), w: 340 };
+        block.items.push(item);
+        var div = buildTextItem(item);
+        stage.appendChild(div);
+        var ta = div.querySelector('textarea');
+        if (ta && ta.focus) { ta.focus(); }
+        collect();
+      }
+      function addImageAt(file, x, y) {
+        say('Lade Bild hoch ...');
+        upload('image', file, function (data) {
+          var item = { kind: 'image', media: data.id, name: data.name, alt: '', x: clampN(x, 0, block.w - 32), y: clampN(y, 0, block.h - 32), w: 320, h: 240 };
+          block.items.push(item);
+          var div = buildImageItem(item);
+          stage.appendChild(div);
+          /* Natuerliche Bildgroesse uebernehmen, auf 45% der Flaechenbreite begrenzen */
+          var probe = el('img');
+          probe.onload = function () {
+            if (probe.naturalWidth > 0) {
+              var f = Math.min((block.w * 0.45) / probe.naturalWidth, 1);
+              item.w = Math.max(24, Math.round(probe.naturalWidth * f));
+              item.h = Math.max(18, Math.round(probe.naturalHeight * f));
+              styleItem(div, item);
+            }
+            collect();
+          };
+          probe.src = mediaUrl(data.id);
+          collect();
+        });
+      }
+      /* Drag & Drop aus Finder/Explorer direkt auf die Flaeche (#63) */
+      stage.addEventListener('dragover', function (ev) {
+        if (ev.preventDefault) { ev.preventDefault(); }
+        stage.classList.add('icv-drop');
+      });
+      stage.addEventListener('dragleave', function () { stage.classList.remove('icv-drop'); });
+      stage.addEventListener('drop', function (ev) {
+        if (ev.preventDefault) { ev.preventDefault(); }
+        stage.classList.remove('icv-drop');
+        var f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+        if (!f) { return; }
+        setMode('select');
+        var rect = stage.getBoundingClientRect();
+        var lx = (ev.clientX - rect.left) * (block.w / (rect.width || block.w));
+        var ly = (ev.clientY - rect.top) * (block.h / (rect.height || block.h));
+        addImageAt(f, lx - 160, ly - 120);
+      });
+      /* Doppeltipp/Doppelklick auf freie Stelle: Text genau dort anlegen */
+      stage.addEventListener('dblclick', function (ev) {
+        if (mode !== 'select' || (ev.target && ev.target !== stage)) { return; }
+        var rect = stage.getBoundingClientRect();
+        var lx = (ev.clientX - rect.left) * (block.w / (rect.width || block.w));
+        var ly = (ev.clientY - rect.top) * (block.h / (rect.height || block.h));
+        addTextAt(lx - 170, ly - 14);
+      });
+      /* Bestehende Elemente aufbauen */
+      block.items.forEach(function (item) {
+        if (item.kind === 'text') { stage.appendChild(buildTextItem(item)); }
+        else if (item.kind === 'image') { stage.appendChild(buildImageItem(item)); }
+      });
+      stage.appendChild(inkCanvas);
+      row.appendChild(el('div', 'muted iblock-hint', 'Bilder einfach aus Finder/Explorer auf die Fläche ziehen oder 🖼️ Bild antippen. Doppeltipp auf eine freie Stelle legt Text an. Mit ✏️ Zeichnen schreibst du überall frei, auch über Bildern (Ideal für Apple Pencil). Freihand mit „✅ Freihand übernehmen“ sichern, dann Seite speichern.'));
+      row.appendChild(tools);
+      row.appendChild(stage);
     } else {
       /* Bild, Audio, Video: Datei hochladen, Vorschau direkt abspielbar. */
       var kind = block.type;
@@ -1924,6 +2208,25 @@
       var entry = { type: block.type };
       if (block.type === 'text') { entry.body = block.body || ''; }
       else if (block.type === 'embed') { entry.url = block.url || ''; entry.title = block.title || ''; }
+      else if (block.type === 'canvas') {
+        entry.w = block.w || 1600;
+        entry.h = block.h || 1000;
+        entry.items = (block.items || []).map(function (item) {
+          var e = { kind: item.kind };
+          if (item.kind === 'text') { e.body = item.body || ''; }
+          else {
+            e.media = item.media || 0;
+            e.name = item.name || '';
+            if (item.alt) { e.alt = item.alt; }
+            e.h = Math.round((item.h || 120) * 100) / 100;
+          }
+          e.x = Math.round((item.x || 0) * 100) / 100;
+          e.y = Math.round((item.y || 0) * 100) / 100;
+          e.w = Math.round((item.w || 320) * 100) / 100;
+          return e;
+        });
+        if (block.ink) { entry.ink = block.ink; entry.inkName = block.inkName || ''; }
+      }
       else {
         entry.media = block.media || 0;
         entry.name = block.name || '';

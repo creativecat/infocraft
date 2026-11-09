@@ -176,6 +176,65 @@ final class InfoBook
         return (int) Database::pdo()->lastInsertId();
     }
 
+    /**
+     * Zahl fuer die Freie Flaeche begrenzen: alles innerhalb der Flaeche,
+     * ganze Zahlen bleiben ganze Zahlen (DB-JSON bleibt kompakt).
+     */
+    private static function cvNum(mixed $value, float $min, float $max): float|int
+    {
+        $n = round((float) $value, 2);
+        if ($n < $min) {
+            $n = $min;
+        }
+        if ($n > $max) {
+            $n = $max;
+        }
+        return (int) $n === $n ? (int) $n : $n;
+    }
+
+    /** Elemente der Freien Flaeche (#63) bereinigen: Positionen begrenzen, nur gueltige Bilder/Texte. @param list<mixed> $items */
+    private static function cleanCanvasItems(mixed $items, float $w, float $h): array
+    {
+        if (!is_array($items)) {
+            return [];
+        }
+        $clean = [];
+        foreach ($items as $item) {
+            if (!is_array($item) || count($clean) >= 200) {
+                continue;
+            }
+            $kind = (string) ($item['kind'] ?? '');
+            if ($kind === 'image') {
+                $media = (int) ($item['media'] ?? 0);
+                if ($media <= 0) {
+                    continue;
+                }
+                $it = [
+                    'kind' => 'image',
+                    'media' => $media,
+                    'name' => mb_substr((string) ($item['name'] ?? ''), 0, 160),
+                    'x' => self::cvNum($item['x'] ?? 0, 0, $w),
+                    'y' => self::cvNum($item['y'] ?? 0, 0, $h),
+                    'w' => self::cvNum($item['w'] ?? 160, 16, $w),
+                    'h' => self::cvNum($item['h'] ?? 120, 16, $h),
+                ];
+                if (isset($item['alt'])) {
+                    $it['alt'] = mb_substr((string) $item['alt'], 0, 200);
+                }
+                $clean[] = $it;
+            } elseif ($kind === 'text') {
+                $clean[] = [
+                    'kind' => 'text',
+                    'body' => mb_substr((string) ($item['body'] ?? ''), 0, 20000),
+                    'x' => self::cvNum($item['x'] ?? 0, 0, $w),
+                    'y' => self::cvNum($item['y'] ?? 0, 0, $h),
+                    'w' => self::cvNum($item['w'] ?? 320, 60, $w),
+                ];
+            }
+        }
+        return $clean;
+    }
+
     /** Seite speichern: Titel und Bloecke (JSON wird serverseitig bereinigt). */
     public static function savePage(int $pageId, string $title, array $blocks): void
     {
@@ -185,7 +244,7 @@ final class InfoBook
                 continue;
             }
             $type = (string) ($block['type'] ?? '');
-            $entry = ['type' => in_array($type, ['text', 'image', 'audio', 'video', 'embed', 'zeichnen'], true) ? $type : 'text'];
+            $entry = ['type' => in_array($type, ['text', 'image', 'audio', 'video', 'embed', 'zeichnen', 'canvas'], true) ? $type : 'text'];
             if ($entry['type'] === 'text') {
                 $entry['body'] = mb_substr((string) ($block['body'] ?? ''), 0, 20000);
             } elseif ($entry['type'] === 'embed') {
@@ -194,6 +253,18 @@ final class InfoBook
                 if ($entry['url'] === '') {
                     continue;
                 }
+            } elseif ($entry['type'] === 'canvas') {
+                $w = self::cvNum($block['w'] ?? 1600, 400, 4000);
+                $h = self::cvNum($block['h'] ?? 1000, 300, 4000);
+                $items = self::cleanCanvasItems($block['items'] ?? [], (float) $w, (float) $h);
+                $ink = (int) ($block['ink'] ?? 0);
+                if ($ink > 0) {
+                    $entry['ink'] = $ink;
+                    $entry['inkName'] = mb_substr((string) ($block['inkName'] ?? ''), 0, 160);
+                }
+                $entry['w'] = $w;
+                $entry['h'] = $h;
+                $entry['items'] = $items;
             } else {
                 $entry['media'] = (int) ($block['media'] ?? 0);
                 $entry['name'] = mb_substr((string) ($block['name'] ?? ''), 0, 160);
@@ -318,11 +389,43 @@ final class InfoBook
 
     // ---------------- Verteilen und Präsentation ----------------
 
+    /** Alle Medien-IDs eines Block-Arrays: normale Medienblöcke plus Bilder und Freihand-Ebene der Freien Flaeche (#63). @param list<array<string, mixed>> $blocks @return list<int> */
+    public static function mediaIdsOfBlocks(array $blocks): array
+    {
+        $ids = [];
+        foreach ($blocks as $block) {
+            if (!is_array($block)) {
+                continue;
+            }
+            $type = (string) ($block['type'] ?? '');
+            $mediaId = (int) ($block['media'] ?? 0);
+            if ($mediaId > 0) {
+                $ids[] = $mediaId;
+            }
+            if ($type === 'canvas') {
+                $ink = (int) ($block['ink'] ?? 0);
+                if ($ink > 0) {
+                    $ids[] = $ink;
+                }
+                foreach (($block['items'] ?? []) as $item) {
+                    if (is_array($item) && (string) ($item['kind'] ?? '') === 'image') {
+                        $imgId = (int) ($item['media'] ?? 0);
+                        if ($imgId > 0) {
+                            $ids[] = $imgId;
+                        }
+                    }
+                }
+            }
+        }
+        return $ids;
+    }
+
     /**
      * Seite in einen anderen Abschnitt kopieren (Verteilen): Bloecke werden
-     * mitgenommen, gebundene Medien (Bild/Audio/Video/Zeichnung) werden in
-     * das Ziel-Buch dupliziert und die Block-Referenzen auf die neuen
-     * Medien-IDs umgebogen, damit das Ziel unabhaengig ist.
+     * mitgenommen, gebundene Medien (Bild/Audio/Video/Zeichnung und alles in
+     * der Freien Flaeche, inklusive Freihand-Ebene) werden in das Ziel-Buch
+     * dupliziert und die Block-Referenzen auf die neuen Medien-IDs umgebogen,
+     * damit das Ziel unabhaengig ist.
      */
     public static function copyPage(int $pageId, int $targetSectionId, string $titleSuffix = ''): int
     {
@@ -336,11 +439,7 @@ final class InfoBook
         $blocks = self::pageBlocks($page);
         $copies = [];
         if ($targetBook !== $sourceBook) {
-            foreach ($blocks as $block) {
-                $mediaId = (int) ($block['media'] ?? 0);
-                if ($mediaId <= 0) {
-                    continue;
-                }
+            foreach (self::mediaIdsOfBlocks($blocks) as $mediaId) {
                 $media = self::findMedia($mediaId);
                 if ($media === null || (int) $media['book_id'] !== $sourceBook) {
                     continue;
@@ -357,6 +456,20 @@ final class InfoBook
             $mediaId = (int) ($block['media'] ?? 0);
             if ($mediaId > 0 && isset($copies[$mediaId])) {
                 $blocks[$i]['media'] = $copies[$mediaId];
+            }
+            if (is_array($block) && (string) ($block['type'] ?? '') === 'canvas') {
+                $ink = (int) ($block['ink'] ?? 0);
+                if ($ink > 0 && isset($copies[$ink])) {
+                    $blocks[$i]['ink'] = $copies[$ink];
+                }
+                foreach (($block['items'] ?? []) as $j => $item) {
+                    if (is_array($item) && (string) ($item['kind'] ?? '') === 'image') {
+                        $imgId = (int) ($item['media'] ?? 0);
+                        if ($imgId > 0 && isset($copies[$imgId])) {
+                            $blocks[$i]['items'][$j]['media'] = $copies[$imgId];
+                        }
+                    }
+                }
             }
         }
         $title = (string) $page['title'] . ($titleSuffix !== '' ? ' ' . $titleSuffix : '');

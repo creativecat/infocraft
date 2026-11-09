@@ -94,6 +94,12 @@ FakeEl.prototype.addEventListener = function (type, fn) {
   if (!this.handlers[type]) { this.handlers[type] = []; }
   this.handlers[type].push(fn);
 };
+FakeEl.prototype.removeEventListener = function (type, fn) {
+  var l = this.handlers && this.handlers[type];
+  if (!l) { return; }
+  var i = l.indexOf(fn);
+  if (i !== -1) { l.splice(i, 1); }
+};
 FakeEl.prototype.focus = function () { this._focused = true; };
 FakeEl.prototype.appendChild = function (child) {
   child.parent = this;
@@ -215,6 +221,8 @@ FakeDoc.prototype.createElement = function (tag) {
     el.height = 0;
     el.__ctx = fakeCtx();
     el.getContext = function () { return el.__ctx; };
+    /* Freie-Flaeche-Editor (#63): Freihand wird als PNG gespeichert */
+    el.toDataURL = function () { return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg=='; };
   }
   return el;
 };
@@ -1115,9 +1123,119 @@ setTimeout(function () {
               dbRunBtn.dispatch('click');
               ok(dbOut.textContent.indexOf('gibt es noch nicht') !== -1, 'T36e SQL-Fehler erscheinen mit Tipp in der DB-Konsole');
 
-              console.log('');
-              if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }
-              else { console.log(failures.length + ' UI-Tests fehlgeschlagen.'); process.exit(1); }
+              /* ================= T40: InfoBook-Freie Flaeche (#63) =================
+               * Eine eigene Fake-Seite wie templates/ibook_page.php: Der Editor in
+               * app.js laedt, sobald #ibook-editor existiert. Geprueft wird:
+               * Baustein anlegen, Drag&Drop-Bild an der Ablege-Position, Text per
+               * Doppeltipp frei platzieren, Zeichnen-Modus mit Freihand ueber
+               * allem, Freihand-PNG uebernehmen, Serialisierung nach collect(). */
+              global.localStorage = { getItem: function () { return null; }, setItem: function () {} };
+              var ibDoc = new FakeDoc();
+              ibDoc.documentElement = new FakeEl('html');
+              ibDoc.body.setAttribute('data-csrf', 'csrf-t40');
+              var ibEditor = new FakeEl('div');
+              ibEditor.setAttribute('data-book-id', '77');
+              ibEditor.setAttribute('data-blocks', '[]');
+              ibDoc.register(ibEditor, 'ibook-editor');
+              ibDoc.register(new FakeEl('input'), 'ibook-blocks-json');
+              ibDoc.register(new FakeEl('form'), 'ibook-saveform');
+              var ibAddrow = new FakeEl('div');
+              var cvAddBtn = new FakeEl('button');
+              cvAddBtn.setAttribute('data-ib-add', 'canvas');
+              ibAddrow.appendChild(cvAddBtn);
+              ibDoc.register(ibAddrow, 'ibook-addrow');
+              var ibookUrls = [];
+              global.fetch = function (url) {
+                ibookUrls.push(url);
+                return Promise.resolve({
+                  ok: true,
+                  json: function () { return Promise.resolve({ ok: true, id: 4242, name: 'foto.png' }); }
+                });
+              };
+              global.document = ibDoc;
+              /* app.js im eigenen Fake-DOM laden: alle IIFEs ohne ihre Elemente
+               * steigen aus, nur der InfoBook-Editor (#ibook-editor) bindet sich. */
+              require('../public/assets/js/app.js');
+
+              cvAddBtn.dispatch('click');
+              var ibStage = ibDoc.body.querySelector('.icv-stage');
+              ok(ibStage !== null, 'T40a Baustein Freie Flaeche baut die Buehne auf');
+              ok(ibStage.getAttribute('style').indexOf('1600/1000') !== -1, 'T40b logische Flaechengroesse 1600x1000 steht im Seitenverhaeltnis');
+              var ibInk = ibStage.querySelector('canvas.icv-inkcanvas');
+              ok(ibInk !== null && ibInk.width === 1600 && ibInk.height === 1000, 'T40c transparente Freihand-Ebene ueber allem (1600x1000)');
+
+              /* Bild per Drag & Drop: Ablege-Position in Flaechen-Koordinaten.
+               * rect 800x500: clientX 400 -> logisch x=800, minus haelfte -> 640 = 40%. */
+              ibStage.getBoundingClientRect = function () { return { left: 0, top: 0, width: 800, height: 500 }; };
+              var ibBlob = new Blob(['x'], { type: 'image/png' });
+              ibBlob.name = 'foto.png';
+              ibStage.dispatch('drop', { clientX: 400, clientY: 250, dataTransfer: { files: [ibBlob] } });
+              ok(ibookUrls.indexOf('/infobuecher/77/medium') !== -1, 'T40d abgelegtes Bild wird sofort hochgeladen');
+
+              /* Text per Doppeltipp auf freie Stelle */
+              ibStage.dispatch('dblclick', { clientX: 100, clientY: 60, target: ibStage });
+              var ibTa = ibStage.querySelector('.icv-text textarea');
+              ok(ibTa !== null, 'T40e Doppeltipp legt eine Textbox genau an der Stelle an');
+              if (ibTa) {
+                ibTa.value = ':::merksatz Beschriftung';
+                ibTa.dispatch('input');
+              }
+
+              /* Element verschieben: Move-Leiste ziehen aendert die Position */
+              var ibText = ibStage.querySelector('.icv-text');
+              var ibMove = ibStage.querySelector('.icv-move');
+              ibMove.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 9 });
+              ibMove.dispatch('pointermove', { clientX: 160, clientY: 50, pointerId: 9 });
+              ibMove.dispatch('pointerup', { pointerId: 9 });
+              var movedPct = ibText.style.left;
+              ok(movedPct === '21.88%', 'T40f gezogene Textbox landet an neuer Stelle (21.88% statt 1.88%)');
+
+              setTimeout(function () {
+                var ibImg = ibStage.querySelector('.icv-image img');
+                ok(ibImg !== null && ibImg.src === '/infobuecher/medium/4242', 'T40g hochgeladenes Bild liegt nach dem Upload auf der Flaeche');
+                var ibImgDiv = ibStage.querySelector('.icv-image');
+                ok(ibImgDiv.style.left === '40%', 'T40h Bild liegt an der Ablege-Position (40%)');
+                ok(ibookUrls.indexOf('/infobuecher/77/medium') === ibookUrls.lastIndexOf('/infobuecher/77/medium'), 'T40i genau ein Upload pro abgelegtem Bild');
+
+                /* Zeichnen-Modus: Freihand ueber allem, Druck ueber Pointer Events */
+                var ibTools = ibDoc.body.querySelector('.icv-tools');
+                var modeBtns = ibTools.querySelectorAll('button');
+                var drawToggle = null;
+                var mi;
+                for (mi = 0; mi < modeBtns.length; mi++) {
+                  if (modeBtns[mi].textOf().indexOf('Zeichnen') !== -1) { drawToggle = modeBtns[mi]; }
+                }
+                drawToggle.dispatch('click');
+                ok(ibStage.classList.contains('icv-mode-draw'), 'T40j Zeichnen-Modus schaltet die Flaeche um (Elemente klicken nicht mehr)');
+                ibInk.dispatch('pointerdown', { clientX: 10, clientY: 10, pointerId: 3, pressure: 0.5 });
+                ibInk.dispatch('pointermove', { clientX: 50, clientY: 30, pointerId: 3, pressure: 0.5 });
+                ibInk.dispatch('pointerup', { pointerId: 3 });
+                var inkCalls = ibInk.__ctx.__calls;
+                ok(inkCalls.indexOf('beginPath') !== -1 && inkCalls.indexOf('stroke') !== -1, 'T40k Freihandstrophen zeichnen sich auf die Ebene ueber allem');
+
+                /* Freihand als PNG uebernehmen: POST an den Zeichnungsendpunkt */
+                var inkSaveBtn = null;
+                var modeBtns2 = ibTools.querySelectorAll('button');
+                for (mi = 0; mi < modeBtns2.length; mi++) {
+                  if (modeBtns2[mi].textOf().indexOf('Freihand') !== -1 && modeBtns2[mi].textOf().indexOf('leeren') === -1) { inkSaveBtn = modeBtns2[mi]; }
+                }
+                inkSaveBtn.dispatch('click');
+                setTimeout(function () {
+                  ok(ibookUrls.indexOf('/infobuecher/77/zeichnung') !== -1, 'T40l Freihand wird als PNG an den Zeichnungsendpunkt gesendet');
+                  var collected = JSON.parse(ibDoc.getElementById('ibook-blocks-json').value);
+                  var cv = collected[0];
+                  ok(cv && cv.type === 'canvas' && cv.w === 1600 && cv.h === 1000, 'T40m collect() schreibt den Canvas-Block mit Flaechengroesse');
+                  ok(cv && cv.ink === 4242, 'T40n uebernommene Freihand haengt als Ebene am Block');
+                  var txt = cv && cv.items ? cv.items.filter(function (it) { return it.kind === 'text'; })[0] : null;
+                  ok(txt && txt.body === ':::merksatz Beschriftung' && txt.x === 350, 'T40o Textbox inklusive neuer Position wird serialisiert');
+                  var img = cv && cv.items ? cv.items.filter(function (it) { return it.kind === 'image'; })[0] : null;
+                  ok(img && img.media === 4242 && img.x === 640 && img.y === 380, 'T40p Bild mit Medien-ID und Ablege-Position wird serialisiert');
+
+                  console.log('');
+                  if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }
+                  else { console.log(failures.length + ' UI-Tests fehlgeschlagen.'); process.exit(1); }
+                }, 120);
+              }, 120);
             }, 700);
           }, 700);
         }, 700);
