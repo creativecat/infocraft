@@ -209,6 +209,9 @@ final class InfoBook
             $kind = (string) ($item['kind'] ?? '');
             $left = self::cvNum($item['x'] ?? 0, 0, $w);
             $top = self::cvNum($item['y'] ?? 0, 0, $h);
+            /* Gruppen-ID (#68): Lasso-Auswahl gruppierbar, Mitglieder bewegen
+             * sich gemeinsam. 0 = ohne Gruppe. */
+            $grp = (int) ($item['g'] ?? 0) > 0 ? (int) ($item['g'] ?? 0) : 0;
             if ($kind === 'text') {
                 $it = [
                     'kind' => 'text',
@@ -216,9 +219,12 @@ final class InfoBook
                     'x' => $left,
                     'y' => $top,
                     'w' => self::cvNum($item['w'] ?? 320, 60, $w),
-                    'bg' => self::cvColor((string) ($item['bg'] ?? ''), ''),
+                    'bg' => ((string) ($item['bg'] ?? '') === 'none') ? 'none' : self::cvColor((string) ($item['bg'] ?? ''), ''),
                     'align' => in_array((string) ($item['align'] ?? 'left'), ['left', 'center', 'right'], true) ? (string) ($item['align'] ?? 'left') : 'left',
                 ];
+                if ($grp > 0) {
+                    $it['g'] = $grp;
+                }
                 $clean[] = $it;
             } elseif ($kind === 'image') {
                 $media = (int) ($item['media'] ?? 0);
@@ -236,6 +242,9 @@ final class InfoBook
                 ];
                 if (isset($item['alt'])) {
                     $it['alt'] = mb_substr((string) $item['alt'], 0, 200);
+                }
+                if ($grp > 0) {
+                    $it['g'] = $grp;
                 }
                 $clean[] = $it;
             } elseif ($kind === 'ink') {
@@ -255,7 +264,7 @@ final class InfoBook
                     }
                 }
                 if (count($points) >= 2) {
-                    $clean[] = [
+                    $it = [
                         'kind' => 'ink',
                         'c' => self::cvColor((string) ($item['c'] ?? ''), '#1f2937'),
                         'sw' => self::cvNum($item['sw'] ?? 4, 1, 32),
@@ -265,13 +274,17 @@ final class InfoBook
                         'w' => self::cvNum($item['w'] ?? 40, 4, $w),
                         'h' => self::cvNum($item['h'] ?? 40, 4, $h),
                     ];
+                    if ($grp > 0) {
+                        $it['g'] = $grp;
+                    }
+                    $clean[] = $it;
                 }
             } elseif ($kind === 'embed') {
                 $url = self::cleanEmbedUrl((string) ($item['url'] ?? ''));
                 if ($url === '') {
                     continue;
                 }
-                $clean[] = [
+                $it = [
                     'kind' => 'embed',
                     'url' => $url,
                     'title' => mb_substr((string) ($item['title'] ?? ''), 0, 200),
@@ -279,6 +292,10 @@ final class InfoBook
                     'y' => $top,
                     'w' => self::cvNum($item['w'] ?? 480, 120, $w),
                 ];
+                if ($grp > 0) {
+                    $it['g'] = $grp;
+                }
+                $clean[] = $it;
             } elseif ($kind === 'audio' || $kind === 'video') {
                 $media = (int) ($item['media'] ?? 0);
                 if ($media <= 0) {
@@ -294,6 +311,9 @@ final class InfoBook
                 ];
                 if ($kind === 'video') {
                     $it['h'] = self::cvNum($item['h'] ?? 270, 60, $h);
+                }
+                if ($grp > 0) {
+                    $it['g'] = $grp;
                 }
                 $clean[] = $it;
             }

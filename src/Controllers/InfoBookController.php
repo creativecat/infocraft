@@ -316,6 +316,12 @@ final class InfoBookController
         if ($preview) {
             $canWrite = false;
         }
+        /* Linke Navigation (#68): Abschnitte und Seiten des Buchs, damit man
+         * auf der Seitenseite zwischen den Seiten springen kann. */
+        $nav = [];
+        foreach (InfoBook::sections($book->id) as $navSection) {
+            $nav[] = ['section' => $navSection, 'pages' => InfoBook::pages((int) $navSection['id'])];
+        }
         $blocks = InfoBook::pageBlocks($page);
         foreach ($blocks as $i => $block) {
             $blocks[$i]['html'] = self::renderBlock($block);
@@ -331,6 +337,7 @@ final class InfoBookController
             'media' => $media,
             'canWrite' => $canWrite,
             'preview' => $preview,
+            'nav' => $nav,
             'isTeacher' => Auth::isTeacher(),
             'user' => $user,
         ]);
@@ -828,7 +835,15 @@ final class InfoBookController
                 $width = self::pct($item['w'] ?? 320, $w);
                 $bg = (string) ($item['bg'] ?? '');
                 $align = (string) ($item['align'] ?? 'left');
-                $inner .= '<div class="icv-item icv-text" style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%' . ($bg !== '' ? ';background:' . $bg : '')
+                /* Post-It-Hintergrund (#68): Farbe auf den GESAMTEN Zettel,
+                 * 'none' ist ganz ohne Hintergrund (auch ohne gelbes Post-It). */
+                $bgStyle = '';
+                if ($bg === 'none') {
+                    $bgStyle = ';background:none;border-color:transparent;box-shadow:none';
+                } elseif ($bg !== '') {
+                    $bgStyle = ';background:' . $bg;
+                }
+                $inner .= '<div class="icv-item icv-text" style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%' . $bgStyle
                     . ';text-align:' . ($align !== '' ? $align : 'left') . '">'
                     . PresentationController::renderSlideBody((string) ($item['body'] ?? '')) . '</div>';
             } elseif ($kind === 'image') {

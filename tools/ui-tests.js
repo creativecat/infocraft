@@ -1253,7 +1253,10 @@ setTimeout(function () {
               var ibBarBtns = ibBar.querySelectorAll('button');
               var ibi;
               for (ibi = 0; ibi < ibBarBtns.length; ibi++) {
-                if (ibBarBtns[ibi].textOf().indexOf('Einbettung') !== -1) { ibEmbBtn = ibBarBtns[ibi]; }
+                /* Icons only (#68): Der Einbettungs-Knopf zeigt nur sein Icon,
+                 * gefunden wird er ueber seine Hover-Beschreibung. */
+                var ibTitle68 = String(ibBarBtns[ibi].title || ibBarBtns[ibi].getAttribute('title') || '');
+                if (ibTitle68.indexOf('einbetten') !== -1 || ibTitle68.indexOf('Einbettung') !== -1) { ibEmbBtn = ibBarBtns[ibi]; }
               }
               ibEmbBtn.dispatch('click');
               var ibEmbDiv = ibStage.querySelector('.icv-embed');
@@ -1398,6 +1401,61 @@ setTimeout(function () {
                 var yt50 = ibDoc2.body.querySelector('img.icv-embed-thumb');
                 ok(yt50 !== null && yt50.getAttribute('src') === 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', 'T50b YouTube-Einbettung zeigt das Vorschaubild direkt aus der Video-Nummer der URL');
                 global.document = savedDoc50;
+
+                /* T53 (#68): Der Hintergrund faerbt den GESAMTEN Zettel,
+                 * 'Ohne' nimmt ihm Hintergrund, gelbes Post-It und Schatten. */
+                var ibText53 = ibStage.querySelector('.icv-text');
+                ok(ibText53 !== null, 'T53a Textfeld liegt vor dem Post-It-Test auf der Flaeche');
+                if (ibText53) { ibText53.dispatch('pointerdown', { target: ibText53 }); }
+                ibDoc.body.querySelector('[data-icv-bg="none"]').dispatch('click');
+                ok(ibText53 !== null && ibText53.style.background === 'transparent' && ibText53.style.borderColor === 'transparent' && ibText53.style.boxShadow === 'none', 'T53 Ohne Hintergrund meint den ganzen Zettel: transparent, ohne Rand und Schatten');
+                var cv53 = ibCollect();
+                var txt53 = cv53 && cv53.items ? cv53.items.filter(function (it) { return it.kind === 'text'; })[0] : null;
+                ok(txt53 && txt53.bg === 'none', 'T53b der ganze Zettel ohne Hintergrund wird mit der Seite serialisiert (bg none)');
+                ibDoc.body.querySelector('[data-icv-bg="#eff6ff"]').dispatch('click');
+                ok(ibText53 !== null && ibText53.style.background === '#eff6ff', 'T53c eine Hintergrundfarbe faerbt ebenfalls den ganzen Zettel, nicht nur die Schreibfläche');
+
+                /* T54 (#68): Lasso-Auswahl mit gedrueckter Maustaste und
+                 * Gruppieren. Die Flaeche ist 1600x2320, das Harness-Stadium
+                 * 800x500: clientX halbiert, clientY mit 4,64 multipliziert. */
+                ibStage.dispatch('pointerdown', { clientX: 50, clientY: 45, pointerId: 81, target: ibStage });
+                ibStage.dispatch('pointermove', { clientX: 450, clientY: 45, pointerId: 81 });
+                ibStage.dispatch('pointermove', { clientX: 450, clientY: 430, pointerId: 81 });
+                ibStage.dispatch('pointermove', { clientX: 50, clientY: 430, pointerId: 81 });
+                ibStage.dispatch('pointerup', { pointerId: 81 });
+                var ibImg54 = ibStage.querySelector('.icv-image');
+                var ibStroke54 = ibStage.querySelector('.icv-stroke');
+                var ibText54 = ibStage.querySelector('.icv-text');
+                ok(ibImg54 !== null && ibStroke54 !== null && ibImg54.classList.contains('icv-selected') && ibStroke54.classList.contains('icv-selected'), 'T54 Lasso waehlt alles, was es beruehrt (Bild und Strich markiert)');
+                ok(ibText54 !== null && !ibText54.classList.contains('icv-selected'), 'T54b das Textfeld ausserhalb des Lassos bleibt unmarkiert');
+                ok(ibDoc.body.querySelector('.icv-ctx').textOf().indexOf('2 Objekte') !== -1, 'T54c Kontextleiste meldet zwei ausgewaehlte Objekte');
+                ok(ibStage.querySelector('polyline') !== null, 'T54d das Lasso-Overlay liegt mit auf der Flaeche');
+                ibDoc.body.querySelector('[data-icv-group]').dispatch('click');
+                var cv54 = ibCollect();
+                var g54img = cv54 && cv54.items ? cv54.items.filter(function (it) { return it.kind === 'image'; })[0] : null;
+                var g54stroke = cv54 && cv54.items ? cv54.items.filter(function (it) { return it.kind === 'ink'; })[0] : null;
+                ok(g54img && g54stroke && g54img.g > 0 && g54img.g === g54stroke.g, 'T54e Gruppieren gibt allen Lasso-Objekten dieselbe Gruppen-ID');
+                ibImg54.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 82 });
+                ibImg54.dispatch('pointermove', { clientX: 100, clientY: 0, pointerId: 82 });
+                ibImg54.dispatch('pointerup', { pointerId: 82 });
+                var ibStroke54b = ibStage.querySelector('.icv-stroke');
+                ok(ibStroke54b !== null && ibStroke54b.style.left === '53.75%', 'T54f Gruppenmitglieder bewegen sich gemeinsam (Strich laeuft mit auf 53.75%)');
+                ibDoc.body.querySelector('[data-icv-ungroup]').dispatch('click');
+                var cv54b = ibCollect();
+                var g54bimg = cv54b && cv54b.items ? cv54b.items.filter(function (it) { return it.kind === 'image'; })[0] : null;
+                var g54bstroke = cv54b && cv54b.items ? cv54b.items.filter(function (it) { return it.kind === 'ink'; })[0] : null;
+                ok(g54bimg && g54bstroke && g54bimg.g === undefined && g54bstroke.g === undefined, 'T54g Gruppe loesen entfernt die Gruppen-ID von allen Mitgliedern');
+
+                /* T55 (#68): Icons only in der Leiste, Flaechen-Knoepfe unten
+                 * rechts in der Flaeche, Auswahl-Sachen im Kontextbereich. */
+                var ibSelBtn55 = ibDoc.body.querySelector('[data-icv-tool="select"]');
+                ok(ibSelBtn55 !== null && ibSelBtn55.textOf() === '🖱️' && String(ibSelBtn55.title || '').indexOf('Auswahl') !== -1, 'T55 Werkzeug-Knoepfe zeigen nur das Icon, die Beschreibung steht als Hover (title)');
+                ok(ibBar.querySelector('[data-icv-grow]') === null && ibBar.querySelector('[data-icv-shrink]') === null && ibStage.querySelector('[data-icv-grow]') !== null, 'T55b die Flaechen-Knoepfe sitzen unten rechts in der Flaeche, nicht mehr in der Leiste');
+                var ibDel55 = ibDoc.body.querySelector('.icv-ctx .icv-delbtn');
+                ok(ibDel55 !== null && ibDel55.parent && String(ibDel55.parent.className).indexOf('icv-ctx') !== -1, 'T55c Loeschen liegt im Auswahl-Kontext (Kontextleiste erscheint nur mit Auswahl)');
+                ok(ibDoc.body.querySelector('.icv-ctx [data-icv-group]') !== null, 'T55d Gruppieren liegt ebenfalls im Auswahl-Kontext');
+                var ibSwatches55 = ibBar.querySelector('.icv-swatches');
+                ok(ibSwatches55 !== null && ibSwatches55.style.display === 'none', 'T55e ohne Stift-Modus und ohne Strich-Auswahl bleiben Stift-Farben und Staerken aus der Leiste');
 
                 /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */
                 var NL41 = String.fromCharCode(10);

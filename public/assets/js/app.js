@@ -1808,8 +1808,9 @@
   var penSw = 4;
   var sel = null;
   var selDiv = null;
+  var selList = []; /* Mehrfachauswahl per Lasso (#68) */
   var PEN_COLORS = ['#1f2937', '#ef4444', '#3b82f6', '#059669', '#f59e0b'];
-  var TEXT_BGS = ['', '#fffbe6', '#ffffff', '#eff6ff', '#f0fdf4', '#fef2f2'];
+  var TEXT_BGS = [['', 'Gelb (Post-It)'], ['none', 'Ohne Hintergrund'], ['#ffffff', 'Weiß'], ['#eff6ff', 'Blau'], ['#f0fdf4', 'Grün'], ['#fef2f2', 'Rosé']];
   var KIND_NAMES = { text: 'Textfeld', image: 'Bild', ink: 'Strich', embed: 'Einbettung', audio: 'Audio', video: 'Video' };
 
   function pctOf(v, total) { return (Math.round((v || 0) / total * 10000) / 100) + '%'; }
@@ -1832,6 +1833,24 @@
     div.style.width = pctOf(item.w, block.w);
     if ((item.kind === 'image' || item.kind === 'ink' || item.kind === 'video') && item.h) {
       div.style.height = pctOf(item.h, block.h);
+    }
+    /* Post-It-Hintergrund (#68): Die Farbe gehoert zum GESAMTEN Zettel,
+     * nicht nur zur Schreibfläche. 'none' bedeutet ganz ohne Hintergrund
+     * (auch ohne das gelbe Standard-Post-It), '' ist das gelbe Post-It. */
+    if (item.kind === 'text') {
+      if (item.bg === 'none') {
+        div.style.background = 'transparent';
+        div.style.borderColor = 'transparent';
+        div.style.boxShadow = 'none';
+      } else if (item.bg) {
+        div.style.background = item.bg;
+        div.style.borderColor = 'rgba(15, 23, 42, 0.15)';
+        div.style.boxShadow = '';
+      } else {
+        div.style.background = '';
+        div.style.borderColor = '';
+        div.style.boxShadow = '';
+      }
     }
   }
   function svgEl(name) {
@@ -1935,12 +1954,23 @@
       dragActive = true; /* waehrend des Drags keine andere Auswahl (#67) */
       if (ev.preventDefault) { ev.preventDefault(); }
       var sx = ev.clientX, sy = ev.clientY, ox = item.x, oy = item.y;
+      /* Gruppen (#68): Mitbeweger mit Startpositionen merken, damit der
+       * Drag alle Gruppenmitglieder um dieselbe Strecke zieht. */
+      var peers = item.g ? block.items.filter(function (o) {
+        return o !== item && o.g === item.g;
+      }).map(function (o) { return { it: o, x: o.x || 0, y: o.y || 0 }; }) : [];
       function onMove(ev2) {
         if (typeof ev2.clientX !== 'number' || typeof ev2.clientY !== 'number') { return; }
         var rect = stageRect(); /* frisch: die Flaeche kann waachsen (#67) */
         item.x = clampN(ox + (ev2.clientX - sx) * (block.w / (rect.width || block.w)), 0, Math.max(0, block.w - 24));
         item.y = clampN(oy + (ev2.clientY - sy) * (block.h / (rect.height || block.h)), 0, 99999);
         styleItem(div, item);
+        peers.forEach(function (p) { /* Gruppe zieht mit (#68) */
+          p.it.x = clampN(p.x + (ev2.clientX - sx) * (block.w / (rect.width || block.w)), 0, Math.max(0, block.w - 24));
+          p.it.y = clampN(p.y + (ev2.clientY - sy) * (block.h / (rect.height || block.h)), 0, 99999);
+          var di = block.items.indexOf(p.it);
+          if (di >= 0 && itemDivs[di]) { styleItem(itemDivs[di], p.it); }
+        });
         growStage(); /* unteren Rand erreicht: Flaeche waechst mit (#67) */
       }
       function onUp() {
@@ -2023,7 +2053,7 @@
     if (item.kind === 'text') {
       var ta = el('textarea', 'mono icv-ta');
       ta.value = item.body || '';
-      if (item.bg) { ta.style.background = item.bg; }
+      /* Hintergrund sitzt am ganzen Zettel (#68), nicht an der Textarea. */
       if (item.align && item.align !== 'left') { ta.style.textAlign = item.align; }
       if (typeof window !== 'undefined' && window.IC_AUTOCOMPLETE && window.IC_AUTOCOMPLETE.attach) {
         try { window.IC_AUTOCOMPLETE.attach(ta, 'md'); } catch (eAC) { /* harmlos */ }
@@ -2114,6 +2144,12 @@
       stage.appendChild(div);
     });
     stage.appendChild(overlay);
+    stage.appendChild(areaBtns); /* Flaechen-Knoepfe unten rechts (#68) */
+    stage.appendChild(lassoSvg); /* Lasso-Overlay (#68) */
+    if (selList.length) {
+      /* Nach dem Neuaufbau die Lasso-Auswahl wieder aufdröckeln (#68) */
+      selList.forEach(function (it) { markDiv(it, true); });
+    }
   }
 
   /* ---------- Selektion und Kontextbereich ---------- */
@@ -2129,17 +2165,17 @@
   ctxTitle.placeholder = 'Titel (optional)';
   ctxUrl.addEventListener('input', function () { if (sel && sel.kind === 'embed') { sel.url = ctxUrl.value; collect(); markDirty(); } });
   ctxTitle.addEventListener('input', function () { if (sel && sel.kind === 'embed') { sel.title = ctxTitle.value; collect(); markDirty(); } });
-  TEXT_BGS.forEach(function (bg, i) {
-    var b = el('button', 'icv-bgbtn', ['', 'Ohne', 'Weiß', 'Gelb', 'Blau', 'Grün', 'Rosé'][i + 1] || 'Ohne');
+  TEXT_BGS.forEach(function (pair, i) {
+    var bg = pair[0];
+    var b = el('button', 'icv-bgbtn', pair[1]);
     b.type = 'button';
-    b.title = 'Hintergrund des Textfelds';
+    b.title = 'Hintergrund des Textfelds: ' + pair[1];
     b.setAttribute('data-icv-bg', bg);
-    if (bg) { b.style.background = bg; }
+    if (bg && bg !== 'none') { b.style.background = bg; }
     b.addEventListener('click', function () {
       if (!sel || sel.kind !== 'text') { return; }
       sel.bg = bg;
-      var ta = selDiv && selDiv.querySelector ? selDiv.querySelector('textarea') : null;
-      if (ta) { ta.style.background = bg || ''; }
+      styleItem(selDiv, sel); /* faerbt den ganzen Zettel (#68) */
       collect(); markDirty();
     });
     ctxText.appendChild(b);
@@ -2160,26 +2196,80 @@
   });
   ctxEmbed.appendChild(ctxUrl);
   ctxEmbed.appendChild(ctxTitle);
+  /* Gruppieren/Loesen (#68): nur sinnvoll mit Auswahl, deshalb im
+   * Kontextbereich - die Leiste bleibt frei von Auswahl-abhaengigen Icons. */
+  var grpBtn = el('button', 'icv-bgbtn', '🪢 Gruppieren');
+  grpBtn.type = 'button';
+  grpBtn.title = 'Alle ausgewählten Objekte zu einer Gruppe verbinden: sie bewegen sich dann gemeinsam';
+  grpBtn.setAttribute('data-icv-group', '1');
+  grpBtn.addEventListener('click', function () {
+    if (selList.length < 2) { return; }
+    var gid = nextGroupId();
+    selList.forEach(function (it) { it.g = gid; });
+    collect(); markDirty(); updateCtx();
+  });
+  ctxBar.appendChild(grpBtn);
+  var ungrpBtn = el('button', 'icv-bgbtn', '✂️ Gruppe lösen');
+  ungrpBtn.type = 'button';
+  ungrpBtn.title = 'Gruppe wieder auflösen: die Objekte bewegen sich wieder einzeln';
+  ungrpBtn.setAttribute('data-icv-ungroup', '1');
+  ungrpBtn.addEventListener('click', function () {
+    var target = (sel && sel.g) ? sel : (selList[0] && selList[0].g ? selList[0] : null);
+    if (!target || !target.g) { return; }
+    var gid = target.g;
+    block.items.forEach(function (it) { if (it.g === gid) { delete it.g; } });
+    collect(); markDirty(); updateCtx();
+  });
+  ctxBar.appendChild(ungrpBtn);
+  function nextGroupId() {
+    var max = 0;
+    block.items.forEach(function (it) { if (it.g && it.g > max) { max = it.g; } });
+    return max + 1;
+  }
   ctxBar.appendChild(ctxLabel);
   ctxBar.appendChild(ctxText);
   ctxBar.appendChild(ctxEmbed);
 
   function updateCtx() {
     if (!ctxBar.classList) { return; }
-    if (!sel) {
+    if (!sel && selList.length === 0) {
       ctxBar.classList.remove('icv-toolbar-show');
+      refreshToolVis();
       return;
     }
     ctxBar.classList.add('icv-toolbar-show');
-    ctxLabel.textContent = 'Ausgewählt: ' + (KIND_NAMES[sel.kind] || sel.kind);
-    if (ctxText.style) { ctxText.style.display = sel.kind === 'text' ? '' : 'none'; }
-    if (ctxEmbed.style) { ctxEmbed.style.display = sel.kind === 'embed' ? '' : 'none'; }
-    if (sel.kind === 'embed') { ctxUrl.value = sel.url || ''; ctxTitle.value = sel.title || ''; }
+    if (selList.length > 1) {
+      /* Lasso-Mehrfachauswahl (#68): nur Gruppieren, keine Einzel-Einstellungen */
+      ctxLabel.textContent = 'Ausgewählt: ' + selList.length + ' Objekte';
+      if (ctxText.style) { ctxText.style.display = 'none'; }
+      if (ctxEmbed.style) { ctxEmbed.style.display = 'none'; }
+      if (grpBtn.style) { grpBtn.style.display = ''; }
+      var sameGroup = selList.every(function (it) { return it.g && it.g === selList[0].g; });
+      if (ungrpBtn.style) { ungrpBtn.style.display = sameGroup ? '' : 'none'; }
+    } else {
+      ctxLabel.textContent = 'Ausgewählt: ' + (KIND_NAMES[sel.kind] || sel.kind);
+      if (ctxText.style) { ctxText.style.display = sel.kind === 'text' ? '' : 'none'; }
+      if (ctxEmbed.style) { ctxEmbed.style.display = sel.kind === 'embed' ? '' : 'none'; }
+      if (grpBtn.style) { grpBtn.style.display = 'none'; }
+      if (ungrpBtn.style) { ungrpBtn.style.display = (sel && sel.g) ? '' : 'none'; }
+      if (sel.kind === 'embed') { ctxUrl.value = sel.url || ''; ctxTitle.value = sel.title || ''; }
+    }
+    refreshToolVis();
+  }
+  /* Icon-Audit (#68): Stift-Farben und Strichstaerken gehoeren zum Stift-
+   * werkzeug oder zu einem ausgewaehlten Strich. Ohne beides bleiben sie
+   * aus der Leiste weg, dafuer sind die Einfuegen-Icons immer da. */
+  function refreshToolVis() {
+    var inkSel = (sel && sel.kind === 'ink') || selList.some(function (it) { return it && it.kind === 'ink'; });
+    var show = mode === 'draw' || inkSel;
+    if (swatchWrap.style) { swatchWrap.style.display = show ? '' : 'none'; }
+    if (swWrap.style) { swWrap.style.display = show ? '' : 'none'; }
   }
   function selectItem(item) {
     /* Auswahl ohne DOM-Neubau (#66): renderStage() hier wuerde die gerade
      * laufenden Pointer-Verbindungen (Drag am Element, Strich greifen)
      * abbrechen lassen. Stattdessen nur die Klassen umsetzen. */
+    clearMulti(); /* Lasso-Auswahl weicht der Einzelwahl (#68) */
     if (sel !== item) {
       var prevDiv = selDiv;
       sel = item;
@@ -2193,7 +2283,18 @@
     }
     updateCtx();
   }
+  /* ---------- Mehrfachauswahl und Gruppieren (#68) ---------- */
+  function markDiv(it, on) {
+    var idx = block.items.indexOf(it);
+    var d = idx >= 0 ? itemDivs[idx] : null;
+    if (d && d.classList) { d.classList.toggle('icv-selected', !!on); }
+  }
+  function clearMulti() {
+    selList.forEach(function (it) { markDiv(it, false); });
+    selList = [];
+  }
   function deselect() {
+    clearMulti();
     sel = null;
     if (selDiv && selDiv.classList) { selDiv.classList.remove('icv-selected'); }
     selDiv = null;
@@ -2208,12 +2309,16 @@
     collect(); markDirty();
   }
 
-  /* ---------- Symbolleiste (GoodNotes-artig, sticky oben) ---------- */
+  /* ---------- Symbolleiste (GoodNotes-artig, sticky oben) ----------
+   * Icons only (#68): Die Buttons zeigen nur ihr Icon, die Beschreibung
+   * steht im title und erscheint beim Hover. Auswahl-abhaengige Dinge
+   * (Loeschen, Hintergrund, Ausrichtung, Gruppieren) liegen im
+   * Kontextbereich, der nur mit Auswahl erscheint. */
   var toolbar = el('div', 'icv-toolbar');
   var toolBtns = {};
-  [['select', '🖱️ Auswahl', 'Elemente auswählen, verschieben, Text bearbeiten'],
-   ['draw', '✏️ Stift', 'Freihand zeichnen, auch über Bildern (Apple Pencil: druckempfindlich)'],
-   ['eraser', '🧽 Radierer', 'Gezeichnete Striche wegradieren']].forEach(function (t) {
+  [['select', '🖱️', 'Auswahl: Elemente anklicken, verschieben, Text bearbeiten; Ziehen über die Fläche = Lasso'],
+   ['draw', '✏️', 'Stift: Freihand zeichnen, auch über Bildern (Apple Pencil: druckempfindlich)'],
+   ['eraser', '🧽', 'Radierer: Gezeichnete Striche wegradieren']].forEach(function (t) {
     var b = el('button', 'btn btn-ghost icv-mode-btn' + (t[0] === 'select' ? ' icv-mode-btn-active' : ''), t[1]);
     b.type = 'button';
     b.title = t[2];
@@ -2233,6 +2338,7 @@
       if (m === 'draw') { stage.classList.add('icv-mode-draw'); }
       if (m === 'eraser') { stage.classList.add('icv-mode-eraser'); }
     }
+    refreshToolVis(); /* Stift-Icons nur beim Stift bzw. Strich-Auswahl (#68) */
   }
   var swatchWrap = el('div', 'icv-swatches');
   function refreshSwatches() {
@@ -2261,10 +2367,11 @@
       if (btns[i].classList) { btns[i].classList.toggle('icv-sw-active', parseInt(btns[i].getAttribute('data-icv-sw'), 10) === penSw); }
     }
   }
-  [[2, 'Fein'], [4, 'Mittel'], [8, 'Dick'], [16, 'Extra dick']].forEach(function (w) {
-    var b = el('button', 'icv-swbtn', w[1]);
+  [[2, 'Fein', 10], [4, 'Mittel', 14], [8, 'Dick', 18], [16, 'Extra dick', 24]].forEach(function (w) {
+    var b = el('button', 'icv-swbtn', '●');
     b.type = 'button';
-    b.title = 'Strichstärke';
+    b.title = 'Strichstärke: ' + w[1] + ' (' + w[0] + ')';
+    b.style.fontSize = w[2] + 'px';
     b.setAttribute('data-icv-sw', String(w[0]));
     b.addEventListener('click', function () {
       penSw = w[0];
@@ -2275,13 +2382,13 @@
   });
   toolbar.appendChild(swatchWrap);
   toolbar.appendChild(swWrap);
-  /* Einfuegen */
-  var txtBtn = el('button', 'btn btn-ghost', '✍️ Textfeld'); txtBtn.type = 'button';
-  txtBtn.title = 'Textfeld anlegen (oder freie Stelle doppelt antippen)';
+  /* Einfuegen: Icons only (#68), Beschreibung als Hover (title) */
+  var txtBtn = el('button', 'btn btn-ghost', '📝'); txtBtn.type = 'button';
+  txtBtn.title = 'Textfeld einfügen (oder freie Stelle doppelt antippen)';
   txtBtn.addEventListener('click', function () { setMode('select'); addTextAt(block.w / 2 - 170, block.h / 2 - 60); });
   toolbar.appendChild(txtBtn);
-  var imgBtn = el('button', 'btn btn-ghost', '🖼️ Bild'); imgBtn.type = 'button';
-  imgBtn.title = 'Bild hochladen (oder einfach auf die Fläche ziehen)';
+  var imgBtn = el('button', 'btn btn-ghost', '🖼️'); imgBtn.type = 'button';
+  imgBtn.title = 'Bild einfügen (hochladen oder einfach auf die Fläche ziehen)';
   var imgFile = el('input', 'iblock-file icv-file'); imgFile.type = 'file';
   imgFile.accept = 'image/png,image/jpeg,image/gif,image/webp';
   imgBtn.addEventListener('click', function () { if (imgFile.click) { imgFile.click(); } });
@@ -2290,8 +2397,8 @@
   });
   toolbar.appendChild(imgBtn);
   toolbar.appendChild(imgFile);
-  var audBtn = el('button', 'btn btn-ghost', '🔊 Audio'); audBtn.type = 'button';
-  audBtn.title = 'Audiodatei hochladen, im Lesemodus abspielbar';
+  var audBtn = el('button', 'btn btn-ghost', '🔊'); audBtn.type = 'button';
+  audBtn.title = 'Audio einfügen (hochladen, im Lesemodus abspielbar)';
   var audFile = el('input', 'iblock-file icv-file'); audFile.type = 'file';
   audFile.accept = 'audio/*';
   audBtn.addEventListener('click', function () { if (audFile.click) { audFile.click(); } });
@@ -2300,8 +2407,8 @@
   });
   toolbar.appendChild(audBtn);
   toolbar.appendChild(audFile);
-  var vidBtn = el('button', 'btn btn-ghost', '🎞️ Video'); vidBtn.type = 'button';
-  vidBtn.title = 'Video hochladen, im Lesemodus abspielbar';
+  var vidBtn = el('button', 'btn btn-ghost', '🎞️'); vidBtn.type = 'button';
+  vidBtn.title = 'Video einfügen (hochladen, im Lesemodus abspielbar)';
   var vidFile = el('input', 'iblock-file icv-file'); vidFile.type = 'file';
   vidFile.accept = 'video/*';
   vidBtn.addEventListener('click', function () { if (vidFile.click) { vidFile.click(); } });
@@ -2310,15 +2417,17 @@
   });
   toolbar.appendChild(vidBtn);
   toolbar.appendChild(vidFile);
-  var embBtn = el('button', 'btn btn-ghost', '🔗 Einbettung'); embBtn.type = 'button';
-  embBtn.title = 'YouTube (ohne Cookies) oder LearningApps einbetten';
+  var embBtn = el('button', 'btn btn-ghost', '🔗'); embBtn.type = 'button';
+  embBtn.title = 'Einbettung einfügen: YouTube (ohne Cookies) oder LearningApps';
   embBtn.addEventListener('click', function () { addEmbedAt(block.w / 2 - 240, block.h / 2 - 40); });
   toolbar.appendChild(embBtn);
   toolbar.appendChild(ctxBar);
   /* Flaechenhoehe (#67): nach unten wachst automatisch, hier geht es
    * manuell: groesser immer, kleiner nur bis knapp unter das unterste
-   * Element (Minimum 500). */
-  var growBtn = el('button', 'btn btn-ghost', '⬇️ Fläche +');
+   * Element (Minimum 500). Die Knoepfe sitzen unten rechts IN der Flaeche
+   * (#68), nicht mehr in der Leiste. */
+  var areaBtns = el('div', 'icv-area-btns');
+  var growBtn = el('button', 'btn btn-ghost', '⬇️');
   growBtn.type = 'button';
   growBtn.title = 'Fläche um 300 vergrößern';
   growBtn.setAttribute('data-icv-grow', '1');
@@ -2328,8 +2437,8 @@
     relayoutAll();
     collect(); markDirty();
   });
-  toolbar.appendChild(growBtn);
-  var shrinkBtn = el('button', 'btn btn-ghost', '⬆️ Fläche −');
+  areaBtns.appendChild(growBtn);
+  var shrinkBtn = el('button', 'btn btn-ghost', '⬆️');
   shrinkBtn.type = 'button';
   shrinkBtn.title = 'Fläche verkleinern, maximal bis zum untersten Element';
   shrinkBtn.setAttribute('data-icv-shrink', '1');
@@ -2340,11 +2449,13 @@
     relayoutAll();
     collect(); markDirty();
   });
-  toolbar.appendChild(shrinkBtn);
+  areaBtns.appendChild(shrinkBtn);
+  /* Loeschen braucht eine Auswahl (#68): deshalb im Kontextbereich statt
+   * dauerhaft in der Leiste (X am Element und Entf-Taste gibt es weiter). */
   var delBtn = el('button', 'btn btn-danger icv-delbtn', '🗑'); delBtn.type = 'button';
   delBtn.title = 'Ausgewähltes Element entfernen';
   delBtn.addEventListener('click', function () { if (sel) { removeItem(sel); } });
-  toolbar.appendChild(delBtn);
+  ctxBar.appendChild(delBtn);
 
   /* ---------- Einfuegen ---------- */
   function addTextAt(x, y) {
@@ -2512,10 +2623,98 @@
     var p = toLogical(ev.clientX, ev.clientY);
     addTextAt(p.x - 170, p.y - 14);
   });
+  /* ---------- Lasso (#68): Auswahl mit gedrueckter Maustaste ---------- */
+  var lassoSvg = svgEl('svg');
+  lassoSvg.setAttribute('class', 'icv-lasso');
+  lassoSvg.setAttribute('preserveAspectRatio', 'none');
+  var lassoLine = svgEl('polyline');
+  lassoLine.setAttribute('fill', 'rgba(29, 78, 216, 0.08)');
+  lassoLine.setAttribute('stroke', '#1d4ed8');
+  lassoLine.setAttribute('stroke-width', '3');
+  lassoLine.setAttribute('stroke-dasharray', '8 6');
+  lassoLine.setAttribute('vector-effect', 'non-scaling-stroke');
+  lassoSvg.appendChild(lassoLine);
+  lassoSvg.style.display = 'none';
+  function drawLasso(pts) {
+    lassoSvg.setAttribute('viewBox', '0 0 ' + Math.max(4, block.w) + ' ' + Math.max(4, Math.round(block.h)));
+    var s = '';
+    for (var i = 0; i + 1 < pts.length; i += 2) { s += (i ? ' ' : '') + pts[i] + ',' + pts[i + 1]; }
+    lassoLine.setAttribute('points', s);
+    lassoSvg.style.display = '';
+  }
+  function itemBox(it) {
+    var h;
+    if (it.kind === 'image' || it.kind === 'ink' || it.kind === 'video') { h = it.h || 100; }
+    else if (it.kind === 'embed') { h = 130; }
+    else { h = 80; }
+    return { x: it.x || 0, y: it.y || 0, w: it.w || 320, h: h };
+  }
+  function pointInPoly(x, y, poly) {
+    var inside = false;
+    for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      var xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
+      if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) { inside = !inside; }
+    }
+    return inside;
+  }
+  function lassoHitsItem(poly, it) {
+    var b = itemBox(it);
+    var i;
+    for (i = 0; i < poly.length; i++) {
+      if (poly[i].x >= b.x && poly[i].x <= b.x + b.w && poly[i].y >= b.y && poly[i].y <= b.y + b.h) { return true; }
+    }
+    var corners = [[b.x, b.y], [b.x + b.w, b.y], [b.x, b.y + b.h], [b.x + b.w, b.y + b.h]];
+    for (i = 0; i < corners.length; i++) {
+      if (pointInPoly(corners[i][0], corners[i][1], poly)) { return true; }
+    }
+    return false;
+  }
+  function lassoSelect(pts) {
+    var poly = [];
+    for (var i = 0; i + 1 < pts.length; i += 2) { poly.push({ x: pts[i], y: pts[i + 1] }); }
+    var hits = block.items.filter(function (it) { return lassoHitsItem(poly, it); });
+    if (hits.length === 0) { deselect(); return; }
+    if (hits.length === 1) { selectItem(hits[0]); return; }
+    /* Mehrfachauswahl: alles markieren, was das Lasso beruehrt hat (#68) */
+    sel = null;
+    if (selDiv && selDiv.classList) { selDiv.classList.remove('icv-selected'); }
+    selDiv = null;
+    selList = hits;
+    selList.forEach(function (it) { markDiv(it, true); });
+    updateCtx();
+  }
   stage.addEventListener('pointerdown', function (ev) {
     if (mode !== 'select' || dragActive) { return; }
     if (ev.target && ev.target !== stage) { return; }
-    deselect();
+    if (typeof ev.clientX !== 'number' || typeof ev.clientY !== 'number') { deselect(); return; }
+    if (ev.preventDefault) { ev.preventDefault(); }
+    /* Ziehen ueber die freie Flaeche zeichnet das Lasso (#68); ein simpler
+     * Klick ohne Bewegung deselektiert wie bisher. */
+    dragActive = true;
+    var pts = [];
+    function addPt(ev2) {
+      var p = toLogical(ev2.clientX, ev2.clientY);
+      pts.push(Math.round(p.x), Math.round(p.y));
+      drawLasso(pts);
+    }
+    addPt(ev);
+    function onLassoMove(ev2) {
+      if (typeof ev2.clientX !== 'number' || typeof ev2.clientY !== 'number') { return; }
+      addPt(ev2);
+    }
+    function onLassoUp() {
+      dragActive = false;
+      if (stage.removeEventListener) {
+        stage.removeEventListener('pointermove', onLassoMove);
+        stage.removeEventListener('pointerup', onLassoUp);
+        stage.removeEventListener('pointercancel', onLassoUp);
+      }
+      lassoSvg.style.display = 'none';
+      if (pts.length >= 8) { lassoSelect(pts); } else { deselect(); }
+    }
+    stage.addEventListener('pointermove', onLassoMove);
+    stage.addEventListener('pointerup', onLassoUp);
+    stage.addEventListener('pointercancel', onLassoUp);
   });
   /* Entf-/Backspace-Taste entfernt die Auswahl (#66): Die intuitive Erwartung
    * vom Desktop. Nie waehrend der Texteingabe (Textarea/Input). */
@@ -2557,6 +2756,7 @@
         e.x = num(item.x, 2);
         e.y = num(item.y, 2);
         e.w = num(item.w || 320, 2);
+        if (item.g) { e.g = item.g; } /* Gruppen-ID (#68): Objekte bewegen sich gemeinsam */
         if (item.kind === 'image' || item.kind === 'ink' || item.kind === 'video') { e.h = num(item.h || 120, 2); }
         return e;
       })

@@ -1,7 +1,32 @@
 <?php /* InfoBook: Seite bearbeiten/ansehen (#62). Bloecke: Text, Bild, Audio, Video, Einbettung, Zeichnung (Apple Pencil). */
 ?>
 <?php /* #67: Zurueck ganz links, rechts Vorschau/Lesemodus und kleines aufklappbares Verteilen, Autospeichern statt Speichern-Button. */ ?>
+<?php /* #68: Links steht immer die Navigation des InfoBooks (Abschnitte und
+ * Seiten), rechts daneben Titelzeile, Editor bzw. Lesemodus. */ ?>
 <?php $preview = (bool) ($preview ?? false); ?>
+<?php $navAreas = ['lernbereich' => ['📖', 'Lernbereich'], 'gemeinsam' => ['🤝', 'Zusammenarbeit'], 'eigen' => ['🔒', 'Mein Bereich']]; ?>
+<div class="ibook-page-layout">
+<aside class="ibook-pagenav" aria-label="Navigation dieses InfoBooks">
+    <div class="ibook-pagenav-head">📓 <?= e($book->title) ?></div>
+    <?php
+    $navArea = null;
+    foreach ($nav as $navEntry):
+        $navSec = $navEntry['section'];
+        $navAreaKey = (string) $navSec['area'];
+        if ($navAreaKey !== $navArea):
+            $navArea = $navAreaKey;
+            $navIcon = $navAreas[$navAreaKey][0] ?? '📄';
+            $navName = $navAreas[$navAreaKey][1] ?? $navAreaKey;
+    ?>
+    <div class="ibook-pagenav-area"><?= $navIcon ?> <?= e($navName) ?></div>
+    <?php endif; ?>
+    <a class="ibook-pagenav-section<?= (int) $section['id'] === (int) $navSec['id'] ? ' active' : '' ?>" href="<?= url('infobuecher/' . (int) $book->id . '?abschnitt=' . (int) $navSec['id']) ?>"><?= e($navSec['title']) ?></a>
+    <?php foreach ($navEntry['pages'] as $navPage): ?>
+    <a class="ibook-pagenav-page<?= (int) $navPage['id'] === (int) $page['id'] ? ' active' : '' ?>" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $navPage['id']) ?>" title="Seite öffnen"><?= e((string) $navPage['title']) ?></a>
+    <?php endforeach; ?>
+    <?php endforeach; ?>
+</aside>
+<div class="ibook-pagemain">
 <section class="hero ibook-hero-compact">
     <div class="btn-row ibook-topnav">
         <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '?abschnitt=' . (int) $section['id']) ?>">← <?= e($book->title) ?></a>
@@ -71,3 +96,5 @@
     </section>
 </form>
 <?php endif; ?>
+</div>
+</div>
