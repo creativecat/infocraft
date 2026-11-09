@@ -105,7 +105,7 @@ $areaIcons = ['lernbereich' => '📖', 'gemeinsam' => '🤝', 'eigen' => '🔒']
         <?php foreach ($pages as $page): ?>
         <a class="ibook-page-card" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id']) ?>">
             <span class="ibook-page-title">📄 <?= e($page['title']) ?></span>
-            <?php /* #69: Blockanzahl weg - seit der freien Flaeche steht dort nur noch "1 Baustein". */ ?>
+            <?php /* #69: Blockzaehlung weg - seit der freien Flaeche stand dort nur noch "1". */ ?>
         </a>
         <?php endforeach; ?>
         <?php if ($canWriteSection): ?>

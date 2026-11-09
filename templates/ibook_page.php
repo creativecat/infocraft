@@ -5,6 +5,10 @@
  * Seiten), rechts daneben Titelzeile, Editor bzw. Lesemodus. */ ?>
 <?php $preview = (bool) ($preview ?? false); ?>
 <?php $navAreas = ['lernbereich' => ['📖', 'Lernbereich'], 'gemeinsam' => ['🤝', 'Zusammenarbeit'], 'eigen' => ['🔒', 'Mein Bereich']]; ?>
+<?php /* #70: Im Lesemodus (?lesen=1) bleibt die linke Navigation im Lesemodus:
+ * Seiten-Links haengen das Suffix an, Abschnitts-Links fuehren auf die erste
+ * Seite des Abschnitts, wenn der Abschnitt Seiten hat. */ ?>
+<?php $navLesen = $preview ? '?lesen=1' : ''; ?>
 <div class="ibook-page-layout">
 <aside class="ibook-pagenav" aria-label="Navigation dieses InfoBooks">
     <div class="ibook-pagenav-head">📓 <?= e($book->title) ?></div>
@@ -20,9 +24,10 @@
     ?>
     <div class="ibook-pagenav-area"><?= $navIcon ?> <?= e($navName) ?></div>
     <?php endif; ?>
-    <a class="ibook-pagenav-section<?= (int) $section['id'] === (int) $navSec['id'] ? ' active' : '' ?>" href="<?= url('infobuecher/' . (int) $book->id . '?abschnitt=' . (int) $navSec['id']) ?>"><?= e($navSec['title']) ?></a>
+    <?php $navSecHref = ($preview && !empty($navEntry['pages'])) ? url('infobuecher/' . (int) $book->id . '/seite/' . (int) $navEntry['pages'][0]['id'] . '?lesen=1') : url('infobuecher/' . (int) $book->id . '?abschnitt=' . (int) $navSec['id']); ?>
+    <a class="ibook-pagenav-section<?= (int) $section['id'] === (int) $navSec['id'] ? ' active' : '' ?>" href="<?= $navSecHref ?>"><?= e($navSec['title']) ?></a>
     <?php foreach ($navEntry['pages'] as $navPage): ?>
-    <a class="ibook-pagenav-page<?= (int) $navPage['id'] === (int) $page['id'] ? ' active' : '' ?>" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $navPage['id']) ?>" title="Seite öffnen"><?= e((string) $navPage['title']) ?></a>
+    <a class="ibook-pagenav-page<?= (int) $navPage['id'] === (int) $page['id'] ? ' active' : '' ?>" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $navPage['id'] . $navLesen) ?>" title="Seite öffnen"><?= e((string) $navPage['title']) ?></a>
     <?php endforeach; ?>
     <?php endforeach; ?>
 </aside>
