@@ -57,8 +57,6 @@
 <?php endif; ?>
 <?php else: ?>
 
-<?php else: ?>
-
 <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id']) ?>" id="ibook-saveform" class="form">
     <?= csrf_field() ?>
     <section class="panel ibook-editor-panel">
