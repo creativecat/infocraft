@@ -1148,6 +1148,7 @@ setTimeout(function () {
               var ibEditor = new FakeEl('div');
               ibEditor.setAttribute('data-book-id', '77');
               ibEditor.setAttribute('data-page-id', '42');
+              ibEditor.setAttribute('data-nav', JSON.stringify([{ id: 42, t: 'Aktuelle Seite', s: 'Abschnitt A' }, { id: 43, t: 'Zielseite', s: 'Abschnitt A' }]));
               ibEditor.setAttribute('data-blocks', '[]');
               ibDoc.register(ibEditor, 'ibook-editor');
               ibDoc.register(new FakeEl('input'), 'ibook-blocks-json');
@@ -1456,6 +1457,28 @@ setTimeout(function () {
                 ok(ibDoc.body.querySelector('.icv-ctx [data-icv-group]') !== null, 'T55d Gruppieren liegt ebenfalls im Auswahl-Kontext');
                 var ibSwatches55 = ibBar.querySelector('.icv-swatches');
                 ok(ibSwatches55 !== null && ibSwatches55.style.display === 'none', 'T55e ohne Stift-Modus und ohne Strich-Auswahl bleiben Stift-Farben und Staerken aus der Leiste');
+
+                /* T56 (#73): Objekt mit einer anderen Seite des Buchs
+                 * verlinken: Auswahl im Kontextbereich, Badge am Element,
+                 * Serialisierung, und wieder weg. */
+                var ibTxt56 = ibStage.querySelector('.icv-text');
+                if (ibTxt56) { ibTxt56.dispatch('pointerdown', { target: ibTxt56 }); }
+                var ibSel56 = ibDoc.body.querySelector('.icv-ctx .icv-ctx-select');
+                ok(ibSel56 !== null, 'T56 Kontextbereich hat die Seiten-Auswahl zum Verlinken');
+                if (ibSel56) {
+                  ibSel56.value = '43';
+                  ibSel56.dispatch('change');
+                  ok(ibTxt56 !== null && ibTxt56.querySelector('.icv-linkbadge') !== null, 'T56b verlinktes Objekt traegt das Kettenglied-Badge');
+                  var cv56 = ibCollect();
+                  var t56 = cv56 && cv56.items ? cv56.items.filter(function (it) { return it.kind === 'text'; })[0] : null;
+                  ok(t56 && t56.link === 43, 'T56c der Seiten-Link wird mit serialisiert (link: 43)');
+                  ibSel56.value = '';
+                  ibSel56.dispatch('change');
+                  var cv56b = ibCollect();
+                  var t56b = cv56b && cv56b.items ? cv56b.items.filter(function (it) { return it.kind === 'text'; })[0] : null;
+                  ok(t56b && t56b.link === undefined, 'T56d ohne Link-Auswahl verschwindet der Link wieder');
+                  ok(ibTxt56 !== null && ibTxt56.querySelector('.icv-linkbadge') === null, 'T56e auch das Badge verschwindet wieder');
+                }
 
                 /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */
                 var NL41 = String.fromCharCode(10);

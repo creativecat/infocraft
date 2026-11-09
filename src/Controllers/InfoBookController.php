@@ -324,9 +324,20 @@ final class InfoBookController
              * dort das "Neue Seite"-Formular zeigt, wo es erlaubt ist. */
             $nav[] = ['section' => $navSection, 'pages' => InfoBook::pages((int) $navSection['id']), 'canWrite' => self::canWriteSection($navSection, $user)];
         }
+        /* #73: Seiten des Buchs als Link-Ziele fuer den Editor und zur
+         * Pruefung im Lesemodus: gerendert werden nur Links innerhalb
+         * desselben Buchs. */
+        $navPages = [];
+        $linkPages = [];
+        foreach ($nav as $navEntry) {
+            foreach ($navEntry['pages'] as $navPage) {
+                $navPages[] = ['id' => (int) $navPage['id'], 't' => (string) $navPage['title'], 's' => (string) $navEntry['section']['title']];
+                $linkPages[(int) $navPage['id']] = true;
+            }
+        }
         $blocks = InfoBook::pageBlocks($page);
         foreach ($blocks as $i => $block) {
-            $blocks[$i]['html'] = self::renderBlock($block);
+            $blocks[$i]['html'] = self::renderBlock($block, (int) $book->id, $linkPages);
         }
         $media = self::canManage($book, $user) || $canWrite ? InfoBook::mediaOfBook($book->id) : [];
         render('ibook_page', [
@@ -340,6 +351,7 @@ final class InfoBookController
             'canWrite' => $canWrite,
             'preview' => $preview,
             'nav' => $nav,
+            'navPages' => $navPages,
             'isTeacher' => Auth::isTeacher(),
             'user' => $user,
         ]);
@@ -601,11 +613,13 @@ final class InfoBookController
         }
         $wanted = (int) ($_GET['abschnitt'] ?? 0);
         $slides = [];
+        $linkPages = [];
         foreach ($sections as $section) {
             if ($wanted > 0 && (int) $section['id'] !== $wanted) {
                 continue;
             }
             foreach (InfoBook::pages((int) $section['id']) as $page) {
+                $linkPages[(int) $page['id']] = true; /* #73: verlinkbare Seiten */
                 $slides[] = [
                     'section' => (string) $section['title'],
                     'title' => (string) $page['title'],
@@ -616,7 +630,7 @@ final class InfoBookController
         foreach ($slides as $i => $slide) {
             $html = '';
             foreach ($slide['blocks'] as $block) {
-                $html .= self::renderBlock($block);
+                $html .= self::renderBlock($block, (int) $book->id, $linkPages);
             }
             $slides[$i]['html'] = $html;
         }
@@ -821,7 +835,7 @@ final class InfoBookController
      * Präsentationsmodus ohne JavaScript).
      * @param array<string, mixed> $block
      */
-    private static function renderCanvas(array $block): string
+    private static function renderCanvas(array $block, int $bookId = 0, array $linkPages = []): string
     {
         $w = max(50.0, (float) ($block['w'] ?? 1600));
         $h = max(50.0, (float) ($block['h'] ?? 1000));
@@ -833,6 +847,14 @@ final class InfoBookController
             $kind = (string) ($item['kind'] ?? '');
             $left = self::pct($item['x'] ?? 0, $w);
             $top = self::pct($item['y'] ?? 0, $h);
+            /* Seiten-Link (#73): Ziel muss eine Seite desselben Buchs sein,
+             * dann liegt das Element im Lesemodus in einem Link. */
+            $itemLink = 0;
+            if ($bookId > 0 && isset($item['link']) && isset($linkPages[(int) $item['link']])) {
+                $itemLink = (int) $item['link'];
+            }
+            $pre = $itemLink > 0 ? '<a class="icv-item-link" href="' . e(url('infobuecher/' . $bookId . '/seite/' . $itemLink)) . '">' : '';
+            $lenBefore = strlen($inner);
             if ($kind === 'text') {
                 $width = self::pct($item['w'] ?? 320, $w);
                 $bg = (string) ($item['bg'] ?? '');
@@ -845,7 +867,7 @@ final class InfoBookController
                 } elseif ($bg !== '') {
                     $bgStyle = ';background:' . $bg;
                 }
-                $inner .= '<div class="icv-item icv-text" style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%' . $bgStyle
+                $inner .= $pre . '<div class="icv-item icv-text" style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%' . $bgStyle
                     . ';text-align:' . ($align !== '' ? $align : 'left') . '">'
                     . PresentationController::renderSlideBody((string) ($item['body'] ?? '')) . '</div>';
             } elseif ($kind === 'image') {
@@ -857,7 +879,7 @@ final class InfoBookController
                 $height = self::pct($item['h'] ?? 120, $h);
                 $alt = (string) ($item['alt'] ?? '');
                 $name = (string) ($item['name'] ?? '');
-                $inner .= '<div class="icv-item icv-image" style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%;height:' . $height . '%">'
+                $inner .= $pre . '<div class="icv-item icv-image" style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%;height:' . $height . '%">'
                     . '<img src="' . e(url('/infobuecher/medium/' . $mediaId)) . '" alt="' . e($alt !== '' ? $alt : ($name !== '' ? $name : 'Bild')) . '"></div>';
             } elseif ($kind === 'ink') {
                 /* Stift-Strich als SVG-Pfad (#64): Punkte sind relativ zum
@@ -872,7 +894,7 @@ final class InfoBookController
                 for ($i = 0; $i + 1 < count($points); $i += 2) {
                     $d .= ($i === 0 ? 'M ' : 'L ') . self::svgNum($points[$i]) . ' ' . self::svgNum($points[$i + 1]) . ' ';
                 }
-                $inner .= '<div class="icv-item icv-stroke" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($iw, $w) . '%;height:' . self::pct($ih, $h) . '%">'
+                $inner .= $pre . '<div class="icv-item icv-stroke" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($iw, $w) . '%;height:' . self::pct($ih, $h) . '%">'
                     . '<svg class="icv-ink-svg" viewBox="0 0 ' . self::svgNum($iw) . ' ' . self::svgNum($ih) . '" preserveAspectRatio="none" aria-hidden="true">'
                     . '<path d="' . $d . '" fill="none" stroke="' . e((string) ($item['c'] ?? '#1f2937')) . '" stroke-width="' . self::svgNum($item['sw'] ?? 4)
                     . '" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
@@ -882,22 +904,26 @@ final class InfoBookController
                     continue;
                 }
                 $title = (string) ($item['title'] ?? '');
-                $inner .= '<div class="icv-item icv-embed" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%">'
+                $inner .= $pre . '<div class="icv-item icv-embed" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%">'
                     . '<div class="embed-frame"><iframe src="' . e($url) . '" title="' . e($title !== '' ? $title : 'Eingebetteter Inhalt') . '" loading="lazy" allowfullscreen referrerpolicy="no-referrer"></iframe></div></div>';
             } elseif ($kind === 'audio') {
                 $mediaId = (int) ($item['media'] ?? 0);
                 if ($mediaId <= 0) {
                     continue;
                 }
-                $inner .= '<div class="icv-item icv-audio" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 360, $w) . '%">'
+                $inner .= $pre . '<div class="icv-item icv-audio" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 360, $w) . '%">'
                     . '<audio controls preload="metadata" src="' . e(url('/infobuecher/medium/' . $mediaId)) . '"></audio></div>';
             } elseif ($kind === 'video') {
                 $mediaId = (int) ($item['media'] ?? 0);
                 if ($mediaId <= 0) {
                     continue;
                 }
-                $inner .= '<div class="icv-item icv-video" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%;height:' . self::pct($item['h'] ?? 270, $h) . '%">'
+                $inner .= $pre . '<div class="icv-item icv-video" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%;height:' . self::pct($item['h'] ?? 270, $h) . '%">'
                     . '<video controls preload="metadata" src="' . e(url('/infobuecher/medium/' . $mediaId)) . '"></video></div>';
+            }
+            /* Nur schliessen, wenn der Zweig wirklich etwas angehaengt hat. */
+            if ($itemLink > 0 && strlen($inner) > $lenBefore) {
+                $inner .= '</a>';
             }
         }
         $ink = (int) ($block['ink'] ?? 0);
@@ -921,15 +947,16 @@ final class InfoBookController
         return rtrim(rtrim(number_format($n, 2, '.', ''), '0'), '.') ?: '0';
     }
 
-    /** Einen Block als HTML rendern (fuer Seitenansicht und Präsentationsmodus). @param array<string, mixed> $block */
-    public static function renderBlock(array $block): string
+    /** Einen Block als HTML rendern (fuer Seitenansicht und Präsentationsmodus).
+     * $bookId/$linkPages (#73): erlaubte Link-Ziele, nur sie werden verlinkt. @param array<string, mixed> $block */
+    public static function renderBlock(array $block, int $bookId = 0, array $linkPages = []): string
     {
         $type = (string) ($block['type'] ?? 'text');
         if ($type === 'text') {
             return '<div class="iblock-text">' . PresentationController::renderSlideBody((string) ($block['body'] ?? '')) . '</div>';
         }
         if ($type === 'canvas') {
-            return self::renderCanvas($block);
+            return self::renderCanvas($block, $bookId, $linkPages);
         }
         if ($type === 'embed') {
             $url = InfoBook::cleanEmbedUrl((string) ($block['url'] ?? ''));

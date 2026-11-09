@@ -1716,6 +1716,10 @@
   var csrf = '';
   try { csrf = document.body.getAttribute('data-csrf') || ''; } catch (e) { /* Harness */ }
   var pageId = parseInt(editor.getAttribute('data-page-id') || '0', 10) || 0;
+  /* Seiten des Buchs als Link-Ziele (#73): [{id, t, s}] aus dem Template. */
+  var navPages = [];
+  try { navPages = JSON.parse(editor.getAttribute('data-nav') || '[]') || []; } catch (eNav) { navPages = []; }
+  if (!Array.isArray(navPages)) { navPages = []; }
   var status = null;
   var dirty = false;
 
@@ -2096,6 +2100,7 @@
       div.appendChild(vid);
       div.appendChild(el('div', 'muted icv-ph-sub', (item.name || 'Video') + ' · im Lesemodus abspielbar'));
     }
+    refreshLinkBadge(div, item); /* verlinktes Element zeigt das Badge (#73) */
     /* Vier Ecken zum Skalieren (#67), sichtbar nur bei Auswahl (CSS). */
     var corners = ['nw', 'ne', 'sw', 'se'];
     for (var ci = 0; ci < corners.length; ci++) {
@@ -2196,6 +2201,40 @@
   });
   ctxEmbed.appendChild(ctxUrl);
   ctxEmbed.appendChild(ctxTitle);
+  /* Seiten-Link (#73): Objekt oder Textfeld mit einer anderen Seite des
+   * Buchs verbinden; im Lesemodus ist das Element dann ein Link. */
+  var ctxLink = el('div', 'icv-ctx-group');
+  var ctxLinkSel = el('select', 'icv-ctx-select');
+  ctxLinkSel.title = 'Mit welcher Seite soll das Objekt verlinkt sein? Klick im Lesemodus führt dann dorthin.';
+  var linkNone = el('option', '', 'kein Link');
+  linkNone.value = '';
+  ctxLinkSel.appendChild(linkNone);
+  navPages.forEach(function (np) {
+    var o = el('option', '', (np.s ? np.s + ' · ' : '') + (np.t || ('Seite ' + np.id)));
+    o.value = String(np.id);
+    ctxLinkSel.appendChild(o);
+  });
+  ctxLinkSel.addEventListener('change', function () {
+    if (!sel) { return; }
+    var v = parseInt(ctxLinkSel.value, 10) || 0;
+    if (v > 0) { sel.link = v; } else { delete sel.link; }
+    refreshLinkBadge(selDiv, sel);
+    collect(); markDirty();
+  });
+  ctxLink.appendChild(ctxLinkSel);
+  function refreshLinkBadge(div, item) {
+    if (!div || !div.querySelector || !div.removeChild) { return; }
+    var old = div.querySelector('.icv-linkbadge');
+    if (item && item.link) {
+      if (!old) {
+        var b = el('div', 'icv-linkbadge', '🔗');
+        b.title = 'Verlinkt mit einer anderen Seite (im Kontextbereich aendern)';
+        div.appendChild(b);
+      }
+    } else if (old && old.parentNode === div) {
+      div.removeChild(old);
+    }
+  }
   /* Gruppieren/Loesen (#68): nur sinnvoll mit Auswahl, deshalb im
    * Kontextbereich - die Leiste bleibt frei von Auswahl-abhaengigen Icons. */
   var grpBtn = el('button', 'icv-bgbtn', '🪢 Gruppieren');
@@ -2229,6 +2268,7 @@
   ctxBar.appendChild(ctxLabel);
   ctxBar.appendChild(ctxText);
   ctxBar.appendChild(ctxEmbed);
+  ctxBar.appendChild(ctxLink);
 
   function updateCtx() {
     if (!ctxBar.classList) { return; }
@@ -2243,6 +2283,7 @@
       ctxLabel.textContent = 'Ausgewählt: ' + selList.length + ' Objekte';
       if (ctxText.style) { ctxText.style.display = 'none'; }
       if (ctxEmbed.style) { ctxEmbed.style.display = 'none'; }
+      if (ctxLink.style) { ctxLink.style.display = 'none'; }
       if (grpBtn.style) { grpBtn.style.display = ''; }
       var sameGroup = selList.every(function (it) { return it.g && it.g === selList[0].g; });
       if (ungrpBtn.style) { ungrpBtn.style.display = sameGroup ? '' : 'none'; }
@@ -2250,6 +2291,9 @@
       ctxLabel.textContent = 'Ausgewählt: ' + (KIND_NAMES[sel.kind] || sel.kind);
       if (ctxText.style) { ctxText.style.display = sel.kind === 'text' ? '' : 'none'; }
       if (ctxEmbed.style) { ctxEmbed.style.display = sel.kind === 'embed' ? '' : 'none'; }
+      /* Seiten-Link (#73): passt zu jedem Element, nur die Auswahl braucht Ziele. */
+      if (ctxLink.style) { ctxLink.style.display = navPages.length > 0 ? '' : 'none'; }
+      if (navPages.length > 0) { ctxLinkSel.value = sel && sel.link ? String(sel.link) : ''; }
       if (grpBtn.style) { grpBtn.style.display = 'none'; }
       if (ungrpBtn.style) { ungrpBtn.style.display = (sel && sel.g) ? '' : 'none'; }
       if (sel.kind === 'embed') { ctxUrl.value = sel.url || ''; ctxTitle.value = sel.title || ''; }
@@ -2757,6 +2801,7 @@
         e.y = num(item.y, 2);
         e.w = num(item.w || 320, 2);
         if (item.g) { e.g = item.g; } /* Gruppen-ID (#68): Objekte bewegen sich gemeinsam */
+        if (item.link) { e.link = item.link; } /* Seiten-Link (#73) */
         if (item.kind === 'image' || item.kind === 'ink' || item.kind === 'video') { e.h = num(item.h || 120, 2); }
         return e;
       })

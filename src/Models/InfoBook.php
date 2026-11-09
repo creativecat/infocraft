@@ -194,8 +194,9 @@ final class InfoBook
         return (int) $n === $n ? (int) $n : $n;
     }
 
-    /** Elemente der Freien Flaeche (#63/#64) bereinigen: Positionen begrenzen, nur gueltige Elemente. @param list<mixed> $items */
-    private static function cleanCanvasItems(mixed $items, float $w, float $h): array
+    /** Elemente der Freien Flaeche (#63/#64) bereinigen: Positionen begrenzen, nur gueltige Elemente.
+     * $bookPageIds (#73): Seiten-IDs desselben Buchs, auf die verlinkt werden darf. @param list<mixed> $items */
+    private static function cleanCanvasItems(mixed $items, float $w, float $h, array $bookPageIds = []): array
     {
         if (!is_array($items)) {
             return [];
@@ -212,6 +213,11 @@ final class InfoBook
             /* Gruppen-ID (#68): Lasso-Auswahl gruppierbar, Mitglieder bewegen
              * sich gemeinsam. 0 = ohne Gruppe. */
             $grp = (int) ($item['g'] ?? 0) > 0 ? (int) ($item['g'] ?? 0) : 0;
+            /* Seiten-Link (#73): Ziel muss eine Seite desselben Buchs sein. */
+            $link = (int) ($item['link'] ?? 0);
+            if ($link > 0 && !isset($bookPageIds[$link])) {
+                $link = 0;
+            }
             if ($kind === 'text') {
                 $it = [
                     'kind' => 'text',
@@ -225,6 +231,7 @@ final class InfoBook
                 if ($grp > 0) {
                     $it['g'] = $grp;
                 }
+                if ($link > 0) { $it['link'] = $link; }
                 $clean[] = $it;
             } elseif ($kind === 'image') {
                 $media = (int) ($item['media'] ?? 0);
@@ -246,6 +253,7 @@ final class InfoBook
                 if ($grp > 0) {
                     $it['g'] = $grp;
                 }
+                if ($link > 0) { $it['link'] = $link; }
                 $clean[] = $it;
             } elseif ($kind === 'ink') {
                 /* Stift-Strich als echtes Objekt (#64): Punkte relativ zum
@@ -277,6 +285,7 @@ final class InfoBook
                     if ($grp > 0) {
                         $it['g'] = $grp;
                     }
+                    if ($link > 0) { $it['link'] = $link; }
                     $clean[] = $it;
                 }
             } elseif ($kind === 'embed') {
@@ -295,6 +304,7 @@ final class InfoBook
                 if ($grp > 0) {
                     $it['g'] = $grp;
                 }
+                if ($link > 0) { $it['link'] = $link; }
                 $clean[] = $it;
             } elseif ($kind === 'audio' || $kind === 'video') {
                 $media = (int) ($item['media'] ?? 0);
@@ -315,6 +325,7 @@ final class InfoBook
                 if ($grp > 0) {
                     $it['g'] = $grp;
                 }
+                if ($link > 0) { $it['link'] = $link; }
                 $clean[] = $it;
             }
         }
@@ -331,6 +342,17 @@ final class InfoBook
     /** Seite speichern: Titel und Bloecke (JSON wird serverseitig bereinigt). */
     public static function savePage(int $pageId, string $title, array $blocks): void
     {
+        /* Seiten-Link-Ziele (#73): erlaubt sind alle Seiten desselben Buchs. */
+        $bookPageIds = [];
+        $pageRow = self::findPage($pageId);
+        $pageSection = $pageRow !== null ? self::findSection((int) $pageRow['section_id']) : null;
+        if ($pageSection !== null) {
+            foreach (self::sections((int) $pageSection['book_id']) as $linkSection) {
+                foreach (self::pages((int) $linkSection['id']) as $linkPage) {
+                    $bookPageIds[(int) $linkPage['id']] = true;
+                }
+            }
+        }
         $clean = [];
         foreach ($blocks as $block) {
             if (!is_array($block)) {
@@ -349,7 +371,7 @@ final class InfoBook
             } elseif ($entry['type'] === 'canvas') {
                 $w = self::cvNum($block['w'] ?? 1600, 400, 4000);
                 $h = self::cvNum($block['h'] ?? 1000, 300, 4000);
-                $items = self::cleanCanvasItems($block['items'] ?? [], (float) $w, (float) $h);
+                $items = self::cleanCanvasItems($block['items'] ?? [], (float) $w, (float) $h, $bookPageIds);
                 $ink = (int) ($block['ink'] ?? 0);
                 if ($ink > 0) {
                     $entry['ink'] = $ink;
