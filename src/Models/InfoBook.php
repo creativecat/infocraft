@@ -174,7 +174,7 @@ final class InfoBook
         /* Neue Seiten sind direkt eine Freie Flaeche (#64): Eine Seite, alle
          * Elemente (Text, Stift-Streiche, Bilder, Medien) frei darauf platziert. */
         Database::pdo()->prepare('INSERT INTO ibook_pages (section_id, title, content, position) VALUES (?, ?, ?, ?)')
-            ->execute([$sectionId, $title, '{"type":"canvas","w":1600,"h":1000,"items":[]}', $pos]);
+            ->execute([$sectionId, $title, '[{"type":"canvas","w":1600,"h":1000,"items":[]}]', $pos]);
         return (int) Database::pdo()->lastInsertId();
     }
 
