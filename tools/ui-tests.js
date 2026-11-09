@@ -1278,6 +1278,50 @@ setTimeout(function () {
                 var imgItem = cv && cv.items ? cv.items.filter(function (it) { return it.kind === 'image'; })[0] : null;
                 ok(imgItem && imgItem.media === 4242 && imgItem.x === 640 && imgItem.y === 380, 'T40zd Bild mit Medien-ID und Ablege-Position wird serialisiert');
 
+                /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */
+                var NL41 = String.fromCharCode(10);
+                replIn.value = ['a', 'b', 'c', 'd', 'e', 'f'].join(NL41);
+                replIn.dispatch('input');
+                ok(String(replIn.getAttribute('rows')) === '6', 'T41 Anweisungsfeld: 6 Zeilen Text geben rows 6');
+                replIn.value = 'eins';
+                replIn.dispatch('input');
+                ok(String(replIn.getAttribute('rows')) === '4', 'T41b kuerzere Eingabe behaelt mindestens rows 4');
+                var t41long = '';
+                var t41i;
+                for (t41i = 0; t41i < 20; t41i++) { t41long += 'z' + NL41; }
+                replIn.value = t41long;
+                replIn.dispatch('input');
+                ok(String(replIn.getAttribute('rows')) === '14', 'T41c viele Zeilen stoppen bei rows 14 (dann scrollt das Feld)');
+
+                /* T42 (#65): Der Boot wartet auf DOMContentLoaded. java-vm.js laeuft
+                 * im Browser mitten im Body (Script-Tag vor dem DB-Panel), die
+                 * DB-Konsole steht erst danach im HTML. Bisher lief die Verdrahtung
+                 * ins Leere und 'Abfrage ausfuehren' tat nichts. */
+                var vmPath42 = require.resolve('../public/assets/js/java-vm.js');
+                delete require.cache[vmPath42];
+                var doc42 = new FakeDoc();
+                doc42.readyState = 'loading';
+                var dbSeed42 = new FakeEl('input');
+                dbSeed42.value = 'CREATE TABLE produkte (name TEXT);' + NL41 + "INSERT INTO produkte VALUES ('Heft');";
+                doc42.register(dbSeed42, 'java-db-seed');
+                var dbIn42 = new FakeEl('textarea');
+                doc42.register(dbIn42, 'java-db-in');
+                var dbOut42 = new FakeEl('pre');
+                doc42.register(dbOut42, 'java-db-out');
+                var dbRunBtn42 = new FakeEl('button');
+                doc42.register(dbRunBtn42, 'java-db-run');
+                var savedDoc42 = global.document;
+                global.document = doc42;
+                require(vmPath42);
+                ok(dbOut42.textContent === '', 'T42 solange das Dokument laedt, laeuft der Boot noch nicht');
+                doc42._fire('DOMContentLoaded', { type: 'DOMContentLoaded' });
+                ok(dbOut42.textContent.indexOf('Noch keine Abfrage') !== -1, 'T42b nach DOMContentLoaded ist die DB-Konsole verdrahtet (Platzhalter steht)');
+                dbIn42.value = 'SELECT * FROM produkte';
+                dbOut42.textContent = '';
+                dbRunBtn42.dispatch('click');
+                ok(dbOut42.textContent.indexOf('Heft') !== -1, 'T42c Abfrage ausfuehren liefert nach dem Boot die Zeilen (Seed geladen)');
+                global.document = savedDoc42;
+
                 console.log('');
                 if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }
                 else { console.log(failures.length + ' UI-Tests fehlgeschlagen.'); process.exit(1); }

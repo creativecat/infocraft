@@ -1322,6 +1322,18 @@ span.hlwrap { display: block; }
 .repl-edit > .hlwrap { flex: 1; min-width: 0; }
 .repl-edit > .hlwrap > #java-repl-in { width: 100%; }
 
+/* Gleiches Schriftmass im farbigen Overlay wie in der Anweisungs-Textarea (#65):
+ * .hlwrap > pre nutzt 0.85rem/1.5 mit 10px 12px, #java-repl-in aber 0.9rem/1.45
+ * mit 8px 10px - der farbige Text sass 2 Pixel daneben und driftete pro Zeile
+ * und Zeichen weiter auseinander. Der Ghost-Text-Layer (.ic-ghost) uebernimmt
+ * seine Schriftmasse per getComputedStyle direkt von der Textarea und ist
+ * deshalb nicht betroffen. */
+.repl-edit .hlwrap > pre {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
 /* ===== Grafik-Fenster im Dock: volle Breite statt fester Pixelbreite.
  * Position erbt vom Dock (keine absolute Breite mehr), der Canvas misst
  * die Zeilenbreite 1:1 mit (java-vm.js passt canvas.width an). */

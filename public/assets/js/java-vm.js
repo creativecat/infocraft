@@ -7131,6 +7131,15 @@
       var i2;
       for (i2 = 0; i2 < lines.length; i2++) { txt += (i2 + 1) + '\n'; }
       replGut.textContent = txt;
+      /* Hoehe des Anweisungsfelds folgt dem Text (#65): mindestens 4 Zeilen
+       * wie bisher, hoechstens 14 - danach scrollt das Feld weiter wie gewohnt.
+       * Vorher blieb die Textarea stur bei rows 4, obwohl der Gutter schon
+       * mehr Zeilen nummerierte. */
+      try {
+        if (typeof replIn.setAttribute === 'function') {
+          replIn.setAttribute('rows', String(lines.length < 4 ? 4 : (lines.length > 14 ? 14 : lines.length)));
+        }
+      } catch (eRows) { /* Nur die Feldhoehe, nichts darf hier brechen */ }
       if (typeof replGut.scrollTop === 'number' && typeof replIn.scrollTop === 'number') {
         replGut.scrollTop = replIn.scrollTop;
       }
@@ -7331,6 +7340,12 @@ dbSchemaRenderHook = renderDbSchema;
  * nutzen - bislang blieb das Live-Schema deshalb unsichtbar, bis das
  * Programm einmal lief oder die Konsole benutzt wurde. */
 try {
+  /* Eigener Seed-Import (#65): Die Konsole ist unabhaengig verdrahtet (#53) -
+   * fiel wireUi frueher ab oder lief noch nicht, laedt sie den gespeicherten
+   * Seed selbst. Nur solange die Datenbank noch unberuehrt ist (RUN_DB null),
+   * damit keine laufende Datenbank ueberschrieben wird. */
+  try { dbSeedRead(); } catch (eSeedRead) { /* Seed-Text darf nichts blockieren */ }
+  if (RUN_DB === null && DB_SEED_SQL !== '') { dbResetToSeed(); }
   var bootTbl = dbTables();
   var bootCnt = 0;
   var btk;
@@ -7461,8 +7476,23 @@ if (dbIn) {
    * ab (z. B. ein Browser-Addon, das eine API blockt), laufen die anderen weiter:
    * Der Rest der IDE, die DB-Konsole und die Objektkonsole bleiben bedienbar. */
   if (typeof document !== 'undefined') {
-    try { wireUi(); } catch (eUi) { try { if (typeof console !== 'undefined' && console.error) { console.error('InfoCraft: Java-IDE Initialisierung abgebrochen', eUi); } } catch (eC) { } }
-    try { wireDbConsole(); } catch (eDb) { try { if (typeof console !== 'undefined' && console.error) { console.error('InfoCraft: DB-Konsole Initialisierung abgebrochen', eDb); } } catch (eC) { } }
+    var icJavaBoot = function () {
+      try { wireUi(); } catch (eUi) { try { if (typeof console !== 'undefined' && console.error) { console.error('InfoCraft: Java-IDE Initialisierung abgebrochen', eUi); } } catch (eC) { } }
+      try { wireDbConsole(); } catch (eDb) { try { if (typeof console !== 'undefined' && console.error) { console.error('InfoCraft: DB-Konsole Initialisierung abgebrochen', eDb); } } catch (eC) { } }
+    };
+    /* Das Script-Tag steht mitten im Body, vor dem DB-Panel (#65): Laeuft die
+     * Datei sofort, existieren die DB-Konsole-Elemente (java-db-in/-out/-run,
+     * java-db-seed, java-dbschema) im DOM noch nicht - "Abfrage ausfuehren"
+     * blieb deshalb ohne Funktion und die Beispieldatenbank wurde nie geladen.
+     * Waehrend der Browser noch laedt (readyState 'loading') wartet der Boot
+     * deshalb bis DOMContentLoaded; ohne document.readyState (Node-Tests)
+     * laeuft er sofort wie bisher. */
+    if (typeof document.readyState === 'string' && document.readyState === 'loading' &&
+        typeof document.addEventListener === 'function') {
+      document.addEventListener('DOMContentLoaded', icJavaBoot);
+    } else {
+      icJavaBoot();
+    }
   }
 })(typeof window !== 'undefined' ? window : globalThis);
 
