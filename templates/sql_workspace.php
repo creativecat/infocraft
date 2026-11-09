@@ -1,3 +1,4 @@
+<?php $sqlTableNames = array_map(static fn (array $t): string => (string) $t['name'], $tables); ?>
 <section class="panel">
     <div class="panel-head">
         <div>
@@ -38,7 +39,6 @@
     <?php endif; ?>
 </section>
 
-<?php $sqlTableNames = array_map(static fn (array $t): string => (string) $t['name'], $tables); ?>
 <div class="two-col">
     <section class="panel">
         <h3>📋 Tabellen der Datenbank</h3>
