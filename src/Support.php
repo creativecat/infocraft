@@ -87,24 +87,26 @@ function flash_all(): array
     return $messages;
 }
 
-function render(string $view, array $data = []): void
+function render(string $viewFile, array $data = []): void
 {
     // Reihenfolge wichtig: extract(EXTR_SKIP) ueberschreibt niemals bereits
     // gesetzte Variablen. Titel, aktiver Navi-Punkt und die Layout-Wahl stehen
     // deshalb bewusst NACH dem extract und werden aus $data gelesen, sonst
     // wuerde jeder Seite der Default-Titel bleiben bzw. das bare-Layout
     // (Login, Musterloesungsfenster) nie greifen.
-    // Der Parameter heisst bewusst $view: Mit $template wuerde EXTR_SKIP den
-    // Daten-Schluessel 'template' (z. B. das SqlTemplate-Objekt der Werkstatt)
-    // verschatten und im Template-Datei-Kontext waere $template nur der Name
-    // der Ansicht als String (#46/#47 Nacharbeit).
+    // Der Parameter heisst bewusst $viewFile: EXTR_SKIP ueberspringt Daten-
+    // Schluessel, die bereits belegte Variablen treffen. Mit $template wuerde
+    // der Schluessel 'template' (z. B. das SqlTemplate-Objekt der Werkstatt)
+    // verschattet, mit $view der Schluessel 'view' (Unternavigation Aufgaben,
+    // z. B. 'katalog'). $viewFile wird von keinem Controller als Schluessel
+    // uebergeben (#46/#47 Nacharbeit).
     $user = Infocraft\Auth::user();
     extract($data, EXTR_SKIP);
     $title = isset($data['title']) ? (string) $data['title'] : 'InfoCraft';
     $active = isset($data['active']) ? (string) $data['active'] : '';
     $bare = isset($data['bare']) ? (bool) $data['bare'] : false;
     ob_start();
-    require INFOCRAFT_ROOT . '/templates/' . $view . '.php';
+    require INFOCRAFT_ROOT . '/templates/' . $viewFile . '.php';
     $content = (string) ob_get_clean();
     require INFOCRAFT_ROOT . '/templates/layout.php';
 }
