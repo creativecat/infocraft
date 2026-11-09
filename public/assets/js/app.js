@@ -1858,13 +1858,29 @@
   }
 
   /* ---------- Elemente aufbauen ---------- */
+  /* Textfeld-Hoehe folgt dem Text (#66): kein manuelles Ziehen mehr, das
+   * Feld wachs mit jedem Tastendruck mit (min-height als Fallback im CSS). */
+  function fitTa(ta) {
+    if (!ta || !ta.style) { return; }
+    try {
+      ta.style.height = 'auto';
+      var h = (typeof ta.scrollHeight === 'number' && ta.scrollHeight > 0) ? ta.scrollHeight : 0;
+      if (h > 0) { ta.style.height = h + 'px'; }
+    } catch (e) { /* Harness ohne Layout */ }
+  }
   function attachMove(handle, item, div) {
     handle.addEventListener('pointerdown', function (ev) {
       if (mode !== 'select') { return; }
+      if (ev && ev.__icvDragging) { return; } /* nur ein Drag pro Klick (#66) */
+      /* Ohne Koordinaten (Test-Harness, synthetische Events) kein Drag-Start:
+       * Der offene Handler wuerde spaetere echte Moves mit NaN vergiften. */
+      if (typeof ev.clientX !== 'number' || typeof ev.clientY !== 'number') { return; }
+      if (ev) { ev.__icvDragging = true; }
       if (ev.preventDefault) { ev.preventDefault(); }
       var rect = stageRect();
       var sx = ev.clientX, sy = ev.clientY, ox = item.x, oy = item.y;
       function onMove(ev2) {
+        if (typeof ev2.clientX !== 'number' || typeof ev2.clientY !== 'number') { return; }
         item.x = clampN(ox + (ev2.clientX - sx) * (block.w / (rect.width || block.w)), 0, Math.max(0, block.w - 24));
         item.y = clampN(oy + (ev2.clientY - sy) * (block.h / (rect.height || block.h)), 0, Math.max(0, block.h - 24));
         styleItem(div, item);
@@ -1884,11 +1900,14 @@
   function attachResize(handle, item, div) {
     handle.addEventListener('pointerdown', function (ev) {
       if (mode !== 'select') { return; }
+      /* Ohne Koordinaten (Test-Harness, synthetische Events) kein Resize-Start. */
+      if (typeof ev.clientX !== 'number' || typeof ev.clientY !== 'number') { return; }
       if (ev.preventDefault) { ev.preventDefault(); }
       var rect = stageRect();
       var sx = ev.clientX, sy = ev.clientY, ow = item.w, oh = item.h || 0;
       var prop = item.kind === 'image' || item.kind === 'ink' || item.kind === 'video';
       function onMove(ev2) {
+        if (typeof ev2.clientX !== 'number' || typeof ev2.clientY !== 'number') { return; }
         var dw = (ev2.clientX - sx) * (block.w / (rect.width || block.w));
         if (prop) {
           var f = ow > 0 ? Math.max(0.05, (ow + dw) / ow) : 1;
@@ -1928,8 +1947,13 @@
       if (typeof window !== 'undefined' && window.IC_AUTOCOMPLETE && window.IC_AUTOCOMPLETE.attach) {
         try { window.IC_AUTOCOMPLETE.attach(ta, 'md'); } catch (eAC) { /* harmlos */ }
       }
-      ta.addEventListener('input', function () { item.body = ta.value; collect(); markDirty(); });
+      ta.addEventListener('input', function () {
+        item.body = ta.value;
+        fitTa(ta); /* Hoehe folgt dem Text (#66) */
+        collect(); markDirty();
+      });
       div.appendChild(ta);
+      fitTa(ta);
     } else if (item.kind === 'image') {
       var im = el('img', 'icv-img');
       im.src = mediaUrl(item.media); im.alt = item.alt || item.name || 'Bild';
@@ -1950,9 +1974,24 @@
     rs.title = 'Ecke ziehen zum Skalieren';
     attachResize(rs, item, div);
     div.appendChild(rs);
+    /* Loeschen-Knopf am Element (#66): Sichtbar bei Auswahl (CSS), entfernt
+     * das Element direkt - bisher war Loeschen nur ueber die Symbolleiste
+     * moeglich und die Entf-Taste tat gar nichts. */
+    var del = el('button', 'icv-del', '✕');
+    del.type = 'button';
+    del.title = 'Element entfernen (Entf-Taste geht auch)';
+    del.addEventListener('click', function (ev) {
+      if (ev && ev.stopPropagation) { ev.stopPropagation(); }
+      removeItem(item);
+    });
+    div.appendChild(del);
     div.addEventListener('pointerdown', function () {
       if (mode === 'select' && sel !== item) { selectItem(item); }
     });
+    /* Ganze Fläche als Griff (#66): Striche, Bilder, Audio, Video und
+     * Einbettungen lassen sich ueberall greifen. Textfelder weiter nur
+     * ueber die Leiste oben, sonst waere Textauswahl und Tippen kaputt. */
+    if (item.kind !== 'text') { attachMove(div, item, div); }
     return div;
   }
   var overlay = el('canvas', 'icv-inkcanvas');
@@ -1961,11 +2000,14 @@
   var ctx = null;
   try { ctx = overlay.getContext ? overlay.getContext('2d') : null; } catch (e) { ctx = null; /* Harness */ }
 
+  var itemDivs = [];
   function renderStage() {
     selDiv = null;
     stage.textContent = '';
+    itemDivs = [];
     block.items.forEach(function (item) {
       var div = buildItem(item);
+      itemDivs.push(div);
       if (item === sel) { selDiv = div; }
       stage.appendChild(div);
     });
@@ -2033,8 +2075,20 @@
     if (sel.kind === 'embed') { ctxUrl.value = sel.url || ''; ctxTitle.value = sel.title || ''; }
   }
   function selectItem(item) {
-    sel = item;
-    renderStage();
+    /* Auswahl ohne DOM-Neubau (#66): renderStage() hier wuerde die gerade
+     * laufenden Pointer-Verbindungen (Drag am Element, Strich greifen)
+     * abbrechen lassen. Stattdessen nur die Klassen umsetzen. */
+    if (sel !== item) {
+      var prevDiv = selDiv;
+      sel = item;
+      if (prevDiv && prevDiv.classList) { prevDiv.classList.remove('icv-selected'); }
+      var idx = block.items.indexOf(item);
+      selDiv = (idx >= 0 && itemDivs[idx]) ? itemDivs[idx] : null;
+      if (selDiv && selDiv.classList) { selDiv.classList.add('icv-selected'); }
+    } else if (!selDiv) {
+      var idx2 = block.items.indexOf(item);
+      selDiv = (idx2 >= 0 && itemDivs[idx2]) ? itemDivs[idx2] : null;
+    }
     updateCtx();
   }
   function deselect() {
@@ -2168,6 +2222,7 @@
   function addTextAt(x, y) {
     var item = { kind: 'text', body: '', x: clampN(x, 0, block.w - 60), y: clampN(y, 0, block.h - 24), w: 340, bg: '', align: 'left' };
     block.items.push(item);
+    renderStage(); /* sichtbar machen, selectItem baut das DOM nicht mehr neu (#66) */
     selectItem(item);
     var ta = selDiv && selDiv.querySelector ? selDiv.querySelector('textarea') : null;
     if (ta && ta.focus) { ta.focus(); }
@@ -2178,6 +2233,7 @@
     upload('image', file, function (data) {
       var item = { kind: 'image', media: data.id, name: data.name, alt: '', x: clampN(x, 0, block.w - 32), y: clampN(y, 0, block.h - 32), w: 320, h: 240 };
       block.items.push(item);
+      renderStage(); /* sichtbar machen, selectItem baut das DOM nicht mehr neu (#66) */
       var probe = el('img');
       probe.onload = function () {
         if (probe.naturalWidth > 0) {
@@ -2198,12 +2254,14 @@
         ? { kind: 'audio', media: data.id, name: data.name, x: clampN(block.w / 2 - 180, 0, block.w - 60), y: clampN(block.h / 2 - 40, 0, block.h - 24), w: 360 }
         : { kind: 'video', media: data.id, name: data.name, x: clampN(block.w / 2 - 240, 0, block.w - 60), y: clampN(block.h / 2 - 135, 0, block.h - 24), w: 480, h: 270 };
       block.items.push(item);
+      renderStage(); /* sichtbar machen, selectItem baut das DOM nicht mehr neu (#66) */
       selectItem(item); collect(); markDirty();
     });
   }
   function addEmbedAt(x, y) {
     var item = { kind: 'embed', url: '', title: '', x: clampN(x, 0, block.w - 100), y: clampN(y, 0, block.h - 40), w: 480 };
     block.items.push(item);
+    renderStage(); /* sichtbar machen, selectItem baut das DOM nicht mehr neu (#66) */
     selectItem(item);
     if (ctxUrl && ctxUrl.focus) { ctxUrl.focus(); }
     collect(); markDirty();
@@ -2246,6 +2304,7 @@
     block.items.push(item);
     stroke = null;
     clearOverlay();
+    renderStage(); /* Strich sofort sichtbar, selectItem baut das DOM nicht mehr neu (#66) */
     selectItem(item);
     collect(); markDirty();
   }
@@ -2329,6 +2388,18 @@
     if (ev.target && ev.target !== stage) { return; }
     deselect();
   });
+  /* Entf-/Backspace-Taste entfernt die Auswahl (#66): Die intuitive Erwartung
+   * vom Desktop. Nie waehrend der Texteingabe (Textarea/Input). */
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('keydown', function (ev) {
+      if (mode !== 'select' || !sel) { return; }
+      if (ev.key !== 'Delete' && ev.key !== 'Backspace' && ev.key !== 'Entf') { return; }
+      var t = ev.target;
+      if (t && t.tagName && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.isContentEditable)) { return; }
+      if (ev.preventDefault) { ev.preventDefault(); }
+      removeItem(sel);
+    });
+  }
 
   /* ---------- Speichern: alles wird mit der Seite gesichert ---------- */
   function collect() {

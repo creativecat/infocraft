@@ -1573,7 +1573,8 @@ figure.iblock-image figcaption, figure.iblock-embed figcaption {
     padding: 6px 8px 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 .icv-ta {
-    width: 100%; min-height: 56px; border: 0; background: transparent; resize: vertical;
+    width: 100%; min-height: 56px; border: 0; background: transparent;
+    resize: none; box-sizing: border-box; overflow: hidden;
     font: inherit; color: inherit; padding: 2px; outline: none;
 }
 .icv-move {
@@ -1584,11 +1585,17 @@ figure.iblock-image figcaption, figure.iblock-embed figcaption {
 }
 .icv-item:hover .icv-move, .icv-selected .icv-move, .icv-move:focus-within, .icv-move:active { opacity: 1; }
 .icv-grip { font-size: 0.75rem; color: #475569; user-select: none; letter-spacing: 2px; padding-left: 4px; }
+/* Loeschen-Knopf am ausgewaehlten Element (#66): roter Kreis oben rechts,
+ * erscheint mit der Auswahl - Loeschen ohne Umweg ueber die Symbolleiste. */
 .icv-del {
-    margin-left: auto; border: 0; background: #e11d48; color: #ffffff; cursor: pointer;
-    width: 22px; height: 22px; border-radius: 50%; font-size: 0.8rem; line-height: 1;
+    position: absolute; top: -11px; right: -11px; width: 24px; height: 24px; z-index: 7;
+    border: 2px solid #ffffff; background: #e11d48; color: #ffffff; cursor: pointer;
+    border-radius: 50%; font-size: 0.8rem; line-height: 1; padding: 0;
     display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.3);
+    visibility: hidden;
 }
+.icv-selected .icv-del, .icv-del:active, .icv-del:focus { visibility: visible; }
 .icv-rs {
     position: absolute; right: -8px; bottom: -8px; width: 16px; height: 16px; z-index: 6;
     background: #1d4ed8; border: 2px solid #ffffff; border-radius: 50%; cursor: nwse-resize;

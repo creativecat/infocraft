@@ -1278,6 +1278,44 @@ setTimeout(function () {
                 var imgItem = cv && cv.items ? cv.items.filter(function (it) { return it.kind === 'image'; })[0] : null;
                 ok(imgItem && imgItem.media === 4242 && imgItem.x === 640 && imgItem.y === 380, 'T40zd Bild mit Medien-ID und Ablege-Position wird serialisiert');
 
+                /* T43 (#66): Loeschen-Knopf direkt am Element: Einbettung
+                 * auswaehlen, auf das rote X am Objekt klicken, Element ist weg. */
+                var ibEmbDiv66 = ibStage.querySelector('.icv-embed');
+                ok(ibEmbDiv66 !== null, 'T43a Einbettung liegt noch vor dem Loesch-Test auf der Flaeche');
+                if (ibEmbDiv66) { ibEmbDiv66.dispatch('pointerdown', { target: ibEmbDiv66 }); }
+                var ibDelBtn66 = ibStage.querySelector('.icv-embed .icv-del');
+                ok(ibDelBtn66 !== null, 'T43b am Element sitzt ein Loeschen-Knopf (icv-del)');
+                if (ibDelBtn66) { ibDelBtn66.dispatch('click', { target: ibDelBtn66 }); }
+                var cvDel66 = ibCollect();
+                var embCount66 = cvDel66 && cvDel66.items ? cvDel66.items.filter(function (it) { return it.kind === 'embed'; }).length : -1;
+                ok(ibStage.querySelector('.icv-embed') === null && embCount66 === 0, 'T43c X am Element entfernt es, serialisiert ist es auch weg');
+
+                /* T44 (#66): Entf-Taste loescht die Auswahl (nicht waehrend der Texteingabe). */
+                ibDoc.body.querySelector('[data-icv-tool="select"]').dispatch('click');
+                ibStage.dispatch('dblclick', { clientX: 300, clientY: 60, target: ibStage });
+                var textCount66 = ibStage.querySelectorAll('.icv-text').length;
+                ok(textCount66 === 2, 'T44a zweites Textfeld steht vor der Entf-Taste auf der Flaeche');
+                ibDoc._fire('keydown', { key: 'Delete', target: ibStage });
+                ok(ibStage.querySelectorAll('.icv-text').length === textCount66 - 1, 'T44b Entf-Taste entfernt das ausgewaehlte Element');
+                var growTa66 = ibStage.querySelector('.icv-text textarea');
+                ok(growTa66 !== null && growTa66.style.height === 'auto', 'T45 Textfeld-Hoehe folgt dem Text (Auto-Grow statt manuellem Ziehen)');
+
+                /* T46 (#66): Strich auf der GANZEN Flaeche greifen und verschieben. */
+                ibDoc.body.querySelector('[data-icv-tool="draw"]').dispatch('click');
+                ibInk.dispatch('pointerdown', { clientX: 10, clientY: 10, pointerId: 66, pressure: 0.5 });
+                ibInk.dispatch('pointermove', { clientX: 50, clientY: 30, pointerId: 66, pressure: 0.5 });
+                ibInk.dispatch('pointerup', { pointerId: 66 });
+                ibDoc.body.querySelector('[data-icv-tool="select"]').dispatch('click');
+                var ibStroke66 = ibStage.querySelector('.icv-stroke');
+                ok(ibStroke66 !== null && ibStroke66.style.left === '1.25%', 'T46a neuer Strich liegt bei 1.25% (20 von 1600)');
+                if (ibStroke66) {
+                  ibStroke66.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 67 });
+                  ibStroke66.dispatch('pointermove', { clientX: 160, clientY: 50, pointerId: 67 });
+                  ibStroke66.dispatch('pointerup', { pointerId: 67 });
+                }
+                var ibStroke66b = ibStage.querySelector('.icv-stroke');
+                ok(ibStroke66b !== null && ibStroke66b.style.left === '21.25%', 'T46b Strich laesst sich an jeder Stelle seiner Flaeche anfassen (21.25%)');
+
                 /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */
                 var NL41 = String.fromCharCode(10);
                 replIn.value = ['a', 'b', 'c', 'd', 'e', 'f'].join(NL41);
