@@ -1715,6 +1715,7 @@
   if (!Array.isArray(raw)) { raw = []; }
   var csrf = '';
   try { csrf = document.body.getAttribute('data-csrf') || ''; } catch (e) { /* Harness */ }
+  var pageId = parseInt(editor.getAttribute('data-page-id') || '0', 10) || 0;
   var status = null;
   var dirty = false;
 
@@ -1729,7 +1730,20 @@
     status.textContent = msg;
     status.className = 'ibook-status' + (isErr ? ' ibook-status-err' : '');
   }
-  function markDirty() { dirty = true; }
+  /* Autospeichern (#67): Jede Aenderung plant einen speicherten POST nach
+   * kurzer Pause. Der Speichern-Knopf ist dafuer entfallen. */
+  var saveTimer = null;
+  function saveUrl() {
+    var a = (typeof saveform !== 'undefined' && saveform && saveform.getAttribute) ? (saveform.getAttribute('action') || '') : '';
+    if (a) { return a; }
+    return '/infobuecher/' + bookId + '/seite/' + pageId;
+  }
+  function markDirty() {
+    dirty = true;
+    if (saveTimer === null && typeof setTimeout === 'function') {
+      saveTimer = setTimeout(doSave, 900);
+    }
+  }
   function mediaUrl(id) { return '/infobuecher/medium/' + id; }
   function num(v, d) { var p = Math.pow(10, d || 2); return Math.round((v || 0) * p) / p; }
   function clampN(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -1856,6 +1870,12 @@
       }
     }
   }
+  /* YouTube-Video-Nummer aus allen gaengigen Linkformen (#67), dafuer gibt
+   * es ohne API und ohne Cookies das Vorschaubild von i.ytimg.com. */
+  function ytThumbFor(u) {
+    var m = /(?:youtube\.com\/(?:watch\?[^#]*v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/.exec(String(u || ''));
+    return m ? ('https://i.ytimg.com/vi/' + m[1] + '/hqdefault.jpg') : '';
+  }
 
   /* ---------- Elemente aufbauen ---------- */
   /* Textfeld-Hoehe folgt dem Text (#66): kein manuelles Ziehen mehr, das
@@ -1868,66 +1888,127 @@
       if (h > 0) { ta.style.height = h + 'px'; }
     } catch (e) { /* Harness ohne Layout */ }
   }
+  /* ---------- Unendliche Seitenhoehe (#67): Die Flaeche waechst mit,
+   * sobald ein Objekt den unteren Rand ueberschreitet. Alle Objekte
+   * behalten ihre Position (Prozentkoordinaten skalierten bisher schon
+   * mit, der Rand unten kommt schlicht dazu). ---------- */
+  function updateStageStyle() {
+    stage.setAttribute('style', 'aspect-ratio:' + block.w + '/' + Math.max(1, Math.round(block.h)));
+    if (overlay.width !== block.w || overlay.height !== Math.round(block.h)) {
+      try { overlay.height = Math.max(1, Math.round(block.h)); overlay.width = block.w; } catch (eOv) { /* Harness */ }
+    }
+  }
+  function itemsBottom() {
+    var bottom = 0;
+    block.items.forEach(function (it) {
+      var h;
+      if (it.kind === 'image' || it.kind === 'ink' || it.kind === 'video') { h = it.h || 100; }
+      else if (it.kind === 'embed') { h = 130; }
+      else if (it.kind === 'audio') { h = 80; }
+      else { h = 80; } /* Textfeld: Inhalt wachst mit */
+      bottom = Math.max(bottom, (it.y || 0) + h);
+    });
+    return bottom;
+  }
+  function relayoutAll() {
+    for (var i = 0; i < itemDivs.length; i++) {
+      if (itemDivs[i] && block.items[i]) { styleItem(itemDivs[i], block.items[i]); }
+    }
+  }
+  function growStage() {
+    var need = Math.ceil(itemsBottom()) + 80;
+    if (need > block.h) {
+      block.h = need;
+      updateStageStyle();
+      relayoutAll();
+    }
+  }
+  var dragActive = false;
   function attachMove(handle, item, div) {
     handle.addEventListener('pointerdown', function (ev) {
-      if (mode !== 'select') { return; }
+      if (mode !== 'select' || dragActive) { return; }
       if (ev && ev.__icvDragging) { return; } /* nur ein Drag pro Klick (#66) */
       /* Ohne Koordinaten (Test-Harness, synthetische Events) kein Drag-Start:
        * Der offene Handler wuerde spaetere echte Moves mit NaN vergiften. */
       if (typeof ev.clientX !== 'number' || typeof ev.clientY !== 'number') { return; }
       if (ev) { ev.__icvDragging = true; }
+      dragActive = true; /* waehrend des Drags keine andere Auswahl (#67) */
       if (ev.preventDefault) { ev.preventDefault(); }
-      var rect = stageRect();
       var sx = ev.clientX, sy = ev.clientY, ox = item.x, oy = item.y;
       function onMove(ev2) {
         if (typeof ev2.clientX !== 'number' || typeof ev2.clientY !== 'number') { return; }
+        var rect = stageRect(); /* frisch: die Flaeche kann waachsen (#67) */
         item.x = clampN(ox + (ev2.clientX - sx) * (block.w / (rect.width || block.w)), 0, Math.max(0, block.w - 24));
-        item.y = clampN(oy + (ev2.clientY - sy) * (block.h / (rect.height || block.h)), 0, Math.max(0, block.h - 24));
+        item.y = clampN(oy + (ev2.clientY - sy) * (block.h / (rect.height || block.h)), 0, 99999);
         styleItem(div, item);
+        growStage(); /* unteren Rand erreicht: Flaeche waechst mit (#67) */
       }
       function onUp() {
+        dragActive = false;
         if (handle.removeEventListener) {
           handle.removeEventListener('pointermove', onMove);
           handle.removeEventListener('pointerup', onUp);
+          handle.removeEventListener('pointercancel', onUp);
         }
         collect(); markDirty();
       }
       try { if (handle.setPointerCapture) { handle.setPointerCapture(ev.pointerId); } } catch (e) { /* aeltere Browser */ }
       handle.addEventListener('pointermove', onMove);
       handle.addEventListener('pointerup', onUp);
+      handle.addEventListener('pointercancel', onUp);
     });
   }
-  function attachResize(handle, item, div) {
+  /* Skalieren ueber alle vier Ecken (#67): corner ist 'nw'/'ne'/'sw'/'se',
+   * die gegenueberliegende Ecke bleibt als Anker fix. Proportional bei
+   * Bild, Strich und Video, nur Breite bei Text, Einbettung und Audio. */
+  function attachResize(handle, item, div, corner) {
     handle.addEventListener('pointerdown', function (ev) {
-      if (mode !== 'select') { return; }
+      if (mode !== 'select' || dragActive) { return; }
+      if (ev && ev.__icvDragging) { return; }
       /* Ohne Koordinaten (Test-Harness, synthetische Events) kein Resize-Start. */
       if (typeof ev.clientX !== 'number' || typeof ev.clientY !== 'number') { return; }
+      if (ev) { ev.__icvDragging = true; }
+      dragActive = true;
       if (ev.preventDefault) { ev.preventDefault(); }
-      var rect = stageRect();
-      var sx = ev.clientX, sy = ev.clientY, ow = item.w, oh = item.h || 0;
+      var sx = ev.clientX, sy = ev.clientY;
+      var ox = item.x, oy = item.y, ow = item.w, oh = item.h || 0;
       var prop = item.kind === 'image' || item.kind === 'ink' || item.kind === 'video';
+      var growW = corner.indexOf('e') >= 0;  /* Ecke rechts: w wachst */
+      var growN = corner.indexOf('n') >= 0;  /* Ecke oben: h wachst nach oben */
       function onMove(ev2) {
         if (typeof ev2.clientX !== 'number' || typeof ev2.clientY !== 'number') { return; }
-        var dw = (ev2.clientX - sx) * (block.w / (rect.width || block.w));
+        var rect = stageRect();
+        var dx = (ev2.clientX - sx) * (block.w / (rect.width || block.w));
+        var nw = clampN(growW ? ow + dx : ow - dx, 24, block.w);
         if (prop) {
-          var f = ow > 0 ? Math.max(0.05, (ow + dw) / ow) : 1;
-          item.w = clampN(ow * f, 24, block.w);
-          item.h = clampN(oh * f, 18, block.h);
+          var f = ow > 0 ? nw / ow : 1;
+          var nh = clampN(oh * f, 18, 99999);
+          item.w = nw;
+          item.h = oh > 0 ? nh : oh;
+          if (corner === 'nw') { item.x = (ox + ow) - nw; item.y = (oy + oh) - (oh > 0 ? nh : oh); }
+          else if (corner === 'ne') { item.x = ox; item.y = (oy + oh) - (oh > 0 ? nh : oh); }
+          else if (corner === 'sw') { item.x = (ox + ow) - nw; item.y = oy; }
+          else { item.x = ox; item.y = oy; }
         } else {
-          item.w = clampN(ow + dw, 60, block.w);
+          item.w = clampN(nw, 60, block.w);
+          if (!growW) { item.x = (ox + ow) - item.w; }
         }
         styleItem(div, item);
+        growStage();
       }
       function onUp() {
+        dragActive = false;
         if (handle.removeEventListener) {
           handle.removeEventListener('pointermove', onMove);
           handle.removeEventListener('pointerup', onUp);
+          handle.removeEventListener('pointercancel', onUp);
         }
         collect(); markDirty();
       }
       try { if (handle.setPointerCapture) { handle.setPointerCapture(ev.pointerId); } } catch (e) { /* aeltere Browser */ }
       handle.addEventListener('pointermove', onMove);
       handle.addEventListener('pointerup', onUp);
+      handle.addEventListener('pointercancel', onUp);
     });
   }
   function buildItem(item) {
@@ -1961,19 +2042,38 @@
     } else if (item.kind === 'ink') {
       div.appendChild(buildInkSvg(item));
     } else if (item.kind === 'embed') {
+      /* YouTube-Vorschau (#67): Thumbnail direkt aus der URL, ohne API. */
+      var yt = ytThumbFor(item.url);
+      if (yt) {
+        var th = el('img', 'icv-embed-thumb');
+        th.setAttribute('src', yt);
+        th.setAttribute('alt', 'Vorschau');
+        div.appendChild(th);
+      }
       div.appendChild(el('div', 'icv-ph', '🔗 ' + ((item.url || '').indexOf('learningapps') >= 0 ? 'LearningApps' : (item.url || '').indexOf('youtube') >= 0 ? 'YouTube' : 'Einbettung')));
       div.appendChild(el('div', 'muted icv-ph-sub', (item.title ? item.title + ' · ' : '') + (item.url || 'Adresse in der Leiste oben eingeben (YouTube oder LearningApps)')));
     } else if (item.kind === 'audio') {
       div.appendChild(el('div', 'icv-ph', '🔊 Audio'));
       div.appendChild(el('div', 'muted icv-ph-sub', (item.name || 'Audio') + ' · im Lesemodus abspielbar'));
     } else if (item.kind === 'video') {
-      div.appendChild(el('div', 'icv-ph', '🎞 Video'));
+      /* Erster Frame als Vorschau (#67): preload=metadata holt das Standbild,
+       * pointer-events: none (CSS) haelt Ziehen und Skalieren frei. */
+      var vid = el('video', 'icv-video-preview');
+      vid.setAttribute('src', mediaUrl(item.media));
+      vid.setAttribute('preload', 'metadata');
+      vid.setAttribute('muted', 'muted');
+      vid.setAttribute('playsinline', '');
+      div.appendChild(vid);
       div.appendChild(el('div', 'muted icv-ph-sub', (item.name || 'Video') + ' · im Lesemodus abspielbar'));
     }
-    var rs = el('div', 'icv-rs');
-    rs.title = 'Ecke ziehen zum Skalieren';
-    attachResize(rs, item, div);
-    div.appendChild(rs);
+    /* Vier Ecken zum Skalieren (#67), sichtbar nur bei Auswahl (CSS). */
+    var corners = ['nw', 'ne', 'sw', 'se'];
+    for (var ci = 0; ci < corners.length; ci++) {
+      var rs = el('div', 'icv-rs icv-rs-' + corners[ci]);
+      rs.title = 'Ecke ziehen zum Skalieren';
+      attachResize(rs, item, div, corners[ci]);
+      div.appendChild(rs);
+    }
     /* Loeschen-Knopf am Element (#66): Sichtbar bei Auswahl (CSS), entfernt
      * das Element direkt - bisher war Loeschen nur ueber die Symbolleiste
      * moeglich und die Entf-Taste tat gar nichts. */
@@ -1986,7 +2086,9 @@
     });
     div.appendChild(del);
     div.addEventListener('pointerdown', function () {
-      if (mode === 'select' && sel !== item) { selectItem(item); }
+      /* Waehrend eines laufenden Drags keine neue Auswahl (#67): Erst wenn
+       * das Objekt wieder liegt, ist die Flaeche frei. */
+      if (mode === 'select' && !dragActive && sel !== item) { selectItem(item); }
     });
     /* Ganze Fläche als Griff (#66): Striche, Bilder, Audio, Video und
      * Einbettungen lassen sich ueberall greifen. Textfelder weiter nur
@@ -2213,6 +2315,32 @@
   embBtn.addEventListener('click', function () { addEmbedAt(block.w / 2 - 240, block.h / 2 - 40); });
   toolbar.appendChild(embBtn);
   toolbar.appendChild(ctxBar);
+  /* Flaechenhoehe (#67): nach unten wachst automatisch, hier geht es
+   * manuell: groesser immer, kleiner nur bis knapp unter das unterste
+   * Element (Minimum 500). */
+  var growBtn = el('button', 'btn btn-ghost', '⬇️ Fläche +');
+  growBtn.type = 'button';
+  growBtn.title = 'Fläche um 300 vergrößern';
+  growBtn.setAttribute('data-icv-grow', '1');
+  growBtn.addEventListener('click', function () {
+    block.h = Math.ceil(block.h) + 300;
+    updateStageStyle();
+    relayoutAll();
+    collect(); markDirty();
+  });
+  toolbar.appendChild(growBtn);
+  var shrinkBtn = el('button', 'btn btn-ghost', '⬆️ Fläche −');
+  shrinkBtn.type = 'button';
+  shrinkBtn.title = 'Fläche verkleinern, maximal bis zum untersten Element';
+  shrinkBtn.setAttribute('data-icv-shrink', '1');
+  shrinkBtn.addEventListener('click', function () {
+    var min = Math.max(500, Math.ceil(itemsBottom()) + 60);
+    block.h = Math.max(min, Math.ceil(block.h) - 300);
+    updateStageStyle();
+    relayoutAll();
+    collect(); markDirty();
+  });
+  toolbar.appendChild(shrinkBtn);
   var delBtn = el('button', 'btn btn-danger icv-delbtn', '🗑'); delBtn.type = 'button';
   delBtn.title = 'Ausgewähltes Element entfernen';
   delBtn.addEventListener('click', function () { if (sel) { removeItem(sel); } });
@@ -2305,6 +2433,7 @@
     stroke = null;
     clearOverlay();
     renderStage(); /* Strich sofort sichtbar, selectItem baut das DOM nicht mehr neu (#66) */
+    growStage(); /* unter den Rand gezeichnet: Flaeche waechst mit (#67) */
     selectItem(item);
     collect(); markDirty();
   }
@@ -2384,7 +2513,7 @@
     addTextAt(p.x - 170, p.y - 14);
   });
   stage.addEventListener('pointerdown', function (ev) {
-    if (mode !== 'select') { return; }
+    if (mode !== 'select' || dragActive) { return; }
     if (ev.target && ev.target !== stage) { return; }
     deselect();
   });
@@ -2438,13 +2567,72 @@
   }
   var saveform = document.getElementById('ibook-saveform');
   if (saveform) {
+    /* Fallback, falls doch einmal per Enter abgeschickt wird (#67). */
     saveform.addEventListener('submit', function () { collect(); dirty = false; });
   }
+  var titleInput = document.getElementById('ibook-title');
+  if (titleInput) { titleInput.addEventListener('input', markDirty); }
+  /* Autospeichern (#67): kurze Pause nach der letzten Aenderung, dann POST
+   * als urlencoded-Body (kein FormData-Konstrukt am Fake-DOM noetig). Der
+   * Server erkennt den Autosave am Header und antwortet JSON statt Redirect. */
+  function doSave() {
+    saveTimer = null;
+    if (!dirty) { return; }
+    collect();
+    var params = new URLSearchParams();
+    params.append('csrf', csrf);
+    params.append('title', titleInput && titleInput.value ? String(titleInput.value) : '');
+    var jsonIn = document.getElementById('ibook-blocks-json');
+    params.append('blocks', jsonIn ? String(jsonIn.value) : '[]');
+    try {
+      fetch(saveUrl(), {
+        method: 'POST',
+        headers: { 'X-IC-Autosave': '1', 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data && data.ok) {
+            dirty = false;
+            say('✓ Automatisch gespeichert' + (data.saved_at ? ' (' + data.saved_at + ')' : ''));
+            var meta = document.getElementById('ibook-page-meta');
+            if (meta && data.saved_at) {
+              var t = String(meta.textContent || '');
+              var cut = t.indexOf('Letzte Änderung');
+              if (cut >= 0) { meta.textContent = t.slice(0, cut) + 'Letzte Änderung: ' + data.saved_at; }
+            }
+          } else {
+            say('Speichern fehlgeschlagen: ' + ((data && data.error) || 'unbekannter Fehler'), true);
+          }
+        })
+        .catch(function (err) { say('Speichern fehlgeschlagen: ' + err, true); });
+    } catch (eSave) {
+      /* Im Notfall ohne Antwort abfeuern: Hauptsache die Daten kommen an. */
+      try {
+        if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+          navigator.sendBeacon(saveUrl(), params.toString());
+          dirty = false;
+        }
+      } catch (eB) { /* nichts mehr zu retten */ }
+    }
+  }
   if (typeof window !== 'undefined' && window.addEventListener) {
-    window.addEventListener('beforeunload', function (ev) {
+    window.addEventListener('beforeunload', function () {
+      /* Offene Aenderungen gehen beim Verlassen nicht verloren (#67):
+       * sendBeacon schreibt sie noch weg, ohne die Navigation aufzuhalten. */
       if (!dirty) { return; }
-      if (ev.preventDefault) { ev.preventDefault(); }
-      ev.returnValue = '';
+      collect();
+      try {
+        if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+          var params = new URLSearchParams();
+          params.append('csrf', csrf);
+          params.append('title', titleInput && titleInput.value ? String(titleInput.value) : '');
+          var jsonIn = document.getElementById('ibook-blocks-json');
+          params.append('blocks', jsonIn ? String(jsonIn.value) : '[]');
+          navigator.sendBeacon(saveUrl(), params.toString());
+          dirty = false;
+        }
+      } catch (eB) { /* Navigation darf nie haengen bleiben */ }
     });
   }
 

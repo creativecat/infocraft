@@ -311,6 +311,11 @@ final class InfoBookController
             redirect('/infobuecher');
         }
         $canWrite = self::canWriteSection($section, $user);
+        /* #67: ?lesen=1 zeigt Bearbeiterinnen die eigene Seite im Lesemodus. */
+        $preview = $canWrite && (int) ($_GET['lesen'] ?? 0) === 1;
+        if ($preview) {
+            $canWrite = false;
+        }
         $blocks = InfoBook::pageBlocks($page);
         foreach ($blocks as $i => $block) {
             $blocks[$i]['html'] = self::renderBlock($block);
@@ -325,6 +330,7 @@ final class InfoBookController
             'blocks' => $blocks,
             'media' => $media,
             'canWrite' => $canWrite,
+            'preview' => $preview,
             'isTeacher' => Auth::isTeacher(),
             'user' => $user,
         ]);
@@ -358,6 +364,12 @@ final class InfoBookController
             $blocks = [];
         }
         InfoBook::savePage((int) $page['id'], $title, $blocks);
+        /* #67: Autospeichern aus dem Editor antwortet mit JSON statt Redirect. */
+        if (($_SERVER['HTTP_X_IC_AUTOSAVE'] ?? '') === '1') {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => true, 'saved_at' => date('H:i')]);
+            return;
+        }
         flash('success', 'Seite gespeichert.');
         redirect('/infobuecher/' . $book->id . '/seite/' . (int) $page['id']);
     }

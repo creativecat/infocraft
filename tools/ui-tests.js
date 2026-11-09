@@ -1147,10 +1147,13 @@ setTimeout(function () {
               ibDoc.body.setAttribute('data-csrf', 'csrf-t40');
               var ibEditor = new FakeEl('div');
               ibEditor.setAttribute('data-book-id', '77');
+              ibEditor.setAttribute('data-page-id', '42');
               ibEditor.setAttribute('data-blocks', '[]');
               ibDoc.register(ibEditor, 'ibook-editor');
               ibDoc.register(new FakeEl('input'), 'ibook-blocks-json');
-              ibDoc.register(new FakeEl('form'), 'ibook-saveform');
+              var ibSaveForm = new FakeEl('form');
+              ibSaveForm.setAttribute('action', '/infobuecher/77/seite/42');
+              ibDoc.register(ibSaveForm, 'ibook-saveform');
               var ibookUrls = [];
               global.fetch = function (url) {
                 ibookUrls.push(url);
@@ -1316,6 +1319,86 @@ setTimeout(function () {
                 var ibStroke66b = ibStage.querySelector('.icv-stroke');
                 ok(ibStroke66b !== null && ibStroke66b.style.left === '21.25%', 'T46b Strich laesst sich an jeder Stelle seiner Flaeche anfassen (21.25%)');
 
+                /* T47 (#67): Waehrend eines Drags duerfen Klicks auf andere
+                 * Objekte die Auswahl NICHT wechseln - erst wenn das Objekt
+                 * wieder liegt, ist die Flaeche frei. */
+                var ibImgDiv67 = ibStage.querySelector('.icv-image');
+                ok(ibImgDiv67 !== null, 'T47a Bild liegt vor dem Drag-Guard-Test auf der Flaeche');
+                if (ibStroke66b) { ibStroke66b.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 70 }); }
+                if (ibImgDiv67) { ibImgDiv67.dispatch('pointerdown', { target: ibImgDiv67 }); }
+                ok(ibImgDiv67 !== null && ibStroke66b.classList.contains('icv-selected') && !ibImgDiv67.classList.contains('icv-selected'), 'T47 waehrend des Drags bleibt die Auswahl beim gezogenen Objekt (Klick aufs Bild waehlt nicht um)');
+                if (ibStroke66b) { ibStroke66b.dispatch('pointerup', { pointerId: 70 }); }
+                ok(ibImgDiv67 !== null && !ibImgDiv67.classList.contains('icv-selected'), 'T47b nach dem Ablegen ist immer noch nichts anderes ausgewaehlt');
+
+                /* T48 (#67): Vier Eck-Handles statt randloser Skalier-Bereich,
+                 * proportionales Skalieren von allen Ecken mit fester Anker-Ecke. */
+                if (ibImgDiv67) { ibImgDiv67.dispatch('pointerdown', { target: ibImgDiv67 }); }
+                var rsCount67 = ibImgDiv67 ? ibImgDiv67.querySelectorAll('.icv-rs').length : -1;
+                ok(rsCount67 === 4, 'T48a das ausgewaehlte Bild hat genau vier Eck-Handles (nur bei Auswahl sichtbar, CSS)');
+                var rsSe67 = ibImgDiv67 ? ibImgDiv67.querySelector('.icv-rs-se') : null;
+                var rsNw67 = ibImgDiv67 ? ibImgDiv67.querySelector('.icv-rs-nw') : null;
+                ok(rsSe67 !== null && rsNw67 !== null, 'T48b alle Ecken sind als eigene Dragzonen da (SE und NW)');
+                if (rsSe67) {
+                  rsSe67.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 71 });
+                  rsSe67.dispatch('pointermove', { clientX: 100, clientY: 75, pointerId: 71 });
+                  rsSe67.dispatch('pointerup', { pointerId: 71 });
+                }
+                ok(ibImgDiv67 !== null && ibImgDiv67.style.width === '32.5%' && ibImgDiv67.style.height === '39%', 'T48c SE-Ecke vergroessert proportional (320x240 wird 520x390)');
+                if (rsNw67) {
+                  rsNw67.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 72 });
+                  rsNw67.dispatch('pointermove', { clientX: -100, clientY: -75, pointerId: 72 });
+                  rsNw67.dispatch('pointerup', { pointerId: 72 });
+                }
+                ok(ibImgDiv67 !== null && ibImgDiv67.style.left === '27.5%' && ibImgDiv67.style.top === '23%' && ibImgDiv67.style.width === '45%', 'T48d NW-Ecke skaliert mit fester Anker-Ecke unten rechts (Position laeuft mit)');
+                var cv48 = ibCollect();
+                var img48 = cv48 && cv48.items ? cv48.items.filter(function (it) { return it.kind === 'image'; })[0] : null;
+                ok(img48 && img48.w === 720 && img48.h === 540 && img48.x === 440 && img48.y === 230, 'T48e die skalierte Groesse und Position werden mit der Seite serialisiert');
+
+                /* T51 (#67): Die Flaeche wächst automatisch mit, sobald ein
+                 * Objekt nach unten gezogen wird, und laesst sich manuell
+                 * vergroessern bzw. bis knapp unter das unterste Element
+                 * verkleinern. */
+                var stroke51 = ibStage.querySelector('.icv-stroke');
+                ok(stroke51 !== null, 'T51a Strich liegt vor dem Flaechen-Test auf der Flaeche');
+                if (stroke51) {
+                  stroke51.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 73 });
+                  stroke51.dispatch('pointermove', { clientX: 160, clientY: 900, pointerId: 73 });
+                  stroke51.dispatch('pointerup', { pointerId: 73 });
+                }
+                ok(ibStage.getAttribute('style').indexOf('1600/2040') !== -1, 'T51 ein Objekt unten angefasst laesst die Flaeche automatisch mitwachsen (1000 wird 2040)');
+                ibDoc.body.querySelector('[data-icv-shrink]').dispatch('click');
+                ok(ibStage.getAttribute('style').indexOf('1600/2020') !== -1, 'T51b verkleinern stoppt knapp unter dem untersten Element (Minimum 2020)');
+                ibDoc.body.querySelector('[data-icv-grow]').dispatch('click');
+                ok(ibStage.getAttribute('style').indexOf('1600/2320') !== -1 && ibInk.height === 2320, 'T51c vergroessern schlaegt 300 dazu, die Zeichenebene wächst mit (2320)');
+
+                /* T50 (#67): Vorschau fuer eingebettete Videos (erster Frame)
+                 * und YouTube-Einbettungen (Thumbnail aus der URL). */
+                var appPath50 = require.resolve('../public/assets/js/app.js');
+                delete require.cache[appPath50];
+                var ibDoc2 = new FakeDoc();
+                ibDoc2.documentElement = new FakeEl('html');
+                ibDoc2.body.setAttribute('data-csrf', 'csrf-t50');
+                var ibEditor2 = new FakeEl('div');
+                ibEditor2.setAttribute('data-book-id', '77');
+                ibEditor2.setAttribute('data-page-id', '42');
+                ibEditor2.setAttribute('data-blocks', JSON.stringify([{ type: 'canvas', w: 1600, h: 1000, items: [
+                  { kind: 'video', media: 11, name: 'clip.mp4', x: 100, y: 100, w: 480, h: 270 },
+                  { kind: 'embed', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', title: 'Demo', x: 100, y: 500, w: 480 }
+                ] }]));
+                ibDoc2.register(ibEditor2, 'ibook-editor');
+                ibDoc2.register(new FakeEl('input'), 'ibook-blocks-json');
+                var ibForm2 = new FakeEl('form');
+                ibForm2.setAttribute('action', '/infobuecher/77/seite/42');
+                ibDoc2.register(ibForm2, 'ibook-saveform');
+                var savedDoc50 = global.document;
+                global.document = ibDoc2;
+                require(appPath50);
+                var vid50 = ibDoc2.body.querySelector('video.icv-video-preview');
+                ok(vid50 !== null && vid50.getAttribute('src') === '/infobuecher/medium/11', 'T50a eingebettetes Video zeigt seinen ersten Frame als Vorschau (preload=metadata)');
+                var yt50 = ibDoc2.body.querySelector('img.icv-embed-thumb');
+                ok(yt50 !== null && yt50.getAttribute('src') === 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', 'T50b YouTube-Einbettung zeigt das Vorschaubild direkt aus der Video-Nummer der URL');
+                global.document = savedDoc50;
+
                 /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */
                 var NL41 = String.fromCharCode(10);
                 replIn.value = ['a', 'b', 'c', 'd', 'e', 'f'].join(NL41);
@@ -1360,9 +1443,18 @@ setTimeout(function () {
                 ok(dbOut42.textContent.indexOf('Heft') !== -1, 'T42c Abfrage ausfuehren liefert nach dem Boot die Zeilen (Seed geladen)');
                 global.document = savedDoc42;
 
-                console.log('');
-                if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }
-                else { console.log(failures.length + ' UI-Tests fehlgeschlagen.'); process.exit(1); }
+                /* T52 (#67): Autospeichern. Der 900ms-Timer des Editors feuert
+                 * erst nach diesem Callback, deshalb sitzt die Pruefung (und
+                 * die Zusammenfassung) eine setTimeout-Ebene tiefer. */
+                setTimeout(function () {
+                  ok(ibookUrls.indexOf('/infobuecher/77/seite/42') !== -1, 'T52 jede Aenderung speichert sich von selbst (POST auf die Seite, ohne Speichern-Knopf)');
+                  var ibStatus52 = ibDoc.body.querySelector('.ibook-status');
+                  ok(ibStatus52 !== null && ibStatus52.textContent.indexOf('Automatisch gespeichert') !== -1, 'T52b der Editor meldet den automatischen Speichervorgang im Statusfeld');
+
+                  console.log('');
+                  if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }
+                  else { console.log(failures.length + ' UI-Tests fehlgeschlagen.'); process.exit(1); }
+                }, 1200);
               }, 700);
 
             }, 700);

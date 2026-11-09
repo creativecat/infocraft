@@ -1404,7 +1404,21 @@ span.hlwrap { display: block; }
 .ibook-page-title { font-weight: 600; color: var(--text); }
 .ibook-hero-compact h1 { margin-bottom: 2px; }
 .ibook-newsection, .ibook-newpage { margin: 0; }
-.ibook-topnav { margin-bottom: 8px; }
+.ibook-topnav { margin-bottom: 8px; justify-content: flex-start; }
+/* Kopfzeile (#67): Zurueck ganz links, rechts Vorschau und das kleine
+ * aufklappbare "An Klasse verteilen" statt des grossen Panels. */
+.ibook-topnav-right { margin-left: auto; display: flex; gap: 10px; align-items: flex-start; }
+.ibook-distribute-details { position: relative; }
+.ibook-distribute-details summary { list-style: none; }
+.ibook-distribute-details summary::-webkit-details-marker { display: none; }
+.ibook-distribute-details summary { cursor: pointer; }
+.ibook-distribute-panel {
+    position: absolute; right: 0; top: calc(100% + 8px); z-index: 40;
+    width: min(460px, 92vw); background: var(--panel, #ffffff);
+    border: 1px solid var(--border, #d7dce5); border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18); padding: 12px; text-align: left;
+    display: flex; flex-direction: column; gap: 10px;
+}
 
 /* Seiteneditor: Bausteine untereinander, jede mit Kopfzeile und Steuerung */
 #ibook-editor { display: flex; flex-direction: column; gap: 14px; }
@@ -1596,17 +1610,36 @@ figure.iblock-image figcaption, figure.iblock-embed figcaption {
     visibility: hidden;
 }
 .icv-selected .icv-del, .icv-del:active, .icv-del:focus { visibility: visible; }
+/* Skalier-Ecken (#67): vier Punkte, sichtbar nur bei Auswahl - vorher waren
+ * die blauen Punkte immer da. Jede Ecke fixiert die gegenueberliegende. */
 .icv-rs {
-    position: absolute; right: -8px; bottom: -8px; width: 16px; height: 16px; z-index: 6;
-    background: #1d4ed8; border: 2px solid #ffffff; border-radius: 50%; cursor: nwse-resize;
-    touch-action: none;
+    position: absolute; width: 14px; height: 14px; z-index: 6;
+    background: #1d4ed8; border: 2px solid #ffffff; border-radius: 50%;
+    touch-action: none; visibility: hidden;
 }
+.icv-rs-nw { top: -8px; left: -8px; cursor: nwse-resize; }
+.icv-rs-ne { top: -8px; right: -8px; cursor: nesw-resize; }
+.icv-rs-sw { bottom: -8px; left: -8px; cursor: nesw-resize; }
+.icv-rs-se { bottom: -8px; right: -8px; cursor: nwse-resize; }
+.icv-selected .icv-rs, .icv-rs:active { visibility: visible; }
 .icv-inkcanvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
 .icv-stage.icv-mode-draw .icv-item { pointer-events: none; }
 .icv-stage.icv-mode-draw .icv-inkcanvas { pointer-events: auto; cursor: crosshair; }
 /* Strich-Objekte (#64): SVG fuellt die Bounding-Box, Klicks landen auf dem Item */
 .icv-stroke .icv-ink-svg, .icv-ink-svg { width: 100%; height: 100%; display: block; pointer-events: none; overflow: visible; }
 .icv-selected.icv-stroke { outline: 1px dashed #1d4ed8; outline-offset: 3px; }
+/* Vorschaubilder (#67): YouTube-Thumbnail ueber der Einbettung, erstes
+ * Frame beim Video. pointer-events: none haelt die Flaeche zum Ziehen frei. */
+.icv-embed-thumb {
+    width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block;
+    border-radius: 8px 8px 0 0; border: 1px solid var(--border, #d7dce5); border-bottom: 0;
+    pointer-events: none;
+}
+.icv-video-preview {
+    width: 100%; height: calc(100% - 22px); object-fit: cover; display: block;
+    border-radius: 8px 8px 0 0; background: #000000; pointer-events: none;
+}
+.icv-video .icv-ph-sub, .icv-embed .icv-ph-sub { padding: 2px 6px 4px; }
 /* Platzhalter im Editor: echte Player gibt es im Lesemodus */
 .icv-embed, .icv-audio, .icv-video {
     background: #f8fafc; border: 1px dashed var(--border, #d7dce5); border-radius: 10px;
