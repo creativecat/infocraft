@@ -920,6 +920,15 @@ final class InfoBookController
                 }
                 $inner .= $pre . '<div class="icv-item icv-video" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%;height:' . self::pct($item['h'] ?? 270, $h) . '%">'
                     . '<video controls preload="metadata" src="' . e(url('/infobuecher/medium/' . $mediaId)) . '"></video></div>';
+            } elseif ($kind === 'code') {
+                /* Code-Fenster mit Konsole (#75): Der Quelltext wird unveraendert
+                 * ausgegeben, ausgefuehrt wird er erst im Browser (window.IC_RUN_CODE
+                 * in app.js) - der Server fuehrt nie fremden Code aus. */
+                $code = (string) ($item['code'] ?? '');
+                $inner .= $pre . '<div class="icv-item icv-code" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 520, $w) . '%">'
+                    . '<pre class="code icv-code-src">' . e($code) . '</pre>'
+                    . '<button type="button" class="icv-code-run">▶ Ausführen</button>'
+                    . '<pre class="icv-code-out" aria-live="polite"></pre></div>';
             }
             /* Nur schliessen, wenn der Zweig wirklich etwas angehaengt hat. */
             if ($itemLink > 0 && strlen($inner) > $lenBefore) {

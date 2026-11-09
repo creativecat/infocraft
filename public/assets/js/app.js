@@ -1815,7 +1815,7 @@
   var selList = []; /* Mehrfachauswahl per Lasso (#68) */
   var PEN_COLORS = ['#1f2937', '#ef4444', '#3b82f6', '#059669', '#f59e0b'];
   var TEXT_BGS = [['', 'Gelb (Post-It)'], ['none', 'Ohne Hintergrund'], ['#ffffff', 'Weiß'], ['#eff6ff', 'Blau'], ['#f0fdf4', 'Grün'], ['#fef2f2', 'Rosé']];
-  var KIND_NAMES = { text: 'Textfeld', image: 'Bild', ink: 'Strich', embed: 'Einbettung', audio: 'Audio', video: 'Video' };
+  var KIND_NAMES = { text: 'Textfeld', image: 'Bild', ink: 'Strich', embed: 'Einbettung', audio: 'Audio', video: 'Video', code: 'Code-Fenster', db: 'Datenbank', diagram: 'Diagramm' };
 
   function pctOf(v, total) { return (Math.round((v || 0) / total * 10000) / 100) + '%'; }
   function stageRect() {
@@ -2099,6 +2099,21 @@
       vid.setAttribute('playsinline', '');
       div.appendChild(vid);
       div.appendChild(el('div', 'muted icv-ph-sub', (item.name || 'Video') + ' · im Lesemodus abspielbar'));
+    } else if (item.kind === 'code') {
+      /* Code-Fenster mit Konsole (#75): Quelltext editieren, Ausfuehren
+       * uebernimmt der globale .icv-code-run-Delegations-Listener unten. */
+      var cta = el('textarea', 'mono icv-code-ta');
+      cta.value = item.code || '';
+      cta.setAttribute('spellcheck', 'false');
+      cta.addEventListener('input', function () {
+        item.code = cta.value;
+        collect(); markDirty();
+      });
+      div.appendChild(cta);
+      var crun = el('button', 'icv-code-run', '▶ Ausführen');
+      crun.type = 'button';
+      div.appendChild(crun);
+      div.appendChild(el('pre', 'mono icv-code-out'));
     }
     refreshLinkBadge(div, item); /* verlinktes Element zeigt das Badge (#73) */
     /* Vier Ecken zum Skalieren (#67), sichtbar nur bei Auswahl (CSS). */
@@ -2465,6 +2480,10 @@
   embBtn.title = 'Einbettung einfügen: YouTube (ohne Cookies), LearningApps oder H5P';
   embBtn.addEventListener('click', function () { addEmbedAt(block.w / 2 - 240, block.h / 2 - 40); });
   toolbar.appendChild(embBtn);
+  var codeBtn = el('button', 'btn btn-ghost', '💻'); codeBtn.type = 'button';
+  codeBtn.title = 'Code-Fenster einfügen (JavaScript mit Konsole)';
+  codeBtn.addEventListener('click', function () { addCodeAt(block.w / 2 - 260, block.h / 2 - 90); });
+  toolbar.appendChild(codeBtn);
   toolbar.appendChild(ctxBar);
   /* Flaechenhoehe (#67): nach unten wachst automatisch, hier geht es
    * manuell: groesser immer, kleiner nur bis knapp unter das unterste
@@ -2547,6 +2566,15 @@
     renderStage(); /* sichtbar machen, selectItem baut das DOM nicht mehr neu (#66) */
     selectItem(item);
     if (ctxUrl && ctxUrl.focus) { ctxUrl.focus(); }
+    collect(); markDirty();
+  }
+  function addCodeAt(x, y) {
+    var item = { kind: 'code', code: '', x: clampN(x, 0, block.w - 120), y: clampN(y, 0, block.h - 60), w: 520 };
+    block.items.push(item);
+    renderStage();
+    selectItem(item);
+    var cta = selDiv && selDiv.querySelector ? selDiv.querySelector('.icv-code-ta') : null;
+    if (cta && cta.focus) { cta.focus(); }
     collect(); markDirty();
   }
 
@@ -2792,6 +2820,8 @@
         } else if (item.kind === 'embed') {
           e.url = item.url || '';
           e.title = item.title || '';
+        } else if (item.kind === 'code') {
+          e.code = item.code || '';
         } else {
           e.media = item.media || 0;
           e.name = item.name || '';
@@ -2906,4 +2936,60 @@
     try { ok = window.confirm(msg); } catch (e) { ok = true; /* Harness ohne confirm */ }
     if (!ok) { ev.preventDefault(); }
   }, true);
+})();
+
+
+/* InfoBook Code-Fenster (#75): Ausfuehren im Editor und im Lesemodus.
+ * window.IC_RUN_CODE ist der gemeinsame Kern, der Quelltext laeuft in einer
+ * new Function mit eigener console - alle Ausgaben landen im Konsole-Feld.
+ * Der Klick-Listener arbeitet per Delegation am document und greift damit
+ * beide Welten ab: die Textarea im Editor und das pre im Lesemodus. */
+(function () {
+  'use strict';
+  if (typeof window === 'undefined') { return; }
+  window.IC_RUN_CODE = function (outEl, src) {
+    if (!outEl) { return ''; }
+    var lines = [];
+    function fmt(v) {
+      if (typeof v === 'string') { return v; }
+      try { return JSON.stringify(v); } catch (e) { return String(v); }
+    }
+    var con = {
+      log: function () { lines.push(Array.prototype.map.call(arguments, fmt).join(' ')); },
+      error: function () { lines.push('✖ ' + Array.prototype.map.call(arguments, fmt).join(' ')); },
+      warn: function () { lines.push('⚠ ' + Array.prototype.map.call(arguments, fmt).join(' ')); }
+    };
+    try {
+      /* REPL-artig: eval liefert den Completion-Wert der letzten Anweisung,
+       * '6 * 7' zeigt also 42 als Ergebnis, ohne dass return noetig waere. */
+      var fn = new Function('console', '"use strict";return eval(' + JSON.stringify(String(src)) + ');');
+      var r = fn(con);
+      if (r !== undefined) { lines.push('⮐ ' + fmt(r)); }
+    } catch (e) {
+      lines.push('✖ ' + (e && e.message ? e.message : String(e)));
+    }
+    var text = lines.join('\n');
+    outEl.textContent = text;
+    return text;
+  };
+  if (typeof document === 'undefined' || !document.addEventListener) { return; }
+  document.addEventListener('click', function (ev) {
+    var node = ev.target;
+    var btn = null;
+    while (node) {
+      if (node.classList && node.classList.contains && node.classList.contains('icv-code-run')) { btn = node; break; }
+      node = node.parentNode;
+    }
+    if (!btn) { return; }
+    var box = btn.parentNode;
+    if (!box || !box.querySelector) { return; }
+    var srcEl = box.querySelector('.icv-code-ta') || box.querySelector('.icv-code-src');
+    var outEl = box.querySelector('.icv-code-out');
+    if (!outEl) { return; }
+    var src = '';
+    if (srcEl) {
+      src = String(srcEl.tagName === 'TEXTAREA' ? srcEl.value : (srcEl.textContent || ''));
+    }
+    window.IC_RUN_CODE(outEl, src);
+  });
 })();

@@ -1480,6 +1480,32 @@ setTimeout(function () {
                   ok(ibTxt56 !== null && ibTxt56.querySelector('.icv-linkbadge') === null, 'T56e auch das Badge verschwindet wieder');
                 }
 
+                /* T57 (#75): Code-Fenster mit Konsole. Einfuegen ueber den
+                 * Laptop-Knopf in der Leiste, Quelltext tippen, Ausfuehren
+                 * laeuft ueber die globale Delegation am document. */
+                var ibCodeBtn57 = null;
+                var ibBarBtns57 = ibBar.querySelectorAll('button');
+                for (var ci57 = 0; ci57 < ibBarBtns57.length; ci57++) {
+                  if (String(ibBarBtns57[ci57].title || '').indexOf('Code-Fenster') !== -1) { ibCodeBtn57 = ibBarBtns57[ci57]; }
+                }
+                ok(ibCodeBtn57 !== null && ibCodeBtn57.textOf() === '💻', 'T57 Code-Fenster-Knopf in der Leiste zeigt nur das Icon');
+                if (ibCodeBtn57) {
+                  ibCodeBtn57.dispatch('click');
+                  var ibCodeBox57 = ibStage.querySelector('.icv-code');
+                  ok(ibCodeBox57 !== null && ibCodeBox57.querySelector('.icv-code-ta') !== null && ibCodeBox57.querySelector('.icv-code-out') !== null, 'T57b das Code-Fenster hat Editor, Ausfuehren-Knopf und Konsole');
+                  if (ibCodeBox57) {
+                    var ibCodeTa57 = ibCodeBox57.querySelector('.icv-code-ta');
+                    ibCodeTa57.value = "console.log('Hallo InfoBook'); 6 * 7;";
+                    ibCodeTa57.dispatch('input');
+                    var cv57 = ibCollect();
+                    var t57 = cv57 && cv57.items ? cv57.items.filter(function (it) { return it.kind === 'code'; })[0] : null;
+                    ok(t57 && t57.code === "console.log('Hallo InfoBook'); 6 * 7;", 'T57c der Quelltext wird mit serialisiert');
+                    ibCodeBox57.querySelector('.icv-code-run').dispatch('click');
+                    var ibCodeOut57 = ibCodeBox57.querySelector('.icv-code-out');
+                    ok(ibCodeOut57 !== null && ibCodeOut57.textContent.indexOf('Hallo InfoBook') !== -1 && ibCodeOut57.textContent.indexOf('42') !== -1, 'T57d Ausfuehren schreibt console-Ausgaben und Ergebnis in die Konsole');
+                  }
+                }
+
                 /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */
                 var NL41 = String.fromCharCode(10);
                 replIn.value = ['a', 'b', 'c', 'd', 'e', 'f'].join(NL41);

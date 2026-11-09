@@ -1705,6 +1705,30 @@ a.icv-item-link:hover .icv-item { outline: 2px dashed #1d4ed8; outline-offset: 2
 }
 .icv-ph { font-size: 0.95rem; font-weight: 600; color: #1e293b; }
 .icv-ph-sub { font-size: 0.78rem; overflow-wrap: anywhere; }
+/* Code-Fenster mit Konsole (#75): Editor und Lesemodus */
+.icv-code {
+    display: flex; flex-direction: column; gap: 6px;
+    background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 10px;
+}
+.icv-code .icv-code-src {
+    margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;
+    font-family: var(--mono, ui-monospace, monospace); font-size: 0.85rem; color: #e2e8f0;
+}
+.icv-code .icv-code-ta {
+    width: 100%; min-height: 110px; box-sizing: border-box; resize: vertical;
+    background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px;
+    font-family: var(--mono, ui-monospace, monospace); font-size: 0.85rem; padding: 6px; outline: none;
+}
+.icv-code .icv-code-run {
+    align-self: flex-start; cursor: pointer; border: 1px solid #475569;
+    background: #334155; color: #e2e8f0; border-radius: 6px; padding: 3px 10px; font-size: 0.82rem;
+}
+.icv-code .icv-code-run:hover { background: #475569; }
+.icv-code .icv-code-out {
+    margin: 0; min-height: 20px; max-height: 220px; overflow: auto;
+    background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 6px;
+    font-family: var(--mono, ui-monospace, monospace); font-size: 0.82rem; white-space: pre-wrap;
+}
 /* Lesen/Präsentation: gleiche Geometrie, ohne Editor-Griffe */
 .icv-readonly .icv-ink { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
 .icv-readonly .icv-text { padding: 8px 10px; border-radius: 8px; }

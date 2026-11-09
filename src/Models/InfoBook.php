@@ -306,6 +306,21 @@ final class InfoBook
                 }
                 if ($link > 0) { $it['link'] = $link; }
                 $clean[] = $it;
+            } elseif ($kind === 'code') {
+                /* Code-Fenster mit Konsole (#75): Quelltext wird im Editor und
+                 * Lesemodus clientseitig ausgefuehrt, nie auf dem Server. */
+                $it = [
+                    'kind' => 'code',
+                    'code' => mb_substr((string) ($item['code'] ?? ''), 0, 20000),
+                    'x' => $left,
+                    'y' => $top,
+                    'w' => self::cvNum($item['w'] ?? 520, 120, $w),
+                ];
+                if ($grp > 0) {
+                    $it['g'] = $grp;
+                }
+                if ($link > 0) { $it['link'] = $link; }
+                $clean[] = $it;
             } elseif ($kind === 'audio' || $kind === 'video') {
                 $media = (int) ($item['media'] ?? 0);
                 if ($media <= 0) {
