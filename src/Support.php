@@ -22,7 +22,7 @@ function url(string $path = ''): string
  * Zeitstempel erhalten (rsync --times, Docker-Layer): Browser laden dann garantiert
  * die neue Datei statt einer alten Version aus dem Cache.
  */
-const ASSET_VERSION = '45.4';
+const ASSET_VERSION = '45.5';
 
 /**
  * Asset-URL mit Cache-Busting: haengt die Aenderungszeit der Datei als

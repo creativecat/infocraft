@@ -57,6 +57,8 @@ $router->post('/werkstatt/sql/entfernen', [SqlWorkshopController::class, 'revoke
 $router->get('/werkstatt/sql/{slug}', [SqlWorkshopController::class, 'workspace']);
 $router->post('/werkstatt/sql/{slug}', [SqlWorkshopController::class, 'query']);
 $router->post('/werkstatt/sql/{slug}/mission/{id}', [SqlWorkshopController::class, 'mission']);
+$router->get('/werkstatt/sql/{slug}/app', [SqlWorkshopController::class, 'appView']);
+$router->post('/werkstatt/sql/{slug}/app', [SqlWorkshopController::class, 'appAction']);
 
 // Code-Werkstatt
 $router->get('/werkstatt/code', [CodeController::class, 'index']);

@@ -552,12 +552,15 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
                 </div>
             </div>
             </div>
-            <div class="gfx-dock" id="gfx-dock" hidden>
-                <div class="gfx-dock-bar">
-                    <button class="btn btn-ghost gfx-dock-btn" id="java-gfx-hide" type="button" title="Grafik-Fenster schließen">✕ Schließen</button>
-                    <button class="btn btn-ghost gfx-dock-btn" id="java-gfx-open" type="button" title="Grafik-Fenster anzeigen: blendet das Grafik-Fenster wieder ein. Es öffnet sich auch automatisch, sobald dein Programm etwas zeichnet.">🎨 Anzeigen</button>
-                    <span class="muted gfx-dock-hint">Größe im Code festlegen: <code>new World(640, 480)</code> (Standard 800 × 600). Bei jedem ▶ Ausführen startet das Fenster leer.</span>
-                </div>
+        </div>
+        <?php /* Grafik-Fenster als eigene Zeile direkt unter der IDE (#52):
+               volle Breite unter Dateileiste, Editor und Konsole, unabhaengig
+               davon, wie hoch die linke Spalte ist. */ ?>
+        <div class="gfx-dock" id="gfx-dock" hidden>
+            <div class="gfx-dock-bar">
+                <button class="btn btn-ghost gfx-dock-btn" id="java-gfx-hide" type="button" title="Grafik-Fenster schließen">✕ Schließen</button>
+                <button class="btn btn-ghost gfx-dock-btn" id="java-gfx-open" type="button" title="Grafik-Fenster anzeigen: blendet das Grafik-Fenster wieder ein. Es öffnet sich auch automatisch, sobald dein Programm etwas zeichnet.">🎨 Anzeigen</button>
+                <span class="muted gfx-dock-hint">Größe im Code festlegen: <code>new World(640, 480)</code> (Standard 800 × 600). Bei jedem ▶ Ausführen startet das Fenster leer.</span>
             </div>
         </div>
     </div>

@@ -6,14 +6,15 @@
             <p class="muted"><?= e($template->description) ?></p>
         </div>
         <span class="pill" title="<?= $permission === 'read' ? 'Nur Leserechte: Du arbeitest an der gemeinsamen Datenbank, es wird keine eigene Kopie angelegt.' : 'Schreibrechte: Du arbeitest an deiner eigenen datensparsamen Kopie der Daten.' ?>"><?= e($permissionLabel) ?></span>
+        <?php if (in_array($template->slug, ['shop', 'instacraft'], true)): ?>
+        <a class="btn btn-ghost" href="<?= url('werkstatt/sql/' . e($template->slug) . '/app') ?>" title="Mobil-Frontend auf derselben Datenbank: Bestellungen, Likes und Kommentare landen in den Tabellen der Werkstatt - und umgekehrt.">📱 App-Ansicht</a>
+        <?php endif; ?>
     </div>
     <form method="post" action="<?= url('werkstatt/sql/' . $template->slug) ?>" class="form" id="sql-form">
         <?= csrf_field() ?>
         <label class="field">
             <span>SQL-Anweisung (Strg + Enter führt aus)</span>
-            <div class="hlwrap sql" data-hl="sql">
-                <div class="hlwrap" data-hl="sql" data-ac="sql"><textarea name="sql" rows="5" class="mono sql-input" data-tables="<?= e(implode(',', $sqlTableNames)) ?>" placeholder="SELECT * FROM ..."><?= e($lastSql) ?></textarea></div>
-            </div>
+            <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="sql" rows="5" class="mono sql-input" data-tables="<?= e(implode(',', $sqlTableNames)) ?>" placeholder="SELECT * FROM ..."><?= e($lastSql) ?></textarea></div>
         </label>
         <div class="btn-row"><button class="btn btn-primary" type="submit" title="Ausführen">▶</button></div>
     </form>
@@ -97,9 +98,7 @@
             <?= csrf_field() ?>
             <label class="field">
                 <span>Deine SQL-Anweisung<?= ($mission['kind'] ?? 'query') === 'action' ? ' (verändert die Daten, Schreibrechte nötig)' : '' ?></span>
-                <div class="hlwrap sql" data-hl="sql">
-                    <div class="hlwrap" data-hl="sql" data-ac="sql"><textarea name="mission_sql" rows="3" class="mono" placeholder="SELECT ..."></textarea></div>
-                </div>
+                <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="mission_sql" rows="3" class="mono" placeholder="SELECT ..."></textarea></div>
             </label>
             <div class="btn-row"><button class="btn btn-primary" type="submit" title="Prüfen">✅</button></div>
         </form>

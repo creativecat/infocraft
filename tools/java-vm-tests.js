@@ -1181,6 +1181,26 @@ t('ArcVererbung', {
   eq(r.output, '210.0' + NL, 'Vererbung von Arc mit move');
 });
 
+/* --- #50/#51: Konstruktor- und Parameter-Fehler mit Signatur --- */
+t('CtorOhneArgsWirftFehler', { 'Auto.java': 'public class Auto {' + NL + '    private String marke;' + NL + '    public Auto(String marke) { this.marke = marke; }' + NL + '}', 'Main.java': mainOf('        new Auto();') }, r => {
+  err1(r, 'runtime');
+  if (r.errors[0].message.indexOf('new Auto(...) mit 0 Argument(en)') === -1) { throw new Error('Meldung nennt new-Aufruf nicht: ' + r.errors[0].message); }
+  if (r.errors[0].message.indexOf('Auto(String marke)') === -1) { throw new Error('Signatur fehlt: ' + r.errors[0].message); }
+});
+t('CtorZuVieleArgsNenntSignatur', { 'Auto.java': 'public class Auto {' + NL + '    public Auto(String marke) { }' + NL + '}', 'Main.java': mainOf('        new Auto("A", 1);') }, r => {
+  err1(r, 'runtime');
+  if (r.errors[0].message.indexOf('Auto(String marke)') === -1) { throw new Error('Signatur fehlt: ' + r.errors[0].message); }
+});
+t('CtorDefaultOhneKonstruktorOk', { 'Auto.java': 'public class Auto {' + NL + '    public String marke;' + NL + '}', 'Main.java': mainOf('        Auto a = new Auto();' + NL + '        System.out.println(a.marke == null);') }, r => {
+  eq(r.ok, true, 'ok: ' + JSON.stringify(r.errors));
+  eq(r.output, 'true' + NL, 'Default-Konstruktor mit 0 Argumenten erlaubt');
+});
+t('MethodeFalscheArgsNenntSignatur', { 'Auto.java': 'public class Auto {' + NL + '    public void setzeMarke(String marke) { }' + NL + '}', 'Main.java': mainOf('        Auto a = new Auto();' + NL + '        a.setzeMarke();') }, r => {
+  err1(r, 'runtime');
+  var text = r.errors[0].message + ' ' + r.errors[0].hint;
+  if (text.indexOf('setzeMarke(String marke)') === -1) { throw new Error('erwartete Signatur fehlt: ' + text); }
+});
+
 console.log('');
 console.log(failed === 0 ? ('Alle ' + count + ' Tests bestanden.') : (failed + ' von ' + count + ' Tests fehlgeschlagen.'));
 process.exit(failed === 0 ? 0 : 1);
