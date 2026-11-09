@@ -706,7 +706,7 @@ jobs:
           curl -sS -L -o cdbopen2.html -b cookies5.txt -c cookies5.txt http://127.0.0.1:8080/werkstatt/code/$CDBPROJ
           grep -q "CREATE TABLE lehrkraefte" cdbopen2.html && CDB_SEEDUI_OK=1 || CDB_SEEDUI_OK=0
           grep -q "db-schema-table" cdbopen2.html && CDB_CARDS_OK=1 || CDB_CARDS_OK=0
-grep -q "<td>INT</td>" cdbopen2.html && CDB_TYPES_OK=1 || CDB_TYPES_OK=0
+          grep -q "<td>INT</td>" cdbopen2.html && CDB_TYPES_OK=1 || CDB_TYPES_OK=0
           grep -q "java-dbschema-static" cdbopen2.html && CDB_STATIC_OK=1 || CDB_STATIC_OK=0
           grep -q "db-console-details" cdbopen2.html && CDB_DETAILS_OK=1 || CDB_DETAILS_OK=0
           grep -q "datenbank/datei" cdbopen2.html && CDB_UPLFORM_OK=1 || CDB_UPLFORM_OK=0
@@ -718,7 +718,7 @@ grep -q "<td>INT</td>" cdbopen2.html && CDB_TYPES_OK=1 || CDB_TYPES_OK=0
           curl -sS -L -o cdbopen3.html -b cookies5.txt -c cookies5.txt http://127.0.0.1:8080/werkstatt/code/$CDBPROJ
           grep -q "ci_test" cdbopen3.html && CDBUP_UI_OK=1 || CDBUP_UI_OK=0
           grep -q "db-schema-table" cdbopen3.html && CDBUP_CARDS_OK=1 || CDBUP_CARDS_OK=0
-grep -q "<td>INT</td>" cdbopen3.html && CDBUP_TYPES_OK=1 || CDBUP_TYPES_OK=0
+          grep -q "<td>INT</td>" cdbopen3.html && CDBUP_TYPES_OK=1 || CDBUP_TYPES_OK=0
           CODE_CFOL=$(curl -sS -L -o cfol.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "name=CI Ordner" http://127.0.0.1:8080/werkstatt/code/ordner)
           CFOL=$(sqlite3 "$DB" "SELECT id FROM folders WHERE owner_id = $STEFAN AND name = 'CI Ordner'")
           CODE_CSUB=$(curl -sS -L -o csub.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "name=CI Unterordner" -d "parent_id=$CFOL" http://127.0.0.1:8080/werkstatt/code/ordner)
