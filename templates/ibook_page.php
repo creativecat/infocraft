@@ -179,3 +179,9 @@
 <?php if ($hasCode): ?>
 <script src="<?= asset_url('assets/js/java-vm.js') ?>"></script>
 <?php endif; ?>
+<?php /* #105: highlight.js nur laden, wenn Code- oder Diagramm-Fenster
+ * vorhanden sind - die Module haengen das Overlay selbst an (Java im
+ * Code-Fenster, Mermaid im Diagramm-Quelltext). */ ?>
+<?php if ($hasCode || $hasDiagram): ?>
+<script src="<?= vendor_asset('assets/vendor/highlight.min.js', 'https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.12.0/highlight.min.js', 100000) ?>"></script>
+<?php endif; ?>

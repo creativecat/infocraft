@@ -2,7 +2,7 @@
  * Wiederverwendbare Editor-Bausteine (#102) sind an window.* exportiert
  * und an allen Stellen (Werkstatt, InfoBook-Editor, Lesemodus, geteiltes
  * Diagramm) nur eingebunden, nicht doppelt implementiert:
- *   - IC_EDIT_TOOLS  .gutter(ta) .brackets(ta) .boostRead()
+ *   - IC_EDIT_TOOLS  .gutter(ta) .brackets(ta) .tabIndent(ta) .highlight(ta,lang) .boostRead()
  *                    .clsMembers(code)  (Attribute/Methoden einer Klasse)
  *   - IC_AUTOCOMPLETE.attach(ta, kind, extra) (java|mermaid|md|sql|...)
  *   - IC_RUN_CODE(outEl, src, lang, clsFiles), IC_DB_RUN, IC_RENDER_DIAGRAM
@@ -1698,7 +1698,16 @@
 
     ta.addEventListener('input', update);
     ta.addEventListener('keydown', function (e) {
-      if (matches.length === 0) { return; }
+      if (matches.length === 0) {
+        /* Tab ohne offenen Vorschlag (#103): Vorschub statt Fokus-Sprung,
+         * damit sich Tab in allen angeschlossenen Feldern gleich
+         * verhaelt wie im Werkstatt-Coding-Bereich. */
+        if (e && e.key === 'Tab' && window.IC_EDIT_TOOLS && window.IC_EDIT_TOOLS.tabIndent) {
+          if (e.preventDefault) { e.preventDefault(); }
+          window.IC_EDIT_TOOLS.tabIndent(ta);
+        }
+        return;
+      }
       if (e.key === 'ArrowDown') { e.preventDefault(); active = (active + 1) % matches.length; render(); ghost(); }
       else if (e.key === 'ArrowUp') { e.preventDefault(); active = active <= 0 ? matches.length - 1 : active - 1; render(); ghost(); }
       else if (e.key === 'Tab' || e.key === 'Enter') { e.preventDefault(); accept(active); }
@@ -1810,6 +1819,77 @@
         if (ev.preventDefault) { ev.preventDefault(); }
       }
     });
+  }
+
+  /* Tab-Vorschub (#103): Zwei Leerzeichen an der Cursor-Position; bei
+   * Auswahl ueber mehrere Zeilen wird jede betroffene Zeile eingerueckt.
+   * Feuert ein input-Event, damit Gutter, Highlighting und Sammeln
+   * (collect) mitlaufen. */
+  function tabIndent(ta) {
+    if (!ta) { return; }
+    var v = String(ta.value || '');
+    var pos = typeof ta.selectionStart === 'number' ? ta.selectionStart : v.length;
+    var end = typeof ta.selectionEnd === 'number' ? ta.selectionEnd : pos;
+    var ins = '  ';
+    if (end !== pos && v.slice(pos, end).indexOf('\n') !== -1) {
+      var s = pos - v.lastIndexOf('\n', pos - 1);
+      var start = pos - (s - 1);
+      var block = v.slice(start, end);
+      var shifted = block.replace(/^/mg, ins);
+      ta.value = v.slice(0, start) + shifted + v.slice(end);
+      var grow = shifted.length - block.length;
+      try {
+        if (ta.setSelectionRange) { ta.setSelectionRange(Math.min(pos + ins.length, start + shifted.length), end + grow); }
+        else { ta.selectionStart = pos + ins.length; ta.selectionEnd = end + grow; }
+      } catch (eSel) { /* ohne Auswahl-API harmlos */ }
+      fireInput(ta);
+      return;
+    }
+    ta.value = v.slice(0, pos) + ins + v.slice(end);
+    var caret = pos + ins.length;
+    try {
+      if (ta.setSelectionRange) { ta.setSelectionRange(caret, caret); }
+      else { ta.selectionStart = caret; ta.selectionEnd = caret; }
+    } catch (eSel2) { /* ohne Auswahl-API harmlos */ }
+    fireInput(ta);
+  }
+
+  /* Syntax-Highlighting-Overlay hinter dem Feld (#105): dieselbe
+   * highlight.js-Technik wie das hlwrap-Modul der Werkstatt, hier in der
+   * Geometrie des icv-edwrap (Gutter 48px, dunkler Code-Hintergrund).
+   * Ohne hljs oder ohne bekannte Sprache bleibt das Feld unangetastet. */
+  function highlight(ta, lang) {
+    if (!ta || !window.hljs || !window.hljs.getLanguage || !window.hljs.getLanguage(lang)) { return null; }
+    var wrap = ta.parentNode;
+    if (!wrap || !wrap.appendChild || ta.__icHl) { return null; }
+    ta.__icHl = true;
+    var pre = document.createElement('pre');
+    pre.className = 'icv-hl-pre';
+    var code = document.createElement('code');
+    code.className = 'language-' + lang;
+    pre.appendChild(code);
+    wrap.appendChild(pre);
+    if (wrap.classList && wrap.classList.add) { wrap.classList.add('hl-on'); }
+    var cur = lang;
+    var NL = '\n';
+    function render() {
+      try { code.innerHTML = window.hljs.highlight(String(ta.value || '') + NL, { language: cur }).value; }
+      catch (eH) { /* Renderfehler: Feld bleibt lesbar */ }
+      sync();
+    }
+    function sync() {
+      try { pre.scrollTop = ta.scrollTop; pre.scrollLeft = ta.scrollLeft; }
+      catch (eS) { /* ohne Scrollposition harmlos */ }
+    }
+    render();
+    ta.addEventListener('input', render);
+    ta.addEventListener('scroll', sync);
+    /* Sprachwechsel (Editor: Java/JavaScript/Python oben umstellbar). */
+    return { setLang: function (next) {
+      if (next && next !== cur && window.hljs.getLanguage(next)) {
+        cur = next; code.className = 'language-' + next; render();
+      }
+    } };
   }
 
   /* Zeilennummern links neben dem Feld, Scrollhoehe synchron. */
@@ -1933,6 +2013,7 @@
       }
       gutter(ta);
       brackets(ta);
+      highlight(ta, 'java');
       if (window.IC_AUTOCOMPLETE) { window.IC_AUTOCOMPLETE.attach(ta, 'java', extraFromClsFiles(clsFiles)); }
       wireReadCards(box, clsFiles);
     }
@@ -1941,12 +2022,13 @@
       var dta = diagTas[j];
       gutter(dta);
       brackets(dta);
+      highlight(dta, 'mermaid');
       if (window.IC_AUTOCOMPLETE) { window.IC_AUTOCOMPLETE.attach(dta, 'mermaid'); }
     }
   }
   try { boostRead(); } catch (eBoost) { /* Lesemodus ohne Felder: harmlos */ }
 
-  window.IC_EDIT_TOOLS = { gutter: gutter, brackets: brackets, boostRead: boostRead, clsMembers: clsMembersOf };
+  window.IC_EDIT_TOOLS = { gutter: gutter, brackets: brackets, tabIndent: tabIndent, highlight: highlight, boostRead: boostRead, clsMembers: clsMembersOf };
 })();
 
 /* =====================================================================
@@ -2389,9 +2471,13 @@
       }
       var clangVal = (item.lang === 'javascript' || item.lang === 'python') ? item.lang : 'java';
       clang.value = clangVal;
+      /* Syntax-Highlighting am Code-Fenster (#105); cta entsteht weiter
+       * unten, codeHl wird an der Gutter-Verdrahtung gesetzt. */
+      var codeHl = null;
       clang.addEventListener('change', function () {
         item.lang = clang.value;
         crun.setAttribute('data-lang', clang.value);
+        if (codeHl) { codeHl.setLang(clang.value); }
         collect(); markDirty();
       });
       cctl.appendChild(clang);
@@ -2559,7 +2645,14 @@
         acShow();
       });
       cta.addEventListener('keydown', function (ev) {
-        if (acItems.length === 0) { return; }
+        if (acItems.length === 0) {
+          /* Tab ohne Vorschlag (#103): Vorschub statt Fokus-Sprung. */
+          if (ev && ev.key === 'Tab' && window.IC_EDIT_TOOLS && window.IC_EDIT_TOOLS.tabIndent) {
+            if (ev.preventDefault) { ev.preventDefault(); }
+            window.IC_EDIT_TOOLS.tabIndent(cta);
+          }
+          return;
+        }
         var k = ev && ev.key ? ev.key : '';
         if (k === 'ArrowDown' || k === 'ArrowUp') {
           acSel = (acSel + (k === 'ArrowDown' ? 1 : -1) + acItems.length) % acItems.length;
@@ -2582,6 +2675,10 @@
        * am Code-Fenster des InfoBook-Editors, wie in der Werkstatt. */
       try {
         if (window.IC_EDIT_TOOLS) { window.IC_EDIT_TOOLS.gutter(cta); window.IC_EDIT_TOOLS.brackets(cta); }
+        /* Syntax-Highlighting (#105) */
+        if (window.IC_EDIT_TOOLS && window.IC_EDIT_TOOLS.highlight) {
+          codeHl = window.IC_EDIT_TOOLS.highlight(cta, clang.value || clangVal);
+        }
       } catch (eEd) { /* ohne Gutter laeuft das Feld trotzdem */ }
       var crun = el('button', 'icv-code-run', '▶ Ausführen');
       crun.type = 'button';
@@ -2721,6 +2818,7 @@
        * Vorschlaege auch am Diagramm-Quelltext im Editor. */
       try {
         if (window.IC_EDIT_TOOLS) { window.IC_EDIT_TOOLS.gutter(dgTa); window.IC_EDIT_TOOLS.brackets(dgTa); }
+        if (window.IC_EDIT_TOOLS && window.IC_EDIT_TOOLS.highlight) { window.IC_EDIT_TOOLS.highlight(dgTa, 'mermaid'); }
         if (window.IC_AUTOCOMPLETE) { window.IC_AUTOCOMPLETE.attach(dgTa, 'mermaid'); }
       } catch (eDg) { /* ohne Gutter laeuft das Feld trotzdem */ }
       var dgPrev = el('div', 'icv-diagram-prev');

@@ -2140,6 +2140,98 @@ setTimeout(function () {
                 ok(mem78 !== null && mem78.fields.length === 1 && mem78.fields[0].name === 'name', 'T78b der Baustein erkennt Attribute einer Klasse');
                 ok(mem78 !== null && mem78.methods.length === 1 && mem78.methods[0].name === 'fahren', 'T78c der Baustein erkennt Methoden einer Klasse');
 
+                /* T79 (#103): Tab-Verhalten vereinheitlicht. Ohne offenen
+                 * Vorschlag rueckt Tab um zwei Leerzeichen ein, statt den
+                 * Fokus zu verlieren; mit Vorschlag uebernimmt Tab wie bisher. */
+                roCodeTa.value = 'qq';
+                roCodeTa.selectionStart = 2;
+                roCodeTa.selectionEnd = 2;
+                roCodeTa.dispatch('input');
+                roCodeTa.dispatch('keydown', { key: 'Tab' });
+                ok(roCodeTa.value === 'qq  ', 'T79 Tab ohne Vorschlag fuegt im Lesemodus zwei Leerzeichen ein');
+                ok(roCodeTa.selectionStart === 4 && roCodeTa.selectionEnd === 4, 'T79b der Cursor steht nach dem Vorschub');
+                roCodeTa.value = 'Sys';
+                roCodeTa.selectionStart = 3;
+                roCodeTa.selectionEnd = 3;
+                roCodeTa.dispatch('input');
+                roCodeTa.dispatch('keydown', { key: 'Tab' });
+                ok(roCodeTa.value === 'System.out.println(', 'T79c Tab mit offenem Vorschlag uebernimmt weiterhin den Vorschlag');
+                /* Diagramm-Quelltext im geteilten Lesemodus: gleiche Regel. */
+                roSplitTa.value = 'zz';
+                roSplitTa.selectionStart = 2;
+                roSplitTa.selectionEnd = 2;
+                roSplitTa.dispatch('input');
+                roSplitTa.dispatch('keydown', { key: 'Tab' });
+                ok(roSplitTa.value === 'zz  ', 'T79d Tab ohne Vorschlag fuegt auch im Diagramm-Quelltext zwei Leerzeichen ein');
+                /* Auswahl ueber mehrere Zeilen: jede Zeile rueckt ein. */
+                var ta79 = new FakeEl('textarea');
+                ta79.value = 'a' + NLt + 'b';
+                ta79.selectionStart = 0;
+                ta79.selectionEnd = 3;
+                global.window.IC_EDIT_TOOLS.tabIndent(ta79);
+                ok(ta79.value === '  a' + NLt + '  b', 'T79e Auswahl ueber zwei Zeilen rueckt jede Zeile ein');
+
+                /* T80 (#105): Syntax-Highlighting als Baustein. highlight()
+                 * haengt das Overlay hinter das Feld, feuerert bei input neu
+                 * und schaltet die Sprache um; ohne hljs bleibt alles weg. */
+                global.window.hljs = {
+                  getLanguage: function (l) { return l === 'java' || l === 'javascript' || l === 'mermaid'; },
+                  highlight: function (src, o) { return { value: '<b class="hl-mock">' + o.language + '</b>' }; }
+                };
+                var wrap80 = new FakeEl('div');
+                var ta80 = new FakeEl('textarea');
+                wrap80.appendChild(ta80);
+                var ctl80 = global.window.IC_EDIT_TOOLS.highlight(ta80, 'java');
+                ok(ctl80 !== null && wrap80.classList.contains('hl-on'), 'T80 das Overlay aktiviert sich (hl-on) nur, wenn es wirklich da ist');
+                var pre80 = wrap80.querySelector('.icv-hl-pre');
+                ok(pre80 !== null, 'T80b das farbige pre-Overlay liegt hinter dem Feld');
+                var code80 = pre80 ? pre80.children[0] : null;
+                ok(code80 !== null && String(code80.className).indexOf('language-java') !== -1, 'T80c das Overlay traegt die Sprache Java');
+                ok(code80 !== null && String(code80.innerHTML).indexOf('hl-mock') !== -1, 'T80d der Quelltext wird durch highlight.js gefaerbt');
+                ta80.value = 'class A {}';
+                ta80.dispatch('input');
+                ok(code80 !== null && String(code80.innerHTML).indexOf('hl-mock') !== -1, 'T80e Tippen faerbt das Overlay neu');
+                ctl80.setLang('javascript');
+                ok(code80 !== null && String(code80.className).indexOf('language-javascript') !== -1, 'T80f der Sprachwechsel schaltet das Overlay um');
+                /* Ohne hljs: Rueckgabe null, Feld unangetastet. */
+                delete global.window.hljs;
+                var wrap80b = new FakeEl('div');
+                var ta80b = new FakeEl('textarea');
+                wrap80b.appendChild(ta80b);
+                ok(global.window.IC_EDIT_TOOLS.highlight(ta80b, 'java') === null && !wrap80b.classList.contains('hl-on'), 'T80g ohne highlight.js bleibt das Feld unangetastet');
+
+                /* T81 (#105): boostRead verdrahtet das Highlighting im
+                 * Lesemodus mit - gleicher Baustein, nur angebunden. */
+                var p81 = require.resolve('../public/assets/js/app.js');
+                delete require.cache[p81];
+                var doc81 = new FakeDoc();
+                doc81.documentElement = new FakeEl('html');
+                var box81 = new FakeEl('div');
+                box81.className = 'icv-item icv-code';
+                var ta81 = new FakeEl('textarea');
+                ta81.className = 'mono icv-code-src';
+                ta81.value = 'class Main {}';
+                var btn81 = new FakeEl('button');
+                btn81.className = 'icv-code-run';
+                btn81.setAttribute('data-lang', 'java');
+                btn81.setAttribute('data-clsfiles', '[]');
+                box81.appendChild(ta81);
+                box81.appendChild(btn81);
+                doc81.body.appendChild(box81);
+                var savedDoc81 = global.document;
+                global.document = doc81;
+                global.window.hljs = {
+                  getLanguage: function () { return true; },
+                  highlight: function (src, o) { return { value: '<b class="hl-mock81">' + o.language + '</b>' }; }
+                };
+                require(p81);
+                var wrap81 = (ta81.parentNode && ta81.parentNode.classList.contains('icv-edwrap')) ? ta81.parentNode : null;
+                ok(wrap81 !== null && wrap81.classList.contains('hl-on') && wrap81.querySelector('.icv-hl-pre') !== null, 'T81 der Lesemodus holt sich das Syntax-Highlighting aus demselben Baustein');
+                var code81 = wrap81 && wrap81.querySelector('.icv-hl-pre') ? wrap81.querySelector('.icv-hl-pre').children[0] : null;
+                ok(code81 !== null && String(code81.innerHTML).indexOf('hl-mock81') !== -1, 'T81b der Java-Quelltext der Seite ist gefaerbt');
+                delete global.window.hljs;
+                global.document = savedDoc81;
+
                 /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */
                 var NL41 = String.fromCharCode(10);
                 replIn.value = ['a', 'b', 'c', 'd', 'e', 'f'].join(NL41);

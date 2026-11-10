@@ -1950,20 +1950,63 @@ a.icv-item-link:hover .icv-item { outline: 2px dashed #1d4ed8; outline-offset: 2
     background: #f1f5f9; border-right: 1px solid var(--border, #d7dce5);
     border-radius: 6px 0 0 6px; z-index: 1;
 }
-.icv-gutter-inner { position: relative; padding: 6px 0; }
+/* #104: Der Text beginnt erst unter der 1px-Border der Textarea plus
+ * 6px Padding, also bei 7px - die Gutter-Innenseite exakt genauso. */
+.icv-gutter-inner { position: relative; padding: 7px 0; }
 .icv-gutter-cell {
     font-family: var(--mono, ui-monospace, monospace); font-size: 0.78rem;
     line-height: 1.45; color: #64748b; text-align: right; padding-right: 8px;
 }
-/* Dunkle Variante im Code-Fenster (#93) */
+/* Dunkle Variante im Code-Fenster (#93); Schriftgroesse wie die Textarea
+ * im gleichen Kontext (#104), sonst driften die Nummern pro Zeile weg. */
 .icv-code .icv-gutter { background: #16213a; border-right: 1px solid #334155; }
-.icv-code .icv-gutter-cell { color: #64748b; }
+.icv-code .icv-gutter-cell { color: #64748b; font-size: 0.85rem; }
 /* Gutter-Wrap nimmt die Flex-Anteile des Feldes ein (#93) */
 .icv-diagram-wrap .icv-edwrap { flex: 1 1 45%; min-width: 0; display: flex; flex-direction: column; }
 .icv-diagram-wrap .icv-edwrap > textarea { flex: 1 1 auto; min-height: 110px; resize: none; }
 .icv-diagram-wrap.icv-diagram-noprev .icv-edwrap { flex: 1 1 auto; }
 .icv-diagram-split .icv-edwrap { flex: 0 0 45%; min-width: 0; display: flex; flex-direction: column; }
 .icv-diagram-split .icv-edwrap > textarea { flex: 1 1 auto; }
+/* =====================================================================
+ * Syntax-Highlighting hinter den InfoBook-Feldern (#105): das Overlay
+ * (pre.icv-hl-pre) liegt hinter der Textarea, exakt in deren Geometrie
+ * (48px Gutter-Platz inklusive), die Schrift der Textarea wird erst
+ * transparent, wenn das Overlay wirklich da ist (hl-on).
+ * ===================================================================== */
+.icv-edwrap.hl-on > textarea { position: relative; z-index: 1; }
+.icv-edwrap > .icv-hl-pre {
+    position: absolute; inset: 0; margin: 0; z-index: 0;
+    overflow: hidden; pointer-events: none; box-sizing: border-box;
+    border: 1px solid transparent; border-radius: 6px;
+    white-space: pre-wrap; overflow-wrap: break-word;
+    font-family: var(--mono, ui-monospace, monospace);
+}
+.icv-code .icv-edwrap > .icv-hl-pre { background: #1e293b; font-size: 0.85rem; line-height: 1.45; padding: 6px 6px 6px 48px; }
+.icv-diagram .icv-edwrap > .icv-hl-pre { background: #ffffff; font-size: 0.78rem; line-height: 1.45; padding: 6px 6px 6px 48px; }
+.icv-code .icv-edwrap.hl-on > textarea { background: transparent; color: transparent; caret-color: #e2e8f0; }
+.icv-diagram .icv-edwrap.hl-on > textarea { background: transparent; color: transparent; caret-color: #1e293b; }
+/* Dunkle Palette im Code-Fenster (wie .code) */
+.icv-code .icv-hl-pre .hljs-keyword, .icv-code .icv-hl-pre .hljs-selector-tag { color: #c792ea; }
+.icv-code .icv-hl-pre .hljs-string, .icv-code .icv-hl-pre .hljs-regexp { color: #9ece6a; }
+.icv-code .icv-hl-pre .hljs-number, .icv-code .icv-hl-pre .hljs-literal { color: #ff9e64; }
+.icv-code .icv-hl-pre .hljs-comment, .icv-code .icv-hl-pre .hljs-quote { color: #565f89; font-style: italic; }
+.icv-code .icv-hl-pre .hljs-title, .icv-code .icv-hl-pre .hljs-name, .icv-code .icv-hl-pre .hljs-tag { color: #82aaff; }
+.icv-code .icv-hl-pre .hljs-type, .icv-code .icv-hl-pre .hljs-built_in { color: #89ddff; }
+.icv-code .icv-hl-pre .hljs-attr, .icv-code .icv-hl-pre .hljs-attribute, .icv-code .icv-hl-pre .hljs-variable,
+.icv-code .icv-hl-pre .hljs-symbol, .icv-code .icv-hl-pre .hljs-meta { color: #f07178; }
+.icv-code .icv-hl-pre .hljs-emphasis { font-style: italic; }
+.icv-code .icv-hl-pre .hljs-strong { font-weight: 600; }
+/* Helle Palette im Diagramm-Quelltext (wie .hlwrap) */
+.icv-diagram .icv-hl-pre .hljs-keyword, .icv-diagram .icv-hl-pre .hljs-selector-tag { color: #7c3aed; }
+.icv-diagram .icv-hl-pre .hljs-string, .icv-diagram .icv-hl-pre .hljs-regexp { color: #047857; }
+.icv-diagram .icv-hl-pre .hljs-number, .icv-diagram .icv-hl-pre .hljs-literal { color: #b45309; }
+.icv-diagram .icv-hl-pre .hljs-comment, .icv-diagram .icv-hl-pre .hljs-quote { color: #64748b; font-style: italic; }
+.icv-diagram .icv-hl-pre .hljs-title, .icv-diagram .icv-hl-pre .hljs-name, .icv-diagram .icv-hl-pre .hljs-tag { color: #1d4ed8; }
+.icv-diagram .icv-hl-pre .hljs-type, .icv-diagram .icv-hl-pre .hljs-built_in { color: #0e7490; }
+.icv-diagram .icv-hl-pre .hljs-attr, .icv-diagram .icv-hl-pre .hljs-attribute, .icv-diagram .icv-hl-pre .hljs-variable,
+.icv-diagram .icv-hl-pre .hljs-symbol, .icv-diagram .icv-hl-pre .hljs-meta { color: #be185d; }
+.icv-diagram .icv-hl-pre .hljs-section, .icv-diagram .icv-hl-pre .hljs-strong { color: #334155; font-weight: 600; }
+.icv-diagram .icv-hl-pre .hljs-emphasis { font-style: italic; }
 @media (max-width: 700px) {
     .icv-diagram-wrap .icv-edwrap, .icv-diagram-split .icv-edwrap { flex: 1 1 auto; }
     .icv-diagram-wrap .icv-edwrap > textarea, .icv-diagram-split .icv-edwrap > textarea { max-height: 260px; }
