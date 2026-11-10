@@ -174,7 +174,7 @@ jobs:
           grep -q "tabIndent" public/assets/js/app.js && grep -q "Vorschub statt Fokus-Sprung" public/assets/js/app.js && grep -q "T79 Tab ohne Vorschlag" tools/ui-tests.js && IBK_TAB_OK=1 || IBK_TAB_OK=0
           grep -q ".icv-code .icv-gutter-cell" public/assets/css/style.css && grep -q "padding: 7px 0" public/assets/css/style.css && IBK_GUTALIGN_OK=1 || IBK_GUTALIGN_OK=0
           grep -q "icv-hl-pre" public/assets/css/style.css && grep -q "highlight.min.js" templates/ibook_page.php && grep -q "highlight(ta, 'java')" public/assets/js/app.js && IBK_IBHL_OK=1 || IBK_IBHL_OK=0
-          grep -q "startet das Programm automatisch" public/assets/js/java-vm.js && grep -q "T82 " tools/ui-tests.js && WSC_REPLAUTO_OK=1 || WSC_REPLAUTO_OK=0
+          grep -q "Noch keine Session (#106)" public/assets/js/java-vm.js && grep -q "T82 " tools/ui-tests.js && WSC_REPLAUTO_OK=1 || WSC_REPLAUTO_OK=0
           grep -q "Ueberschreiben statt stapeln" public/assets/js/java-vm.js && grep -q "SessionUeberschreibtGleichesObjekt" tools/java-vm-tests.js && WSC_OBJOVER_OK=1 || WSC_OBJOVER_OK=0
           grep -q "Anweisungen ausführen:" public/assets/js/java-vm.js && grep -q "REPLAUSGABE" tools/ui-tests.js && WSC_REPLOUT_OK=1 || WSC_REPLOUT_OK=0
           grep -q "SFMono-Regular, Menlo, Consolas, monospace" public/assets/css/style.css && grep -q "code.style.transform" public/assets/js/app.js && grep -q "caret-color" public/assets/css/style.css && WSC_REPLHL_OK=1 || WSC_REPLHL_OK=0
