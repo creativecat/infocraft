@@ -613,6 +613,34 @@ last = replLog.children[replLog.children.length - 1];
 ok(last.textOf().indexOf('Audi') !== -1, 'T6e Strg+Enter im Anweisungsfeld fuehrt aus');
 ok(replIn.value === 'b.vorstellen();', 'T6f die Anweisungen bleiben nach dem Ausfuehren stehen');
 
+/* T82 (#106): ▶ Anweisungen ausführen startet das Programm selbst, wenn
+ * noch kein Lauf passiert ist - vorher musste oben ▶ Ausführen geklickt
+ * werden. Und (#107): erneutes Erzeugen ueberschreibt das Objekt, (#109)
+ * Ausgaben erscheinen auch im Konsolenfenster, (#108) Tab rueckt ein. */
+var pane1ta82 = pane1.querySelector('textarea');
+var savedCode82 = pane1ta82.value;
+pane1ta82.value = 'class Boom {'; /* kaputt: danach steht keine Session */
+runBtn.dispatch('click');
+pane1ta82.value = savedCode82; /* reparieren, NICHT neu ausfuehren */
+replIn.value = 'Auto x = new Auto("VW");';
+var nBefore82 = replLog.children.length;
+replRunBtn.dispatch('click');
+ok(replLog.children.length === nBefore82 + 1, 'T82 ▶ Anweisungen ausführen startet das Programm automatisch (ohne vorheriges ▶ Ausführen)');
+var badge82 = objBadge.textContent;
+replIn.value = 'Auto x = new Auto("VW2");';
+replRunBtn.dispatch('click');
+ok(objBadge.textContent === badge82, 'T82b erneutes Erzeugen mit gleichem Namen ueberschreibt das Objekt statt es zu stapeln');
+replIn.value = 'System.out.println("REPLAUSGABE");';
+replRunBtn.dispatch('click');
+ok(consoleEl.textContent.indexOf('REPLAUSGABE') !== -1, 'T82c Ausgaben der Objektkonsole erscheinen auch im Konsolenfenster darueber');
+ok(consoleEl.textContent.indexOf('Anweisungen') !== -1, 'T82d die Spiegelung ist im Konsolenfenster klar gekennzeichnet');
+var savedIET82 = global.window.IC_EDIT_TOOLS;
+global.window.IC_EDIT_TOOLS = { tabIndent: function (ta) { ta.__tabbed = true; } };
+replIn.value = 'x';
+replIn.dispatch('keydown', { key: 'Tab' });
+ok(replIn.__tabbed === true, 'T82e Tab ohne Vorschlag rueckt im Anweisungsfeld ein statt den Fokus zu verlieren');
+global.window.IC_EDIT_TOOLS = savedIET82;
+
 /* T7: Live-Klassendiagramm beim Tippen (ohne Ausfuehren). */
 var ta = pane1.querySelector('textarea');
 ta.value = ta.value + '\npublic class Fahrrad { public void klingeln() { } }\n';

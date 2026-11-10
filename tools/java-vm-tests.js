@@ -642,6 +642,34 @@ sesOk('SessionNachDateiAnweisungen', {
   }
 });
 
+/* --- #107: Erneutes Erzeugen ueberschreibt statt zu stapeln --- */
+sesOk('SessionUeberschreibtGleichesObjekt', { 'Auto.java': AUTO_JAVA }, s => {
+  var r1 = s.evalLine('Auto a = new Auto("BMW");');
+  if (r1.errors.length > 0) { throw new Error('Fehler: ' + JSON.stringify(r1.errors)); }
+  var r2 = s.evalLine('Auto a = new Auto("Opel");');
+  if (r2.errors.length > 0) { throw new Error('Fehler beim erneuten Erzeugen: ' + JSON.stringify(r2.errors)); }
+  var objs = s.objects();
+  if (objs.length !== 1) { throw new Error('1 Objekt erwartet (ueberschrieben), erhalten ' + objs.length + ': ' + JSON.stringify(objs)); }
+  if (objs[0].name !== 'a' || objs[0].cls !== 'Auto') { throw new Error('Name/Klasse falsch: ' + JSON.stringify(objs[0])); }
+  if (objs[0].fields[0].text !== '"Opel"') { throw new Error('Feld sollte beim neuen Objekt Opel sein: ' + JSON.stringify(objs[0].fields)); }
+  if (objs[0].id !== 1) { throw new Error('Nummerierung erwartet 1, erhalten ' + objs[0].id); }
+  /* Und die weitere Arbeit gilt dem NEUEN Objekt: */
+  var r3 = s.evalLine('a.getMarke();');
+  if (r3.result !== 'Opel') { throw new Error('Neues Objekt erwartet, erhalten ' + JSON.stringify(r3.result)); }
+});
+sesOk('SessionAliasHaeltAltesObjekt', { 'Auto.java': AUTO_JAVA }, s => {
+  s.evalLine('Auto a = new Auto("BMW");');
+  s.evalLine('Auto b = a;');
+  s.evalLine('Auto a = new Auto("Opel");');
+  var objs = s.objects();
+  if (objs.length !== 2) { throw new Error('2 Objekte erwartet (a neu, b als Alias alt), erhalten ' + objs.length + ': ' + JSON.stringify(objs)); }
+  var byName = {};
+  var oi;
+  for (oi = 0; oi < objs.length; oi++) { byName[objs[oi].name] = objs[oi]; }
+  if (!byName.a || byName.a.fields[0].text !== '"Opel"') { throw new Error('a sollte das neue Opel sein: ' + JSON.stringify(byName.a)); }
+  if (!byName.b || byName.b.fields[0].text !== '"BMW"') { throw new Error('b sollte das alte BMW halten: ' + JSON.stringify(byName.b)); }
+});
+
 /* --- Grafik-Fenster (OnlineIDE/learnj-API): Figuren, Bewegung, Farben --- */
 t('GfxKreis', {
   'Kreis.java': [
