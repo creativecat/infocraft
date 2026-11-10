@@ -2912,6 +2912,17 @@
     if (item.kind === 'image' || item.kind === 'ink' || item.kind === 'embed' || item.kind === 'audio' || item.kind === 'video') { attachMove(div, item, div); }
     return div;
   }
+  /* Hoehe ALLER Textfelder nachziehen (#115): fitTa in buildItem laeuft,
+   * bevor das Element in der Flaeche haengt - ohne Layout ist scrollHeight 0,
+   * deshalb bleiben geladene/importierte Felder auf Mindesthoehe. renderStage
+   * ruft diese Funktion am Ende, wenn alles im Dokument liegt. */
+  function fitStageTas() {
+    try {
+      var tas = stage.querySelectorAll('.icv-ta');
+      for (var i = 0; i < tas.length; i++) { fitTa(tas[i]); }
+    } catch (e) { /* Harness ohne Layout: harmlos */ }
+  }
+  window.IC_IBOOK_FITTA = fitStageTas;
   var overlay = el('canvas', 'icv-inkcanvas');
   overlay.width = block.w; overlay.height = block.h;
   overlay.style.touchAction = 'none';
@@ -2936,6 +2947,9 @@
       /* Nach dem Neuaufbau die Lasso-Auswahl wieder aufdröckeln (#68) */
       selList.forEach(function (it) { markDiv(it, true); });
     }
+    /* Nach dem Einfuegen haengen alle Elemente im Dokument: Hoehe der
+     * Textfelder jetzt einmal fuer alles nachziehen (#115). */
+    fitStageTas();
   }
 
   /* ---------- Selektion und Kontextbereich ---------- */
