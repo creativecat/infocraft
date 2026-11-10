@@ -121,7 +121,7 @@ jobs:
           grep -q "repl-edit:focus-within" public/assets/css/style.css && REPL_FOCUS_OK=1 || REPL_FOCUS_OK=0
           grep -q "elementFromPoint" public/assets/js/app.js && DBCONSFIX_OK=1 || DBCONSFIX_OK=0
           grep -q "__icDbRunDone" public/assets/js/java-vm.js && DBRUN_GUARD_OK=1 || DBRUN_GUARD_OK=0
-          grep -Fq ".gfx-dock .gfx-window { width: 100%; max-width: none; }" public/assets/css/style.css && GFXFIT_OK=1 || GFXFIT_OK=0
+          grep -Fq ".gfx-dock .gfx-window { width: fit-content; max-width: 100%; margin: 0 auto; }" public/assets/css/style.css && GFXFIT_OK=1 || GFXFIT_OK=0
           grep -q "host.clientWidth" public/assets/js/java-vm.js && GFXFITJS_OK=1 || GFXFITJS_OK=0
           grep -Fq ".repl-edit > .hlwrap { flex: 1; min-width: 0; }" public/assets/css/style.css && REPLW_OK=1 || REPLW_OK=0
           grep -q "DOMContentLoaded" public/assets/js/java-vm.js && BOOTDOM_OK=1 || BOOTDOM_OK=0
