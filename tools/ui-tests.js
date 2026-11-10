@@ -2358,6 +2358,41 @@ setTimeout(function () {
                 ok(/top:\s*auto;\s*right:\s*auto;/.test(dock85), 'T85 die Dock-Regel neutralisiert top/right der Overlay-Basisregel');
                 ok(css85.indexOf('.hlwrap.hl-active > #java-repl-in { color: transparent; }') !== -1, 'T85b die ID-Regel macht den Originaltext der Objektkonsole transparent');
 
+                /* T86 (#115): Textfeld-Hoehe nach Laden/Import. fitTa lief in
+                 * buildItem, bevor das Feld im Dokument hing (scrollHeight 0),
+                 * geladene/importierte Felder blieben auf Mindesthoehe.
+                 * renderStage zieht die Hoehe jetzt nach dem Einfuegen fuer
+                 * ALLE Felder nach (fitStageTas, als IC_IBOOK_FITTA exponiert). */
+                var p86 = require.resolve('../public/assets/js/app.js');
+                delete require.cache[p86];
+                var doc86 = new FakeDoc();
+                doc86.documentElement = new FakeEl('html');
+                doc86.body.setAttribute('data-csrf', 'csrf-t86');
+                var ed86 = new FakeEl('div');
+                ed86.setAttribute('data-book-id', '77');
+                ed86.setAttribute('data-page-id', '42');
+                ed86.setAttribute('data-blocks', JSON.stringify([{ type: 'canvas', w: 1600, h: 1000, items: [
+                  { kind: 'text', body: 'Importierter Zettel', x: 40, y: 40, w: 320 }
+                ] }]));
+                doc86.register(ed86, 'ibook-editor');
+                doc86.register(new FakeEl('input'), 'ibook-blocks-json');
+                var form86 = new FakeEl('form');
+                form86.setAttribute('action', '/infobuecher/77/seite/42');
+                doc86.register(form86, 'ibook-saveform');
+                var savedDoc86 = global.document;
+                global.document = doc86;
+                require(p86);
+                global.document = savedDoc86;
+                ok(typeof global.window.IC_IBOOK_FITTA === 'function', 'T86 der Nachzieh-Lauf ist als Baustein exponiert (renderStage ruft ihn nach dem Einfuegen)');
+                var ta86 = ed86.querySelector('.icv-ta');
+                ok(ta86 !== null, 'T86b das importierte Textfeld steht auf der Flaeche');
+                if (ta86 && global.window.IC_IBOOK_FITTA) {
+                  ta86.style.height = ''; /* Mindesthoehe, wie direkt nach dem Import */
+                  ta86.scrollHeight = 234; /* jetzt liegt das Feld im Layout */
+                  global.window.IC_IBOOK_FITTA();
+                  ok(ta86.style.height === '234px', 'T86c nach dem Laden/Import passt sich die Textfeld-Hoehe an den Inhalt an');
+                }
+
                 /* T52 (#67): Autospeichern. Der 900ms-Timer des Editors feuert
                  * erst nach diesem Callback, deshalb sitzt die Pruefung (und
                  * die Zusammenfassung) eine setTimeout-Ebene tiefer. */
