@@ -2033,6 +2033,30 @@
       highlight(dta, 'mermaid');
       if (window.IC_AUTOCOMPLETE) { window.IC_AUTOCOMPLETE.attach(dta, 'mermaid'); }
     }
+    /* SQL-Abfrage-Feld im DB-Element (#113): Autovervollstaendigung wie im
+     * SQL-Arbeitsbereich der Werkstatt - Schluesselwoerter plus Tabellen
+     * aus dem Schema des Elements (CREATE TABLE im Seed-Text). Der Editor
+     * verdrahtet sein Feld selbst; hier doppelt anzuschliessen ist wegen
+     * des __icAc-Wächters im Modul harmlos. */
+    var dbTas = document.querySelectorAll('textarea.icv-db-in');
+    for (var k = 0; k < dbTas.length; k++) {
+      var qta = dbTas[k];
+      if (qta.__icAc) { continue; }
+      var dbBox = qta.parentNode;
+      var seedEl = dbBox && dbBox.querySelector ? (dbBox.querySelector('.icv-db-seed-src') || dbBox.querySelector('.icv-db-seed-ta')) : null;
+      /* Lesemodus: Seed liegt im versteckten pre (textContent); Editor: Textarea (value). */
+      var seedSrc = seedEl ? (seedEl.value || seedEl.textContent || '') : '';
+      if (seedSrc) {
+        var dbNames = [];
+        var dbRe = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z_][A-Za-z0-9_]*)/gi;
+        var dbM;
+        while ((dbM = dbRe.exec(seedSrc)) !== null) {
+          if (dbNames.indexOf(dbM[1]) < 0) { dbNames.push(dbM[1]); }
+        }
+        if (dbNames.length > 0) { qta.setAttribute('data-tables', dbNames.join(',')); }
+      }
+      if (window.IC_AUTOCOMPLETE) { window.IC_AUTOCOMPLETE.attach(qta, 'sql'); }
+    }
   }
   try { boostRead(); } catch (eBoost) { /* Lesemodus ohne Felder: harmlos */ }
 
@@ -2720,6 +2744,7 @@
           dbSeedTa.value = item.dbseed;
           var sch = div.querySelector('.icv-db-schema');
           if (sch && window.IC_DB_SCHEMA) { sch.textContent = window.IC_DB_SCHEMA(item.dbseed); }
+          dbQTa.setAttribute('data-tables', dbTablesAttr(item.dbseed));
           dbLib.value = '';
           collect(); markDirty();
         });
@@ -2734,6 +2759,7 @@
         item.dbseed = dbSeedTa.value;
         var sch = div.querySelector('.icv-db-schema');
         if (sch && window.IC_DB_SCHEMA) { sch.textContent = window.IC_DB_SCHEMA(item.dbseed); }
+        dbQTa.setAttribute('data-tables', dbTablesAttr(item.dbseed));
         collect(); markDirty();
       });
       div.appendChild(dbSeedTa);
@@ -2747,11 +2773,25 @@
       dbQTa.value = item.dbq || '';
       dbQTa.setAttribute('rows', '2');
       dbQTa.setAttribute('spellcheck', 'false');
+      /* Tabellennamen aus dem Seed als data-tables (#113): Die SQL-
+       * Autovervollstaendigung schlaegt sie neben den Schluesselwoertern
+       * vor, genau wie im SQL-Arbeitsbereich der Werkstatt. */
+      var dbTablesAttr = function (seedSrc) {
+        var names = [];
+        var re = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z_][A-Za-z0-9_]*)/gi;
+        var m;
+        while ((m = re.exec(String(seedSrc || ''))) !== null) {
+          if (names.indexOf(m[1]) < 0) { names.push(m[1]); }
+        }
+        return names.join(',');
+      };
+      dbQTa.setAttribute('data-tables', dbTablesAttr(item.dbseed));
       dbQTa.addEventListener('input', function () {
         item.dbq = dbQTa.value;
         collect(); markDirty();
       });
       div.appendChild(dbQTa);
+      if (window.IC_AUTOCOMPLETE) { window.IC_AUTOCOMPLETE.attach(dbQTa, 'sql'); }
       var dbRun = el('button', 'icv-db-run', '▶ Abfrage ausführen');
       dbRun.type = 'button';
       div.appendChild(dbRun);

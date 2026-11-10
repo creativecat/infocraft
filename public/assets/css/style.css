@@ -315,6 +315,12 @@ body.sidebar-mini .nav-item { justify-content: center; padding: 10px 8px; }
 .hlwrap.sql > textarea { font-size: 0.95rem; }
 /* Transparent wird der Text erst, wenn das farbige Overlay wirklich da ist (hl-active). */
 .hlwrap.hl-active > textarea { color: transparent; }
+/* Objektkonsole (#112): #java-repl-in setzt color per ID-Spezifitaet und
+ * schlaegt dadurch die generische Transparenz-Regel - der Originaltext blieb
+ * sichtbar und lag doppelt auf dem farbigen Overlay. Die ID-Regel hier
+ * gewinnt gegen die Feld-Regel und macht den Text wie im SQL-Feld
+ * transparent, sobald das Overlay aktiv ist. */
+.hlwrap.hl-active > #java-repl-in { color: transparent; }
 .hlwrap > textarea::placeholder { color: #94a3b8; opacity: 1; }
 .hlwrap > textarea::selection { color: #0f172a; background: #c7d2fe; }
 .hlwrap > pre {
@@ -1008,6 +1014,10 @@ span.hlwrap { display: block; }
 .gfx-dock:empty { display: none; }
 .gfx-dock .gfx-window {
     position: relative;
+    /* Offsets der Overlay-Basisregel neutralisieren (#111): relative
+     * Positionierung uebernimmt top/right sonst weiter und verschiebt
+     * das Fenster im Dock nach unten/rechts aus dem Fluss. */
+    top: auto; right: auto;
     width: 480px; max-width: 100%;
     margin: 0;
     background: var(--bg); border: none; border-radius: 0;
