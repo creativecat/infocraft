@@ -1849,6 +1849,175 @@ setTimeout(function () {
                   ok(t67 && t67.code === 'Auto.fahren(', 'T67f der ergaenzte Quelltext wird serialisiert');
                 }
 
+                /* T69 (#93): Editor-Paritaet am Code-Fenster - Zeilennummern
+                 * und Klammer-Automatik wie in der Werkstatt. */
+                var NLt = String.fromCharCode(10);
+                var ibEdWrap69 = ibCodeBox65 ? ibCodeBox65.querySelector('.icv-edwrap') : null;
+                ok(ibEdWrap69 !== null, 'T69 das Code-Fenster im Editor traegt den Zeilennummern-Gutter (icv-edwrap)');
+                if (ibEdWrap69) {
+                  var ibGut69 = ibEdWrap69.querySelector('.icv-gutter');
+                  ok(ibGut69 !== null && ibEdWrap69.querySelector('textarea.icv-code-ta') === ibCodeTa65, 'T69b der Gutter haelt die Zeilennummern-Spalte, das Code-Feld steckt im Wrap');
+                  ibCodeTa65.value = 'int a = 1;' + NLt + 'int b = 2;' + NLt + 'int c = 3;';
+                  ibCodeTa65.selectionStart = 32;
+                  ibCodeTa65.selectionEnd = 32;
+                  ibCodeTa65.dispatch('input');
+                  var ibGutCells69 = ibGut69 && ibGut69.querySelector('.icv-gutter-inner') ? String(ibGut69.querySelector('.icv-gutter-inner').innerHTML).split('icv-gutter-cell').length - 1 : 0;
+                  ok(ibGutCells69 === 3, 'T69c drei Zeilen Quelltext geben drei Zeilennummern');
+                  ibCodeTa65.value = '';
+                  ibCodeTa65.selectionStart = 0;
+                  ibCodeTa65.selectionEnd = 0;
+                  ibCodeTa65.dispatch('keydown', { key: '{' });
+                  ok(ibCodeTa65.value === '{}' && ibCodeTa65.selectionStart === 1, 'T69d die oeffnende Klammer schliesst sofort mit }');
+                  ibCodeTa65.value = 'System.out.println("Hi"';
+                  ibCodeTa65.selectionStart = 23;
+                  ibCodeTa65.selectionEnd = 23;
+                  ibCodeTa65.dispatch('keydown', { key: '(' });
+                  ok(ibCodeTa65.value === 'System.out.println("Hi"()', 'T69e auch ( schliesst sofort mit dem Gegenstueck');
+                  ibCodeTa65.value = 'Auto.fahren()';
+                  ibCodeTa65.selectionStart = 12;
+                  ibCodeTa65.selectionEnd = 12;
+                  ibCodeTa65.dispatch('keydown', { key: ')' });
+                  ok(ibCodeTa65.value === 'Auto.fahren()' && ibCodeTa65.selectionStart === 13, 'T69f ein getipptes ) ueberspringt das vorhandene statt es zu verdoppeln');
+                }
+
+                /* T71 (#93): Mermaid-Vorschlaege am Diagramm-Quelltext im
+                 * Editor, dazu Gutter und Klammer-Automatik. */
+                ibDiagBtn59.dispatch('click');
+                var ibDiagBoxes71 = ibStage.querySelectorAll('.icv-diagram');
+                var ibDiagBox71 = ibDiagBoxes71[ibDiagBoxes71.length - 1];
+                var ibDiagTa71 = ibDiagBox71 ? ibDiagBox71.querySelector('textarea.icv-diagram-src') : null;
+                var ibDiagWrap71 = (ibDiagTa71 && ibDiagTa71.parentNode && ibDiagTa71.parentNode.classList && ibDiagTa71.parentNode.classList.contains('icv-edwrap')) ? ibDiagTa71.parentNode : null;
+                ok(ibDiagWrap71 !== null && ibDiagWrap71.querySelector('.ac-drop') !== null, 'T71 der Diagramm-Quelltext im Editor traegt den Gutter-Wrap mit Vorschlagsbox darunter');
+                if (ibDiagWrap71) {
+                  var ibAcDrop71 = ibDiagWrap71.querySelector('.ac-drop');
+                  ibDiagTa71.value = 'gr';
+                  ibDiagTa71.selectionStart = 2;
+                  ibDiagTa71.selectionEnd = 2;
+                  ibDiagTa71.dispatch('input');
+                  var ibAc71Labels = [];
+                  for (var ai71 = 0; ai71 < ibAcDrop71.children.length; ai71++) { ibAc71Labels.push(ibAcDrop71.children[ai71].textOf()); }
+                  ok(ibAc71Labels.join('|').indexOf('graph TD') !== -1, 'T71b tippen schlaegt Mermaid-Schluesselwoerter vor (graph TD)');
+                  ibDiagTa71.dispatch('keydown', { key: 'Tab' });
+                  ok(ibDiagTa71.value === 'graph TD', 'T71c Tab uebernimmt den Vorschlag in den Quelltext');
+                  ibDiagTa71.value = 'graph TD' + NLt + 'A --';
+                  ibDiagTa71.selectionStart = 13;
+                  ibDiagTa71.selectionEnd = 13;
+                  ibDiagTa71.dispatch('input');
+                  var ibAc71LabelsB = [];
+                  for (var bi71 = 0; bi71 < ibAcDrop71.children.length; bi71++) { ibAc71LabelsB.push(ibAcDrop71.children[bi71].textOf()); }
+                  ok(ibAc71LabelsB.join('|').indexOf('-->') !== -1, 'T71d nach dem Minus schlagen die Pfeile vor (-->)');
+                  ibDiagTa71.dispatch('keydown', { key: 'Enter' });
+                  ok(ibDiagTa71.value === 'graph TD' + NLt + 'A -->', 'T71e Enter fuegt den Pfeil ein');
+                  ibDiagTa71.value = 'graph TD' + NLt + 'A --> B';
+                  ibDiagTa71.selectionStart = 16;
+                  ibDiagTa71.selectionEnd = 16;
+                  ibDiagTa71.dispatch('keydown', { key: '{' });
+                  ok(ibDiagTa71.value === 'graph TD' + NLt + 'A --> B{}', 'T71f die Klammer-Automatik schliesst { auch am Diagramm-Quelltext');
+                }
+
+                /* T72/T73 (#92/#93): Lesemodus-Paritaet. Der Server rendert das
+                 * Code-Fenster als editierbares Feld (#92), app.js legt beim
+                 * Laden Gutter, Klammer-Automatik und Vorschlaege darauf; das
+                 * geteilte Diagramm rendert live weiter. */
+                var roPath72 = require.resolve('../public/assets/js/app.js');
+                delete require.cache[roPath72];
+                var roDoc = new FakeDoc();
+                roDoc.documentElement = new FakeEl('html');
+                roDoc.body.setAttribute('data-csrf', 'csrf-t72');
+                var roCodeBox = new FakeEl('div');
+                roCodeBox.className = 'icv-item icv-code';
+                var roCodeTa = new FakeEl('textarea');
+                roCodeTa.className = 'mono icv-code-src';
+                roCodeTa.value = 'class Main {' + NLt + '  public static void main(String[] args) {' + NLt + '    Auto a = new Auto();' + NLt + '  }' + NLt + '}';
+                var roRunBtn = new FakeEl('button');
+                roRunBtn.className = 'icv-code-run';
+                roRunBtn.setAttribute('data-lang', 'java');
+                roRunBtn.setAttribute('data-clsfiles', JSON.stringify([{ name: 'Auto.java', code: 'class Auto {' + NLt + '  String name;' + NLt + '  void fahren() {}' + NLt + '}' + NLt }]));
+                var roOut = new FakeEl('pre');
+                roOut.className = 'icv-code-out';
+                roCodeBox.appendChild(roCodeTa);
+                roCodeBox.appendChild(roRunBtn);
+                roCodeBox.appendChild(roOut);
+                roDoc.body.appendChild(roCodeBox);
+                var roSplitRo = new FakeEl('div');
+                roSplitRo.className = 'icv-item icv-diagram icv-diagram-split-ro';
+                roSplitRo.setAttribute('data-src', 'graph TD' + NLt + 'A --> B');
+                var roSplitWrap = new FakeEl('div');
+                roSplitWrap.className = 'icv-diagram-split';
+                var roSplitTa = new FakeEl('textarea');
+                roSplitTa.className = 'mono icv-diagram-code';
+                roSplitTa.value = 'graph TD' + NLt + 'A --> B';
+                var roSplitBar = new FakeEl('div');
+                roSplitBar.className = 'icv-diagram-split-bar';
+                var roSplitPrev = new FakeEl('div');
+                roSplitPrev.className = 'icv-diagram-prev';
+                roSplitWrap.appendChild(roSplitTa);
+                roSplitWrap.appendChild(roSplitBar);
+                roSplitWrap.appendChild(roSplitPrev);
+                roSplitRo.appendChild(roSplitWrap);
+                roDoc.body.appendChild(roSplitRo);
+                var savedDocR = global.document;
+                global.document = roDoc;
+                require(roPath72);
+                var roWrap72 = (roCodeTa.parentNode && roCodeTa.parentNode.classList && roCodeTa.parentNode.classList.contains('icv-edwrap')) ? roCodeTa.parentNode : null;
+                ok(roWrap72 !== null && roWrap72.querySelector('.icv-gutter') !== null, 'T72 das Lesemodus-Code-Fenster (#92) traegt den Zeilennummern-Gutter');
+                if (roWrap72) {
+                  var roGutCells72 = String(roWrap72.querySelector('.icv-gutter').querySelector('.icv-gutter-inner').innerHTML).split('icv-gutter-cell').length - 1;
+                  ok(roGutCells72 === 5, 'T72b fuenf Zeilen Quelltext geben fuenf Zeilennummern');
+                  roCodeTa.value = '';
+                  roCodeTa.selectionStart = 0;
+                  roCodeTa.selectionEnd = 0;
+                  roCodeTa.dispatch('keydown', { key: '{' });
+                  ok(roCodeTa.value === '{}', 'T72c die Klammer-Automatik schliesst { auch im Lesemodus');
+                  var roDrop72 = roWrap72.querySelector('.ac-drop');
+                  roCodeTa.value = 'Aut';
+                  roCodeTa.selectionStart = 3;
+                  roCodeTa.selectionEnd = 3;
+                  roCodeTa.dispatch('input');
+                  var roLabels72 = [];
+                  for (var ri72 = 0; roDrop72 && ri72 < roDrop72.children.length; ri72++) { roLabels72.push(roDrop72.children[ri72].textOf()); }
+                  ok(roLabels72.join('|').indexOf('Auto') !== -1, 'T72d tippen schlaegt die importierte Klasse Auto vor');
+                  roCodeTa.dispatch('keydown', { key: 'Tab' });
+                  ok(roCodeTa.value === 'Auto', 'T72e Tab uebernimmt den Klassennamen');
+                  roCodeTa.value = 'Auto.fa';
+                  roCodeTa.selectionStart = 7;
+                  roCodeTa.selectionEnd = 7;
+                  roCodeTa.dispatch('input');
+                  var roLabels72b = [];
+                  for (var rj72 = 0; roDrop72 && rj72 < roDrop72.children.length; rj72++) { roLabels72b.push(roDrop72.children[rj72].textOf()); }
+                  ok(roLabels72b.join('|').indexOf('fahren()') !== -1, 'T72f nach dem Punkt schlagen Attribute und Methoden der importierten Klasse vor');
+                  roCodeTa.dispatch('keydown', { key: 'Enter' });
+                  ok(roCodeTa.value === 'Auto.fahren(', 'T72g Enter fuegt die Methode ein');
+                  global.window.InfoCraftJavaVM = {
+                    run: function (files) {
+                      ok(files && typeof files === 'object' && typeof files['Main.java'] === 'string' && files['Main.java'].indexOf('Auto.fahren(') !== -1, 'T72h der im Lesemodus getippte Quelltext geht als Main.java an die Java-VM');
+                      ok(typeof files['Auto.java'] === 'string' && files['Auto.java'].indexOf('class Auto') !== -1, 'T72i die importierte Klasse reist als Auto.java mit');
+                      return { output: 'Auto faehrt', errors: [], ok: true };
+                    }
+                  };
+                  roRunBtn.dispatch('click');
+                  ok(roOut.textContent.indexOf('Auto faehrt') !== -1, 'T72j die Ausgabe der Java-VM landet in der Konsole des Lesemodus-Fensters');
+                  delete global.window.InfoCraftJavaVM;
+                }
+                var roWrap73 = (roSplitTa.parentNode && roSplitTa.parentNode.classList && roSplitTa.parentNode.classList.contains('icv-edwrap')) ? roSplitTa.parentNode : null;
+                ok(roWrap73 !== null && roWrap73.querySelector('.ac-drop') !== null, 'T73 der Quelltext im geteilten Lesemodus traegt Gutter und Mermaid-Vorschlagsbox');
+                if (roWrap73) {
+                  roSplitTa.value = 'gr';
+                  roSplitTa.selectionStart = 2;
+                  roSplitTa.selectionEnd = 2;
+                  roSplitTa.dispatch('input');
+                  roSplitTa.dispatch('keydown', { key: 'Tab' });
+                  ok(roSplitTa.value === 'graph TD', 'T73b Tab uebernimmt den Mermaid-Vorschlag in den geteilten Quelltext');
+                  global.window.mermaid = { render: function (id, src) { return { svg: '<svg class="icv-dg-t73">' + String(src) + '</svg>' }; } };
+                  roSplitTa.value = 'graph TD' + NLt + 'A --> C';
+                  roSplitTa.selectionStart = 16;
+                  roSplitTa.selectionEnd = 16;
+                  roSplitTa.dispatch('input');
+                  ok(String(roSplitPrev.innerHTML).indexOf('A --> C') !== -1, 'T73c Tippen am Gutter-Feld zeichnet das Diagramm live neu');
+                  delete global.window.mermaid;
+                }
+                global.document = savedDocR;
+
                 /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */
                 var NL41 = String.fromCharCode(10);
                 replIn.value = ['a', 'b', 'c', 'd', 'e', 'f'].join(NL41);

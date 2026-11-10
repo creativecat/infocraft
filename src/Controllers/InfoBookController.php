@@ -1005,7 +1005,10 @@ final class InfoBookController
                 $inner .= $pre . '<div class="icv-item icv-code" data-lang="' . e($codeLang) . '" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 520, $w) . '%">'
                     . '<div class="icv-code-head"><span class="icv-code-langtag">' . e($codeLangLabel) . '</span></div>'
                     . $clsChips
-                    . '<pre class="code icv-code-src">' . e($code) . '</pre>'
+                    /* Code editierbar im Lesemodus (#92): wie beim geteilten
+                     * Diagramm (#85) wird aenderungen nicht gespeichert, sie
+                     * gelten nur fuer die laufende Ansicht. */
+                    . '<textarea class="mono icv-code-src" spellcheck="false" aria-label="Programmcode">' . e($code) . '</textarea>'
                     . '<button type="button" class="icv-code-run" data-lang="' . e($codeLang) . '"' . $clsAttr . '>▶ Ausführen</button>'
                     . '<pre class="icv-code-out" aria-live="polite"></pre></div>';
             } elseif ($kind === 'db') {

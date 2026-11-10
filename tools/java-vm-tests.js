@@ -192,6 +192,18 @@ t('SemikolonFehlt', { 'Main.java': 'public class Main {' + NL + '    public stat
 t('KlammerOffen', { 'Main.java': 'public class Main {' + NL + '    public static void main(String[] args) {' + NL + '        System.out.println("x");' + NL + '    }' + NL + '' }, r => {
   err1(r, 'syntax');
 });
+/* #91: Endet der Quelltext mitten im Ausdruck (z. B. Anweisung ohne
+ * schliessende Klammer am Dateiende), sagt die VM jetzt klar bescheid
+ * statt mit "Unerwartet: Dateiende" auf fruehere Zeilen zu verweisen. */
+t('AusdruckEndetAmDateiende', { 'Main.java': 'Auto a = new Auto("x");' + NL + 'a.fahren(' + NL }, r => {
+  err1(r, 'syntax');
+  if (r.errors[0].message.indexOf('endet mitten') < 0) { throw new Error('Meldung sollte "endet mitten in einem Ausdruck" enthalten'); }
+  if (r.errors[0].hint.indexOf(')') < 0 || r.errors[0].hint.indexOf('Semikolon') < 0) { throw new Error('Hinweis sollte ) und Semikolon nennen'); }
+});
+t('AusdruckEndetAmDateiendeKlarerHint', { 'Main.java': 'System.out.println("Hi"' + NL }, r => {
+  err1(r, 'syntax');
+  if (r.errors[0].message.indexOf('Unerwartet: Dateiende') >= 0) { throw new Error('Meldung sollte nicht mehr "Unerwartet: Dateiende" sein'); }
+});
 t('KlassennameDateiname', { 'Falsch.java': 'public class AndererName {' + NL + '    public static void main(String[] args) { }' + NL + '}' }, r => {
   err1(r, 'compile');
 });
