@@ -1589,6 +1589,20 @@ setTimeout(function () {
                     ibDbSeed58.dispatch('input');
                     ok(ibDbBox58.querySelector('.icv-db-schema').textContent.indexOf('schueler') !== -1 && ibDbBox58.querySelector('.icv-db-schema').textContent.indexOf('punkte INT') !== -1, 'T58c das Schema aktualisiert sich live aus den CREATE-TABLE-Zeilen');
                     var ibDbQ58 = ibDbBox58.querySelector('.icv-db-in');
+                    /* T83 (#113): Die Abfrage des DB-Elements hat dieselbe SQL-
+                     * Autovervollstaendigung wie der SQL-Arbeitsbereich -
+                     * Schluesselwoerter plus Tabellen aus dem eigenen Schema,
+                     * Tab uebernimmt. */
+                    ok(ibDbQ58.__icAc === true, 'T83 die SQL-Abfrage des DB-Elements ist an die Autovervollstaendigung angeschlossen (Editor)');
+                    ok(String(ibDbQ58.getAttribute('data-tables') || '').indexOf('schueler') !== -1, 'T83b die Tabellen des Schemas stehen als Vorschlagsquelle am Feld');
+                    ibDbQ58.value = 'SEL';
+                    ibDbQ58.selectionStart = 3;
+                    ibDbQ58.selectionEnd = 3;
+                    ibDbQ58.dispatch('input');
+                    var ac83 = ibDbBox58.querySelector('.ac-item');
+                    ok(ac83 !== null && ac83.textOf().indexOf('SELECT') !== -1, 'T83c SQL-Schluesselwoerter erscheinen als Vorschlaege');
+                    ibDbQ58.dispatch('keydown', { key: 'Tab' });
+                    ok(String(ibDbQ58.value).indexOf('SELECT') === 0, 'T83d Tab uebernimmt den SQL-Vorschlag');
                     ibDbQ58.value = 'SELECT name, punkte FROM schueler WHERE punkte > 10';
                     ibDbQ58.dispatch('input');
                     ibDbBox58.querySelector('.icv-db-run').dispatch('click');
@@ -2303,6 +2317,46 @@ setTimeout(function () {
                 dbRunBtn42.dispatch('click');
                 ok(dbOut42.textContent.indexOf('Heft') !== -1, 'T42c Abfrage ausfuehren liefert nach dem Boot die Zeilen (Seed geladen)');
                 global.document = savedDoc42;
+
+                /* T84 (#113): Lesemodus - boostRead verdrahtet auch das
+                 * SQL-Abfrage-Feld des DB-Elements mit der Werkstatt-
+                 * Autovervollstaendigung, Tabellen aus dem Seed-pre. */
+                var p84 = require.resolve('../public/assets/js/app.js');
+                delete require.cache[p84];
+                var doc84 = new FakeDoc();
+                doc84.documentElement = new FakeEl('html');
+                var box84 = new FakeEl('div');
+                box84.className = 'icv-item icv-db';
+                var seed84 = new FakeEl('pre');
+                seed84.className = 'icv-db-seed-src';
+                seed84.textContent = "CREATE TABLE klassen (name TEXT); INSERT INTO klassen VALUES ('7a');";
+                var qta84 = new FakeEl('textarea');
+                qta84.className = 'mono icv-db-in';
+                box84.appendChild(seed84);
+                box84.appendChild(qta84);
+                doc84.body.appendChild(box84);
+                var savedDoc84 = global.document;
+                global.document = doc84;
+                require(p84);
+                ok(qta84.__icAc === true, 'T84 das SQL-Abfrage-Feld des Lesemodus ist an die Autovervollstaendigung angeschlossen');
+                ok(String(qta84.getAttribute('data-tables') || '') === 'klassen', 'T84b die Tabellen aus dem Schema stehen als data-tables am Feld');
+                qta84.value = 'SEL';
+                qta84.selectionStart = 3;
+                qta84.selectionEnd = 3;
+                qta84.dispatch('input');
+                var ac84 = box84.querySelector('.ac-item');
+                ok(ac84 !== null && ac84.textOf().indexOf('SELECT') !== -1, 'T84c SQL-Vorschlaege erscheinen im Lesemodus');
+                qta84.dispatch('keydown', { key: 'Tab' });
+                ok(String(qta84.value).indexOf('SELECT') === 0, 'T84d Tab uebernimmt den Vorschlag im Lesemodus');
+                global.document = savedDoc84;
+
+                /* T85 (#111/#112): CSS-Marker. Die Dock-Regel neutralisiert
+                 * die Offsets der Overlay-Basisregel; die Objektkonsole wird
+                 * per ID-Regel transparent, sobald das Overlay aktiv ist. */
+                var css85 = require('fs').readFileSync(require.resolve('../public/assets/css/style.css'), 'utf8');
+                var dock85 = css85.slice(css85.indexOf('.gfx-dock .gfx-window'), css85.indexOf('.gfx-dock .gfx-window') + 500);
+                ok(/top:\s*auto;\s*right:\s*auto;/.test(dock85), 'T85 die Dock-Regel neutralisiert top/right der Overlay-Basisregel');
+                ok(css85.indexOf('.hlwrap.hl-active > #java-repl-in { color: transparent; }') !== -1, 'T85b die ID-Regel macht den Originaltext der Objektkonsole transparent');
 
                 /* T52 (#67): Autospeichern. Der 900ms-Timer des Editors feuert
                  * erst nach diesem Callback, deshalb sitzt die Pruefung (und
