@@ -76,6 +76,19 @@ $areaIcons = ['lernbereich' => '📖', 'gemeinsam' => '🤝', 'eigen' => '🔒']
                 <?php endif; ?>
                 <button class="btn btn-ghost" type="submit">➕ Abschnitt</button>
             </form>
+            <?php if ($canManage): ?>
+            <details class="ibook-import-details">
+                <summary class="btn btn-ghost">📥 Buchpaket importieren</summary>
+                <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/import') ?>" class="form ibook-import-panel">
+                    <?= csrf_field() ?>
+                    <label class="field"><span>JSON-Paket (Abschnitte + Seiten)</span>
+                        <textarea name="paket" rows="6" placeholder='{"sections":[{"title":"SQL","area":"lernbereich","pages":[{"title":"SELECT","blocks":[{"type":"canvas","w":1600,"h":1000,"items":[]}]}]}]}'></textarea>
+                    </label>
+                    <p class="muted">Fügt Abschnitte mit Seiten ans Ende des Buchs an. Texte, DB-Abfrage-Fenster, Code, Diagramme und Einbettungen (YouTube, LearningApps, H5P) kommen mit; Bilder, Audio und Video müssen danach neu hochgeladen werden.</p>
+                    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Abschnitte und Seiten aus dem JSON anlegen">📥 Importieren</button></div>
+                </form>
+            </details>
+            <?php endif; ?>
             <?php if ($canManage && $activeSection !== null && (string) $activeSection['area'] !== 'eigen'): ?>
             <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/abschnitt/' . (int) $activeSection['id'] . '/loeschen') ?>" class="inline-form" data-confirm="Abschnitt mit allen Seiten löschen?">
                 <?= csrf_field() ?>

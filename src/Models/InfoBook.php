@@ -697,6 +697,52 @@ final class InfoBook
         return $newId;
     }
 
+    /**
+     * #114: Fertiges Buchpaket (JSON) importieren. Erwartet
+     * {"sections":[{"title":"...","area":"lernbereich","pages":[{"title":"...","blocks":[...]}]}]}.
+     * Abschnitte und Seiten werden ueber die normalen create/save-Methoden
+     * angelegt, jede Seite laeuft durch die savePage-Bereinigung (Canvas-Limits,
+     * Farb-Allowlist, Embed-Freigabe). Deckel: 20 Abschnitte, 100 Seiten je
+     * Abschnitt. Gebundene Medien (Bild/Audio/Video) koennen nicht mitkommen,
+     * weil ihre IDs buchlokal sind; Text, DB, Code, Diagramm und Einbettungen
+     * funktionieren komplett.
+     * @return array{sections: int, pages: int}
+     */
+    public static function importContent(int $bookId, array $data): array
+    {
+        $stats = ['sections' => 0, 'pages' => 0];
+        $sections = is_array($data['sections'] ?? null) ? array_values($data['sections']) : [];
+        foreach (array_slice($sections, 0, 20) as $section) {
+            if (!is_array($section)) {
+                continue;
+            }
+            $title = trim((string) ($section['title'] ?? ''));
+            if ($title === '') {
+                $title = 'Importierter Abschnitt';
+            }
+            $area = (string) ($section['area'] ?? 'lernbereich');
+            $area = in_array($area, ['lernbereich', 'gemeinsam'], true) ? $area : 'lernbereich';
+            $sectionId = self::createSection($bookId, $area, null, mb_substr($title, 0, 160));
+            $stats['sections']++;
+            $pages = is_array($section['pages'] ?? null) ? array_values($section['pages']) : [];
+            foreach (array_slice($pages, 0, 100) as $page) {
+                if (!is_array($page)) {
+                    continue;
+                }
+                $pageTitle = trim((string) ($page['title'] ?? ''));
+                if ($pageTitle === '') {
+                    $pageTitle = 'Importierte Seite';
+                }
+                $pageTitle = mb_substr($pageTitle, 0, 160);
+                $blocks = is_array($page['blocks'] ?? null) ? $page['blocks'] : [];
+                $pageId = self::createPage($sectionId, $pageTitle);
+                self::savePage($pageId, $pageTitle, $blocks);
+                $stats['pages']++;
+            }
+        }
+        return $stats;
+    }
+
     private static function sectionBookId(int $sectionId): int
     {
         $section = self::findSection($sectionId);

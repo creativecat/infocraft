@@ -212,6 +212,7 @@ $router->post('/infobuecher/{id}/seite/{pid}/loeschen', [InfoBookController::cla
 $router->post('/infobuecher/{id}/medium', [InfoBookController::class, 'uploadMedia']);
 $router->post('/infobuecher/{id}/zeichnung', [InfoBookController::class, 'saveDrawing']);
 $router->post('/infobuecher/{id}/verteilen', [InfoBookController::class, 'distribute']);
+$router->post('/infobuecher/{id}/import', [InfoBookController::class, 'import']);
 $router->get('/infobuecher/{id}/praesentation', [InfoBookController::class, 'present']);
 $router->post('/infobuecher/{id}/als-praesentation', [InfoBookController::class, 'createPresentation']);
 

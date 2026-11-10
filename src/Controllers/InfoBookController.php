@@ -694,6 +694,41 @@ final class InfoBookController
         redirect('/infobuecher/' . $book->id . '/seite/' . (int) $page['id']);
     }
 
+    /**
+     * #114: Fertiges Buchpaket (JSON mit Abschnitten + Seiten) importieren.
+     * Nur Lehrkraefte mit Verwaltungsrecht am Buch; die Bloecke laufen auf
+     * Serverseite durch dieselbe Bereinigung wie beim normalen Speichern.
+     */
+    public static function import(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $book = InfoBook::find((int) ($params['id'] ?? 0));
+        if ($book === null) {
+            flash('error', 'Dieses InfoBook gibt es nicht.');
+            redirect('/infobuecher');
+        }
+        if (!self::canManage($book, $user)) {
+            flash('error', 'Nur die Lehrkraft kann Inhalte importieren.');
+            redirect('/infobuecher/' . $book->id);
+        }
+        $data = json_decode((string) ($_POST['paket'] ?? ''), true);
+        if (!is_array($data) || !is_array($data['sections'] ?? null) || $data['sections'] === []) {
+            flash('error', 'Das Paket enthält keine Abschnitte. Erwartet wird JSON wie {"sections":[{"title":"...","area":"lernbereich","pages":[{"title":"...","blocks":[...]}]}]}');
+            redirect('/infobuecher/' . $book->id);
+        }
+        $stats = InfoBook::importContent($book->id, $data);
+        if ($stats['sections'] === 0) {
+            flash('error', 'Im Paket war kein gültiger Abschnitt.');
+            redirect('/infobuecher/' . $book->id);
+        }
+        flash('success', 'Import fertig: ' . (int) $stats['sections'] . ' Abschnitt(e) und ' . (int) $stats['pages'] . ' Seite(n) angelegt.');
+        redirect('/infobuecher/' . $book->id);
+    }
+
     /** Seiten als Präsentation ANZEIGEN (live, ohne Kopie): Titel + Bloecke als Folien. */
     public static function present(array $params): void
     {
