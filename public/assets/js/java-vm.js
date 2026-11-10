@@ -728,6 +728,12 @@
         }
         return { type: 'name', v: t.v, line: t.line };
       }
+      /* #91: Endet der Quelltext mitten im Ausdruck (z. B. fehlt die
+       * schließende Klammer am Ende), fuehrte "Unerwartet: Dateiende"
+       * mit einem Hinweis auf fruehere Zeilen in die Irre. */
+      if (t.k === 'eof') {
+        err('Der Code endet mitten in einem Ausdruck.', 'Meist fehlt am Ende eine schließende Klammer ) oder das Semikolon ;. Prüfe die letzte Zeile deines Programms.');
+      }
       err('Unerwartet: ' + describe(t), 'Hier steht etwas, das nicht als Ausdruck lesbar ist. Prüfe Klammern und Semikolons in den Zeilen davor.');
     }
 

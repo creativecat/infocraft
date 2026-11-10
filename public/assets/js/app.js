@@ -1415,16 +1415,22 @@
   var ASM_COMMANDS = ['MOV', 'ADD', 'SUB', 'MUL', 'DIV', 'INC', 'DEC', 'CMP', 'JMP', 'JE', 'JNE', 'JG', 'JL', 'JGE', 'JLE', 'JZ', 'JNZ', 'LOAD', 'STORE', 'PUSH', 'POP', 'CALL', 'RET', 'HLT', 'NOP', 'OUT', 'IN'];
   var HTML_TAGS = ['p', 'h1', 'h2', 'h3', 'strong', 'em', 'br', 'a', 'img', 'ul', 'ol', 'li', 'table', 'tr', 'td', 'th', 'div', 'span', 'header', 'main', 'footer', 'section', 'form', 'input', 'button', 'style', 'script', 'title', 'link'];
   var MD_SNIPPETS = ['# Ueberschrift', '## Abschnitt', '- Aufzaehlung', '1. Nummerierung', '**fett**', '*kursiv*', '`Code`', '``` Codeblock', '[Link](https://)', '> Zitat'];
+  /* Mermaid-Diagramme (#93): Schluesselwoerter fuer Diagramm-Typen und
+   * Pfeile als Vorschlaege, sobald das Token mit einem Buchstaben bzw.
+   * einem Minus beginnt. */
+  var MERMAID_KEYWORDS = ['graph TD', 'graph LR', 'flowchart TD', 'flowchart LR', 'sequenceDiagram', 'classDiagram', 'stateDiagram-v2', 'erDiagram', 'subgraph', 'end'];
+  var MERMAID_ARROWS = ['-->', '-->|Text|', '-.->', '-.->|Text|', '---', '==>', '--o', '--x'];
 
-  function collectIdentifiers(scopeDoc) {
+  function collectIdentifiers(scopeDoc, ta) {
     /* Klassen, Attribute und Methoden aus dem eigenen Java-Code sammeln. */
     var found = {};
     var sources = [];
     try {
       if (scopeDoc.querySelectorAll('[data-file-pane] textarea').length > 0) {
-        scopeDoc.querySelectorAll('[data-file-pane] textarea').forEach(function (ta) { sources.push(ta.value || ''); });
+        scopeDoc.querySelectorAll('[data-file-pane] textarea').forEach(function (ta2) { sources.push(ta2.value || ''); });
       } else {
-        sources.push(taValue(currentTa));
+        /* Ohne Datei-Leiste (#93, z. B. InfoBook): das eigene Feld. */
+        sources.push(taValue(ta));
       }
     } catch (e) { /* Harness ohne querySelectorAll: harmlos */ }
     var code = sources.join(String.fromCharCode(10));
@@ -1445,7 +1451,14 @@
   var currentTa = null;
   function taValue(ta) { return ta && ta.value ? ta.value : ''; }
 
-  function memberItems(objectName) {
+  function memberItems(objectName, ta) {
+    /* Importierte Klassen im InfoBook-Lesemodus (#93): Member-Vorschlaege
+     * pro Feld registriert (ta.__icAcMembers am attach mitgegeben). */
+    try {
+      if (ta && ta.__icAcMembers && Object.prototype.hasOwnProperty.call(ta.__icAcMembers, objectName)) {
+        return ta.__icAcMembers[objectName];
+      }
+    } catch (e) { /* harmlos */ }
     if (objectName === 'Database') {
       return [
         { label: 'execute(...)', insert: 'execute(', detail: 'SQL ausfuehren' },
@@ -1479,7 +1492,7 @@
     if (kind === 'java') {
       for (i = 0; i < JAVA_KEYWORDS.length; i++) { kw = JAVA_KEYWORDS[i]; items.push({ label: kw, insert: kw + ' ', detail: 'Java' }); }
       for (i = 0; i < JAVA_SNIPPETS.length; i++) { items.push(JAVA_SNIPPETS[i]); }
-      var ids = collectIdentifiers(document);
+      var ids = collectIdentifiers(document, ta);
       for (var id in ids) {
         if (Object.prototype.hasOwnProperty.call(ids, id)) {
           items.push({ label: id, insert: id, detail: 'aus deinem Code' });
@@ -1508,16 +1521,30 @@
       }
     } else if (kind === 'md') {
       for (i = 0; i < MD_SNIPPETS.length; i++) { items.push({ label: MD_SNIPPETS[i], insert: MD_SNIPPETS[i], detail: 'Markdown' }); }
+    } else if (kind === 'mermaid') {
+      for (i = 0; i < MERMAID_KEYWORDS.length; i++) { items.push({ label: MERMAID_KEYWORDS[i], insert: MERMAID_KEYWORDS[i], detail: 'Mermaid' }); }
+      for (i = 0; i < MERMAID_ARROWS.length; i++) { items.push({ label: MERMAID_ARROWS[i], insert: MERMAID_ARROWS[i], detail: 'Pfeil' }); }
     } else if (kind === 'python') {
       var PY = ['def', 'return', 'if', 'elif', 'else', 'for', 'while', 'in', 'range', 'print', 'import', 'from', 'class', 'True', 'False', 'None', 'and', 'or', 'not', 'len', 'str', 'int', 'float', 'list', 'append'];
       for (i = 0; i < PY.length; i++) { items.push({ label: PY[i], insert: PY[i], detail: 'Python' }); }
     }
+    /* Zusaetzliche Vorschlaege pro Feld (#93): z. B. importierte Klassen
+     * im InfoBook-Lesemodus, am attach als extra.items mitgegeben. */
+    try {
+      if (ta && ta.__icAcExtra && ta.__icAcExtra.length > 0) {
+        for (var xi = 0; xi < ta.__icAcExtra.length; xi++) { items.push(ta.__icAcExtra[xi]); }
+      }
+    } catch (e) { /* harmlos */ }
     return items;
   }
 
-  function attach(ta, kind) {
+  function attach(ta, kind, extra) {
     if (!ta || ta.__icAc) { return; }
     ta.__icAc = true;
+    if (extra) {
+      if (Array.isArray(extra.items)) { ta.__icAcExtra = extra.items; }
+      if (extra.members) { ta.__icAcMembers = extra.members; }
+    }
     var wrap = ta.closest ? (ta.closest('[data-hl]') || ta.parentNode) : ta.parentNode;
     var drop = document.createElement('div');
     drop.className = 'ac-drop';
@@ -1576,11 +1603,23 @@
     }
 
     function update() {
-      var info = tokenInfo();
-      if (!info || info.token.length < 1) { close(); return; }
+      var info;
+      if (kind === 'mermaid') {
+        /* Mermaid (#93): Tokens koennen mit '-' beginnen (Pfeile) und
+         * '>' bzw. '|' enthalten - die normale Bezeichner-Erkennung
+         * passt hier nicht. */
+        var posM = ta.selectionStart === undefined ? taValue(ta).length : ta.selectionStart;
+        var beforeM = taValue(ta).slice(0, posM);
+        var mM = /([-A-Za-z_][-A-Za-z0-9_>|]*)$/.exec(beforeM);
+        if (!mM || mM[1].length < 1) { close(); return; }
+        info = { token: mM[1], start: posM - mM[1].length, dot: false, objectName: null, pos: posM };
+      } else {
+        info = tokenInfo();
+        if (!info || info.token.length < 1) { close(); return; }
+      }
       var pool;
       if (info.dot) {
-        pool = memberItems(info.objectName);
+        pool = memberItems(info.objectName, ta);
         if (!pool) { close(); return; }
       } else {
         pool = sourceItems(kind, ta);
@@ -1616,7 +1655,10 @@
       var value = taValue(ta);
       var after = value.slice(pos);
       var before = value.slice(0, pos);
-      var m = /([A-Za-z_][A-Za-z0-9_]*)$/.exec(before);
+      /* Mermaid (#93): Token-Anfang auch bei '-' und Pfeil-Zeichen. */
+      var m = kind === 'mermaid'
+        ? /([-A-Za-z_][-A-Za-z0-9_>|]*)$/.exec(before)
+        : /([A-Za-z_][A-Za-z0-9_]*)$/.exec(before);
       var start = m ? pos - m[1].length : pos;
       var next = value.slice(0, start) + ins + after;
       ta.value = next;
@@ -1627,9 +1669,14 @@
       try {
         ta.dispatchEvent(new Event('input', { bubbles: true }));
       } catch (e) {
-        var ev = document.createEvent('Event');
-        ev.initEvent('input', true, false);
-        ta.dispatchEvent(ev);
+        /* Aeltere Engines/Harness ohne Event-Konstruktor (#93). */
+        try {
+          if (typeof document.createEvent === 'function') {
+            var ev = document.createEvent('Event');
+            ev.initEvent('input', true, false);
+            ta.dispatchEvent(ev);
+          } else if (ta.dispatch) { ta.dispatch('input'); }
+        } catch (e2) { /* Listener laufen andernfalls direkt */ }
       }
       close();
       return true;
@@ -1691,6 +1738,163 @@
     if (ta) { attach(ta, kind); }
   });
   window.IC_AUTOCOMPLETE = { attach: attach };
+})();
+
+/* =====================================================================
+ * Editor-Paritaet (#92/#93): Zeilennummern-Gutter, Klammer-Automatik
+ * und Autovervollstaendigung fuer ALLE Code- und Diagrammfelder - im
+ * InfoBook-Editor genau wie im Lesemodus. Die Werkstatt-Editoren bieten
+ * diesen Komfort schon laenger; jedes Eingabefeld verhaelt sich jetzt
+ * identisch, egal wo es gerendert wird.
+ * ===================================================================== */
+(function () {
+  'use strict';
+  if (typeof window === 'undefined' || typeof document === 'undefined') { return; }
+
+  /* input-Event feuern, auch wenn der Event-Konstruktor fehlt. */
+  function fireInput(ta) {
+    try {
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    } catch (e) {
+      try {
+        if (typeof document.createEvent === 'function') {
+          var ev = document.createEvent('Event');
+          ev.initEvent('input', true, false);
+          ta.dispatchEvent(ev);
+        } else if (ta.dispatch) { ta.dispatch('input'); }
+      } catch (e2) { /* Listener laufen andernfalls direkt */ }
+    }
+  }
+
+  /* Klammer-Automatik: ( [ { schliesst das Gegenstueck sofort mit,
+   * ein getipptes Gegenstueck ueberspringt das vorhandene Zeichen. */
+  var OPENERS = { '(': ')', '[': ']', '{': '}' };
+
+  function brackets(ta) {
+    if (!ta || ta.__icBr) { return; }
+    ta.__icBr = true;
+    ta.addEventListener('keydown', function (ev) {
+      if (!ev || ev.ctrlKey || ev.metaKey || ev.altKey) { return; }
+      var k = ev.key || '';
+      var v = String(ta.value || '');
+      var pos = typeof ta.selectionStart === 'number' ? ta.selectionStart : v.length;
+      var end = typeof ta.selectionEnd === 'number' ? ta.selectionEnd : pos;
+      if (OPENERS[k]) {
+        ta.value = v.slice(0, pos) + k + OPENERS[k] + v.slice(end);
+        if (ta.setSelectionRange) { ta.setSelectionRange(pos + 1, pos + 1); }
+        else { ta.selectionStart = pos + 1; ta.selectionEnd = pos + 1; }
+        if (ev.preventDefault) { ev.preventDefault(); }
+        fireInput(ta);
+      } else if ((k === ')' || k === ']' || k === '}') && pos === end && v.charAt(pos) === k) {
+        if (ta.setSelectionRange) { ta.setSelectionRange(pos + 1, pos + 1); }
+        else { ta.selectionStart = pos + 1; ta.selectionEnd = pos + 1; }
+        if (ev.preventDefault) { ev.preventDefault(); }
+      }
+    });
+  }
+
+  /* Zeilennummern links neben dem Feld, Scrollhoehe synchron. */
+  function gutter(ta) {
+    if (!ta || ta.__icGutter || !ta.parentNode) { return; }
+    var parent = ta.parentNode;
+    var wrap = document.createElement('div');
+    wrap.className = 'icv-edwrap';
+    var g = document.createElement('div');
+    g.className = 'icv-gutter';
+    var inner = document.createElement('div');
+    inner.className = 'icv-gutter-inner';
+    g.appendChild(inner);
+    parent.insertBefore(wrap, ta);
+    wrap.appendChild(g);
+    wrap.appendChild(ta);
+    ta.__icGutter = true;
+    function update() {
+      var lines = String(ta.value || '').split('\n').length;
+      var html = '';
+      for (var i = 1; i <= lines; i++) { html += '<div class="icv-gutter-cell">' + i + '</div>'; }
+      inner.innerHTML = html;
+    }
+    function sync() {
+      try {
+        var st = typeof ta.scrollTop === 'number' ? ta.scrollTop : 0;
+        inner.style.top = (-st) + 'px';
+      } catch (e) { /* ohne Scrollposition harmlos */ }
+    }
+    ta.addEventListener('input', update);
+    ta.addEventListener('scroll', sync);
+    update();
+  }
+
+  /* Klassen-Member fuer die Autovervollstaendigung im Lesemodus (#92):
+   * gleiche Erkennung wie im Editor (Regex-Kopie von clsMembers). */
+  function clsMembersOf(code) {
+    var src = String(code || '');
+    var fields = [], methods = [];
+    var fRe = /(?:^|\n)\s*(?:(?:public|protected|private|static|final)\s+)*([A-Za-z_][\w<>\[\], .]*)\s+([a-zA-Z_]\w*)\s*(?:=[^;\n]*)?;/g;
+    var fM;
+    var fSkip = ['class', 'interface', 'enum', 'return', 'new', 'import', 'package', 'extends', 'implements', 'void', 'if', 'for', 'while', 'switch', 'catch'];
+    while ((fM = fRe.exec(src))) {
+      var fType = fM[1].trim();
+      if (fSkip.indexOf(fType.split(/\s+/)[0]) === -1) { fields.push({ name: fM[2], type: fType }); }
+    }
+    var mRe = /(?:^|[^\w.])([A-Za-z_]\w*)\s*\(([^)]*)\)/g;
+    var mM;
+    var mSkip = ['if', 'for', 'while', 'switch', 'catch', 'new', 'return', 'super', 'this', 'do', 'print', 'println', 'class'];
+    while ((mM = mRe.exec(src))) {
+      if (mSkip.indexOf(mM[1]) === -1 && methods.filter(function (x) { return x.name === mM[1]; }).length === 0) {
+        methods.push({ name: mM[1], args: mM[2].trim() });
+      }
+    }
+    return { fields: fields, methods: methods };
+  }
+
+  /* Aus den importierten Klassen (data-clsfiles am Ausfuehren-Knopf)
+   * Vorschlaege bauen: Klassenname plus Attribute/Methoden pro Klasse. */
+  function extraFromClsFiles(clsFiles) {
+    var items = [];
+    var members = {};
+    (clsFiles || []).forEach(function (f) {
+      var name = String(f && f.name ? f.name : '').replace(/\.java$/i, '');
+      var code = String(f && f.code ? f.code : '');
+      if (!name || !code) { return; }
+      items.push({ label: name, insert: name, detail: 'importierte Klasse' });
+      var mem = clsMembersOf(code);
+      var pool = [];
+      mem.fields.forEach(function (x) { pool.push({ label: x.name, insert: x.name, detail: x.type }); });
+      mem.methods.forEach(function (x) { pool.push({ label: x.name + '()', insert: x.name + '(', detail: 'Methode' }); });
+      members[name] = pool;
+    });
+    return { items: items, members: members };
+  }
+
+  /* Lesemodus anreichern (#92/#93): Code-Fenster editierbar und mit
+   * Gutter, Klammern und Java-Autovervollstaendigung; Diagramm-Quelltext
+   * im geteilten Modus ebenso, dort mit Mermaid-Vorschlaegen. */
+  function boostRead() {
+    var codeTas = document.querySelectorAll('textarea.icv-code-src');
+    for (var i = 0; i < codeTas.length; i++) {
+      var ta = codeTas[i];
+      var box = ta.parentNode;
+      var btn = box && box.querySelector ? box.querySelector('.icv-code-run') : null;
+      var clsFiles = [];
+      if (btn) {
+        try { clsFiles = JSON.parse(btn.getAttribute('data-clsfiles') || '[]') || []; } catch (eCf) { clsFiles = []; }
+      }
+      gutter(ta);
+      brackets(ta);
+      if (window.IC_AUTOCOMPLETE) { window.IC_AUTOCOMPLETE.attach(ta, 'java', extraFromClsFiles(clsFiles)); }
+    }
+    var diagTas = document.querySelectorAll('textarea.icv-diagram-code');
+    for (var j = 0; j < diagTas.length; j++) {
+      var dta = diagTas[j];
+      gutter(dta);
+      brackets(dta);
+      if (window.IC_AUTOCOMPLETE) { window.IC_AUTOCOMPLETE.attach(dta, 'mermaid'); }
+    }
+  }
+  try { boostRead(); } catch (eBoost) { /* Lesemodus ohne Felder: harmlos */ }
+
+  window.IC_EDIT_TOOLS = { gutter: gutter, brackets: brackets, boostRead: boostRead };
 })();
 
 /* =====================================================================
@@ -2147,10 +2351,26 @@
         var cprojNone = el('option', '', 'Klasse aus Projekt einfügen …');
         cprojNone.value = '';
         cproj.appendChild(cprojNone);
-        codeClasses.forEach(function (cc, ci) {
-          var o = el('option', '', (cc.name || 'Klasse') + (cc.project ? ' · ' + cc.project : ''));
-          o.value = String(ci);
-          cproj.appendChild(o);
+        /* #91: Eintraege nach Projekt gruppieren (optgroup) und nur den
+         * Dateinamen zeigen - bei vielen Klassen bleibt die Liste kompakt. */
+        var cprojGroups = {};
+        var cprojOrder = [];
+        codeClasses.forEach(function (cc) {
+          var gp = String(cc.project || 'Projekt');
+          if (!cprojGroups[gp]) { cprojGroups[gp] = []; cprojOrder.push(gp); }
+          cprojGroups[gp].push(cc);
+        });
+        cprojOrder.forEach(function (gp) {
+          var og = el('optgroup', '');
+          og.setAttribute('label', gp);
+          cprojGroups[gp].forEach(function (cc) {
+            var globalIdx = codeClasses.indexOf(cc);
+            var o = el('option', '', String(cc.name || 'Klasse'));
+            o.value = String(globalIdx);
+            o.title = gp;
+            og.appendChild(o);
+          });
+          cproj.appendChild(og);
         });
         cproj.addEventListener('change', function () {
           var idx = parseInt(cproj.value, 10);
@@ -2320,6 +2540,11 @@
       div.appendChild(ccards);
       div.appendChild(cta);
       div.appendChild(acBox);
+      /* Editor-Paritaet (#93): Zeilennummern und Klammer-Automatik auch
+       * am Code-Fenster des InfoBook-Editors, wie in der Werkstatt. */
+      try {
+        if (window.IC_EDIT_TOOLS) { window.IC_EDIT_TOOLS.gutter(cta); window.IC_EDIT_TOOLS.brackets(cta); }
+      } catch (eEd) { /* ohne Gutter laeuft das Feld trotzdem */ }
       var crun = el('button', 'icv-code-run', '▶ Ausführen');
       crun.type = 'button';
       crun.setAttribute('data-lang', clangVal);
@@ -2454,6 +2679,12 @@
         collect(); markDirty();
       });
       dgWrap.appendChild(dgTa);
+      /* Editor-Paritaet (#93): Gutter, Klammer-Automatik und Mermaid-
+       * Vorschlaege auch am Diagramm-Quelltext im Editor. */
+      try {
+        if (window.IC_EDIT_TOOLS) { window.IC_EDIT_TOOLS.gutter(dgTa); window.IC_EDIT_TOOLS.brackets(dgTa); }
+        if (window.IC_AUTOCOMPLETE) { window.IC_AUTOCOMPLETE.attach(dgTa, 'mermaid'); }
+      } catch (eDg) { /* ohne Gutter laeuft das Feld trotzdem */ }
       var dgPrev = el('div', 'icv-diagram-prev');
       dgPrev.title = 'Doppelklick: Code bearbeiten';
       dgPrev.addEventListener('dblclick', function () { if (dgTa.focus) { dgTa.focus(); } });
@@ -3790,6 +4021,9 @@
     if (!wrap || !wrap.querySelector) { return; }
     var code = wrap.querySelector('.icv-diagram-code');
     if (!code || !wrap.getBoundingClientRect) { return; }
+    /* Editor-Paritaet (#93): Der Quelltext steckt jetzt im Gutter-Wrap
+     * (icv-edwrap) - die Breite muss den Wrap treffen, nicht das Feld. */
+    var sizeEl = (code.parentNode && code.parentNode.classList && code.parentNode.classList.contains('icv-edwrap')) ? code.parentNode : code;
     var rect = null;
     try { rect = wrap.getBoundingClientRect(); } catch (eRect) { rect = null; }
     if (!rect || typeof rect.width !== 'number' || rect.width <= 0) { return; }
@@ -3797,8 +4031,8 @@
       if (typeof ev2.clientX !== 'number') { return; }
       var pct = ((ev2.clientX - rect.left) / rect.width) * 100;
       pct = Math.max(15, Math.min(85, pct));
-      code.style.width = pct + '%';
-      code.style.flexBasis = pct + '%';
+      sizeEl.style.width = pct + '%';
+      sizeEl.style.flexBasis = pct + '%';
     }
     function onUp() {
       document.removeEventListener('pointermove', onMove);
@@ -3824,6 +4058,11 @@
     if (!node || !node.classList || !node.classList.contains || !node.classList.contains('icv-diagram-code')) { return; }
     var wrap = node.parentNode;
     var prev = wrap && wrap.querySelector ? wrap.querySelector('.icv-diagram-prev') : null;
+    /* Editor-Paritaet (#93): Der Quelltext steckt jetzt im Gutter-Wrap
+     * (icv-edwrap), die Vorschau liegt eine Ebene hoeher. */
+    if (!prev && wrap && wrap.parentNode && wrap.parentNode.querySelector) {
+      prev = wrap.parentNode.querySelector('.icv-diagram-prev');
+    }
     if (!prev || !window.IC_RENDER_DIAGRAM) { return; }
     window.IC_RENDER_DIAGRAM(prev, String(node.value || ''));
   });
