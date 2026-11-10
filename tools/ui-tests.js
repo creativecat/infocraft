@@ -1671,9 +1671,9 @@ setTimeout(function () {
                 ibAside61.className = 'ibook-pagenav';
                 var ibFoldBtn61 = new FakeEl('button');
                 window.IC_IBOOK_NAVFOLD(ibAside61, ibFoldBtn61);
-                ok(ibFoldBtn61.textContent === '◀' && !ibAside61.classList.contains('ibook-pagenav-off'), 'T61b Standard ist aufgeklappt');
+                ok(ibFoldBtn61.textContent === 'Inhalt ◂' && !ibAside61.classList.contains('ibook-pagenav-off'), 'T61b Standard ist aufgeklappt');
                 ibFoldBtn61.dispatch('click');
-                ok(ibAside61.classList.contains('ibook-pagenav-off') === true && ibFoldBtn61.textContent === '▶' && ibFoldBtn61.getAttribute('aria-expanded') === 'false', 'T61c Klick klappt die komplette Leiste ein');
+                ok(ibAside61.classList.contains('ibook-pagenav-off') === true && ibFoldBtn61.textContent === 'Inhalt ▸' && ibFoldBtn61.getAttribute('aria-expanded') === 'false', 'T61c Klick klappt die komplette Leiste ein');
                 ok(ibStore61['ic-ibook-navfold'] === '1', 'T61d der Zustand wird im Browser gespeichert');
                 ibFoldBtn61.dispatch('click');
                 ok(ibAside61.classList.contains('ibook-pagenav-off') === false && ibFoldBtn61.getAttribute('aria-expanded') === 'true', 'T61e zweiter Klick klappt wieder auf');
@@ -1681,7 +1681,7 @@ setTimeout(function () {
                 var ibAside61b = new FakeEl('aside');
                 var ibFoldBtn61b = new FakeEl('button');
                 window.IC_IBOOK_NAVFOLD(ibAside61b, ibFoldBtn61b);
-                ok(ibAside61b.classList.contains('ibook-pagenav-off') === true && ibFoldBtn61b.textContent === '▶', 'T61f gespeicherter eingeklappter Zustand wird beim Laden wiederhergestellt');
+                ok(ibAside61b.classList.contains('ibook-pagenav-off') === true && ibFoldBtn61b.textContent === 'Inhalt ▸', 'T61f gespeicherter eingeklappter Zustand wird beim Laden wiederhergestellt');
                 global.localStorage = { getItem: function () { return null; }, setItem: function () {} };
 
                 /* T63 (#79): Bibliothek am Diagramm-Element: Auswahl uebernimmt
@@ -1933,6 +1933,14 @@ setTimeout(function () {
                 roRunBtn.className = 'icv-code-run';
                 roRunBtn.setAttribute('data-lang', 'java');
                 roRunBtn.setAttribute('data-clsfiles', JSON.stringify([{ name: 'Auto.java', code: 'class Auto {' + NLt + '  String name;' + NLt + '  void fahren() {}' + NLt + '}' + NLt }]));
+                /* #99: Klassen-Chip im Lesemodus, app.js baut die Karte dazu. */
+                var roChip = new FakeEl('div');
+                roChip.className = 'icv-code-card icv-code-card-ro';
+                roChip.setAttribute('data-clsname', 'Auto');
+                roChip.setAttribute('title', 'Auto.java');
+                roChip.appendChild(new FakeEl('text'));
+                roChip.children[0].textContent = 'Auto';
+                roCodeBox.appendChild(roChip);
                 var roOut = new FakeEl('pre');
                 roOut.className = 'icv-code-out';
                 roCodeBox.appendChild(roCodeTa);
@@ -2017,6 +2025,120 @@ setTimeout(function () {
                   delete global.window.mermaid;
                 }
                 global.document = savedDocR;
+
+                /* T74 (#98): AltGr-Klammern. Auf deutschen Tastaturen melden
+                 * { und [ sich als ctrlKey+altKey; die Klammer-Automatik
+                 * darf sie nicht mehr wegfiltern, echte Strg-Kuerzel schon. */
+                roCodeTa.value = '';
+                roCodeTa.selectionStart = 0;
+                roCodeTa.selectionEnd = 0;
+                roCodeTa.dispatch('keydown', { key: '{', ctrlKey: true, altKey: true });
+                ok(roCodeTa.value === '{}', 'T74 AltGr-{ (ctrlKey+altKey) schliesst die geschweifte Klammer mit');
+                roCodeTa.value = '';
+                roCodeTa.selectionStart = 0;
+                roCodeTa.selectionEnd = 0;
+                roCodeTa.dispatch('keydown', { key: '[', ctrlKey: true, altKey: true });
+                ok(roCodeTa.value === '[]', 'T74b AltGr-[ schliesst die eckige Klammer mit');
+                roCodeTa.value = '';
+                roCodeTa.selectionStart = 0;
+                roCodeTa.selectionEnd = 0;
+                roCodeTa.dispatch('keydown', { key: '(', ctrlKey: true });
+                ok(roCodeTa.value === '', 'T74c ein echtes Strg-Kuerzel bleibt unangetastet');
+
+                /* T75 (#99): Klassenkarte im Lesemodus. Der Chip klappt auf
+                 * und zeigt Attribute und Methoden der importierten Klasse. */
+                var roDet75 = roChip.querySelector('.icv-code-card-detail');
+                ok(roDet75 !== null, 'T75 der Lesemodus-Chip traegt die aufklappbare Klassenkarte');
+                if (roDet75) {
+                  var roTxt75 = roChip.textOf();
+                  ok(roTxt75.indexOf('name : String') !== -1, 'T75b die Karte nennt das Attribut der importierten Klasse');
+                  ok(roTxt75.indexOf('fahren()') !== -1, 'T75c die Karte nennt die Methode der importierten Klasse');
+                  roChip.dispatch('click');
+                  ok(roChip.classList.contains('open'), 'T75d ein Klick klappt die Karte im Lesemodus auf');
+                }
+
+                /* T76 (#100): Inhalt-Knopf in der Kopfzeile. Der Knopf sitzt
+                 * neben dem Zurueck-Button und traegt die Beschriftung Inhalt,
+                 * die Leiste verschwindet eingeklappt komplett. */
+                var p76 = require.resolve('../public/assets/js/app.js');
+                delete require.cache[p76];
+                var doc76 = new FakeDoc();
+                doc76.documentElement = new FakeEl('html');
+                var aside76 = new FakeEl('aside');
+                doc76.register(aside76, 'ibook-pagenav');
+                var foldBtn76 = new FakeEl('button');
+                foldBtn76.className = 'btn btn-ghost ibook-pagenav-fold';
+                doc76.register(foldBtn76, 'ibook-pagenav-fold');
+                doc76.body.appendChild(aside76);
+                doc76.body.appendChild(foldBtn76);
+                var savedDoc76 = global.document;
+                global.document = doc76;
+                require(p76);
+                ok(String(foldBtn76.textContent).indexOf('Inhalt') !== -1, 'T76 der Ausklapp-Knopf heisst Inhalt');
+                aside76.classList.add('ibook-pagenav-off');
+                foldBtn76.dispatch('click');
+                ok(!aside76.classList.contains('ibook-pagenav-off'), 'T76b ein Klick klappt die Leiste wieder aus');
+                ok(String(foldBtn76.textContent).indexOf('Inhalt') !== -1, 'T76c die Beschriftung bleibt auch eingeklappt lesbar');
+                aside76.classList.add('ibook-pagenav-off');
+                foldBtn76.dispatch('click');
+                global.document = savedDoc76;
+
+                /* T77 (#101): Seiten per Drag&Drop sortieren. Ziehen im selben
+                 * Abschnitt sortiert das DOM und schickt die neue Reihenfolge
+                 * an den Endpunkt seiten-reihenfolge. */
+                var p77 = require.resolve('../public/assets/js/app.js');
+                delete require.cache[p77];
+                var doc77 = new FakeDoc();
+                doc77.documentElement = new FakeEl('html');
+                var aside77 = new FakeEl('aside');
+                doc77.register(aside77, 'ibook-pagenav');
+                var sec77 = new FakeEl('a');
+                sec77.className = 'ibook-pagenav-section';
+                var pgA = new FakeEl('a');
+                pgA.className = 'ibook-pagenav-page ibook-pagenav-drag';
+                pgA.setAttribute('draggable', 'true');
+                pgA.setAttribute('data-page-id', '1');
+                pgA.setAttribute('href', '/infobuecher/12/seite/1');
+                var pgB = new FakeEl('a');
+                pgB.className = 'ibook-pagenav-page ibook-pagenav-drag';
+                pgB.setAttribute('draggable', 'true');
+                pgB.setAttribute('data-page-id', '2');
+                pgB.setAttribute('href', '/infobuecher/12/seite/2');
+                var pgC = new FakeEl('a');
+                pgC.className = 'ibook-pagenav-page ibook-pagenav-drag';
+                pgC.setAttribute('draggable', 'true');
+                pgC.setAttribute('data-page-id', '3');
+                pgC.setAttribute('href', '/infobuecher/12/seite/3');
+                aside77.appendChild(sec77);
+                aside77.appendChild(pgA);
+                aside77.appendChild(pgB);
+                aside77.appendChild(pgC);
+                doc77.body.appendChild(aside77);
+                var dndUrl = null;
+                var dndBody = null;
+                var savedFetch = global.fetch;
+                global.fetch = function (u, o) { dndUrl = u; dndBody = o && o.body ? String(o.body) : ''; return { catch: function () {} }; };
+                var savedDoc77 = global.document;
+                global.document = doc77;
+                require(p77);
+                pgA.dispatch('dragstart', { dataTransfer: { setData: function () {}, effectAllowed: '' } });
+                ok(pgA.classList.contains('ibook-pagenav-dragging'), 'T77 die gezogene Seite markiert sich');
+                pgC.dispatch('dragover', { dataTransfer: { dropEffect: '' } });
+                ok(pgC.classList.contains('ibook-pagenav-dragover'), 'T77b die Zielzeile hebt sich hervor');
+                pgC.dispatch('drop', { dataTransfer: { dropEffect: '' } });
+                ok(aside77.children[3] === pgA, 'T77c die gezogene Seite landet hinter dem Ziel (DOM-Reihenfolge B, C, A)');
+                ok(dndUrl === '/infobuecher/12/seiten-reihenfolge', 'T77d die neue Reihenfolge geht an den Sortier-Endpunkt');
+                ok(dndBody !== null && dndBody.indexOf('page_ids=2%2C3%2C1') !== -1, 'T77e die Reihenfolge wandert als page_ids an den Server');
+                global.fetch = savedFetch;
+                global.document = savedDoc77;
+
+                /* T78 (#102): Editor-Bausteine sind Module: clsMembers liegt
+                 * genau einmal vor (IC_EDIT_TOOLS) und dient Editor, Lesemodus
+                 * und Klassenkarte. */
+                ok(global.window.IC_EDIT_TOOLS && typeof global.window.IC_EDIT_TOOLS.clsMembers === 'function', 'T78 IC_EDIT_TOOLS exportiert die Member-Erkennung als Baustein');
+                var mem78 = global.window.IC_EDIT_TOOLS ? global.window.IC_EDIT_TOOLS.clsMembers('class Auto {' + NLt + '  String name;' + NLt + '  void fahren() {}' + NLt + '}') : null;
+                ok(mem78 !== null && mem78.fields.length === 1 && mem78.fields[0].name === 'name', 'T78b der Baustein erkennt Attribute einer Klasse');
+                ok(mem78 !== null && mem78.methods.length === 1 && mem78.methods[0].name === 'fahren', 'T78c der Baustein erkennt Methoden einer Klasse');
 
                 /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */
                 var NL41 = String.fromCharCode(10);
