@@ -297,6 +297,59 @@ final class InfoBookController
         redirect('/infobuecher/' . $book->id . '/seite/' . $pageId);
     }
 
+    /**
+     * #101: Seiten per Drag&Drop sortieren. app.js schickt die neue
+     * Reihenfolge als Komma-Liste (page_ids); akzeptiert werden nur Seiten
+     * des Buchs, fuer deren Abschnitt Schreibrecht besteht. Sortiert wird
+     * je Abschnitt: jede zusammenhaengende Gruppe im Abschnitt bekommt ihre
+     * Position neu, Abschnitte mischen sich nicht.
+     */
+    public static function reorderPages(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $book = InfoBook::find((int) ($params['id'] ?? 0));
+        if ($book === null) {
+            http_response_code(404);
+            render('error', ['title' => 'Nicht gefunden', 'message' => 'Dieses InfoBook gibt es nicht.']);
+            return;
+        }
+        $ids = [];
+        foreach (explode(',', (string) ($_POST['page_ids'] ?? '')) as $rawId) {
+            $pid = (int) trim($rawId);
+            if ($pid > 0) {
+                $ids[] = $pid;
+            }
+        }
+        $ids = array_values(array_unique($ids));
+        if ($ids === []) {
+            flash('error', 'Keine Seiten zum Sortieren übergeben.');
+            redirect('/infobuecher/' . $book->id);
+        }
+        /* Seiten nach Abschnitt gruppieren: Reihenfolge gilt innerhalb
+         * eines Abschnitts, jede Seite bleibt wo sie ist. */
+        $bySection = [];
+        foreach ($ids as $pid) {
+            $navPage = InfoBook::findPage($pid);
+            if ($navPage === null) {
+                continue;
+            }
+            $navSection = InfoBook::findSection((int) $navPage['section_id']);
+            if ($navSection === null || (int) $navSection['book_id'] !== $book->id || !self::canWriteSection($navSection, $user)) {
+                continue;
+            }
+            $bySection[(int) $navSection['id']][] = $pid;
+        }
+        foreach ($bySection as $sectionId => $orderedIds) {
+            InfoBook::reorderSectionPages($sectionId, $orderedIds);
+        }
+        flash('success', 'Reihenfolge der Seiten gespeichert.');
+        redirect('/infobuecher/' . $book->id . '/seite/' . (int) $ids[0]);
+    }
+
     public static function page(array $params): void
     {
         $user = Auth::user();
@@ -998,7 +1051,10 @@ final class InfoBookController
                     $clsAttr = ' data-clsfiles="' . e(json_encode($clsList, JSON_UNESCAPED_UNICODE)) . '"';
                     $clsChips = '<div class="icv-code-cards">';
                     foreach ($clsList as $c) {
-                        $clsChips .= '<div class="icv-code-card icv-code-card-ro" title="' . e((string) ($c['name'] ?? 'Klasse')) . '">' . e(pathinfo((string) $c['name'], PATHINFO_FILENAME)) . '</div>';
+                        /* #99: data-clsname verknuepft den Chip mit der
+                         * Klasse, app.js baut daraus die aufklappbare
+                         * Klassenkarte (Attribute und Methoden, nur lesen). */
+                        $clsChips .= '<div class="icv-code-card icv-code-card-ro" data-clsname="' . e(pathinfo((string) $c['name'], PATHINFO_FILENAME)) . '" title="' . e((string) ($c['name'] ?? 'Klasse')) . '">' . e(pathinfo((string) $c['name'], PATHINFO_FILENAME)) . '</div>';
                     }
                     $clsChips .= '</div>';
                 }

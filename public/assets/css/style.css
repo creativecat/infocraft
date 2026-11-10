@@ -1435,13 +1435,17 @@ span.hlwrap { display: block; }
 .ibook-pagenav-box summary::-webkit-details-marker { display: none; }
 .ibook-pagenav-box summary::after { content: '▾'; float: right; color: #64748b; font-size: 0.8rem; }
 .ibook-pagenav-box[open] summary::after { content: '▴'; }
-/* Seitenleiste komplett einklappbar (#82): Der Knopf bleibt als schmale
- * Leiste stehen, alles andere verschwindet, die Seite nutzt die volle
- * Breite (der Hauptbereich ist flex:1). Zustand merkt sich app.js. */
-.ibook-pagenav-fold { display: block; width: 100%; padding: 3px 8px; margin-bottom: 6px; font-size: 0.85rem; text-align: center; }
-.ibook-pagenav.ibook-pagenav-off { flex: 0 0 42px; width: 42px; padding: 8px 4px; }
-.ibook-pagenav.ibook-pagenav-off .ibook-pagenav-fold { margin-bottom: 0; padding: 4px 0; }
-.ibook-pagenav.ibook-pagenav-off details, .ibook-pagenav.ibook-pagenav-off form { display: none; }
+/* Seitenleiste komplett einklappbar (#82, #100): Der Inhalt-Knopf sitzt in
+ * der Kopfzeile neben dem Zurueck-Button, die Leiste selbst verschwindet
+ * eingeklappt komplett, die Seite nutzt die volle Breite. Zustand merkt
+ * sich app.js. */
+.ibook-pagenav-fold { padding: 3px 10px; font-size: 0.85rem; white-space: nowrap; }
+.ibook-pagenav.ibook-pagenav-off { display: none; }
+/* Drag&Drop der Seiten (#101): gezogene Zeile gedimmt, Zielzeile markiert. */
+.ibook-pagenav-drag { cursor: grab; }
+.ibook-pagenav-dragging { opacity: 0.45; }
+.ibook-pagenav-dragover { box-shadow: inset 0 2px 0 #1d4ed8; }
+.ibook-pagenav-dragover.ibook-pagenav-below { box-shadow: inset 0 -2px 0 #1d4ed8; }
 /* Neue Seite direkt im Abschnitt + neuer Abschnitt unten (#72) */
 .ibook-navnew { display: flex; gap: 6px; padding: 2px 6px 6px 24px; align-items: center; }
 .ibook-navnew input[type="text"] { flex: 1; min-width: 0; padding: 4px 8px; font-size: 0.8rem; }
@@ -1868,6 +1872,10 @@ a.icv-item-link:hover .icv-item { outline: 2px dashed #1d4ed8; outline-offset: 2
 .icv-code-card.open .icv-code-card-detail { display: block; }
 .icv-code-card-field { color: #475569; }
 .icv-code-card-method { color: #1d4ed8; }
+/* Klassenkarte im Lesemodus (#99): Chip klappt auf wie im Editor. */
+.icv-code-card-ro { cursor: pointer; }
+.icv-code-card-ro::after { content: ' ▾'; color: #64748b; font-size: 0.7rem; font-weight: 400; }
+.icv-code-card-ro.open::after { content: ' ▴'; }
 /* Autovervollstaendigung (#87): Vorschlaege unter dem Code-Feld */
 .icv-code-ac {
     display: none; margin-top: 4px; background: #ffffff; border: 1px solid #334155;
@@ -1916,11 +1924,15 @@ a.icv-item-link:hover .icv-item { outline: 2px dashed #1d4ed8; outline-offset: 2
 /* Gutter-Wrap um ein Eingabefeld: relatives Gefaess, Gutter absolut links. */
 .icv-edwrap { position: relative; display: flex; flex-direction: column; min-width: 0; }
 .icv-edwrap > textarea { display: block; width: 100%; }
-/* Platz fuer den Gutter in allen vier Feldarten (spaeter im File = gewinnt). */
-.icv-edwrap > .icv-code-ta,
-.icv-edwrap > .icv-code-src,
-.icv-edwrap > .icv-diagram-src,
-.icv-edwrap > .icv-diagram-code { padding-left: 48px; }
+/* Platz fuer den Gutter in allen vier Feldarten. Mit Element-Komponente im
+ * Selektor (textarea...), damit die Regel gegenueber ".icv-code
+ * textarea.icv-code-src" (padding: 6px, #92) bei gleicher Spezifitaet
+ * erstens gleich stark und zweitens spaeter im File ist und gewinnt:
+ * vorher lief der Text im Lesemodus unter den Zeilennummern durch (#97). */
+.icv-edwrap > textarea.icv-code-ta,
+.icv-edwrap > textarea.icv-code-src,
+.icv-edwrap > textarea.icv-diagram-src,
+.icv-edwrap > textarea.icv-diagram-code { padding-left: 48px; }
 .icv-code .icv-edwrap > textarea {
     font-family: var(--mono, ui-monospace, monospace); font-size: 0.85rem;
     line-height: 1.45; background: #1e293b; color: #e2e8f0;

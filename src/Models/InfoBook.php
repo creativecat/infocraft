@@ -178,6 +178,25 @@ final class InfoBook
         return (int) Database::pdo()->lastInsertId();
     }
 
+    /** #101: Reihenfolge der Seiten eines Abschnitts setzen. Erwartet die
+     * vollstaendige, geordnete Liste der Seiten-IDs dieses Abschnitts;
+     * Seiten anderer Abschnitte bleiben unberuehrt (WHERE section_id). */
+    public static function reorderSectionPages(int $sectionId, array $orderedIds): void
+    {
+        $pdo = Database::pdo();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('UPDATE ibook_pages SET position = ? WHERE id = ? AND section_id = ?');
+            foreach (array_values($orderedIds) as $pos => $pageId) {
+                $stmt->execute([$pos, (int) $pageId, $sectionId]);
+            }
+            $pdo->commit();
+        } catch (\Throwable $eReo) {
+            $pdo->rollBack();
+            throw $eReo;
+        }
+    }
+
     /**
      * Zahl fuer die Freie Flaeche begrenzen: alles innerhalb der Flaeche,
      * ganze Zahlen bleiben ganze Zahlen (DB-JSON bleibt kompakt).

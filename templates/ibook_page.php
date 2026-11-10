@@ -9,67 +9,14 @@
  * Seiten-Links haengen das Suffix an, Abschnitts-Links fuehren auf die erste
  * Seite des Abschnitts, wenn der Abschnitt Seiten hat. */ ?>
 <?php $navLesen = $preview ? '?lesen=1' : ''; ?>
-<div class="ibook-page-layout">
-<aside class="ibook-pagenav" id="ibook-pagenav" aria-label="Navigation dieses InfoBooks">
-    <?php /* #82: Knopf klappt die komplette Leiste ein, die Seite bekommt
-     * die volle Breite. Zustand bleibt im Browser gespeichert (app.js). */ ?>
-    <button type="button" class="btn btn-ghost ibook-pagenav-fold" id="ibook-pagenav-fold" aria-expanded="true" title="Seitenleiste einklappen (gibt der Seite die volle Breite)">◀</button>
-    <?php /* #71: Die Navigation klappt auf und zu: Kopfzeile antippen. Ohne
-     * Javascript nutzbar (details/summary), Standardzustand offen. */ ?>
-    <details class="ibook-pagenav-box" open>
-    <summary class="ibook-pagenav-head" title="Navigation ein- und ausklappen">📓 <?= e($book->title) ?></summary>
-    <?php
-    $navArea = null;
-    foreach ($nav as $navEntry):
-        $navSec = $navEntry['section'];
-        $navAreaKey = (string) $navSec['area'];
-        if ($navAreaKey !== $navArea):
-            $navArea = $navAreaKey;
-            $navIcon = $navAreas[$navAreaKey][0] ?? '📄';
-            $navName = $navAreas[$navAreaKey][1] ?? $navAreaKey;
-    ?>
-    <div class="ibook-pagenav-area"><?= $navIcon ?> <?= e($navName) ?></div>
-    <?php endif; ?>
-    <?php $navSecHref = ($preview && !empty($navEntry['pages'])) ? url('infobuecher/' . (int) $book->id . '/seite/' . (int) $navEntry['pages'][0]['id'] . '?lesen=1') : url('infobuecher/' . (int) $book->id . '?abschnitt=' . (int) $navSec['id']); ?>
-    <a class="ibook-pagenav-section<?= (int) $section['id'] === (int) $navSec['id'] ? ' active' : '' ?>" href="<?= $navSecHref ?>"><?= e($navSec['title']) ?></a>
-    <?php foreach ($navEntry['pages'] as $navPage): ?>
-    <a class="ibook-pagenav-page<?= (int) $navPage['id'] === (int) $page['id'] ? ' active' : '' ?>" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $navPage['id'] . $navLesen) ?>" title="Seite öffnen"><?= e((string) $navPage['title']) ?></a>
-    <?php endforeach; ?>
-    <?php /* #72: Seite direkt im Abschnitt anlegen, ohne Umweg ueber die
-     * Buch-Uebersicht. Nach dem Anlegen oeffnet sich die neue Seite. */ ?>
-    <?php if (!empty($navEntry['canWrite'])): ?>
-    <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/seite') ?>" class="ibook-navnew">
-        <?= csrf_field() ?>
-        <input type="hidden" name="section_id" value="<?= (int) $navSec['id'] ?>">
-        <input type="text" name="title" maxlength="160" placeholder="Neue Seite" aria-label="Neue Seite in diesem Abschnitt anlegen">
-        <button class="btn btn-ghost" type="submit" title="Neue Seite in diesem Abschnitt anlegen (öffnet sich danach direkt)">➕</button>
-    </form>
-    <?php endif; ?>
-    <?php endforeach; ?>
-    <?php /* #72: Abschnitt direkt hier anlegen; Lehrkraefte waehlen den Bereich. */ ?>
-    <?php if ($canWrite): ?>
-    <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/abschnitt') ?>" class="form ibook-navnewsec">
-        <?= csrf_field() ?>
-        <label class="field"><span>Neuer Abschnitt</span>
-            <input type="text" name="title" maxlength="160" placeholder="z. B. Schleifen">
-            <?php if (\Infocraft\Auth::isTeacher()): ?>
-            <select name="area">
-                <option value="lernbereich">📖 Lernbereich</option>
-                <option value="gemeinsam">🤝 Zusammenarbeit</option>
-                <option value="eigen">🔒 Mein Bereich</option>
-            </select>
-            <?php else: ?>
-            <input type="hidden" name="area" value="gemeinsam">
-            <?php endif; ?>
-        </label>
-        <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Abschnitt anlegen">➕ Abschnitt anlegen</button></div>
-    </form>
-    <?php endif; ?>
-    </details>
-</aside>
-<div class="ibook-pagemain">
+<?php /* #100: Kopfzeile ueber die volle Breite: Inhalt-Knopf (#100) direkt
+ * neben dem Zurueck-Button, darunter Seitenleiste neben dem Hauptbereich,
+ * damit die Seitenuebersicht direkt neben dem "Freie Flaeche"-Fenster sitzt. */ ?>
 <section class="hero ibook-hero-compact">
     <div class="btn-row ibook-topnav">
+        <?php /* #82/#100: Knopf klappt die Seitenleiste ein und aus, Zustand
+         * bleibt im Browser gespeichert (app.js). Beschriftung "Inhalt". */ ?>
+        <button type="button" class="btn btn-ghost ibook-pagenav-fold" id="ibook-pagenav-fold" aria-expanded="true" title="Seitenübersicht einklappen">Inhalt ◂</button>
         <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '?abschnitt=' . (int) $section['id']) ?>">← <?= e($book->title) ?></a>
         <?php /* #83: Titel und Meta rutschen in die Kopfzeile zu den Buttons,
          * die Seite verliert vertikalen Platz. IDs bleiben (Autospeichern). */ ?>
@@ -113,6 +60,66 @@
         </div>
     </div>
 </section>
+<div class="ibook-page-layout">
+<aside class="ibook-pagenav" id="ibook-pagenav" aria-label="Navigation dieses InfoBooks">
+    <?php /* #71: Die Navigation klappt auf und zu: Kopfzeile antippen. Ohne
+     * Javascript nutzbar (details/summary), Standardzustand offen. */ ?>
+    <details class="ibook-pagenav-box" open>
+    <summary class="ibook-pagenav-head" title="Navigation ein- und ausklappen">📓 <?= e($book->title) ?></summary>
+    <?php
+    $navArea = null;
+    foreach ($nav as $navEntry):
+        $navSec = $navEntry['section'];
+        $navAreaKey = (string) $navSec['area'];
+        if ($navAreaKey !== $navArea):
+            $navArea = $navAreaKey;
+            $navIcon = $navAreas[$navAreaKey][0] ?? '📄';
+            $navName = $navAreas[$navAreaKey][1] ?? $navAreaKey;
+    ?>
+    <div class="ibook-pagenav-area"><?= $navIcon ?> <?= e($navName) ?></div>
+    <?php endif; ?>
+    <?php $navSecHref = ($preview && !empty($navEntry['pages'])) ? url('infobuecher/' . (int) $book->id . '/seite/' . (int) $navEntry['pages'][0]['id'] . '?lesen=1') : url('infobuecher/' . (int) $book->id . '?abschnitt=' . (int) $navSec['id']); ?>
+    <a class="ibook-pagenav-section<?= (int) $section['id'] === (int) $navSec['id'] ? ' active' : '' ?>" href="<?= $navSecHref ?>"><?= e($navSec['title']) ?></a>
+    <?php foreach ($navEntry['pages'] as $navPage): ?>
+    <?php /* #101: Seiten mit Schreibrecht sind per Drag&Drop sortierbar,
+     * app.js schickt die neue Reihenfolge an /seiten-reihenfolge. */ ?>
+    <?php $navDrag = !empty($navEntry['canWrite']) ? ' draggable="true" data-page-id="' . (int) $navPage['id'] . '"' : ''; ?>
+    <a class="ibook-pagenav-page<?= (int) $navPage['id'] === (int) $page['id'] ? ' active' : '' ?><?= !empty($navEntry['canWrite']) ? ' ibook-pagenav-drag' : '' ?>" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $navPage['id'] . $navLesen) ?>"<?= $navDrag ?> title="Seite öffnen"><?= e((string) $navPage['title']) ?></a>
+    <?php endforeach; ?>
+    <?php /* #72: Seite direkt im Abschnitt anlegen, ohne Umweg ueber die
+     * Buch-Uebersicht. Nach dem Anlegen oeffnet sich die neue Seite. */ ?>
+    <?php if (!empty($navEntry['canWrite'])): ?>
+    <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/seite') ?>" class="ibook-navnew">
+        <?= csrf_field() ?>
+        <input type="hidden" name="section_id" value="<?= (int) $navSec['id'] ?>">
+        <input type="text" name="title" maxlength="160" placeholder="Neue Seite" aria-label="Neue Seite in diesem Abschnitt anlegen">
+        <button class="btn btn-ghost" type="submit" title="Neue Seite in diesem Abschnitt anlegen (öffnet sich danach direkt)">➕</button>
+    </form>
+    <?php endif; ?>
+    <?php endforeach; ?>
+    <?php /* #72: Abschnitt direkt hier anlegen; Lehrkraefte waehlen den Bereich. */ ?>
+    <?php if ($canWrite): ?>
+    <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/abschnitt') ?>" class="form ibook-navnewsec">
+        <?= csrf_field() ?>
+        <label class="field"><span>Neuer Abschnitt</span>
+            <input type="text" name="title" maxlength="160" placeholder="z. B. Schleifen">
+            <?php if (\Infocraft\Auth::isTeacher()): ?>
+            <select name="area">
+                <option value="lernbereich">📖 Lernbereich</option>
+                <option value="gemeinsam">🤝 Zusammenarbeit</option>
+                <option value="eigen">🔒 Mein Bereich</option>
+            </select>
+            <?php else: ?>
+            <input type="hidden" name="area" value="gemeinsam">
+            <?php endif; ?>
+        </label>
+        <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Abschnitt anlegen">➕ Abschnitt anlegen</button></div>
+    </form>
+    <?php endif; ?>
+    </details>
+</aside>
+<div class="ibook-pagemain">
+
 
 <?php if (!$canWrite): ?>
 <section class="panel">

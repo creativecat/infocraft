@@ -205,6 +205,7 @@ $router->post('/infobuecher/{id}/loeschen', [InfoBookController::class, 'deleteB
 $router->post('/infobuecher/{id}/abschnitt', [InfoBookController::class, 'createSection']);
 $router->post('/infobuecher/{id}/abschnitt/{sid}/loeschen', [InfoBookController::class, 'deleteSection']);
 $router->post('/infobuecher/{id}/seite', [InfoBookController::class, 'createPage']);
+$router->post('/infobuecher/{id}/seiten-reihenfolge', [InfoBookController::class, 'reorderPages']);
 $router->get('/infobuecher/{id}/seite/{pid}', [InfoBookController::class, 'page']);
 $router->post('/infobuecher/{id}/seite/{pid}', [InfoBookController::class, 'savePage']);
 $router->post('/infobuecher/{id}/seite/{pid}/loeschen', [InfoBookController::class, 'deletePage']);

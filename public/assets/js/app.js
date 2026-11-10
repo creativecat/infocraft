@@ -1,3 +1,15 @@
+/* InfoCraft app.js: ein Bundle aus eigenstaendigen Modulen (IIFEs).
+ * Wiederverwendbare Editor-Bausteine (#102) sind an window.* exportiert
+ * und an allen Stellen (Werkstatt, InfoBook-Editor, Lesemodus, geteiltes
+ * Diagramm) nur eingebunden, nicht doppelt implementiert:
+ *   - IC_EDIT_TOOLS  .gutter(ta) .brackets(ta) .boostRead()
+ *                    .clsMembers(code)  (Attribute/Methoden einer Klasse)
+ *   - IC_AUTOCOMPLETE.attach(ta, kind, extra) (java|mermaid|md|sql|...)
+ *   - IC_RUN_CODE(outEl, src, lang, clsFiles), IC_DB_RUN, IC_RENDER_DIAGRAM
+ * Jede Aenderung an diesen Bausteinen gilt automatisch fuer alle Fenster.
+ * Genauer auditiert in #102; die Werkstatt-Ghost-AC und die Klassen-AC des
+ * Code-Fensters (icv-code-ac) bleiben eigene Anzeigen, teilen aber dieselben
+ * Datenquellen (clsMembers, data-clsfiles). */
 /* InfoCraft: kleine UI-Helfer (Präsentationsmodus, Tabellenfilter, CSV-Beispiel) */
 (function () {
   'use strict';
@@ -521,7 +533,9 @@
     area.dispatchEvent(new Event('input', { bubbles: true }));
   }
   area.addEventListener('keydown', function (ev) {
-    if (ev.ctrlKey || ev.metaKey || ev.altKey) { return; }
+    /* AltGr-Klammern (#98): { und [ kommen mit ctrlKey+altKey, echte
+     * Strg/Meta-Kuerzel bleiben unangetastet. */
+    if (ev.metaKey || (ev.ctrlKey && !ev.altKey)) { return; }
     var start = area.selectionStart;
     var end = area.selectionEnd;
     if (openers[ev.key]) {
@@ -1774,7 +1788,12 @@
     if (!ta || ta.__icBr) { return; }
     ta.__icBr = true;
     ta.addEventListener('keydown', function (ev) {
-      if (!ev || ev.ctrlKey || ev.metaKey || ev.altKey) { return; }
+      if (!ev) { return; }
+      /* AltGr-Klammern (#98): Auf deutschen Tastaturen melden {, [, ], },
+       * @, \, | und ~ sich als ctrlKey UND altKey. Nur echte Meta- und
+       * Strg-Kuerzel (Strg+C, Cmd+V, ...) brechen die Automatik ab,
+       * AltGr-Zeichen duerfen durchreichen. */
+      if (ev.metaKey || (ev.ctrlKey && !ev.altKey)) { return; }
       var k = ev.key || '';
       var v = String(ta.value || '');
       var pos = typeof ta.selectionStart === 'number' ? ta.selectionStart : v.length;
@@ -1867,6 +1886,38 @@
     return { items: items, members: members };
   }
 
+  /* Klassenkarte im Lesemodus (#99): Die Chips ueber dem Code-Fenster sind
+   * statisch gerendert, Inhalt und Struktur liegen am Ausfuehren-Knopf
+   * (data-clsfiles). Hier bekommen die Chips dieselbe aufklappbare Karte
+   * wie im Editor: Klick zeigt Attribute und Methoden, alles nur lesen. */
+  function wireReadCards(box, clsFiles) {
+    if (!box || !box.querySelectorAll) { return; }
+    var chips = box.querySelectorAll('.icv-code-card-ro');
+    for (var i = 0; i < chips.length; i++) {
+      (function (chip) {
+        if (chip.__icCardRo) { return; }
+        chip.__icCardRo = true;
+        var name = String(chip.getAttribute('data-clsname') || chip.title || '');
+        var code = '';
+        (clsFiles || []).forEach(function (f) {
+          if (String(f && f.name ? f.name : '').replace(/\.java$/i, '') === name) { code = String(f && f.code ? f.code : ''); }
+        });
+        var det = document.createElement('div');
+        det.className = 'icv-code-card-detail';
+        var mem = clsMembersOf(code);
+        if (mem.fields.length === 0 && mem.methods.length === 0) {
+          det.appendChild(document.createTextNode('keine Attribute oder Methoden erkannt'));
+        } else {
+          mem.fields.forEach(function (f) { det.appendChild(document.createTextNode(f.name + ' : ' + f.type)); det.appendChild(document.createElement('br')); });
+          mem.methods.forEach(function (m) { det.appendChild(document.createTextNode(m.name + '(' + m.args + ')')); det.appendChild(document.createElement('br')); });
+        }
+        chip.appendChild(det);
+        chip.title = 'Attribute und Methoden anzeigen';
+        chip.addEventListener('click', function () { chip.classList.toggle('open'); });
+      })(chips[i]);
+    }
+  }
+
   /* Lesemodus anreichern (#92/#93): Code-Fenster editierbar und mit
    * Gutter, Klammern und Java-Autovervollstaendigung; Diagramm-Quelltext
    * im geteilten Modus ebenso, dort mit Mermaid-Vorschlaegen. */
@@ -1883,6 +1934,7 @@
       gutter(ta);
       brackets(ta);
       if (window.IC_AUTOCOMPLETE) { window.IC_AUTOCOMPLETE.attach(ta, 'java', extraFromClsFiles(clsFiles)); }
+      wireReadCards(box, clsFiles);
     }
     var diagTas = document.querySelectorAll('textarea.icv-diagram-code');
     for (var j = 0; j < diagTas.length; j++) {
@@ -1894,7 +1946,7 @@
   }
   try { boostRead(); } catch (eBoost) { /* Lesemodus ohne Felder: harmlos */ }
 
-  window.IC_EDIT_TOOLS = { gutter: gutter, brackets: brackets, boostRead: boostRead };
+  window.IC_EDIT_TOOLS = { gutter: gutter, brackets: brackets, boostRead: boostRead, clsMembers: clsMembersOf };
 })();
 
 /* =====================================================================
@@ -2402,26 +2454,12 @@
       var acItems = [];
       var acSel = 0;
       function clsTitle(nm) { return String(nm || 'Klasse').replace(/\.java$/i, ''); }
-      function clsMembers(code) {
-        var src = String(code || '');
-        var fields = [], methods = [];
-        var fRe = /(?:^|\n)\s*(?:(?:public|protected|private|static|final)\s+)*([A-Za-z_][\w<>\[\], .]*)\s+([a-zA-Z_]\w*)\s*(?:=[^;\n]*)?;/g;
-        var fM;
-        var fSkip = ['class', 'interface', 'enum', 'return', 'new', 'import', 'package', 'extends', 'implements', 'void', 'if', 'for', 'while', 'switch', 'catch'];
-        while ((fM = fRe.exec(src))) {
-          var fType = fM[1].trim();
-          if (fSkip.indexOf(fType.split(/\s+/)[0]) === -1) { fields.push({ name: fM[2], type: fType }); }
-        }
-        var mRe = /(?:^|[^\w.])([A-Za-z_]\w*)\s*\(([^)]*)\)/g;
-        var mM;
-        var mSkip = ['if', 'for', 'while', 'switch', 'catch', 'new', 'return', 'super', 'this', 'do', 'print', 'println', 'class'];
-        while ((mM = mRe.exec(src))) {
-          if (mSkip.indexOf(mM[1]) === -1 && methods.filter(function (x) { return x.name === mM[1]; }).length === 0) {
-            methods.push({ name: mM[1], args: mM[2].trim() });
-          }
-        }
-        return { fields: fields, methods: methods };
-      }
+      /* #102: Die Member-Erkennung (Attribute und Methoden einer Klasse)
+       * ist EINMAL im Editor-Baustein implementiert und wird hier nur noch
+       * eingebunden, dieselbe Erkennung wie in der Lesemodus-Klassenkarte. */
+      var clsMembers = (window.IC_EDIT_TOOLS && window.IC_EDIT_TOOLS.clsMembers)
+        ? window.IC_EDIT_TOOLS.clsMembers
+        : function () { return { fields: [], methods: [] }; };
       function acHide() {
         acItems = []; acSel = 0;
         acBox.innerHTML = '';
@@ -3973,14 +4011,14 @@
     function apply(off) {
       if (off) {
         aside.classList.add('ibook-pagenav-off');
-        btn.textContent = '▶';
+        btn.textContent = 'Inhalt ▸';
         btn.setAttribute('aria-expanded', 'false');
-        btn.title = 'Seitenleiste ausklappen';
+        btn.title = 'Seitenübersicht ausklappen';
       } else {
         aside.classList.remove('ibook-pagenav-off');
-        btn.textContent = '◀';
+        btn.textContent = 'Inhalt ◂';
         btn.setAttribute('aria-expanded', 'true');
-        btn.title = 'Seitenleiste einklappen (gibt der Seite die volle Breite)';
+        btn.title = 'Seitenübersicht einklappen';
       }
     }
     var saved = null;
@@ -3998,6 +4036,129 @@
   var aside = document.getElementById('ibook-pagenav');
   var btn = document.getElementById('ibook-pagenav-fold');
   if (aside && btn) { wireNavFold(aside, btn); }
+})();
+
+
+/* InfoBook: Seiten in der Navigation per Drag&Drop sortieren (#101).
+ * Nur Links mit Schreibrecht sind draggable (Klasse ibook-pagenav-drag).
+ * Ziehen bleibt im selben Abschnitt, die neue Reihenfolge geht als
+ * page_ids an POST /infobuecher/{id}/seiten-reihenfolge. Ohne fetch
+ * (Test-Harness) ordnet nur das DOM um, nichts wird gespeichert. */
+(function () {
+  'use strict';
+  if (typeof window === 'undefined' || typeof document === 'undefined' || !document.getElementById) { return; }
+  var nav = document.getElementById('ibook-pagenav');
+  if (!nav || !nav.querySelectorAll) { return; }
+  var dragEl = null;
+  /* Kinder-Liste als Array (HTMLCollection im Browser, Array im Harness). */
+  function kidsOf(node) {
+    if (!node || !node.children) { return []; }
+    return Array.prototype.slice.call(node.children);
+  }
+  function isPage(node) {
+    return !!(node && node.classList && node.classList.contains && node.classList.contains('ibook-pagenav-page'));
+  }
+  function isSection(node) {
+    return !!(node && node.classList && node.classList.contains && node.classList.contains('ibook-pagenav-section'));
+  }
+  /* Abschnitt eines Seiten-Links: der letzte Abschnitts-Link davor. */
+  function sectionOf(link) {
+    var kids = kidsOf(link.parentNode);
+    var idx = -1;
+    for (var i = 0; i < kids.length; i++) { if (kids[i] === link) { idx = i; break; } }
+    for (var j = idx; j >= 0; j--) {
+      if (isSection(kids[j])) { return kids[j]; }
+    }
+    return null;
+  }
+  /* Seiten-Links eines Abschnitts (bis zum naechsten Abschnitt). */
+  function pageLinksOf(sectionLink) {
+    var out = [];
+    var kids = kidsOf(sectionLink.parentNode);
+    var start = -1;
+    for (var i = 0; i < kids.length; i++) { if (kids[i] === sectionLink) { start = i; break; } }
+    for (var j = start + 1; j < kids.length; j++) {
+      if (isSection(kids[j])) { break; }
+      if (isPage(kids[j])) { out.push(kids[j]); }
+    }
+    return out;
+  }
+  function csrfToken() {
+    var inp = document.querySelector('input[name="csrf"]');
+    return inp && inp.value ? String(inp.value) : '';
+  }
+  function saveOrder(sectionLink) {
+    var links = pageLinksOf(sectionLink);
+    var ids = [];
+    for (var i = 0; i < links.length; i++) {
+      var pid = links[i].getAttribute('data-page-id');
+      if (pid) { ids.push(parseInt(pid, 10)); }
+    }
+    if (ids.length < 2 || typeof fetch !== 'function') { return; }
+    /* Buch-Id steht im href des ersten Links: /infobuecher/{id}/seite/... */
+    var m = /\/infobuecher\/(\d+)/.exec(links[0].getAttribute('href') || '');
+    if (!m) { return; }
+    var body = new URLSearchParams();
+    body.set('csrf', csrfToken());
+    body.set('page_ids', ids.join(','));
+    try {
+      fetch('/infobuecher/' + m[1] + '/seiten-reihenfolge', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: String(body)
+      }).catch(function () { /* Offline: Reihenfolge gilt nur im Browser */ });
+    } catch (eFetch) { /* fetch fehlt komplett (Harness): nur DOM umsortiert */ }
+  }
+  var pages = nav.querySelectorAll('a.ibook-pagenav-drag');
+  for (var p = 0; p < pages.length; p++) {
+    (function (link) {
+      link.addEventListener('dragstart', function (ev) {
+        dragEl = link;
+        link.classList.add('ibook-pagenav-dragging');
+        try { ev.dataTransfer.setData('text/plain', 'ic-page'); } catch (eDnD) { /* IE-artige Umgebungen */ }
+        try { ev.dataTransfer.effectAllowed = 'move'; } catch (eDnD2) { /* harmlos */ }
+      });
+      link.addEventListener('dragend', function () {
+        link.classList.remove('ibook-pagenav-dragging');
+        var marks = nav.querySelectorAll('.ibook-pagenav-dragover');
+        for (var i = 0; i < marks.length; i++) { marks[i].classList.remove('ibook-pagenav-dragover'); }
+        dragEl = null;
+      });
+      link.addEventListener('dragover', function (ev) {
+        if (!dragEl || dragEl === link) { return; }
+        if (sectionOf(dragEl) !== sectionOf(link)) { return; }
+        if (ev.preventDefault) { ev.preventDefault(); }
+        link.classList.add('ibook-pagenav-dragover');
+        try { ev.dataTransfer.dropEffect = 'move'; } catch (eDnD3) { /* harmlos */ }
+      });
+      link.addEventListener('dragleave', function () { link.classList.remove('ibook-pagenav-dragover'); });
+      link.addEventListener('drop', function (ev) {
+        if (!dragEl || dragEl === link) { return; }
+        var secDrag = sectionOf(dragEl);
+        var secTarget = sectionOf(link);
+        if (secDrag !== secTarget) { return; }
+        if (ev.preventDefault) { ev.preventDefault(); }
+        /* Vor oder hinter das Ziel, je nach Mausposition in der Zeile. */
+        var after = true;
+        try {
+          var rect = link.getBoundingClientRect();
+          after = ev.clientY > (rect.top + rect.height / 2);
+        } catch (eRect) { after = true; }
+        /* Liegt das Ziel direkt hinter dem gezogenen Element, kehrt die
+         * Richtung um, sonst springt die Zeile nur um sich selbst. */
+        var kidsDrop = kidsOf(link.parentNode);
+        var liDrop = kidsDrop.indexOf(link);
+        if (liDrop > 0 && kidsDrop[liDrop - 1] === dragEl) { after = false; }
+        var anchor = after ? link.nextSibling : link;
+        link.parentNode.insertBefore(dragEl, anchor);
+        link.classList.remove('ibook-pagenav-dragover');
+        dragEl.classList.remove('ibook-pagenav-dragging');
+        saveOrder(secDrag);
+        dragEl = null;
+      });
+    })(pages[p]);
+  }
 })();
 
 
