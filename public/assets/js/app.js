@@ -1231,6 +1231,14 @@
     var sync = function () {
       pre.scrollTop = area.scrollTop;
       pre.scrollLeft = area.scrollLeft;
+      /* Fallback (#108): Browser, die scrollTop am overflow:hidden-pre
+       * nicht umsetzen, verschieben stattdessen das code-Element; ohne
+       * Scroll (oder wenn scrollTop griff) bleibt es unveraendert. */
+      if (code.style && typeof area.scrollTop === 'number') {
+        if (pre.scrollTop !== area.scrollTop) {
+          code.style.transform = 'translate(' + (-(area.scrollLeft || 0)) + 'px,' + (-(area.scrollTop || 0)) + 'px)';
+        } else { code.style.transform = ''; }
+      }
     };
     var render = function () {
       code.innerHTML = hljs.highlight(area.value + NL, { language: lang }).value;

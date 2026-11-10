@@ -1332,13 +1332,23 @@ span.hlwrap { display: block; }
     padding: 8px 10px;
     font-size: 0.9rem;
     line-height: 1.45;
+    /* Exakt dieselbe Schriftfamilie wie #java-repl-in (#108): Der generische
+     * hlwrap-Stack kennt "Cascadia Code", die Anweisungs-Textarea aber
+     * SFMono-Regular - auf Rechnern mit Cascadia Code driften die Ebenen
+     * Zeichen fuer Zeichen auseinander und liegen uebereinander. */
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-/* ===== Grafik-Fenster im Dock: volle Breite statt fester Pixelbreite.
- * Position erbt vom Dock (keine absolute Breite mehr), der Canvas misst
- * die Zeilenbreite 1:1 mit (java-vm.js passt canvas.width an). */
-.gfx-dock .gfx-window { width: 100%; max-width: none; }
-.gfx-dock .gfx-canvas { width: 100%; height: auto; }
+/* Caret bleibt sichtbar, obwohl der Text transparent wird (#108). */
+.hlwrap.hl-active > textarea { caret-color: var(--text, #0f172a); }
+#java-repl-in { caret-color: var(--text, #0f172a); }
+
+/* ===== Grafik-Fenster im Dock: 1:1 an der Weltgroesse aus dem Code (#110),
+ * zentriert unter der IDE statt ueber die volle Breite gestreckt.
+ * Das Fenster schrumpft auf die Canvasgroesse (fit-content) und bleibt
+ * auf schmalen Screens hoechstens so breit wie das Dock. */
+.gfx-dock .gfx-window { width: fit-content; max-width: 100%; margin: 0 auto; }
+.gfx-dock .gfx-canvas { width: auto; max-width: 100%; height: auto; }
 
 /* ===== InfoBook (#62): OneNote-artige Seiten mit Medien ===== */
 

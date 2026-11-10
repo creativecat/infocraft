@@ -197,7 +197,7 @@
                 <div class="console-block-title">Ausgabe</div>
                 <pre id="java-console" class="code ide-console-out">Noch nichts ausgeführt.</pre>
                 <div class="console-block-title">Objektkonsole</div>
-                <p class="muted" id="java-repl-hint">Erst ▶ Ausführen klicken. Dann schreibst du hier auf mehrere Zeilen, was dein Programm tun soll: Objekte erzeugen und Methoden aufrufen, getrennt vom Entwurf deiner Klassen im Codefenster.</p>
+                <p class="muted" id="java-repl-hint">Schreibe hier auf mehrere Zeilen, was dein Programm tun soll: Objekte erzeugen und Methoden aufrufen, getrennt vom Entwurf deiner Klassen im Codefenster. ▶ Anweisungen ausführen startet dein Programm automatisch mit.</p>
                 <div class="repl-edit">
                     <div class="repl-gutter mono" id="java-repl-gutter">1</div>
                     <div class="hlwrap" data-hl="java" data-ac="java"><textarea id="java-repl-in" class="mono" rows="4" autocomplete="off" spellcheck="false"><?= e($replText ?? '') ?></textarea></div>

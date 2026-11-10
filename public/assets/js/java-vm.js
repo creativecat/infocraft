@@ -1152,8 +1152,7 @@
       var line = String(input == null ? '' : input);
       line = line.trim();
       var res = { output: '', errors: [], result: null, resultType: null, objects: [] };
-      if (line === '') { res.objects = s.objects(); return res; }
-      var lastCh = line.charAt(line.length - 1);
+      if (line === '') { res.objects = s.objects(); return res; }      var lastCh = line.charAt(line.length - 1);
       if (lastCh !== ';' && lastCh !== '{' && lastCh !== '}') { line += ';'; }
       var perrs = [];
       var toks = lex('Objektkonsole', line, perrs);
@@ -1172,6 +1171,10 @@
       RUN_CLASS_MAP = classMap;
       RUN_VM = vm;
       var ctx = { file: 'Objektkonsole', line: 1, cls: null, thisVal: null, vm: vm, captureExpr: true };
+      /* Stand der Variablen vor dem Lauf: Zeigt eine Variable danach auf ein
+       * NEUES Objekt, nimmt die alte Registrierung mit (#107) - erneutes
+       * `Auto a = new Auto()` ueberschreibt statt zu stapeln. */
+      var pairsBefore = varPairsOf(env);
       var outStart = vm.out.length;
       var errStart = vm.errCards.length;
       try {
@@ -1185,6 +1188,33 @@
         res.output = vm.out.slice(outStart).join('');
         res.objects = s.objects();
         return res;
+      }
+      /* Ueberschreiben statt stapeln (#107): alle Variablen vergleichen,
+       * die jetzt auf ein anderes Objekt zeigen als vorher. */
+      var pairsAfter = varPairsOf(env);
+      var dropped = [];
+      var oi, pj;
+      for (oi = 0; oi < pairsAfter.length; oi++) {
+        for (pj = 0; pj < pairsBefore.length; pj++) {
+          if (pairsBefore[pj].name === pairsAfter[oi].name && pairsBefore[pj].obj !== pairsAfter[oi].obj) {
+            dropped.push(pairsBefore[pj].obj);
+          }
+        }
+      }
+      if (dropped.length > 0) {
+        /* Alias wie `Auto b = a;` haelt das alte Objekt am Leben: Nur
+         * Registrierungen verschwinden, auf die KEINE Variable mehr zeigt. */
+        var kept = [];
+        var alive;
+        for (oi = 0; oi < vm.objects.length; oi++) {
+          alive = false;
+          for (pj = 0; pj < pairsAfter.length; pj++) {
+            if (pairsAfter[pj].obj === vm.objects[oi].obj) { alive = true; break; }
+          }
+          if (alive || dropped.indexOf(vm.objects[oi].obj) === -1) { kept.push(vm.objects[oi]); }
+        }
+        vm.objects = kept;
+        for (oi = 0; oi < vm.objects.length; oi++) { vm.objects[oi].id = oi + 1; }
       }
       var last = stmts[stmts.length - 1];
       if (last && last.type === 'exprstat' && ctx.lastExprVal) {
@@ -3995,7 +4025,11 @@
      * Ohne Dock (Overlay aelterer Seiten) gilt weiter die Weltbreite. */
     var host = st.el && st.el.parentNode ? st.el.parentNode : null;
     var docked = !!(host && host.id === 'gfx-dock' && host.clientWidth > 0);
-    var cw = docked ? Math.max(240, Math.round(host.clientWidth)) : Math.max(240, Math.min(960, Math.round(w.w)));
+    /* Im Dock 1:1 an der Welt aus dem Code (#110): Das Fenster misst die
+     * Weltbreite (240 bis 960, ohne eigenes World 480), hoechstens die
+     * Dock-Breite - nicht mehr die komplette IDE-Breite. CSS zentriert es. */
+    var cw = Math.max(240, Math.min(Math.round(w.w), 960));
+    if (docked && host.clientWidth > 0 && cw > host.clientWidth) { cw = Math.max(240, Math.round(host.clientWidth)); }
     var ch = Math.max(1, Math.round(cw * w.h / w.w));
     st.canvas.width = cw;
     st.canvas.height = ch;
@@ -6228,12 +6262,20 @@
       }
       replLog.appendChild(wrap);
       replLog.scrollTop = replLog.scrollHeight;
+      /* Ausgaben auch im Konsolenfenster (#109): Der Tab Ausgabe sammelt
+       * alle Programmausgaben, auch die aus der Objektkonsole. */
+      if (res.output !== '' && consoleEl) {
+        var preTxt = String(consoleEl.textContent || '');
+        consoleEl.textContent = (preTxt ? preTxt.replace(/\s+$/, '') + NL : '')
+          + '> Anweisungen ausführen:' + NL
+          + String(res.output).replace(/\s+$/, '');
+      }
     }
 
     function updateReplHint() {
       if (!replHint) { return; }
       if (!session) {
-        replHint.textContent = 'Erst ▶ Ausführen klicken. Dann schreibst du hier auf mehrere Zeilen, was dein Programm tun soll: Objekte erzeugen und Methoden aufrufen.';
+        replHint.textContent = 'Schreibe hier auf mehrere Zeilen, was dein Programm tun soll: Objekte erzeugen und Methoden aufrufen. ▶ Anweisungen ausführen startet dein Programm automatisch mit.';
         return;
       }
       var names = session.classNames();
@@ -7154,9 +7196,11 @@
       if (!replIn) { return; }
       var input = replIn.value;
       if (!session) {
-        /* Noch keine Session: nichts ausfuehren, Eingabe bleibt erhalten. */
-        updateReplHint();
-        return;
+        /* Noch keine Session (#106): ▶ Anweisungen ausfuehren startet das
+         * Programm automatisch einmal (wie ▶ Ausführen) und wertet danach
+         * die Anweisungen aus. Bei Fehlern im Code bleibt es beim Hinweis. */
+        doRun();
+        if (!session) { updateReplHint(); return; }
       }
       acHide();
       var res = session.evalLine(input);
@@ -7186,6 +7230,12 @@
         if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
           e.preventDefault();
           replRunAll();
+        }
+        /* Tab ohne offene Vorschlagsliste (#108): zwei Leerzeichen Vorschub,
+         * wie in der Werkstatt und im InfoBook (#103) - kein Fokus-Sprung. */
+        if (e.key === 'Tab' && window.IC_EDIT_TOOLS && window.IC_EDIT_TOOLS.tabIndent) {
+          e.preventDefault();
+          window.IC_EDIT_TOOLS.tabIndent(replIn);
         }
       });
     }
