@@ -78,7 +78,7 @@ final class CodeController
         $type = ($_POST['type'] ?? 'code') === 'html' ? 'html' : 'code';
         $language = match ($type) {
             'html' => 'html',
-            default => in_array($_POST['language'] ?? '', ['python', 'java', 'asm'], true) ? (string) $_POST['language'] : SiteSetting::defaultLanguage(),
+            default => in_array($_POST['language'] ?? '', ['python', 'java', 'asm', 'blocks'], true) ? (string) $_POST['language'] : SiteSetting::defaultLanguage(),
         };
         if ($language === 'python' && !self::pythonAllowed($user)) {
             flash('error', 'Python ist für deine Klasse (noch) nicht freigegeben.');
@@ -875,6 +875,33 @@ final class CodeController
                 return "# " . $title . "\n# Zeichnen mit Zeichen: mit Zeichenketten ein Bild ausgeben\n# Pyodide hat keine Turtle-Grafik, aber mit print() zeichnen wir genauso.\n\nstern = \"\"\"\n    *\n   ***\n  *****\n   ***\n    *\n\"\"\"\nprint(stern)\n\n# Eigene Figur: unten eine Linie mit Wiederholung\nprint(\"-\" * 20)\n";
             }
             return "# " . $title . "\nprint(\"Hallo InfoCraft!\")\n";
+        }
+        if ($language === 'blocks') {
+            /* Startprogramm: Fahne -> begruessen -> ein Stueck gehen. Das
+             * JSON-Format entspricht genau dem, was der Block-Editor laedt
+             * und automatisch speichert (#121). */
+            $starterBlocks = [
+                'v' => 1,
+                'vars' => [],
+                'sprite' => ['x' => 0, 'y' => 0, 'dir' => 90, 'costume' => 'robot', 'size' => 100, 'visible' => true],
+                'scripts' => [[
+                    'id' => 's1', 'x' => 24, 'y' => 16,
+                    'top' => [
+                        'op' => 'flag', 'id' => 'b1', 'f' => [], 'sub' => [],
+                        'next' => [
+                            'op' => 'say_for', 'id' => 'b2',
+                            'f' => ['msg' => ['v' => 'Hallo!'], 'secs' => ['v' => '2']],
+                            'sub' => [],
+                            'next' => [
+                                'op' => 'move_steps', 'id' => 'b3',
+                                'f' => ['steps' => ['v' => '50']], 'sub' => [],
+                                'next' => null,
+                            ],
+                        ],
+                    ],
+                ]],
+            ];
+            return json_encode($starterBlocks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
         return "# " . $title . "\nprint(\"Hallo InfoCraft!\")\n";
     }

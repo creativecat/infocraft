@@ -2401,6 +2401,234 @@ setTimeout(function () {
                   var ibStatus52 = ibDoc.body.querySelector('.ibook-status');
                   ok(ibStatus52 !== null && ibStatus52.textContent.indexOf('Automatisch gespeichert') !== -1, 'T52b der Editor meldet den automatischen Speichervorgang im Statusfeld');
 
+                  /* ============================================================
+                     T87-T95 (#116-#121): Block-Werkstatt. Zunaechst headless
+                     (Laufzeit ohne DOM), danach ein eigener FakeDoc fuer den
+                     Editor (T86-Muster: eigenes document + frisches require,
+                     weil window-Exponate auf die zuletzt initialisierte
+                     Instanz zeigen). */
+                  var blkDocSaved = global.document;
+                  var blkFetchSaved = global.fetch;
+                  var blkFetchCalls = [];
+                  global.fetch = function (url, opts) {
+                    blkFetchCalls.push({ url: String(url), body: opts ? String(opts.body) : '' });
+                    return { then: function (fn) { fn({ ok: true }); return { catch: function () {} }; } };
+                  };
+
+                  var blkDoc = new FakeDoc();
+                  function blkReg(id, tag) {
+                    var e = blkDoc.createElement(tag || 'div');
+                    blkDoc.register(e, id);
+                    return e;
+                  }
+                  blkReg('blk-ide');
+                  blkReg('blk-scriptwrap');
+                  var blkCatsEl = blkReg('blk-cats');
+                  var blkPalEl = blkReg('blk-pal');
+                  var blkHelpEl = blkReg('blk-help');
+                  var blkScriptEl = blkReg('blk-script');
+                  var blkFlagBtn = blkReg('blk-flag', 'button');
+                  blkReg('blk-stop', 'button');
+                  var blkRuninfoEl = blkReg('blk-runinfo');
+                  var blkSaveinfoEl = blkReg('blk-saveinfo');
+                  blkReg('blk-var-add', 'button');
+                  var blkPenEl = blkDoc.createElement('canvas');
+                  blkDoc.register(blkPenEl, 'blk-pen');
+                  var blkCtrEl = blkDoc.createElement('canvas');
+                  blkDoc.register(blkCtrEl, 'blk-ctr');
+                  var blkFormEl = blkReg('blocks-save-form', 'form');
+                  blkFormEl.setAttribute('action', '/werkstatt/code/5');
+                  var blkCsrfEl = new FakeEl('input');
+                  blkCsrfEl.setAttribute('name', 'csrf');
+                  blkCsrfEl.value = 'tok';
+                  blkFormEl.appendChild(blkCsrfEl);
+                  var blkTitleEl = new FakeEl('input');
+                  blkTitleEl.setAttribute('name', 'title');
+                  blkTitleEl.value = 'Block Demo';
+                  blkFormEl.appendChild(blkTitleEl);
+                  var blkJsonEl = new FakeEl('textarea');
+                  blkDoc.register(blkJsonEl, 'blocks-json');
+                  blkJsonEl.value = JSON.stringify({
+                    v: 1, vars: [],
+                    sprite: { x: 0, y: 0, dir: 90, costume: 'robot', size: 100, visible: true },
+                    scripts: [{
+                      id: 's1', x: 24, y: 16,
+                      top: { op: 'flag', id: 'b1', f: {}, sub: [],
+                        next: { op: 'say_for', id: 'b2', f: { msg: { v: 'Hallo!' }, secs: { v: '2' } }, sub: [],
+                          next: { op: 'move_steps', id: 'b3', f: { steps: { v: '50' } }, sub: [], next: null } } }
+                    }]
+                  });
+
+                  global.document = blkDoc;
+                  delete require.cache[require.resolve('../public/assets/js/block-editor.js')];
+                  var BLK = require('../public/assets/js/block-editor.js');
+
+                  function blkRaw(op, fields, next, subs) {
+                    var f = {};
+                    var k;
+                    for (k in (fields || {})) {
+                      var fv = fields[k];
+                      f[k] = (fv && typeof fv === 'object' && fv.b) ? { b: fv.b } : { v: fv };
+                    }
+                    return { op: op, f: f, sub: subs || [], next: next || null };
+                  }
+                  function blkProgram(top) {
+                    return BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: top }] }));
+                  }
+                  function blkCond(raw) { return { cond: { b: raw } }; }
+
+                  ok(BLK && BLK.BLOCKS && BLK.BLOCKS.flag && BLK.newRuntime, 'T87 der Block-Editor meldet Registry und Laufzeit als Exponat');
+                  ok(Object.keys(BLK.BLOCKS).length >= 40, 'T87b die Registry enthaelt alle Bloecke der acht Kategorien');
+                  var blkParsed = BLK.parseProgram(blkJsonEl.value);
+                  ok(blkParsed.scripts.length === 1 && blkParsed.scripts[0].top.op === 'flag' && blkParsed.scripts[0].top.next.op === 'say_for', 'T87c das gespeicherte JSON laedt als Skript mit Fahne und sage-Befehl');
+                  ok(BLK.parseProgram('kein json').scripts.length === 0, 'T87d ungueltiges JSON laedt als leeres Programm statt zu abstuerzen');
+
+                  /* T88: Bewegung, warte, wiederhole, fortlaufend, stoppe alles */
+                  var rt88 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('move_steps', { steps: '10' }))));
+                  rt88.flag(0);
+                  rt88.frame(0);
+                  ok(rt88.sprite.x === 10, 'T88 gehe 10 Schritte in Richtung 90 Grad bewegt die Figur nach rechts');
+                  var rt88b = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('point_dir', { deg: '0' }, blkRaw('move_steps', { steps: '10' })))));
+                  rt88b.flag(0);
+                  rt88b.frame(0);
+                  ok(rt88b.sprite.y === 10, 'T88b Richtung 0 Grad heisst nach oben');
+                  var rt88c = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('wait', { secs: '1' }, blkRaw('change_y', { dy: '7' })))));
+                  rt88c.flag(0);
+                  rt88c.frame(999);
+                  ok(rt88c.sprite.y === 0, 'T88c waehrend des Wartens steht das Skript still');
+                  rt88c.frame(1000);
+                  ok(rt88c.sprite.y === 0, 'T88d die Wartezeit zaehlt ab dem ersten Anlauf (hier: bis Frame 1999)');
+                  rt88c.frame(2500);
+                  ok(rt88c.sprite.y === 7, 'T88e nach Ablauf der Wartezeit laeuft es weiter');
+                  var rt88e = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('repeat', { count: '3' }, null, [blkRaw('change_y', { dy: '5' })])) }] })));
+                  rt88e.flag(0);
+                  rt88e.frame(0);
+                  rt88e.frame(0);
+                  rt88e.frame(0);
+                  ok(rt88e.sprite.y === 15, 'T88f wiederhole 3 mal lauft mit einem Durchlauf pro Bild');
+                  rt88e.frame(0);
+                  ok(rt88e.running() === false, 'T88g nach dem letzten Durchlauf ist der Thread beendet');
+                  var rt88g = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('forever', {}, null, [blkRaw('move_steps', { steps: '1' })])) }] })));
+                  rt88g.flag(0);
+                  var f88;
+                  for (f88 = 0; f88 < 10; f88++) { rt88g.frame(f88); }
+                  ok(rt88g.sprite.x === 10, 'T88h wiederhole fortlaufend bewegt Bild fuer Bild');
+                  var rt88h = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('forever', {}, null, [blkRaw('stop_all')])) }] })));
+                  rt88h.flag(0);
+                  rt88h.frame(0);
+                  ok(rt88h.running() === false, 'T88i stoppe alles beendet alle laufenden Skripte sofort');
+
+                  /* T89: wenn/sonst, Operatoren, Division durch 0, Zufall */
+                  function blkVarProgram(condRaw, name) {
+                    return BLK.parseProgram(JSON.stringify({
+                      v: 1, vars: ['punkte'], sprite: {},
+                      scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('if_then', blkCond(condRaw), null, [blkRaw('var_set', { name: name, value: '5' })])) }]
+                    }));
+                  }
+                  var rt89 = BLK.newRuntime(blkVarProgram(blkRaw('gt', { a: '3', b: '2' }), 'punkte'));
+                  rt89.flag(0);
+                  rt89.frame(0);
+                  ok(rt89.vars.punkte === 5, 'T89 wenn 3 > 2 setzt den dann-Zweig um');
+                  var rt89b = BLK.newRuntime(blkVarProgram(blkRaw('lt', { a: '3', b: '2' }), 'punkte'));
+                  rt89b.flag(0);
+                  rt89b.frame(0);
+                  ok(rt89b.vars.punkte === 0, 'T89b eine falsche Bedingung ueberspringt den dann-Zweig');
+                  var rt89c = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: ['a'], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('if_else', blkCond(blkRaw('eq', { a: 'hi', b: 'hi' })), null, [blkRaw('var_set', { name: 'a', value: '1' })], [blkRaw('var_set', { name: 'a', value: '2' })])) }] })));
+                  rt89c.flag(0);
+                  rt89c.frame(0);
+                  ok(rt89c.vars.a === 1, 'T89c wenn ... sonst nimmt bei wahrer Bedingung den dann-Zweig');
+                  var rt89d = BLK.newRuntime(blkVarProgram(blkRaw('div', { a: '4', b: '0' }), 'punkte'));
+                  rt89d.flag(0);
+                  rt89d.frame(0);
+                  ok(rt89d.errors.length === 1 && rt89d.vars.punkte === 0, 'T89d Division durch 0 erzeugt einen Hinweis statt eines Absturzes');
+                  var rt89e = BLK.newRuntime(blkVarProgram(blkRaw('random', { from: '1', to: '10' }), 'punkte'));
+                  rt89e.flag(0);
+                  rt89e.frame(0);
+                  ok(rt89e.errors.length === 0, 'T89e die ganzzahlige Zufallszahl laeuft ohne Fehler durch');
+
+                  /* T90: Wahrnehmung (Rand, Taste, Stoppuhr) */
+                  var rt90 = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: ['r'], sprite: { x: 238, y: 0 }, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('if_then', blkCond(blkRaw('touching_edge')), null, [blkRaw('var_set', { name: 'r', value: '1' })])) }] })));
+                  rt90.flag(0);
+                  rt90.frame(0);
+                  ok(rt90.vars.r === 1, 'T90 am Rand berueht die Wahrnehmung den Rand');
+                  var rt90b = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: ['k'], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('forever', {}, null, [blkRaw('if_then', blkCond(blkRaw('key_pressed', { key: 'leertaste' })), null, [blkRaw('var_set', { name: 'k', value: '1' })])])) }] })));
+                  rt90b.flag(0);
+                  rt90b.keys.leertaste = true;
+                  rt90b.frame(0);
+                  rt90b.frame(0);
+                  ok(rt90b.vars.k === 1, 'T90b Taste gedrueckt? liest den Tastaturstatus ohne Fokus im Fenster');
+                  var rt90c = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: ['t'], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('if_then', blkCond(blkRaw('gt', { a: { b: blkRaw('timer') }, b: '0.5' })), null, [blkRaw('var_set', { name: 't', value: '1' })])) }] })));
+                  rt90c.flag(5000);
+                  rt90c.frame(6000);
+                  ok(rt90c.vars.t === 1, 'T90c die Stoppuhr zaehlt die Sekunden seit dem Fahnen-Start');
+
+                  /* T91: Stift und Sprechblase */
+                  var rt91 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('pen_down', {}, blkRaw('move_steps', { steps: '100' })))));
+                  rt91.flag(0);
+                  rt91.frame(0);
+                  ok(rt91.pen.segments.length === 1 && rt91.pen.segments[0].x2 === 100, 'T91 Stift ab zeichnet beim Bewegen eine Spur');
+                  var rt91b = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('pen_down', {}, blkRaw('move_steps', { steps: '50' }, blkRaw('pen_clear'))))));
+                  rt91b.flag(0);
+                  rt91b.frame(0);
+                  ok(rt91b.pen.segments.length === 0, 'T91b loesche alle Spuren leert die Spuren');
+                  var rt91c = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('say_for', { msg: 'Hallo!', secs: '2' }))));
+                  rt91c.flag(0);
+                  rt91c.frame(0);
+                  ok(rt91c.bubble() !== null && rt91c.bubble().text === 'Hallo!', 'T91c sage ... fuer n Sekunden zeigt die Sprechblase');
+                  rt91c.frame(2500);
+                  ok(rt91c.bubble() === null, 'T91d die Sprechblase verschwindet nach Ablauf der Zeit');
+
+                  /* T92: Serialisierung und Validierung */
+                  var blkSer = BLK.serializeProgram(blkParsed);
+                  ok(blkSer.v === 1 && blkSer.scripts.length === 1 && blkSer.scripts[0].top.next.op === 'say_for', 'T92 das Programm serialisiert sich mit Skripten, Feldern und Ketten');
+                  var blkRawMany = { v: 1, vars: [], sprite: {}, scripts: [] };
+                  var i92;
+                  for (i92 = 0; i92 < 100; i92++) { blkRawMany.scripts.push({ id: 's' + i92, x: 0, y: 0, top: blkRaw('flag') }); }
+                  var blkMany = BLK.parseProgram(JSON.stringify(blkRawMany));
+                  ok(blkMany.scripts.length === 60, 'T92b mehr als 60 Skripte werden auf das Limit begrenzt');
+                  var blkEvil = BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('hakemeister', {}, blkRaw('hackemeister_zwei'))) }] }));
+                  ok(blkEvil.scripts.length === 1 && blkEvil.scripts[0].top.next === null, 'T92c unbekannte Bloecke im geladenen JSON entfallen kommentarlos');
+
+                  /* T93: Editor-UI am eigenen FakeDoc */
+                  var blkUi = BLK.ui;
+                  ok(blkUi !== null && typeof blkUi === 'object', 'T93 der Editor initialisiert sich auf der Blöcke-Seite von selbst');
+                  ok(blkCatsEl.children.length === 8, 'T93b die Palette listet alle acht Kategorien');
+                  ok(blkPalEl.children.length === 2, 'T93c die Ereignis-Kategorie zeigt Fahne und Tast-Hut');
+                  blkCatsEl.children[1].dispatch('click');
+                  ok(blkPalEl.querySelector('.blk[data-pal-op="move_steps"]') !== null, 'T93d der Kategorie-Wechsel zeigt die Bewegungs-Bloecke');
+                  ok(blkHelpEl.querySelectorAll('.blk-help-row').length === Object.keys(BLK.BLOCKS).length, 'T93e die Befehlsuebersicht erklaert jeden Block der Registry');
+                  var blkBefore = blkUi.program.scripts.length;
+                  blkUi.addBlock('flag', 200, 120);
+                  ok(blkUi.program.scripts.length === blkBefore + 1 && blkScriptEl.querySelectorAll('.blk-chain').length === blkBefore + 1, 'T93f ein neuer Fahne-Block entsteht als Skript auf der Flaeche');
+                  var blkDelId = blkUi.program.scripts[blkUi.program.scripts.length - 1].top.id;
+                  blkUi.deleteBlockTree(blkDelId);
+                  ok(blkUi.program.scripts.length === blkBefore, 'T93g der Loesch-Knopf entfernt den Block samt Skript');
+                  ok(blkUi.addVariable('punkte') === true && blkUi.program.vars.indexOf('punkte') !== -1, 'T93h eine neue Variable landet in der Liste');
+                  ok(blkUi.addVariable('punkte') === false, 'T93i doppelte Variablennamen lehnt der Editor ab');
+
+                  /* T94: Autospeichern */
+                  blkFetchCalls.length = 0;
+                  blkUi.saveNow();
+                  ok(blkFetchCalls.length === 1 && blkFetchCalls[0].url === '/werkstatt/code/5', 'T94 das Autospeichern geht als POST auf die Projekt-URL');
+                  
+                  var blkBodyJson = decodeURIComponent(blkFetchCalls[0].body.split('content=')[1] || '');
+                  ok(blkBodyJson.indexOf('{"v":1') === 0 && blkBodyJson.indexOf('"op":"flag"') !== -1, 'T94c das komplette Skriptmodell wird als JSON gespeichert');
+                  ok(blkJsonEl.value.indexOf('"op":"flag"') !== -1, 'T94d das JSON-Feld fuer den normalen Speichern-Knopf bleibt synchron');
+                  ok(blkSaveinfoEl.textContent.indexOf('automatisch gespeichert') !== -1, 'T94e der Editor meldet den automatischen Speichervorgang im Statusfeld');
+
+                  /* T95: Buehne und Lauf in der UI */
+                  blkFlagBtn.dispatch('click');
+                  ok(blkUi.runtime() !== null && blkRuninfoEl.textContent.indexOf('läuft') !== -1, 'T95 der Fahne-Knopf startet das Programm auf der Buehne');
+                  ok(blkPenEl.__ctx.__calls.indexOf('clearRect') !== -1, 'T95b jeder Start loescht zunaechst alle Spuren von der Buehne');
+                  blkUi.tick(0);
+                  blkUi.tick(1500);
+                  ok(blkCtrEl.__ctx.__calls.indexOf('fillText:🤖') !== -1, 'T95c die Figur zeichnet sich in der Mitte der Buehne');
+                  blkUi.tick(2500);
+                  ok(blkUi.runtime().sprite.x === 50, 'T95d nach der Sprechblase laeuft der weitere Block (hier: 50 Schritte)');
+
+                  global.document = blkDocSaved;
+                  global.fetch = blkFetchSaved;
+
                   console.log('');
                   if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }
                   else { console.log(failures.length + ' UI-Tests fehlgeschlagen.'); process.exit(1); }

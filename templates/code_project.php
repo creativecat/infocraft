@@ -696,6 +696,48 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
         </div>
         </div>
     </div>
+    <?php elseif ($project->type === 'code' && $project->language === 'blocks'): ?>
+    <!-- Block-Werkstatt (#116-#121): Blöcke aus der Palette ziehen, andocken,
+         ausfuehren auf der Buehne. Das Skriptmodell liegt als JSON im Projekt. -->
+    <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="form blk-meta" id="blocks-save-form">
+        <?= csrf_field() ?>
+        <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
+        <textarea name="content" id="blocks-json" aria-hidden="true" spellcheck="false"><?= e($project->content) ?></textarea>
+        <div class="btn-row">
+            <button class="btn btn-primary" type="submit" title="Speichern">💾 Speichern</button>
+            <span class="save-status" id="blk-saveinfo" hidden></span>
+        </div>
+    </form>
+    <div class="ide blk-ide" id="blk-ide">
+        <aside class="blk-pal-col">
+            <div class="ide-side-title">Palette</div>
+            <div class="blk-cats" id="blk-cats"></div>
+            <div class="blk-pal" id="blk-pal"></div>
+            <button class="btn btn-ghost blk-var-add" id="blk-var-add" type="button" title="Neue Variable anlegen">＋ Variable</button>
+        </aside>
+        <div class="blk-scriptwrap" id="blk-scriptwrap">
+            <div class="blk-script" id="blk-script"></div>
+        </div>
+        <aside class="blk-stage-col">
+            <div class="blk-stagebar">
+                <button class="btn btn-primary" id="blk-flag" type="button" title="Start: alle Fahne-Skripte laufen los">▶</button>
+                <button class="btn" id="blk-stop" type="button" title="Stop: alle laufenden Skripte anhalten">⏹</button>
+                <span class="muted" id="blk-runinfo"></span>
+            </div>
+            <div class="blk-stage" id="blk-stage">
+                <canvas id="blk-pen" width="480" height="360"></canvas>
+                <canvas id="blk-ctr" width="480" height="360"></canvas>
+            </div>
+            <p class="muted blk-stage-hint">Bühne 480 × 360. Die Mitte ist x = 0, y = 0; oben ist y = 180. Richtung: 0 Grad schaut nach oben, 90 Grad nach rechts.</p>
+        </aside>
+    </div>
+    <section class="panel">
+        <div class="panel-head">
+            <h3>📚 Befehlsübersicht</h3>
+        </div>
+        <p class="muted">Alle Blöcke mit Erklärung - automatisch aus derselben Registry erzeugt, die auch die Palette füllt.</p>
+        <div id="blk-help" class="blk-help"></div>
+    </section>
     <?php else: ?>
     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="form">
         <?= csrf_field() ?>
@@ -745,6 +787,8 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
 <script>window.IC_IMAGES = <?= json_encode((object) ($imageUrls ?? []), JSON_HEX_TAG | JSON_UNESCAPED_SLASHES) ?>;</script>
 <?php elseif ($project->type === 'code' && $project->language === 'asm'): ?>
 <script src="<?= asset_url('assets/js/asm-vm.js') ?>"></script>
+<?php elseif ($project->type === 'code' && $project->language === 'blocks'): ?>
+<script src="<?= asset_url('assets/js/block-editor.js') ?>"></script>
 <?php elseif ($project->type === 'html'): ?>
 <section class="panel">
     <div class="notice">

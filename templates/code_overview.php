@@ -19,6 +19,7 @@ foreach ($folderRows as $row) { if (($row['folder']->parentId ?? 0) > 0) { $fold
                     <option value="java"<?= (($defaultLanguage ?? 'java') === 'java') ? ' selected' : '' ?>>☕ Java</option>
                     <option value="python"<?= (($defaultLanguage ?? 'java') === 'python') ? ' selected' : '' ?>>🐍 Python</option>
                     <option value="asm"<?= (($defaultLanguage ?? 'java') === 'asm') ? ' selected' : '' ?>>⚙️ Assembler</option>
+                    <option value="blocks"<?= (($defaultLanguage ?? 'java') === 'blocks') ? ' selected' : '' ?>>🧩 Blöcke</option>
                 </select>
             </label>
             <label class="field"><span>Art</span>
@@ -118,9 +119,9 @@ foreach ($folderRows as $row) { if (($row['folder']->parentId ?? 0) > 0) { $fold
                     <?php endif; ?>
                     <?php foreach ($projectsByFolder[0] ?? [] as $project): ?>
                     <div class="proj-row project-card" draggable="true" data-id="<?= (int) $project->id ?>" title="Zum Verschieben in einen Ordner ziehen">
-                        <span class="proj-icon"><?= $project->type === 'html' ? '🌐' : ($project->language === 'java' ? '☕' : ($project->language === 'asm' ? '⚙️' : '🐍')) ?></span>
+                        <span class="proj-icon"><?= $project->type === 'html' ? '🌐' : ($project->language === 'java' ? '☕' : ($project->language === 'asm' ? '⚙️' : ($project->language === 'blocks' ? '🧩' : '🐍'))) ?></span>
                         <a class="proj-title" href="<?= url('werkstatt/code/' . (int) $project->id) ?>"><?= e($project->title) ?></a>
-                        <span class="pill proj-kind"><?= $project->type === 'html' ? 'HTML' : ($project->language === 'java' ? 'Java' : ($project->language === 'asm' ? 'Assembler' : 'Python')) ?></span>
+                        <span class="pill proj-kind"><?= $project->type === 'html' ? 'HTML' : ($project->language === 'java' ? 'Java' : ($project->language === 'asm' ? 'Assembler' : ($project->language === 'blocks' ? 'Blöcke' : 'Python'))) ?></span>
                         <a class="btn btn-primary proj-open" href="<?= url('werkstatt/code/' . (int) $project->id) ?>">Öffnen</a>
                         <form method="post" action="<?= url('werkstatt/code/loeschen') ?>" class="form-inline" onsubmit="return confirm('Projekt wirklich löschen?');">
                             <?= csrf_field() ?>
@@ -150,9 +151,9 @@ foreach ($folderRows as $row) { if (($row['folder']->parentId ?? 0) > 0) { $fold
                     <?php endif; ?>
                     <?php foreach ($projectsByFolder[$folder->id] ?? [] as $project): ?>
                     <div class="proj-row project-card" draggable="true" data-id="<?= (int) $project->id ?>" title="Zum Verschieben in einen Ordner ziehen">
-                        <span class="proj-icon"><?= $project->type === 'html' ? '🌐' : ($project->language === 'java' ? '☕' : ($project->language === 'asm' ? '⚙️' : '🐍')) ?></span>
+                        <span class="proj-icon"><?= $project->type === 'html' ? '🌐' : ($project->language === 'java' ? '☕' : ($project->language === 'asm' ? '⚙️' : ($project->language === 'blocks' ? '🧩' : '🐍'))) ?></span>
                         <a class="proj-title" href="<?= url('werkstatt/code/' . (int) $project->id) ?>"><?= e($project->title) ?></a>
-                        <span class="pill proj-kind"><?= $project->type === 'html' ? 'HTML' : ($project->language === 'java' ? 'Java' : ($project->language === 'asm' ? 'Assembler' : 'Python')) ?></span>
+                        <span class="pill proj-kind"><?= $project->type === 'html' ? 'HTML' : ($project->language === 'java' ? 'Java' : ($project->language === 'asm' ? 'Assembler' : ($project->language === 'blocks' ? 'Blöcke' : 'Python'))) ?></span>
                         <a class="btn btn-primary proj-open" href="<?= url('werkstatt/code/' . (int) $project->id) ?>">Öffnen</a>
                         <form method="post" action="<?= url('werkstatt/code/loeschen') ?>" class="form-inline" onsubmit="return confirm('Projekt wirklich löschen?');">
                             <?= csrf_field() ?>
@@ -182,7 +183,7 @@ foreach ($folderRows as $row) { if (($row['folder']->parentId ?? 0) > 0) { $fold
   if (!langSel || !typeSel || !typeHtml || !starter) { return; }
   function syncNewForm() {
     var lang = langSel.value;
-    if (lang === 'asm') {
+    if (lang === 'asm' || lang === 'blocks') {
       typeSel.value = 'code';
       typeHtml.disabled = true;
     } else {
