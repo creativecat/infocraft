@@ -92,6 +92,36 @@ final class CodeController
         redirect('/werkstatt/code');
     }
 
+    /**
+     * Portierung aus der Block-Werkstatt (#141): Der im Browser generierte
+     * Java- oder Python-Code wird als neues Code-Projekt uebernommen.
+     */
+    public static function portBlocks(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $language = ($_POST['language'] ?? '') === 'python' ? 'python' : 'java';
+        if ($language === 'python' && !self::pythonAllowed($user)) {
+            flash('error', 'Python ist für deine Klasse (noch) nicht freigegeben.');
+            redirect('/werkstatt/code');
+        }
+        $title = trim((string) ($_POST['title'] ?? ''));
+        if ($title === '') {
+            $title = 'Block-Programm';
+        }
+        $code = (string) ($_POST['code'] ?? '');
+        if (trim($code) === '') {
+            flash('error', 'Es ist kein Code zum Übernehmen vorhanden.');
+            redirect('/werkstatt/code');
+        }
+        $project = Project::create($user->id, null, $title, 'code', $language, $code);
+        flash('success', 'Projekt aus der Block-Werkstatt angelegt.');
+        redirect('/werkstatt/code/' . $project->id);
+    }
+
     public static function createFolder(): void
     {
         $user = Auth::user();

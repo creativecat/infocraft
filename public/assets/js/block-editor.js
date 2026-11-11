@@ -27,6 +27,7 @@
     { id: 'events', label: 'Ereignisse', color: '#d97706' },
     { id: 'motion', label: 'Bewegung', color: '#2563eb' },
     { id: 'looks', label: 'Aussehen', color: '#9333ea' },
+    { id: 'sound', label: 'Klang', color: '#e11d48' },
     { id: 'control', label: 'Steuerung', color: '#16a34a' },
     { id: 'sensing', label: 'Wahrnehmung', color: '#0891b2' },
     { id: 'ops', label: 'Operatoren', color: '#059669' },
@@ -73,11 +74,36 @@
     { v: '#2563eb', l: '🔵 Blau' },
     { v: '#16a34a', l: '🟢 Grün' }
   ];
+  /* Klang (#130): Tonhoehe als Auswahl, Frequenz in Hertz dafuer. */
+  var TONE_OPTIONS = [
+    { v: 'c4', l: '♪ C (tief)' }, { v: 'd4', l: '♪ D' },
+    { v: 'e4', l: '♪ E' }, { v: 'f4', l: '♪ F' },
+    { v: 'g4', l: '♪ G' }, { v: 'a4', l: '♪ A' },
+    { v: 'h4', l: '♪ H' }, { v: 'c5', l: '♪ C (hoch)' }
+  ];
+  var TONE_FREQ = { c4: 261.63, d4: 293.66, e4: 329.63, f4: 349.23, g4: 392, a4: 440, h4: 493.88, c5: 523.25 };
+  /* Nachrichten (#131): feste Postfaecher, die Senden/Empfangen verbinden. */
+  var MSG_OPTIONS = [
+    { v: 'nachricht1', l: 'Nachricht 1' }, { v: 'nachricht2', l: 'Nachricht 2' },
+    { v: 'nachricht3', l: 'Nachricht 3' }, { v: 'nachricht4', l: 'Nachricht 4' },
+    { v: 'nachricht5', l: 'Nachricht 5' }
+  ];
+  var COSTUME_ORDER = ['robot', 'rocket', 'fish', 'ball'];
 
-  function optionSource(name, vars) {
+  function optionSource(name, vars, sprites) {
     if (name === 'keys') { return KEY_OPTIONS; }
     if (name === 'costumes') { return COSTUME_OPTIONS; }
     if (name === 'colors') { return PEN_COLORS; }
+    if (name === 'tones') { return TONE_OPTIONS; }
+    if (name === 'msgs') { return MSG_OPTIONS; }
+    if (name === 'sprites') {
+      var outS = [];
+      var sps = sprites || [];
+      var j;
+      for (j = 0; j < sps.length; j++) { outS.push({ v: sps[j].id, l: sps[j].name }); }
+      if (outS.length === 0) { outS.push({ v: '', l: '(keine Figur)' }); }
+      return outS;
+    }
     if (name === 'vars') {
       var out = [];
       var vs = vars || [];
@@ -105,6 +131,18 @@
     when_key: { cat: 'events', kind: 'hat', inputs: { key: { type: 'select', src: 'keys', def: 'leertaste' } },
       parts: ['Wenn Taste ', { in: 'key' }, ' gedrückt wird'],
       help: 'Startet dieses Skript jedes Mal, wenn du die ausgewählte Taste drückst.' },
+    when_msg: { cat: 'events', kind: 'hat', inputs: { msg: { type: 'select', src: 'msgs', def: 'nachricht1' } },
+      parts: ['Wenn ich ', { in: 'msg' }, ' erhalte'],
+      help: 'Startet dieses Skript, sobald jemand die ausgewählte Nachricht sendet (#131).' },
+    when_clicked: { cat: 'events', kind: 'hat', inputs: {},
+      parts: ['Wenn ich angeklickt werde'],
+      help: 'Startet dieses Skript, wenn du die Figur auf der Bühne anklickst (#133).' },
+    broadcast: { cat: 'events', kind: 'stack', inputs: { msg: { type: 'select', src: 'msgs', def: 'nachricht1' } },
+      parts: ['sende ', { in: 'msg' }],
+      help: 'Schickt eine Nachricht an alle Figuren: Jede mit passendem Empfänger-Block startet (#131).' },
+    broadcast_wait: { cat: 'events', kind: 'stack', inputs: { msg: { type: 'select', src: 'msgs', def: 'nachricht1' } },
+      parts: ['sende ', { in: 'msg' }, ' und warte'],
+      help: 'Wie senden, aber dieses Skript wartet, bis alle Empfänger fertig sind (#131).' },
 
     /* Bewegung */
     move_steps: { cat: 'motion', kind: 'stack', inputs: { steps: { type: 'slot', def: '10' } },
@@ -133,6 +171,15 @@
       help: 'Verschiebt die Figur nach oben (positiv) oder unten (negativ).' },
     set_y: { cat: 'motion', kind: 'stack', inputs: { y: { type: 'slot', def: '0' } },
       parts: ['setze y auf ', { in: 'y' }], help: 'Setzt die senkrechte Position.' },
+    glide: { cat: 'motion', kind: 'stack',
+      inputs: { secs: { type: 'slot', def: '1' }, x: { type: 'slot', def: '0' }, y: { type: 'slot', def: '0' } },
+      parts: ['gleite in ', { in: 'secs' }, ' Sekunden zu x: ', { in: 'x' }, ' y: ', { in: 'y' }],
+      help: 'Bewegt die Figur weich und gleichmäßig zur Zielposition (#134).' },
+    bounce: { cat: 'motion', kind: 'stack', inputs: {}, parts: ['pralle vom Rand ab'],
+      help: 'Wenn die Figur den Rand berührt, dreht sie sich und läuft zurück (#134).' },
+    point_towards: { cat: 'motion', kind: 'stack', inputs: { name: { type: 'select', src: 'sprites', def: '' } },
+      parts: ['drehe dich zu ', { in: 'name' }],
+      help: 'Richtet die Figur auf eine andere Figur aus (#134).' },
 
     /* Aussehen */
     say_for: { cat: 'looks', kind: 'stack',
@@ -152,6 +199,41 @@
       parts: ['ändere Größe um ', { in: 'd' }, ' %'], help: 'Macht die Figur größer oder kleiner.' },
     size_set: { cat: 'looks', kind: 'stack', inputs: { s: { type: 'slot', def: '100' } },
       parts: ['setze Größe auf ', { in: 's' }, ' %'], help: 'Legt die Größe in Prozent fest (100 % = normal).' },
+    think: { cat: 'looks', kind: 'stack', inputs: { msg: { type: 'slot', def: 'Hmm ...' } },
+      parts: ['denke ', { in: 'msg' }], help: 'Zeigt eine Denkblase, bis etwas anderes gedacht wird (#135).' },
+    think_for: { cat: 'looks', kind: 'stack',
+      inputs: { msg: { type: 'slot', def: 'Hmm ...' }, secs: { type: 'slot', def: '2' } },
+      parts: ['denke ', { in: 'msg' }, ' für ', { in: 'secs' }, ' Sekunden'],
+      help: 'Zeigt eine Denkblase für die angegebene Zeit und wartet solange (#135).' },
+    next_costume: { cat: 'looks', kind: 'stack', inputs: {}, parts: ['wechsle zum nächsten Kostüm'],
+      help: 'Schaltet aufs nächste Bild weiter: Roboter, Rakete, Fisch, Ball (#135).' },
+    change_effect: { cat: 'looks', kind: 'stack', inputs: { d: { type: 'slot', def: '25' } },
+      parts: ['ändere Farbeffekt um ', { in: 'd' }], help: 'Verdreht die Farbe der Figur weiter (0 bis 200) (#135).' },
+    set_effect: { cat: 'looks', kind: 'stack', inputs: { v: { type: 'slot', def: '0' } },
+      parts: ['setze Farbeffekt auf ', { in: 'v' }], help: 'Legt die Farbmischung fest: 0 = normal, 100 = halb gedreht (#135).' },
+    clear_effects: { cat: 'looks', kind: 'stack', inputs: {}, parts: ['Farbeffekte aus'],
+      help: 'Stellt die Originalfarbe der Figur wieder her (#135).' },
+    go_front: { cat: 'looks', kind: 'stack', inputs: {}, parts: ['gehe zu vorderster Ebene'],
+      help: 'Legt die Figur ganz nach vorn, sie verdeckt alle anderen (#135).' },
+    go_back: { cat: 'looks', kind: 'stack', inputs: { n: { type: 'slot', def: '1' } },
+      parts: ['gehe ', { in: 'n' }, ' Ebenen nach hinten'],
+      help: 'Schiebt die Figur um n Positionen nach hinten (#135).' },
+
+    /* Klang (#130) */
+    play_note: { cat: 'sound', kind: 'stack',
+      inputs: { tone: { type: 'select', src: 'tones', def: 'c4' }, secs: { type: 'slot', def: '0.5' } },
+      parts: ['spiele Ton ', { in: 'tone' }, ' für ', { in: 'secs' }, ' Sekunden'],
+      help: 'Spielt eine Tonhöhe ab und wartet solange (#130).' },
+    start_note: { cat: 'sound', kind: 'stack', inputs: { tone: { type: 'select', src: 'tones', def: 'c4' } },
+      parts: ['starte Ton ', { in: 'tone' }],
+      help: 'Startet eine Tonhöhe und läuft sofort weiter, bis gestoppt wird (#130).' },
+    stop_sounds: { cat: 'sound', kind: 'stack', inputs: {}, parts: ['stoppe alle Töne'],
+      help: 'Beendet alle laufenden Töne aller Figuren (#130).' },
+    set_volume: { cat: 'sound', kind: 'stack', inputs: { v: { type: 'slot', def: '70' } },
+      parts: ['setze Lautstärke auf ', { in: 'v' }, ' %'],
+      help: 'Legt fest, wie laut neue Töne sind (0 bis 100) (#130).' },
+    volume: { cat: 'sound', kind: 'rep', inputs: {}, parts: ['Lautstärke'],
+      help: 'Die aktuelle Lautstärke in Prozent, zum Einstecken in Steckplätze (#130).' },
 
     /* Steuerung */
     wait: { cat: 'control', kind: 'stack', inputs: { secs: { type: 'slot', def: '1' } },
@@ -192,6 +274,18 @@
       help: 'Die senkrechte Position der Figur (-180 bis 180).' },
     direction: { cat: 'sensing', kind: 'rep', inputs: {}, parts: ['Richtung'],
       help: 'Die aktuelle Richtung in Grad (0 = oben, 90 = rechts).' },
+    mouse_x: { cat: 'sensing', kind: 'rep', inputs: {}, parts: ['Maus-x'],
+      help: 'Die waagerechte Position des Mauszeigers auf der Bühne (#133).' },
+    mouse_y: { cat: 'sensing', kind: 'rep', inputs: {}, parts: ['Maus-y'],
+      help: 'Die senkrechte Position des Mauszeigers auf der Bühne (#133).' },
+    mouse_down: { cat: 'sensing', kind: 'bool', inputs: {}, parts: ['Maus gedrückt?'],
+      help: 'Wahr, solange die Maustaste auf der Bühne gehalten wird (#133).' },
+    touching_sprite: { cat: 'sensing', kind: 'bool', inputs: { name: { type: 'select', src: 'sprites', def: '' } },
+      parts: ['berühre ich ', { in: 'name' }, '?'],
+      help: 'Wahr, wenn die Figur die ausgewählte andere Figur berührt (#133).' },
+    distance_to: { cat: 'sensing', kind: 'rep', inputs: { name: { type: 'select', src: 'sprites', def: '' } },
+      parts: ['Abstand zu ', { in: 'name' }],
+      help: 'Wie weit die ausgewählte Figur entfernt ist, in Bühnenschritten (#133).' },
 
     /* Operatoren */
     add: { cat: 'ops', kind: 'rep', inputs: { a: { type: 'slot', def: '' }, b: { type: 'slot', def: '' } },
@@ -218,6 +312,23 @@
       parts: [{ in: 'a' }, ' oder ', { in: 'b' }], help: 'Wahr, wenn mindestens eine Bedingung wahr ist.' },
     not: { cat: 'ops', kind: 'bool', inputs: { a: { type: 'bool' } },
       parts: ['nicht ', { in: 'a' }], help: 'Kehrt einen Wahrheitswert um.' },
+    mod: { cat: 'ops', kind: 'rep', inputs: { a: { type: 'slot', def: '' }, b: { type: 'slot', def: '' } },
+      parts: ['Rest von ', { in: 'a' }, ' durch ', { in: 'b' }],
+      help: 'Der Divisionsrest, wie in der Grundschule: 7 durch 3 = Rest 1 (#136).' },
+    round: { cat: 'ops', kind: 'rep', inputs: { a: { type: 'slot', def: '' } },
+      parts: ['runde ', { in: 'a' }], help: 'Rundet kaufmännisch auf die nächste ganze Zahl (#136).' },
+    sqrt: { cat: 'ops', kind: 'rep', inputs: { a: { type: 'slot', def: '' } },
+      parts: ['Wurzel von ', { in: 'a' }], help: 'Die Quadratwurzel, z. B. Wurzel aus 25 = 5 (#136).' },
+    abs: { cat: 'ops', kind: 'rep', inputs: { a: { type: 'slot', def: '' } },
+      parts: ['Betrag von ', { in: 'a' }], help: 'Macht aus −7 die Zahl 7, das Vorzeichen fällt weg (#136).' },
+    join: { cat: 'ops', kind: 'rep', inputs: { a: { type: 'slot', def: '' }, b: { type: 'slot', def: '' } },
+      parts: ['verbinde ', { in: 'a' }, ' und ', { in: 'b' }],
+      help: 'Hängt zwei Texte oder Zahlen aneinander (#136).' },
+    letter_of: { cat: 'ops', kind: 'rep', inputs: { n: { type: 'slot', def: '1' }, txt: { type: 'slot', def: 'Text' } },
+      parts: ['Buchstabe ', { in: 'n' }, ' von ', { in: 'txt' }],
+      help: 'Der n-te Buchstabe eines Textes, gezählt ab 1 (#136).' },
+    length_of: { cat: 'ops', kind: 'rep', inputs: { txt: { type: 'slot', def: 'Text' } },
+      parts: ['Länge von ', { in: 'txt' }], help: 'Wie viele Zeichen ein Text hat (#136).' },
 
     /* Variablen */
     var_set: { cat: 'vars', kind: 'stack',
@@ -558,6 +669,67 @@
       case 'key_pressed':
         a = String(node.f.key.v);
         return function (rt) { return rt.keys[a] === true; };
+      /* ---------- Klang (#130) ---------- */
+      case 'volume':
+        return function (rt) { return rt.volume; };
+      /* ---------- Sensoren (#133) ---------- */
+      case 'mouse_x':
+        return function (rt) { return rt.mouse ? Math.round(rt.mouse.x * 100) / 100 : 0; };
+      case 'mouse_y':
+        return function (rt) { return rt.mouse ? Math.round(rt.mouse.y * 100) / 100 : 0; };
+      case 'mouse_down':
+        return function (rt) { return !!(rt.mouse && rt.mouse.down); };
+      case 'touching_sprite':
+        a = String(node.f.name.v);
+        return function (rt, th) {
+          if (!th || !th.tgt) { return false; }
+          var o = findSpriteById(rt, a);
+          if (!o || o === th.tgt || !o.visible) { return false; }
+          var r = 24 * Math.max(10, th.tgt.size) / 100 + 24 * Math.max(10, o.size) / 100;
+          return spriteDist(th.tgt.x - o.x, th.tgt.y - o.y) <= r;
+        };
+      case 'distance_to':
+        a = String(node.f.name.v);
+        return function (rt, th) {
+          var o = findSpriteById(rt, a);
+          if (!th || !th.tgt || !o) { return 0; }
+          return Math.round(spriteDist(th.tgt.x - o.x, th.tgt.y - o.y) * 100) / 100;
+        };
+      /* ---------- Rechnen-Plus (#136) ---------- */
+      case 'mod':
+        fa = valFn(node.f.a); fb = valFn(node.f.b);
+        return function (rt, th) {
+          var d = num(fb(rt, th));
+          if (d === 0) { throw BlkErr('Rest mit 0 ist nicht erlaubt.'); }
+          return num(fa(rt, th)) % d;
+        };
+      case 'round':
+        fa = valFn(node.f.a);
+        return function (rt, th) { return Math.round(num(fa(rt, th))); };
+      case 'sqrt':
+        fa = valFn(node.f.a);
+        return function (rt, th) {
+          var v = num(fa(rt, th));
+          if (v < 0) { throw BlkErr('Wurzel aus einer negativen Zahl ist nicht erlaubt.'); }
+          return Math.sqrt(v);
+        };
+      case 'abs':
+        fa = valFn(node.f.a);
+        return function (rt, th) { return Math.abs(num(fa(rt, th))); };
+      case 'join':
+        fa = valFn(node.f.a); fb = valFn(node.f.b);
+        return function (rt, th) { return String(fa(rt, th)) + String(fb(rt, th)); };
+      case 'letter_of':
+        fa = valFn(node.f.n); fb = valFn(node.f.txt);
+        return function (rt, th) {
+          var s = String(fb(rt, th));
+          var n = Math.round(num(fa(rt, th)));
+          if (n < 1 || n > s.length) { return ''; }
+          return s.charAt(n - 1);
+        };
+      case 'length_of':
+        fa = valFn(node.f.txt);
+        return function (rt, th) { return String(fa(rt, th)).length; };
       default:
         return function () { return 0; };
     }
@@ -566,6 +738,88 @@
   function touchingEdge(sp) {
     var half = 24 * Math.max(10, sp.size) / 100;
     return Math.abs(sp.x) + half >= 240 || Math.abs(sp.y) + half >= 180;
+  }
+
+  /* ---------- Helfer fuer Sensoren, Klang und Ebenen (#130, #133, #135) ---------- */
+  function spriteDist(dx, dy) { return Math.sqrt(dx * dx + dy * dy); }
+
+  function findSpriteById(rt, id) {
+    var i;
+    for (i = 0; i < rt.sprites.length; i++) {
+      if (rt.sprites[i].id === id) { return rt.sprites[i]; }
+    }
+    return null;
+  }
+
+  /* Klang (#130): Web-Audio direkt im Browser, kein Tonmaterial noetig.
+   * Ohne AudioContext (Headless-Test, alter Browser) greift der stumme Stub,
+   * die Blocklogik bleibt identisch. */
+  function ensureAudio(rt) {
+    if (rt.audio !== undefined) { return rt.audio; }
+    var AC = null;
+    if (typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) {
+      AC = window.AudioContext || window.webkitAudioContext;
+    } else if (typeof globalThis !== 'undefined' && (globalThis.AudioContext || globalThis.webkitAudioContext)) {
+      AC = globalThis.AudioContext || globalThis.webkitAudioContext;
+    }
+    if (AC) {
+      try { rt.audio = { ctx: new AC() }; } catch (e) { rt.audio = { ctx: null }; }
+    } else {
+      rt.audio = { ctx: null };
+    }
+    return rt.audio;
+  }
+
+  function playTone(rt, tone, ms) {
+    var until = (ms === null || ms === undefined) ? null : rt.now + ms;
+    var snd = { osc: null, stop: function () {}, until: until };
+    var a = ensureAudio(rt);
+    if (a && a.ctx) {
+      try {
+        var osc = a.ctx.createOscillator();
+        var gain = a.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = TONE_FREQ[tone] || 440;
+        gain.gain.value = clamp(num(rt.volume), 0, 100) / 100 * 0.3;
+        osc.connect(gain);
+        gain.connect(a.ctx.destination);
+        osc.start();
+        snd.osc = osc;
+        snd.stop = function () { try { osc.stop(); } catch (e) {} };
+      } catch (e) { /* stumm weiterlaufen */ }
+    }
+    rt.sounds.push(snd);
+  }
+
+  function stopAllSounds(rt) {
+    var i;
+    for (i = 0; i < rt.sounds.length; i++) { rt.sounds[i].stop(); }
+    rt.sounds.length = 0;
+  }
+
+  /* Ebenen (#135): eigene Reihenfolge-Liste, damit die Zuordnung
+   * Figur-Skript (Index in rt.sprites) unangetastet bleibt. */
+  function moveLayer(rt, th, delta) {
+    if (!th || !th.tgt) { return; }
+    var id = th.tgt.id;
+    var idx = rt.order.indexOf(id);
+    if (idx === -1) { return; }
+    rt.order.splice(idx, 1);
+    var nidx = clamp(idx + delta, 0, rt.order.length);
+    rt.order.splice(nidx, 0, id);
+  }
+
+  /* Abprallen (#134): an der Seitenwand die waagerechte Bewegung
+   * spiegeln, am Boden an der Decke die senkrechte. */
+  function bounceSprite(sp) {
+    var half = 24 * Math.max(10, sp.size) / 100;
+    if (Math.abs(sp.x) + half >= 240) {
+      sp.dir = (360 - sp.dir) % 360;
+      sp.x = clamp(sp.x, -(240 - half), 240 - half);
+    } else if (Math.abs(sp.y) + half >= 180) {
+      sp.dir = (180 - sp.dir + 360) % 360;
+      sp.y = clamp(sp.y, -(180 - half), 180 - half);
+    }
   }
 
   function argsOf(node) {
@@ -648,6 +902,21 @@
       case 'say_for':
         out.push({ t: 'sayfor', fn: valFn(node.f.msg), fn2: valFn(node.f.secs) });
         return;
+      case 'think_for':
+        out.push({ t: 'thinkfor', fn: valFn(node.f.msg), fn2: valFn(node.f.secs) });
+        return;
+      /* Klang (#130): spielt und wartet wie sage-fuer. */
+      case 'play_note':
+        out.push({ t: 'note', fn: valFn(node.f.tone), fn2: valFn(node.f.secs) });
+        return;
+      /* Bewegung (#134): sanftes Gleiten ueber mehrere Bilder. */
+      case 'glide':
+        out.push({ t: 'glide', fx: valFn(node.f.x), fy: valFn(node.f.y), fn: valFn(node.f.secs) });
+        return;
+      /* Nachrichten (#131): senden startet sofort, und-warte blockiert. */
+      case 'broadcast_wait':
+        out.push({ t: 'bcastwait', fn: valFn(node.f.msg) });
+        return;
       default:
         out.push({ t: 'call', op: node.op, A: argsOf(node) });
     }
@@ -691,6 +960,39 @@
         if (rt.penCtx) { rt.penCtx.clearRect(0, 0, 480, 360); }
         break;
       case 'pen_color': if (sp) { sp.pen.color = String(A.color(rt, th)); } break;
+      /* ---------- Klang (#130) ---------- */
+      case 'start_note': playTone(rt, String(A.tone(rt, th)), null); break;
+      case 'stop_sounds': stopAllSounds(rt); break;
+      case 'set_volume': rt.volume = clamp(num(A.v(rt, th)), 0, 100); break;
+      /* ---------- Nachrichten (#131) ---------- */
+      case 'broadcast':
+        if (rt.api.broadcast) { rt.api.broadcast(String(A.msg(rt, th)), rt.now); }
+        break;
+      /* ---------- Bewegung-Plus (#134) ---------- */
+      case 'bounce': if (sp) { bounceSprite(sp); } break;
+      case 'point_towards':
+        if (sp) {
+          var target2 = findSpriteById(rt, String(A.name(rt, th)));
+          if (target2) { sp.dir = Math.atan2(target2.x - sp.x, target2.y - sp.y) * 180 / Math.PI; }
+        }
+        break;
+      /* ---------- Aussehen-Plus (#135) ---------- */
+      case 'think':
+        if (sp) { sp.bubble = { text: String(A.msg(rt, th)), until: null, think: true }; }
+        break;
+      case 'next_costume':
+        if (sp) {
+          var ci = COSTUME_ORDER.indexOf(sp.costume);
+          sp.costume = COSTUME_ORDER[(ci + 1 + COSTUME_ORDER.length) % COSTUME_ORDER.length] || 'robot';
+        }
+        break;
+      case 'change_effect':
+        if (sp) { sp.effect = ((num(sp.effect) + num(A.d(rt, th))) % 200 + 200) % 200; }
+        break;
+      case 'set_effect': if (sp) { sp.effect = clamp(num(A.v(rt, th)), 0, 200); } break;
+      case 'clear_effects': if (sp) { sp.effect = 0; } break;
+      case 'go_front': moveLayer(rt, th, 999); break;
+      case 'go_back': moveLayer(rt, th, -Math.round(num(A.n(rt, th)))); break;
     }
   }
 
@@ -713,6 +1015,342 @@
     sp.y = ny;
   }
 
+  /* ---------- Code-Ansicht: Bloecke als Java oder Python (#140) ----------
+   * Blöcke sind nur eine andere Schreibweise für Programmcode: Der
+   * Generator wandelt jedes Skript in eine Methode (Java) bzw. Funktion
+   * (Python) um, jeder Block wird zu einem Aufruf, der Originaltext des
+   * Blocks steht als Kommentar daneben. Befehle ohne fertige Uebersetzung
+   * werden als Kommentar sichtbar, statt still zu verschwinden. */
+  var LANG_CALLS = {
+    move_steps: ['gehe_schritte', ['steps'], 'void'],
+    turn_right: ['drehe_rechts', ['deg'], 'void'],
+    turn_left: ['drehe_links', ['deg'], 'void'],
+    goto_xy: ['gehe_zu', ['x', 'y'], 'void'],
+    point_dir: ['setze_richtung', ['deg'], 'void'],
+    change_x: ['aendere_x', ['dx'], 'void'],
+    set_x: ['setze_x', ['x'], 'void'],
+    change_y: ['aendere_y', ['dy'], 'void'],
+    set_y: ['setze_y', ['y'], 'void'],
+    glide: ['gleite', ['secs', 'x', 'y'], 'void'],
+    bounce: ['pralle_ab', [], 'void'],
+    point_towards: ['drehe_zu', ['name'], 'void'],
+    say: ['sage', ['msg'], 'void'],
+    say_for: ['sage_fuer', ['msg', 'secs'], 'void'],
+    think: ['denke', ['msg'], 'void'],
+    think_for: ['denke_fuer', ['msg', 'secs'], 'void'],
+    show: ['zeige_dich', [], 'void'],
+    hide: ['verstecke_dich', [], 'void'],
+    costume: ['wechsle_kostuem', ['costume'], 'void'],
+    next_costume: ['naechstes_kostuem', [], 'void'],
+    size_change: ['aendere_groesse', ['d'], 'void'],
+    size_set: ['setze_groesse', ['s'], 'void'],
+    change_effect: ['aendere_farbeffekt', ['d'], 'void'],
+    set_effect: ['setze_farbeffekt', ['v'], 'void'],
+    clear_effects: ['farbeffekte_aus', [], 'void'],
+    go_front: ['nach_vorne', [], 'void'],
+    go_back: ['gehe_hinten', ['n'], 'void'],
+    play_note: ['spiele_ton', ['tone', 'secs'], 'void'],
+    start_note: ['starte_ton', ['tone'], 'void'],
+    stop_sounds: ['stoppe_toene', [], 'void'],
+    set_volume: ['setze_lautstaerke', ['v'], 'void'],
+    broadcast: ['sende', ['msg'], 'void'],
+    broadcast_wait: ['sende_und_warte', ['msg'], 'void'],
+    wait: ['warte', ['secs'], 'void'],
+    stop_all: ['stoppe_alles', [], 'void'],
+    reset_timer: ['stoppuhr_zurueck', [], 'void'],
+    var_set: ['setze_variable', ['name', 'value'], 'void'],
+    var_change: ['aendere_variable', ['name', 'd'], 'void'],
+    pen_down: ['stift_ab', [], 'void'],
+    pen_up: ['stift_hoch', [], 'void'],
+    pen_clear: ['loesche_spuren', [], 'void'],
+    pen_color: ['stift_farbe', ['color'], 'void']
+  };
+
+  function langQuote(v, lang) {
+    var s = String(v);
+    if (lang === 'py') { return "'" + s.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'"; }
+    return '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+  }
+
+  function langLiteral(field, lang) {
+    var v = field && field.v !== undefined ? field.v : '';
+    if (isNum(v)) { return String(num(v)); }
+    return langQuote(v, lang);
+  }
+
+  function blockText(node) {
+    var spec = BLOCKS[node.op];
+    if (!spec) { return node.op; }
+    var s = '';
+    var i;
+    for (i = 0; i < spec.parts.length; i++) {
+      var p = spec.parts[i];
+      if (typeof p === 'string') { s += p; }
+      else if (p.in) {
+        var fld = node.f[p.in];
+        s += (fld && fld.b) ? '⬢' : (fld ? String(fld.v) : '');
+      }
+    }
+    return s.replace(/\s+/g, ' ').trim();
+  }
+
+  function makeHelpers() {
+    return {
+      used: {},
+      counter: 0,
+      use: function (name, kind, n) { this.used[name] = { kind: kind, n: n || 0 }; },
+      nextVar: function () { this.counter++; return 'zaehler' + this.counter; }
+    };
+  }
+
+  function langValue(field, lang, helpers) {
+    if (field && field.b) { return langReporter(field.b, lang, helpers); }
+    return langLiteral(field, lang);
+  }
+
+  function langReporter(node, lang, helpers) {
+    var v2 = function (name) { return langValue(node.f[name], lang, helpers); };
+    var q = function (name) { return langQuote(node.f[name] && node.f[name].v, lang); };
+    switch (node.op) {
+      case 'add': return '(' + v2('a') + ' + ' + v2('b') + ')';
+      case 'sub': return '(' + v2('a') + ' - ' + v2('b') + ')';
+      case 'mul': return '(' + v2('a') + ' * ' + v2('b') + ')';
+      case 'div': return '(' + v2('a') + ' / ' + v2('b') + ')';
+      case 'mod': return '(' + v2('a') + ' % ' + v2('b') + ')';
+      case 'round': helpers.use('runde', 'double', 1); return 'runde(' + v2('a') + ')';
+      case 'sqrt': helpers.use('wurzel', 'double', 1); return 'wurzel(' + v2('a') + ')';
+      case 'abs': helpers.use('betrag', 'double', 1); return 'betrag(' + v2('a') + ')';
+      case 'join': helpers.use('verbinde', 'String', 2); return 'verbinde(' + v2('a') + ', ' + v2('b') + ')';
+      case 'letter_of': helpers.use('buchstabe', 'String', 2); return 'buchstabe(' + v2('n') + ', ' + v2('txt') + ')';
+      case 'length_of': helpers.use('laenge', 'double', 1); return 'laenge(' + v2('txt') + ')';
+      case 'random': helpers.use('zufallszahl', 'double', 2); return 'zufallszahl(' + v2('from') + ', ' + v2('to') + ')';
+      case 'gt': return '(' + v2('a') + ' > ' + v2('b') + ')';
+      case 'lt': return '(' + v2('a') + ' < ' + v2('b') + ')';
+      case 'eq': return '(' + v2('a') + ' == ' + v2('b') + ')';
+      case 'and': return '(' + v2('a') + (lang === 'py' ? ' and ' : ' && ') + v2('b') + ')';
+      case 'or': return '(' + v2('a') + (lang === 'py' ? ' or ' : ' || ') + v2('b') + ')';
+      case 'not': return lang === 'py' ? '(not ' + v2('a') + ')' : '(!' + v2('a') + ')';
+      case 'var_value': helpers.use('wert', 'double', 1); return 'wert(' + q('name') + ')';
+      case 'xpos': helpers.use('x_position', 'double', 0); return 'x_position()';
+      case 'ypos': helpers.use('y_position', 'double', 0); return 'y_position()';
+      case 'direction': helpers.use('richtung', 'double', 0); return 'richtung()';
+      case 'timer': helpers.use('stoppuhr', 'double', 0); return 'stoppuhr()';
+      case 'volume': helpers.use('lautstaerke', 'double', 0); return 'lautstaerke()';
+      case 'mouse_x': helpers.use('maus_x', 'double', 0); return 'maus_x()';
+      case 'mouse_y': helpers.use('maus_y', 'double', 0); return 'maus_y()';
+      case 'touching_edge': helpers.use('wird_rand_beruehrt', 'boolean', 0); return 'wird_rand_beruehrt()';
+      case 'touching_sprite': helpers.use('beruehrt_figur', 'boolean', 1); return 'beruehrt_figur(' + q('name') + ')';
+      case 'distance_to': helpers.use('abstand_zu', 'double', 1); return 'abstand_zu(' + q('name') + ')';
+      case 'key_pressed': helpers.use('taste_gedrueckt', 'boolean', 1); return 'taste_gedrueckt(' + q('key') + ')';
+      case 'mouse_down': helpers.use('maus_geklickt', 'boolean', 0); return 'maus_geklickt()';
+      default:
+        return (lang === 'py' ? '0  # Block ohne Textfassung: ' : '0  /* Block ohne Textfassung: */ ') + node.op;
+    }
+  }
+
+  function langCallLine(node, lang, helpers) {
+    var def = LANG_CALLS[node.op];
+    if (!def) {
+      return null; /* Kontrollblock oder noch ohne Uebersetzung */
+    }
+    helpers.use(def[0], def[2], def[1].length);
+    var args = [];
+    var i;
+    for (i = 0; i < def[1].length; i++) { args.push(langValue(node.f[def[1][i]], lang, helpers)); }
+    var call = def[0] + '(' + args.join(', ') + ')';
+    if (node.op === 'wait' && lang === 'py') { call = 'time.sleep(' + args[0] + ')'; }
+    return call;
+  }
+
+  function langChain(head, lang, ind, out, helpers) {
+    var n = head;
+    var IND = '    ';
+    while (n) {
+      var call = langCallLine(n, lang, helpers);
+      if (call !== null) {
+        out.push(ind + call + (lang === 'py' ? '' : ';') + '  ' + (lang === 'py' ? '# ' : '// ') + blockText(n));
+        n = n.next;
+        continue;
+      }
+      switch (n.op) {
+        case 'repeat':
+          var zv = helpers.nextVar();
+          out.push(ind + (lang === 'py'
+            ? 'for ' + zv + ' in range(int(' + langValue(n.f.count, lang, helpers) + ')):'
+            : 'for (int ' + zv + ' = 0; ' + zv + ' < ' + langValue(n.f.count, lang, helpers) + '; ' + zv + '++) {')
+            + '  ' + (lang === 'py' ? '# ' : '// ') + blockText(n));
+          langChain(n.sub[0], lang, ind + IND, out, helpers);
+          if (lang !== 'py') { out.push(ind + '}'); }
+          break;
+        case 'forever':
+          out.push(ind + (lang === 'py' ? 'while True:' : 'while (true) {')
+            + '  ' + (lang === 'py' ? '# ' : '// ') + blockText(n));
+          langChain(n.sub[0], lang, ind + IND, out, helpers);
+          if (lang !== 'py') { out.push(ind + '}'); }
+          break;
+        case 'if_then':
+          out.push(ind + (lang === 'py'
+            ? 'if ' + langValue(n.f.cond, lang, helpers) + ':'
+            : 'if (' + langValue(n.f.cond, lang, helpers) + ') {')
+            + '  ' + (lang === 'py' ? '# ' : '// ') + blockText(n));
+          langChain(n.sub[0], lang, ind + IND, out, helpers);
+          if (lang !== 'py') { out.push(ind + '}'); }
+          break;
+        case 'if_else':
+          out.push(ind + (lang === 'py'
+            ? 'if ' + langValue(n.f.cond, lang, helpers) + ':'
+            : 'if (' + langValue(n.f.cond, lang, helpers) + ') {')
+            + '  ' + (lang === 'py' ? '# ' : '// ') + blockText(n));
+          langChain(n.sub[0], lang, ind + IND, out, helpers);
+          out.push(ind + (lang === 'py' ? 'else:' : '} else {'));
+          langChain(n.sub[1], lang, ind + IND, out, helpers);
+          if (lang !== 'py') { out.push(ind + '}'); }
+          break;
+        case 'repeat_until':
+          out.push(ind + (lang === 'py'
+            ? 'while not ' + langValue(n.f.cond, lang, helpers) + ':'
+            : 'while (!(' + langValue(n.f.cond, lang, helpers) + ')) {')
+            + '  ' + (lang === 'py' ? '# ' : '// ') + blockText(n));
+          langChain(n.sub[0], lang, ind + IND, out, helpers);
+          if (lang !== 'py') { out.push(ind + '}'); }
+          break;
+        case 'wait_until':
+          out.push(ind + (lang === 'py'
+            ? 'while not ' + langValue(n.f.cond, lang, helpers) + ':'
+            : 'while (!(' + langValue(n.f.cond, lang, helpers) + ')) {')
+            + '  ' + (lang === 'py' ? '# ' : '// ') + blockText(n));
+          if (lang === 'py') { out.push(ind + '    pass'); }
+          else { out.push(ind + '}'); }
+          break;
+        default:
+          out.push(ind + (lang === 'py' ? '# Block ohne Textfassung: ' + n.op : '/* Block ohne Textfassung: ' + n.op + ' */'));
+      }
+      n = n.next;
+    }
+  }
+
+  function langHatName(op) {
+    if (op === 'flag') { return 'wenn_flag_angeklickt'; }
+    if (op === 'when_key') { return 'wenn_taste_gedrueckt'; }
+    if (op === 'when_msg') { return 'wenn_nachricht_kommt'; }
+    if (op === 'when_clicked') { return 'wenn_angeklickt'; }
+    return 'skript';
+  }
+
+  function javaClassName(title) {
+    var n = String(title || '').replace(/[^A-Za-z0-9]/g, '');
+    if (n === '') { n = 'Werkstatt'; }
+    return n.charAt(0).toUpperCase() + n.slice(1);
+  }
+
+  function langScriptsOf(list, prefix, lang, out, helpers, usedNames) {
+    // Java: Methoden liegen in der Klasse (4 Spalten Einzug),
+    // Python: Funktionen liegen auf Modulebene (kein Einzug) (#140).
+    var ind = lang === 'py' ? '' : '    ';
+    var i, s, head;
+    for (i = 0; i < list.length; i++) {
+      s = list[i];
+      head = s.top;
+      if (!head) { continue; }
+      var base = prefix + '_' + langHatName(head.op);
+      var name = base;
+      var k = 2;
+      while (usedNames[name]) { name = base + '_' + k; k++; }
+      usedNames[name] = true;
+      var hatText = blockText(head);
+      out.push('');
+      out.push(ind + (lang === 'py' ? '# ' : '// ') + 'Skript: ' + hatText);
+      if (lang === 'py') {
+        out.push(ind + 'def ' + name + '():');
+        var before = out.length;
+        langChain(head.next, 'py', ind + '    ', out, helpers);
+        if (out.length === before) { out.push(ind + '    pass'); }
+      } else {
+        out.push(ind + 'void ' + name + '() {');
+        langChain(head.next, 'java', ind + '    ', out, helpers);
+        out.push(ind + '}');
+      }
+    }
+  }
+
+  function programToJava(prog, title) {
+    var helpers = makeHelpers();
+    var out = [];
+    out.push('/* Automatisch aus der Block-Werkstatt erzeugt (#140).');
+    out.push(' * Jede Methode entspricht einem Skript deiner Figuren, jeder');
+    out.push(' * Aufruf entspricht einem Block, der Blocktext steht daneben.');
+    out.push(' * Die Platzhalter am Ende zeigen, was auf der Buehne passieren wuerde. */');
+    out.push('public class ' + javaClassName(title) + ' {');
+    var used = {};
+    var i;
+    for (i = 0; i < prog.sprites.length; i++) {
+      var sp = prog.sprites[i];
+      out.push('');
+      out.push('    // ===== ' + sp.name + ' (Kostuem: ' + (COSTUME_EMOJI[sp.costume] || sp.costume) + ') =====');
+      langScriptsOf(sp.scripts, 'figur' + (i + 1), 'java', out, helpers, used);
+    }
+    if (prog.stage.scripts.length > 0) {
+      out.push('');
+      out.push('    // ===== Buehne =====');
+      langScriptsOf(prog.stage.scripts, 'buehne', 'java', out, helpers, used);
+    }
+    var names = Object.keys(helpers.used).sort();
+    if (names.length > 0) {
+      out.push('');
+      out.push('    // ----- Platzhalter-Aktionen: so wuerde die Buehne arbeiten -----');
+      for (i = 0; i < names.length; i++) {
+        var info = helpers.used[names[i]];
+        var params = [];
+        var j;
+        for (j = 0; j < info.n; j++) { params.push('Object p' + (j + 1)); }
+        if (info.kind === 'void') {
+          out.push('    static void ' + names[i] + '(' + params.join(', ') + ') { }');
+        } else {
+          var ret = info.kind === 'boolean' ? 'false' : (info.kind === 'String' ? '""' : '0');
+          out.push('    static ' + info.kind + ' ' + names[i] + '(' + params.join(', ') + ') { return ' + ret + '; }');
+        }
+      }
+    }
+    out.push('}');
+    return out.join('\n') + '\n';
+  }
+
+  function programToPython(prog, title) {
+    var helpers = makeHelpers();
+    var out = [];
+    out.push('# Automatisch aus der Block-Werkstatt erzeugt (#140).');
+    out.push('# Jede Funktion entspricht einem Skript, jeder Aufruf einem Block,');
+    out.push('# der Blocktext steht daneben. import time gehoert zum warte-Block.');
+    out.push('import time');
+    out.push('');
+    var used = {};
+    var i;
+    for (i = 0; i < prog.sprites.length; i++) {
+      var sp = prog.sprites[i];
+      out.push('# ===== ' + sp.name + ' (Kostuem: ' + (COSTUME_EMOJI[sp.costume] || sp.costume) + ') =====');
+      langScriptsOf(sp.scripts, 'figur' + (i + 1), 'py', out, helpers, used);
+    }
+    if (prog.stage.scripts.length > 0) {
+      out.push('');
+      out.push('# ===== Buehne =====');
+      langScriptsOf(prog.stage.scripts, 'buehne', 'py', out, helpers, used);
+    }
+    var names = Object.keys(helpers.used).sort();
+    if (names.length > 0) {
+      out.push('');
+      out.push('# ----- Platzhalter-Aktionen: so wuerde die Buehne arbeiten -----');
+      for (i = 0; i < names.length; i++) {
+        var info = helpers.used[names[i]];
+        var line = 'def ' + names[i] + '(*args):';
+        if (info.kind === 'void') { out.push(line); out.push('    pass'); }
+        else if (info.kind === 'boolean') { out.push(line); out.push('    return False'); }
+        else if (info.kind === 'String') { out.push(line); out.push('    return \'\''); }
+        else { out.push(line); out.push('    return 0'); }
+      }
+    }
+    return out.join('\n') + '\n';
+  }
+
   /* ---------- Laufzeit: alle Figuren und die Buehne parallel ---------- */
   function newRuntime(prog, opts) {
     opts = opts || {};
@@ -728,6 +1366,10 @@
       stopped: false,
       errors: [],
       rand: opts.rand || null,
+      mouse: { x: 0, y: 0, down: false },
+      volume: 70,
+      sounds: [],
+      order: [],
       api: {}
     };
     var i;
@@ -739,8 +1381,10 @@
         x: num(p.x), y: num(p.y), dir: num(p.dir),
         size: clamp(num(p.size), 10, 400), visible: p.visible !== false,
         bubble: null,
+        effect: 0,
         pen: { down: false, color: '#1f2937', segments: [] }
       });
+      rt.order.push(p.id);
     }
 
     function scriptTargets() {
@@ -753,9 +1397,10 @@
       return lists;
     }
 
-    function startScripts(op, keyName, now) {
+    function startScripts(op, keyName, now, onlyTgt) {
       rt.now = now;
       var lists = scriptTargets();
+      var started = [];
       var l, i2, s, head;
       for (l = 0; l < lists.length; l++) {
         for (i2 = 0; i2 < lists[l].scripts.length; i2++) {
@@ -763,6 +1408,8 @@
           head = s.top;
           if (!head || head.op !== op) { continue; }
           if (op === 'when_key' && String(head.f.key.v) !== keyName) { continue; }
+          if (op === 'when_msg' && String(head.f.msg.v) !== keyName) { continue; }
+          if (op === 'when_clicked' && onlyTgt !== undefined && lists[l].tgt !== onlyTgt) { continue; }
           /* laufenden Thread dieses Skripts sauber neu starten */
           var keep = [];
           var t;
@@ -773,9 +1420,12 @@
           var ctx = { mem: 0 };
           var out = [];
           compileChain(head.next, ctx, out);
-          rt.threads.push({ scriptId: s.id, tgt: lists[l].tgt, instrs: out, ip: 0, mem: [], waitT: null });
+          var th = { scriptId: s.id, tgt: lists[l].tgt, instrs: out, ip: 0, mem: [], waitT: null, glide: null, msgThreads: null };
+          rt.threads.push(th);
+          started.push(th);
         }
       }
+      return started;
     }
 
     function stepThread(th) {
@@ -810,6 +1460,56 @@
               if (th.tgt && th.tgt.bubble && th.tgt.bubble.until !== null && rt.now >= th.tgt.bubble.until) { th.tgt.bubble = null; }
               th.ip++;
               break;
+            /* Denkblase (#135): wie sage-fuer, nur mit Punkt-Stil. */
+            case 'thinkfor':
+              if (th.waitT === null) {
+                if (th.tgt) {
+                  th.tgt.bubble = { text: String(ins.fn(rt, th)), until: rt.now + num(ins.fn2(rt, th)) * 1000, think: true };
+                }
+                th.waitT = rt.now + num(ins.fn2(rt, th)) * 1000;
+              }
+              if (rt.now < th.waitT) { return 'alive'; }
+              th.waitT = null;
+              if (th.tgt && th.tgt.bubble && th.tgt.bubble.until !== null && rt.now >= th.tgt.bubble.until) { th.tgt.bubble = null; }
+              th.ip++;
+              break;
+            /* Klang (#130): Ton starten und warten. */
+            case 'note':
+              if (th.waitT === null) {
+                playTone(rt, String(ins.fn(rt, th)), num(ins.fn2(rt, th)) * 1000);
+                th.waitT = rt.now + num(ins.fn2(rt, th)) * 1000;
+              }
+              if (rt.now < th.waitT) { return 'alive'; }
+              th.waitT = null;
+              th.ip++;
+              break;
+            /* Bewegung (#134): in jedem Bild ein Stueck zum Ziel. */
+            case 'glide':
+              if (!th.glide) {
+                var gsecs = num(ins.fn(rt, th));
+                th.glide = {
+                  sx: th.tgt ? th.tgt.x : 0, sy: th.tgt ? th.tgt.y : 0,
+                  tx: num(ins.fx(rt, th)), ty: num(ins.fy(rt, th)),
+                  start: rt.now, dur: Math.max(16, gsecs * 1000)
+                };
+              }
+              var gg = th.glide;
+              var gfrac = clamp((rt.now - gg.start) / gg.dur, 0, 1);
+              if (th.tgt) { moveBy(rt, th.tgt, (gg.sx + (gg.tx - gg.sx) * gfrac) - th.tgt.x, (gg.sy + (gg.ty - gg.sy) * gfrac) - th.tgt.y); }
+              if (gfrac >= 1) { th.glide = null; th.ip++; break; }
+              return 'alive';
+            /* Nachrichten (#131): alle angestossenen Empfaenger abwarten. */
+            case 'bcastwait':
+              if (!th.msgThreads) {
+                th.msgThreads = startScripts('when_msg', String(ins.fn(rt, th)), rt.now) || [];
+              }
+              var aliveM = 0;
+              var it;
+              for (it = 0; it < th.msgThreads.length; it++) {
+                if (rt.threads.indexOf(th.msgThreads[it]) !== -1) { aliveM++; }
+              }
+              if (aliveM === 0) { th.msgThreads = null; th.ip++; break; }
+              return 'alive';
             case 'call':
               applyCall(rt, th, ins.op, ins.A);
               if (rt.stopped) { return 'dead'; }
@@ -831,6 +1531,28 @@
       startScripts('flag', null, now);
     };
     rt.api.press = function (keyName, now) { startScripts('when_key', keyName, now); };
+    /* Nachrichten (#131): Senden startet alle Empfaenger-Skripte. */
+    rt.api.broadcast = function (msgName, now) { return startScripts('when_msg', msgName, now); };
+    /* Sensoren (#133): Zeiger-Position und -Druck von der Buehne. */
+    rt.api.setMouse = function (x, y, down) {
+      if (typeof x === 'number') { rt.mouse.x = x; }
+      if (typeof y === 'number') { rt.mouse.y = y; }
+      if (typeof down === 'boolean') { rt.mouse.down = down; }
+    };
+    /* Klick-Ereignis (#133): trifft die oberste Figur unter dem Zeiger,
+     * sonst die Buehne selbst. */
+    rt.api.click = function (now) {
+      var oi, sp2, r2;
+      for (oi = rt.order.length - 1; oi >= 0; oi--) {
+        sp2 = findSpriteById(rt, rt.order[oi]);
+        if (!sp2 || !sp2.visible) { continue; }
+        r2 = 24 * Math.max(10, sp2.size) / 100 + 6;
+        if (spriteDist(rt.mouse.x - sp2.x, rt.mouse.y - sp2.y) <= r2) {
+          return startScripts('when_clicked', null, now, sp2);
+        }
+      }
+      return startScripts('when_clicked', null, now, null);
+    };
     rt.api.frame = function (now) {
       rt.now = now;
       var i3, i4;
@@ -838,15 +1560,43 @@
         var sp = rt.sprites[i3];
         if (sp.bubble && sp.bubble.until !== null && now > sp.bubble.until) { sp.bubble = null; }
       }
+      /* Abgelaufene Toene stoppen (#130), in-place: die exportierte
+       * Liste bleibt dieselbe Instanz. */
+      for (i3 = rt.sounds.length - 1; i3 >= 0; i3--) {
+        if (rt.sounds[i3].until !== null && now > rt.sounds[i3].until) {
+          rt.sounds[i3].stop();
+          rt.sounds.splice(i3, 1);
+        }
+      }
+      /* Snapshot + Wellen: startScripts darf waehrend des Frames neue
+       * Threads anstossen (Nachrichten, Klicks); jede neue Welle laeuft
+       * im selben Bild mit, bis nichts mehr nachkommt (max. 8 Wellen). */
+      var queue = rt.threads.slice();
       var alive = [];
-      for (i4 = 0; i4 < rt.threads.length; i4++) {
-        if (stepThread(rt.threads[i4]) === 'alive') { alive.push(rt.threads[i4]); }
+      var rounds = 0;
+      while (queue.length > 0 && rounds < 8) {
+        var wave = queue;
+        queue = [];
+        var w;
+        for (w = 0; w < wave.length; w++) {
+          if (stepThread(wave[w]) === 'alive' && rt.threads.indexOf(wave[w]) !== -1) {
+            alive.push(wave[w]);
+          }
+        }
+        for (w = 0; w < rt.threads.length; w++) {
+          var nt = rt.threads[w];
+          if (alive.indexOf(nt) === -1 && queue.indexOf(nt) === -1 && wave.indexOf(nt) === -1) {
+            queue.push(nt);
+          }
+        }
+        rounds++;
       }
       rt.threads = alive;
     };
     rt.api.stopAll = function () {
       rt.stopped = true;
       rt.threads = [];
+      stopAllSounds(rt);
       var i5;
       for (i5 = 0; i5 < rt.sprites.length; i5++) { rt.sprites[i5].bubble = null; }
     };
@@ -854,7 +1604,10 @@
     return {
       flag: rt.api.flag, press: rt.api.press, frame: rt.api.frame,
       stopAll: rt.api.stopAll, running: rt.api.running,
+      broadcast: rt.api.broadcast, setMouse: rt.api.setMouse, click: rt.api.click,
       vars: rt.vars, sprites: rt.sprites, keys: rt.keys,
+      mouse: rt.mouse, sounds: rt.sounds, order: rt.order,
+      volume: function () { return rt.volume; },
       errors: rt.errors,
       bubble: function () {
         var i6;
@@ -879,6 +1632,7 @@
       help: doc.getElementById('blk-help'),
       flagBtn: doc.getElementById('blk-flag'),
       stopBtn: doc.getElementById('blk-stop'),
+      codeBtn: doc.getElementById('blk-code'),
       runInfo: doc.getElementById('blk-runinfo'),
       saveInfo: doc.getElementById('blk-saveinfo'),
       varAdd: doc.getElementById('blk-var-add'),
@@ -918,7 +1672,7 @@
       var wrap;
       if (spec.type === 'select') {
         wrap = el('select', 'blk-sel');
-        var options = optionSource(spec.src, prog.vars);
+        var options = optionSource(spec.src, prog.vars, prog.sprites);
         var found = false;
         var i;
         for (i = 0; i < options.length; i++) {
@@ -1687,8 +2441,19 @@
       ctx.clearRect(0, 0, 480, 360);
       var list = rt ? rt.sprites : prog.sprites;
       var i, sp;
-      for (i = 0; i < list.length; i++) {
-        sp = list[i];
+      /* Ebenen (#135): bei laufender Runtime zeichnet die order-Liste hinten
+       * nach vorn, sonst die Natur-Reihenfolge. */
+      var drawList = [];
+      if (rt) {
+        for (i = 0; i < rt.order.length; i++) {
+          var osp = findSpriteById(rt, rt.order[i]);
+          if (osp) { drawList.push(osp); }
+        }
+      } else {
+        drawList = list;
+      }
+      for (i = 0; i < drawList.length; i++) {
+        sp = drawList[i];
         if (!sp.visible) { continue; }
         ctx.save();
         ctx.translate(240 + sp.x, 180 - sp.y);
@@ -1696,7 +2461,15 @@
         ctx.font = Math.round(40 * sp.size / 100) + 'px system-ui, "Segoe UI Symbol", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        /* Farbeffekt (#135): hue-rotate faerbt das Kostuem um. */
+        var effectOn = num(sp.effect) !== 0;
+        if (effectOn && typeof ctx.filter === 'string') {
+          try { ctx.filter = 'hue-rotate(' + Math.round(num(sp.effect) * 1.8) + 'deg)'; } catch (e) { effectOn = false; }
+        }
         ctx.fillText(COSTUME_EMOJI[sp.costume] || '🤖', 0, 0);
+        if (effectOn && typeof ctx.filter === 'string') {
+          try { ctx.filter = 'none'; } catch (e) {}
+        }
         ctx.restore();
         var bub = sp.bubble;
         if (bub) {
@@ -1712,6 +2485,13 @@
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
           ctx.fillText(bub.text, bx + 7, by - 4);
+          /* Denkblase (#135): drei Punkte statt Sprechblasen-Haken. */
+          if (bub.think) {
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(bx - 6, by + 14, 5, 5);
+            ctx.fillRect(bx - 13, by + 22, 4, 4);
+            ctx.fillRect(bx - 19, by + 29, 3, 3);
+          }
         }
       }
       /* Aktive Figur im Bearbeitungsmodus hervorheben */
@@ -1814,9 +2594,186 @@
       if (k) { delete rt.keys[k]; }
     });
 
+    /* ---------- Buehne: Zeiger und Klicks (#133) ---------- */
+    function stagePoint(ev) {
+      if (!els.ctrCanvas || typeof els.ctrCanvas.getBoundingClientRect !== 'function') { return null; }
+      var r = els.ctrCanvas.getBoundingClientRect();
+      if (!r || !r.width) { return null; }
+      return {
+        x: clamp((ev.clientX - r.left) / r.width * 480 - 240, -240, 240),
+        y: clamp(180 - (ev.clientY - r.top) / r.height * 360, -180, 180)
+      };
+    }
+    if (els.ctrCanvas) {
+      els.ctrCanvas.addEventListener('pointermove', function (ev) {
+        if (!rt) { return; }
+        var p = stagePoint(ev);
+        if (p) { rt.setMouse(p.x, p.y); }
+      });
+      els.ctrCanvas.addEventListener('pointerdown', function (ev) {
+        var p = stagePoint(ev) || { x: 0, y: 0 };
+        if (!rt) {
+          clearPen();
+          rt = newRuntime(prog, { penCtx: (els.penCanvas && els.penCanvas.getContext) ? els.penCanvas.getContext('2d') : null });
+        }
+        rt.setMouse(p.x, p.y, true);
+        rt.click(nowMs());
+        drawStage();
+        ensureLoop();
+      });
+      els.ctrCanvas.addEventListener('pointerup', function () {
+        if (rt) { rt.setMouse(undefined, undefined, false); }
+      });
+      els.ctrCanvas.addEventListener('pointerleave', function () {
+        if (rt) { rt.setMouse(undefined, undefined, false); }
+      });
+    }
+
     /* ---------- Verdrahtung ---------- */
     if (els.flagBtn) { els.flagBtn.addEventListener('click', function () { startRun(); }); }
     if (els.stopBtn) { els.stopBtn.addEventListener('click', function () { stopRun(); }); }
+
+    /* ---------- Code-Ansicht und Portierung (#140, #141) ---------- */
+    var codeBox = null;
+    var codeLang = 'java';
+
+    function titleOf() {
+      if (els.saveForm) {
+        var kids = els.saveForm.children || [];
+        var i;
+        for (i = 0; i < kids.length; i++) {
+          if (kids[i].getAttribute && kids[i].getAttribute('name') === 'title') { return kids[i].value || ''; }
+        }
+      }
+      return '';
+    }
+
+    function csrfValue() {
+      if (els.saveForm) {
+        var kids = els.saveForm.children || [];
+        var i;
+        for (i = 0; i < kids.length; i++) {
+          if (kids[i].getAttribute && kids[i].getAttribute('name') === 'csrf') { return kids[i].value || kids[i].getAttribute('value') || ''; }
+        }
+      }
+      return '';
+    }
+
+    function currentCode() {
+      return codeLang === 'py'
+        ? programToPython(prog, titleOf() || 'Block-Programm')
+        : programToJava(prog, titleOf() || 'Block-Programm');
+    }
+
+    function syncCodeTabs(tabJava, tabPy) {
+      tabJava.className = 'btn blk-code-tab' + (codeLang === 'java' ? ' active' : '');
+      tabPy.className = 'btn blk-code-tab' + (codeLang === 'py' ? ' active' : '');
+    }
+
+    function fillCode(pre) {
+      pre.textContent = currentCode();
+    }
+
+    function portCode() {
+      var form = el('form', 'blk-port-form');
+      form.setAttribute('method', 'post');
+      var portUrl = (els.codeBtn && els.codeBtn.getAttribute('data-port')) || '/werkstatt/code/blocks/port';
+      form.setAttribute('action', portUrl);
+      function addField(name, value) {
+        var inp = el('input');
+        inp.setAttribute('type', 'hidden');
+        inp.setAttribute('name', name);
+        inp.setAttribute('value', String(value));
+        form.appendChild(inp);
+      }
+      var t = titleOf() || 'Block-Programm';
+      addField('csrf', csrfValue());
+      addField('language', codeLang === 'py' ? 'python' : 'java');
+      addField('title', t + (codeLang === 'py' ? ' (Python)' : ' (Java)'));
+      addField('code', currentCode());
+      ensureCodeBox().appendChild(form);
+      if (typeof form.submit === 'function') { form.submit(); }
+    }
+
+    var codePre = null;
+    var codeTabJava = null;
+    var codeTabPy = null;
+
+    function ensureCodeBox() {
+      if (codeBox) { return codeBox; }
+      codeBox = el('div', 'blk-codebox');
+      codeBox.setAttribute('id', 'blk-code-dialog');
+      var head = el('div', 'blk-code-head');
+      var tabs = el('div', 'blk-code-tabs');
+      codeTabJava = el('button', 'btn blk-code-tab active', 'Java');
+      codeTabJava.setAttribute('type', 'button');
+      codeTabPy = el('button', 'btn blk-code-tab', 'Python');
+      codeTabPy.setAttribute('type', 'button');
+      tabs.appendChild(codeTabJava);
+      tabs.appendChild(codeTabPy);
+      head.appendChild(tabs);
+      var close = el('button', 'btn btn-ghost', '✕');
+      close.setAttribute('type', 'button');
+      close.setAttribute('title', 'Code-Ansicht schließen');
+      close.addEventListener('click', function () { codeBox.setAttribute('hidden', 'hidden'); });
+      head.appendChild(close);
+      codeBox.appendChild(head);
+      codePre = el('pre', 'blk-code-view mono');
+      codePre.setAttribute('id', 'blk-code-view');
+      codeBox.appendChild(codePre);
+      var row = el('div', 'btn-row blk-code-actions');
+      var copyBtn = el('button', 'btn', 'Kopieren');
+      copyBtn.setAttribute('type', 'button');
+      copyBtn.addEventListener('click', function () {
+        if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(currentCode());
+        }
+      });
+      var dlBtn = el('button', 'btn', 'Datei laden');
+      dlBtn.setAttribute('type', 'button');
+      dlBtn.addEventListener('click', function () {
+        if (typeof Blob !== 'function' || typeof URL === 'undefined' || !URL.createObjectURL) { return; }
+        var code = currentCode();
+        var fname = codeLang === 'py' ? 'werkstatt_programm.py' : javaClassName(titleOf() || 'Werkstatt') + '.java';
+        var blob = new Blob([code], { type: 'text/plain' });
+        var url = URL.createObjectURL(blob);
+        var a = el('a');
+        a.setAttribute('href', url);
+        a.setAttribute('download', fname);
+        if (typeof a.click === 'function') { a.click(); }
+      });
+      var portBtn = el('button', 'btn btn-primary', 'Als neues Projekt übernehmen');
+      portBtn.setAttribute('type', 'button');
+      portBtn.setAttribute('title', 'Legt ein neues Java- oder Python-Projekt mit diesem Code an (#141)');
+      portBtn.addEventListener('click', function () { portCode(); });
+      row.appendChild(copyBtn);
+      row.appendChild(dlBtn);
+      row.appendChild(portBtn);
+      codeBox.appendChild(row);
+      codeTabJava.addEventListener('click', function () {
+        codeLang = 'java';
+        syncCodeTabs(codeTabJava, codeTabPy);
+        fillCode(codePre);
+      });
+      codeTabPy.addEventListener('click', function () {
+        codeLang = 'py';
+        syncCodeTabs(codeTabJava, codeTabPy);
+        fillCode(codePre);
+      });
+      root.appendChild(codeBox);
+      codeBox.setAttribute('hidden', 'hidden');
+      return codeBox;
+    }
+
+    function openCodeDialog() {
+      var box = ensureCodeBox();
+      box.removeAttribute('hidden');
+      syncCodeTabs(codeTabJava, codeTabPy);
+      fillCode(codePre);
+    }
+
+    if (els.codeBtn) { els.codeBtn.addEventListener('click', function () { openCodeDialog(); }); }
+
     if (els.varAdd) {
       els.varAdd.addEventListener('click', function () {
         var name = typeof window !== 'undefined' && window.prompt ? window.prompt('Name der neuen Variable:') : '';
@@ -1871,6 +2828,9 @@
       isDragging: function () { return drag !== null && drag.phase === 'dragging'; },
       startRun: startRun,
       stopRun: stopRun,
+      openCodeDialog: openCodeDialog,
+      toJava: function () { return programToJava(prog, titleOf() || 'Block-Programm'); },
+      toPython: function () { return programToPython(prog, titleOf() || 'Block-Programm'); },
       tick: function (ts) {
         if (rt) { rt.frame(ts); drawStage(); }
       },
@@ -1901,6 +2861,8 @@
     parseProgram: parseProgram,
     serializeProgram: serializeProgram,
     newRuntime: newRuntime,
+    programToJava: programToJava,
+    programToPython: programToPython,
     attach: attachAndExpose
   };
   if (typeof window !== 'undefined') { window.IC_BLOCKS = api; }

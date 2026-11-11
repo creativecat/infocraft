@@ -1728,76 +1728,6 @@ setTimeout(function () {
 
                 /* T63 (#79): Bibliothek am Diagramm-Element: Auswahl uebernimmt
                  * den Mermaid-Code, pur bleibt pur (kein Rendern im Editor). */
-                global.window.mermaid = { render: function (id) { return { svg: '<svg class="icv-dg-t63">' + id + '</svg>' }; } };
-                ibDiagBtn59.dispatch('click');
-                var ibDiagBoxes63 = ibStage.querySelectorAll('.icv-diagram');
-                var ibDiagBox63 = ibDiagBoxes63[ibDiagBoxes63.length - 1];
-                ok(ibDiagBox63 !== null && ibDiagBox63.querySelector('.icv-diagram-lib') !== null, 'T63 neues Diagramm-Element bietet die eigene Bibliothek an');
-                if (ibDiagBox63) {
-                  var ibDiagWrap63 = ibDiagBox63.querySelector('.icv-diagram-wrap');
-                  ok(ibDiagWrap63.classList.contains('icv-diagram-noprev') === true, 'T63b pur (Standard): im Editor steht nur der Quelltext, keine Vorschau');
-                  var ibDiagLib63 = ibDiagBox63.querySelector('.icv-diagram-lib');
-                  ibDiagLib63.value = '5';
-                  ibDiagLib63.dispatch('change');
-                  ok(String(ibDiagBox63.querySelector('.icv-diagram-src').value).indexOf('classDiagram') !== -1, 'T63c die Bibliotheks-Auswahl uebernimmt den Mermaid-Code');
-                  ok(ibDiagLib63.value === '', 'T63d das Bibliotheks-Dropdown springt zurueck auf die neutrale Auswahl');
-                  var cv63 = ibCollect();
-                  var t63 = cv63 && cv63.items ? cv63.items.filter(function (it) { return it.kind === 'diagram'; })[cv63.items.filter(function (it) { return it.kind === 'diagram'; }).length - 1] : null;
-                  ok(t63 && String(t63.src).indexOf('Auto <|-- BMW') !== -1 && t63.dmode === undefined, 'T63e der uebernommene Code wird serialisiert, Variante bleibt pur');
-                  /* Lesemodus geteilt (#79): die Split-Box zeichnet auch, der
-                   * Balken zwischen Code und Diagramm laesst sich ziehen und
-                   * begrenzt beide Fenster (nichts wird unbedienbar). */
-                  var ibRoSplit63 = new FakeEl('div');
-                  ibRoSplit63.className = 'icv-item icv-diagram icv-diagram-split-ro';
-                  ibRoSplit63.setAttribute('data-src', 'graph TD\nS63[SPLIT]');
-                  var ibRoSplitPrev63 = new FakeEl('div');
-                  ibRoSplitPrev63.className = 'icv-diagram-prev';
-                  ibRoSplit63.appendChild(ibRoSplitPrev63);
-                  ibDoc.body.appendChild(ibRoSplit63);
-                  ibDoc._fire('DOMContentLoaded', { type: 'DOMContentLoaded' });
-                  ok(String(ibRoSplitPrev63.innerHTML).indexOf('<svg class="icv-dg-t63">') === 0, 'T63g die geteilte Lesemodus-Box zeichnet ihr Diagramm');
-                  var ibSplitWrap63 = new FakeEl('div');
-                  ibSplitWrap63.className = 'icv-diagram-split';
-                  var ibSplitCode63 = new FakeEl('textarea');
-                  ibSplitCode63.className = 'icv-diagram-code';
-                  ibSplitCode63.value = 'graph TD\nS63[SPLIT]';
-                  var ibSplitBar63 = new FakeEl('div');
-                  ibSplitBar63.className = 'icv-diagram-split-bar';
-                  var ibSplitPrev63 = new FakeEl('div');
-                  ibSplitPrev63.className = 'icv-diagram-prev';
-                  ibSplitWrap63.appendChild(ibSplitCode63);
-                  ibSplitWrap63.appendChild(ibSplitBar63);
-                  ibSplitWrap63.appendChild(ibSplitPrev63);
-                  ibDoc.body.appendChild(ibSplitWrap63);
-                  ibSplitBar63.dispatch('pointerdown', { clientX: 8, clientY: 8 });
-                  ibDoc._fire('pointermove', { clientX: 218, clientY: 8 });
-                  ok(String(ibSplitCode63.style.width) === '50%', 'T63h der Balken teilt Code und Diagramm nach Zug');
-                  ibDoc._fire('pointermove', { clientX: 5000, clientY: 8 });
-                  ok(String(ibSplitCode63.style.width) === '85%', 'T63i der Balken begrenzt: Code hoechstens 85%, das Diagramm bleibt bedienbar');
-                  ibDoc._fire('pointermove', { clientX: -5000, clientY: 8 });
-                  ok(String(ibSplitCode63.style.width) === '15%', 'T63j nach unten bleibt dem Code mindestens 15% - nichts geht verloren');
-                  ibDoc._fire('pointerup', {});
-                  /* #85: Der Quelltext bleibt im Lesemodus bearbeitbar,
-                   * jede Aenderung zeichnet das Diagramm sofort neu. */
-                  global.window.mermaid = { render: function (id, src) { return { svg: '<svg class="icv-dg-t63">' + id + '|' + String(src) + '</svg>' }; } };
-                  ibSplitCode63.value = 'graph TD\nS63[NEU]';
-                  ibSplitCode63.dispatch('input');
-                  ibSplitCode63.value = 'graph TD\nS63[NOCHNEU]';
-                  ibSplitCode63.dispatch('input');
-                  ok(String(ibSplitPrev63.innerHTML).indexOf('S63[NOCHNEU]') !== -1, 'T63k geteilt im Lesemodus: Tippen am Quelltext zeichnet das Diagramm live neu');
-                  ibDoc._fire('pointerup', {});
-                  delete global.window.mermaid;
-                }
-
-                /* T64 (#80): Vorhandene Datenbanken der SQL-Werkstatt fuellen
-                 * das DB-Element: Schema und Beispieldaten landen im Seed-Feld,
-                 * Abfragen laufen damit auf den echten Vorlagen-Tabellen. */
-                ibDbBtn58.dispatch('click');
-                var ibDbBoxes64 = ibStage.querySelectorAll('.icv-db');
-                var ibDbBox64 = ibDbBoxes64[ibDbBoxes64.length - 1];
-                ok(ibDbBox64 !== null && ibDbBox64.querySelector('.icv-db-libsel') !== null, 'T64 neues DB-Element bietet vorhandene Datenbanken an');
-                if (ibDbBox64) {
-                  var ibDbLib64 = ibDbBox64.querySelector('.icv-db-libsel');
                   ibDbLib64.value = 'shop';
                   ibDbLib64.dispatch('change');
                   var ibDbSeedTa64 = ibDbBox64.querySelector('.icv-db-seed-ta');
@@ -2482,7 +2412,7 @@ setTimeout(function () {
                   function blkCond(raw) { return { cond: { b: raw } }; }
 
                   ok(BLK && BLK.BLOCKS && BLK.BLOCKS.flag && BLK.newRuntime, 'T87 der Block-Editor meldet Registry und Laufzeit als Exponat');
-                  ok(Object.keys(BLK.BLOCKS).length >= 40, 'T87b die Registry enthaelt alle Bloecke der acht Kategorien');
+                  ok(Object.keys(BLK.BLOCKS).length >= 40, 'T87b die Registry enthaelt alle Bloecke der jetzt neun Kategorien');
                   var blkParsed = BLK.parseProgram(blkJsonEl.value);
                   ok(blkParsed.v === 2 && blkParsed.sprites.length === 1 && blkParsed.sprites[0].scripts.length === 1 && blkParsed.sprites[0].scripts[0].top.op === 'flag' && blkParsed.sprites[0].scripts[0].top.next.op === 'say_for', 'T87c das gespeicherte JSON laedt als Skript mit Start-Hut und sage-Befehl');
                   var blkEmpty = BLK.parseProgram('kein json');
@@ -2597,8 +2527,8 @@ setTimeout(function () {
                   /* T93: Editor-UI am eigenen FakeDoc */
                   var blkUi = BLK.ui;
                   ok(blkUi !== null && typeof blkUi === 'object', 'T93 der Editor initialisiert sich auf der Blöcke-Seite von selbst');
-                  ok(blkCatsEl.children.length === 8, 'T93b die Palette listet alle acht Kategorien');
-                  ok(blkPalEl.children.length === 2, 'T93c die Ereignis-Kategorie zeigt Start- und Tast-Hut');
+                  ok(blkCatsEl.children.length === 9, 'T93b die Palette listet alle neun Kategorien (inkl. Klang)');
+                  ok(blkPalEl.children.length === 6, 'T93c die Ereignis-Kategorie zeigt die sechs Ereignis-Bloecke');
                   blkCatsEl.children[1].dispatch('click');
                   ok(blkPalEl.querySelector('.blk[data-pal-op="move_steps"]') !== null, 'T93d der Kategorie-Wechsel zeigt die Bewegungs-Bloecke');
                   ok(blkHelpEl.querySelectorAll('.blk-help-row').length === Object.keys(BLK.BLOCKS).length, 'T93e die Befehlsuebersicht erklaert jeden Block der Registry');
@@ -2657,47 +2587,6 @@ setTimeout(function () {
                       { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
                         scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('move_steps', { steps: '10' })) }] },
                       { id: 'sp2', name: 'Figur 2', costume: 'fish', x: -60, y: 30, dir: 90, size: 100, visible: true,
-                        scripts: [{ id: 's2', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('move_steps', { steps: '20' })) }] }
-                    ],
-                    stage: { scripts: [] }
-                  }));
-                  var rt98 = BLK.newRuntime(blkTwo);
-                  rt98.flag(0);
-                  rt98.frame(0);
-                  ok(rt98.sprites[0].x === 10 && rt98.sprites[1].x === -40, 'T98b zwei Figuren laufen unabhaengig voneinander (hier: 10 und 20 Schritte)');
-                  var rt98c = BLK.newRuntime(blkTwo);
-                  rt98c.flag(0);
-                  rt98c.stopAll();
-                  ok(rt98c.running() === false && rt98c.sprites[0].x === 0 && rt98c.sprites[1].x === -60, 'T98c stoppe alles haelt beide Figuren an');
-
-                  /* T99: die Buehne als eigenes Ziel (#126) */
-                  var blkStageProg = BLK.parseProgram(JSON.stringify({
-                    v: 2, vars: ['buehne'],
-                    sprites: [],
-                    stage: { scripts: [{ id: 'st1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('var_set', { name: 'buehne', value: '1' }, blkRaw('move_steps', { steps: '30' }))) }] }
-                  }));
-                  var rt99 = BLK.newRuntime(blkStageProg);
-                  rt99.flag(0);
-                  rt99.frame(0);
-                  ok(rt99.vars.buehne === 1 && rt99.errors.length === 0 && rt99.sprites.length === 0, 'T99 das Buehnen-Skript laeuft mit und Bewegung stoert die Buehne nicht');
-                  /* Figurenliste + Zielwechsel in der UI */
-                  ok(blkSpritesEl.children.length === 3, 'T98 die Figurenliste zeigt die Buehne, eine Figur und den Figuren-Knopf');
-                  var blkSpr2 = blkUi.addSprite('fish');
-                  ok(blkSpr2 !== null && blkUi.program.sprites.length === 2 && blkSpritesEl.children.length === 4, 'T98d eine neue Figur landet in der Liste und wird zum Ziel');
-                  blkUi.selectTarget(null);
-                  ok(blkUi.isStage() === true && blkCatsEl.children.length === 5, 'T99b die Buehne zeigt nur passende Kategorien (fuenf statt acht)');
-                  blkUi.addBlock('flag', 10, 10);
-                  ok(blkUi.program.stage.scripts.length === 1 && blkUi.program.sprites[0].scripts.length === blkUi.program.sprites[0].scripts.length, 'T99c ein Block auf der Buehne landet im Buehnen-Skript');
-                  blkUi.selectTarget(blkUi.program.sprites[0]);
-                  ok(blkUi.isStage() === false && blkCatsEl.children.length === 8, 'T99d zurueck auf der Figur sind alle acht Kategorien da');
-                  blkUi.deleteSprite(blkUi.program.sprites[1]);
-                  ok(blkUi.program.sprites.length === 1 && blkUi.target() === blkUi.program.sprites[0], 'T99e das Loeschen der zweiten Figur waehlt die erste zurueck');
-                  ok(blkUi.program.stage.scripts.length === 1, 'T99f das Buehnen-Skript bleibt beim Figuren-Wechsel erhalten');
-
-                  /* T100-T100e (#129): Block aus der Mitte/Unten eines Stapels
-                   * wegnehmen darf den Rest des Stapels nie verlieren. Vorher
-                   * meldete findBlockPos jeden Block der next-Kette mit
-                   * parentKind 'top' und der Editor raeumte das GESAMTE Skript
                    * weg. Eigener FakeDoc mit vollstaendigen Rechtecken (auch
                    * right/bottom, sonst ist dist() NaN) und Pointer-Events
                    * wie im Browser; der Editor wird je Szenario frisch
@@ -2808,6 +2697,259 @@ setTimeout(function () {
                   var opsE = blkDragOps(ui2);
                   blkDragDoc.restoreDoc();
                   ok(opsE.length === 2 && opsE[0] === 'flag' && opsE[1] === 'say_for,move_steps', 'T100e der Mittelblock nimmt nur seinen eigenen Teilbaum mit');
+
+                  /* T101-T108 (#130-#136, #140, #141): Klang, Nachrichten,
+                     Sensoren und Zeiger, Bewegung-Plus, Aussehen-Plus,
+                     Rechnen-Plus, Code-Ansicht Java/Python und Portierung. */
+
+                  /* Klang (#130) */
+                  ok(BLK.BLOCKS.play_note && BLK.BLOCKS.start_note && BLK.BLOCKS.stop_sounds && BLK.BLOCKS.set_volume && BLK.BLOCKS.volume.cat === 'sound', 'T101 die Klang-Kategorie hat spielen, starten, stoppen und Lautstaerke (#130)');
+                  var rt101 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('play_note', { tone: 'a4', secs: '0.5' }, blkRaw('change_y', { dy: '7' })))));
+                  rt101.flag(0);
+                  rt101.frame(0);
+                  ok(rt101.sounds.length === 1, 'T101b spiele Ton legt einen (im Test stummen) Ton an und haelt das Skript an (#130)');
+                  rt101.frame(600);
+                  ok(rt101.sounds.length === 0 && rt101.sprites[0].y === 7, 'T101c nach der Tonzeit laeuft das Skript weiter (#130)');
+                  var rt101b = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('start_note', { tone: 'c4' }, blkRaw('stop_sounds', {})))));
+                  rt101b.flag(0);
+                  rt101b.frame(0);
+                  ok(rt101b.sounds.length === 0 && rt101b.sprites[0].y === 0, 'T101d starte Ton wartet nicht, stoppe alle Toene raeumt ab (#130)');
+                  var rt101c = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('set_volume', { v: '40' }, blkRaw('var_set', { name: 'l', value: { b: blkRaw('volume') } })))));
+                  rt101c.flag(0);
+                  rt101c.frame(0);
+                  ok(rt101c.volume() === 40 && rt101c.vars.l === 40, 'T101e setze Lautstaerke und der Lautstaerke-Reporter folgt (#130)');
+
+                  /* Nachrichten (#131) */
+                  var progMsg = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('when_msg', { msg: 'nachricht1' }, blkRaw('var_set', { name: 'm', value: '1' })) }] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's2', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('broadcast', { msg: 'nachricht1' })) }] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt102 = BLK.newRuntime(progMsg);
+                  rt102.flag(0);
+                  rt102.frame(0);
+                  ok(rt102.vars.m === 1, 'T102 senden startet das Empfaenger-Skript der anderen Figur (#131)');
+                  var progWait = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('when_msg', { msg: 'nachricht2' }, blkRaw('wait', { secs: '1' }, blkRaw('var_set', { name: 'done', value: '1' }))) }] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's2', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('broadcast_wait', { msg: 'nachricht2' }, blkRaw('var_set', { name: 'nach', value: '1' }))) }] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt102b = BLK.newRuntime(progWait);
+                  rt102b.flag(0);
+                  rt102b.frame(0);
+                  ok(rt102b.vars.nach === undefined && rt102b.vars.done === undefined, 'T102b sende-und-warte blockiert, solange der Empfaenger laeuft (#131)');
+                  rt102b.frame(1100);
+                  ok(rt102b.vars.done === 1 && rt102b.vars.nach === undefined, 'T102c der Empfaenger wird erst fertig, dann kommt der Sender dran (#131)');
+                  rt102b.frame(1101);
+                  ok(rt102b.vars.nach === 1, 'T102d danach laeuft der Sender weiter (#131)');
+
+                  /* Sensoren und Zeiger (#133) */
+                  var rt103 = BLK.newRuntime(blkProgram(blkRaw('flag', {},
+                    blkRaw('var_set', { name: 'mx', value: { b: blkRaw('mouse_x') } },
+                      blkRaw('var_set', { name: 'my', value: { b: blkRaw('mouse_y') } },
+                        blkRaw('var_set', { name: 'md', value: { b: blkRaw('mouse_down') } }))))));
+                  rt103.setMouse(30, -20, true);
+                  rt103.flag(0);
+                  rt103.frame(0);
+                  ok(rt103.vars.mx === 30 && rt103.vars.my === -20 && rt103.vars.md === true, 'T103 Maus-x, Maus-y und gedrueckt folgen dem Zeiger (#133)');
+                  var progTouch = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {},
+                          blkRaw('var_set', { name: 'r', value: { b: blkRaw('touching_sprite', { name: 'sp2' }) } },
+                            blkRaw('var_set', { name: 'd', value: { b: blkRaw('distance_to', { name: 'sp2' }) } }))) }] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: 20, y: 0, dir: 90, size: 100, visible: true, scripts: [] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt103b = BLK.newRuntime(progTouch);
+                  rt103b.flag(0);
+                  rt103b.frame(0);
+                  ok(rt103b.vars.r === true && rt103b.vars.d === 20, 'T103b beruehren und Abstand zwischen zwei Figuren stimmen (#133)');
+                  var progClick = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('when_clicked', {}, blkRaw('var_set', { name: 'c', value: '1' })) }] }
+                    ],
+                    stage: { scripts: [{ id: 'st', x: 0, y: 0, top: blkRaw('when_clicked', {}, blkRaw('var_set', { name: 'b', value: '1' })) }] }
+                  }));
+                  var rt103c = BLK.newRuntime(progClick);
+                  rt103c.setMouse(0, 0, true);
+                  rt103c.click(0);
+                  rt103c.frame(0);
+                  ok(rt103c.vars.c === 1 && rt103c.vars.b === undefined, 'T103c Klick auf die Figur startet nur das Figuren-Skript (#133)');
+                  var rt103d = BLK.newRuntime(progClick);
+                  rt103d.setMouse(230, 170, true);
+                  rt103d.click(0);
+                  rt103d.frame(0);
+                  ok(rt103d.vars.b === 1 && rt103d.vars.c === undefined, 'T103d Klick neben die Figur startet das Buehnen-Skript (#133)');
+
+                  /* Bewegung-Plus (#134) */
+                  var rt104 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('glide', { secs: '1', x: '100', y: '0' }))));
+                  rt104.flag(0);
+                  rt104.frame(0);
+                  ok(rt104.sprites[0].x === 0, 'T104 gleiten startet an der alten Position (#134)');
+                  rt104.frame(500);
+                  ok(Math.round(rt104.sprites[0].x) === 50, 'T104b halbwegs auf der Strecke liegt die Figur in der Mitte (#134)');
+                  rt104.frame(1000);
+                  ok(rt104.sprites[0].x === 100, 'T104c am Ende steht die Figur am Ziel (#134)');
+                  var prog104 = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 240, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('bounce', {})) }] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: 100, y: 0, dir: 90, size: 100, visible: true, scripts: [] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt104b = BLK.newRuntime(prog104);
+                  rt104b.flag(0);
+                  rt104b.frame(0);
+                  ok(rt104b.sprites[0].dir === 270 && rt104b.sprites[0].x === 216, 'T104d am Rand prallt die Figur ab und rueckt ein (#134)');
+                  var prog104b = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 0, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('point_towards', { name: 'sp2' })) }] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: 100, y: 0, dir: 90, size: 100, visible: true, scripts: [] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt104d = BLK.newRuntime(prog104b);
+                  rt104d.flag(0);
+                  rt104d.frame(0);
+                  ok(Math.round(rt104d.sprites[0].dir) === 90, 'T104e drehe dich zu richtet die Figur nach rechts aus (#134)');
+
+                  /* Aussehen-Plus (#135) */
+                  var rt105 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('think', { msg: 'Hmm ...' }))));
+                  rt105.flag(0);
+                  rt105.frame(0);
+                  ok(rt105.sprites[0].bubble && rt105.sprites[0].bubble.think === true && rt105.sprites[0].bubble.text === 'Hmm ...', 'T105 denken zeigt eine Denkblase (#135)');
+                  var rt105b = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('next_costume', {}, blkRaw('change_effect', { d: '25' })))));
+                  rt105b.flag(0);
+                  rt105b.frame(0);
+                  ok(rt105b.sprites[0].costume === 'rocket' && rt105b.sprites[0].effect === 25, 'T105b naechstes Kostuem und Farbeffekt aendern die Figur (#135)');
+                  var rt105c = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('set_effect', { v: '100' }, blkRaw('clear_effects', {})))));
+                  rt105c.flag(0);
+                  rt105c.frame(0);
+                  ok(rt105c.sprites[0].effect === 0, 'T105c Farbeffekte aus stellt die Originalfarbe wieder her (#135)');
+                  var progLayer = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('go_front', {})) }] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: 0, y: 0, dir: 90, size: 100, visible: true, scripts: [] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt105d = BLK.newRuntime(progLayer);
+                  rt105d.flag(0);
+                  rt105d.frame(0);
+                  ok(rt105d.order[0] === 'sp2' && rt105d.order[1] === 'sp1', 'T105d zu vorderster Ebene schiebt die Figur nach vorn (#135)');
+                  var progLayerBack = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true, scripts: [] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's2', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('go_back', { n: '1' })) }] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt105e = BLK.newRuntime(progLayerBack);
+                  rt105e.flag(0);
+                  rt105e.frame(0);
+                  ok(rt105e.order[0] === 'sp2' && rt105e.order[1] === 'sp1', 'T105e n Ebenen nach hinten tauscht entsprechend (#135)');
+
+                  /* Rechnen-Plus (#136) */
+                  function blkCalc(raw) {
+                    return BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('var_set', { name: 'r', value: { b: raw } }))));
+                  }
+                  var rc1 = blkCalc(blkRaw('mod', { a: '7', b: '3' })); rc1.flag(0); rc1.frame(0);
+                  ok(rc1.vars.r === 1, 'T106 Rest von 7 durch 3 ist 1 (#136)');
+                  var rc2 = blkCalc(blkRaw('round', { a: '2.6' })); rc2.flag(0); rc2.frame(0);
+                  ok(rc2.vars.r === 3, 'T106b runde 2,6 ergibt 3 (#136)');
+                  var rc3 = blkCalc(blkRaw('sqrt', { a: '25' })); rc3.flag(0); rc3.frame(0);
+                  ok(rc3.vars.r === 5, 'T106c Wurzel aus 25 ist 5 (#136)');
+                  var rc4 = blkCalc(blkRaw('abs', { a: '-7' })); rc4.flag(0); rc4.frame(0);
+                  ok(rc4.vars.r === 7, 'T106d Betrag von -7 ist 7 (#136)');
+                  var rc5 = blkCalc(blkRaw('join', { a: 'Hallo', b: '!' })); rc5.flag(0); rc5.frame(0);
+                  ok(rc5.vars.r === 'Hallo!', 'T106e verbinde haengt Texte aneinander (#136)');
+                  var rc6 = blkCalc(blkRaw('letter_of', { n: '2', txt: 'Hallo' })); rc6.flag(0); rc6.frame(0);
+                  ok(rc6.vars.r === 'a', 'T106f Buchstabe 2 von Hallo ist a (#136)');
+                  var rc7 = blkCalc(blkRaw('length_of', { txt: 'Hallo' })); rc7.flag(0); rc7.frame(0);
+                  ok(rc7.vars.r === 5, 'T106g Laenge von Hallo ist 5 (#136)');
+
+                  /* Code-Ansicht (#140) */
+                  var genProg = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: ['punkte'],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {},
+                          blkRaw('say_for', { msg: 'Hallo!', secs: '2' },
+                            blkRaw('repeat', { count: '3' }, null, [blkRaw('turn_right', { deg: '15' })]))) }] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var jOut = BLK.programToJava(genProg, 'Block Demo');
+                  ok(jOut.indexOf('public class BlockDemo') !== -1 && jOut.indexOf('void figur1_wenn_flag_angeklickt()') !== -1 && jOut.indexOf('sage_fuer("Hallo!", 2)') !== -1 && jOut.indexOf('for (int zaehler1') !== -1 && jOut.indexOf('static void sage_fuer(Object p1, Object p2) { }') !== -1, 'T107 Java-Ansicht: Klasse, Methode, Aufruf, Schleife und Platzhalter (#140)');
+                  var pOut = BLK.programToPython(genProg, 'Block Demo');
+                  ok(pOut.indexOf('def figur1_wenn_flag_angeklickt():') !== -1 && pOut.indexOf('for zaehler1 in range(int(3)):') !== -1 && pOut.indexOf('# sage Hallo! für 2 Sekunden') !== -1, 'T107b Python-Ansicht: Funktion, Schleife und Blocktext-Kommentar (#140)');
+                  genProg.sprites[0].scripts[0].top.next = { op: 'gibts_nicht', id: 'bx', f: {}, sub: [], next: null };
+                  var jOut2 = BLK.programToJava(genProg, 'Block Demo');
+                  ok(jOut2.indexOf('Block ohne Textfassung') !== -1, 'T107c ein Block ohne Uebersetzung bleibt als Kommentar sichtbar (#140)');
+
+                  /* Code-Dialog und Portierung (#140, #141) */
+                  var blkUiCode = blkUi;
+                  blkUiCode.openCodeDialog();
+                  var rootIde = blkDoc.getElementById('blk-ide');
+                  var dlgEl = null;
+                  var di;
+                  for (di = 0; di < rootIde.children.length; di++) {
+                    if (rootIde.children[di].getAttribute('id') === 'blk-code-dialog') { dlgEl = rootIde.children[di]; }
+                  }
+                  ok(dlgEl && !dlgEl.hasAttribute('hidden'), 'T108 der Code-Dialog oeffnet sich ueber der Werkstatt (#140)');
+                  var preEl = null;
+                  for (di = 0; di < dlgEl.children.length; di++) {
+                    if (dlgEl.children[di].getAttribute('id') === 'blk-code-view') { preEl = dlgEl.children[di]; }
+                  }
+                  ok(preEl && preEl.textContent.indexOf('public class') !== -1, 'T108b die Java-Ansicht zeigt das Programm als Klasse (#140)');
+                  var pyTab = null;
+                  var tabWrap = dlgEl.children[0].children[0];
+                  for (di = 0; di < tabWrap.children.length; di++) {
+                    if (tabWrap.children[di].textContent === 'Python') { pyTab = tabWrap.children[di]; }
+                  }
+                  if (pyTab) { pyTab.dispatch('click', {}); }
+                  ok(pyTab && preEl.textContent.indexOf('def figur1_') !== -1, 'T108c der Python-Reiter zeigt dieselben Skripte als Funktionen (#140)');
+                  var portBtn = null;
+                  var actRow = dlgEl.children[2];
+                  for (di = 0; di < actRow.children.length; di++) {
+                    if (actRow.children[di].textContent === 'Als neues Projekt übernehmen') { portBtn = actRow.children[di]; }
+                  }
+                  if (portBtn) { portBtn.dispatch('click', {}); }
+                  var portForm = null;
+                  for (di = 0; di < dlgEl.children.length; di++) {
+                    if (dlgEl.children[di].tagName === 'FORM') { portForm = dlgEl.children[di]; }
+                  }
+                  ok(portForm && String(portForm.getAttribute('action')).indexOf('/werkstatt/code/blocks/port') !== -1, 'T108d die Portierung schickt an die Port-Route (#141)');
+                  var pf = {};
+                  if (portForm) {
+                    for (di = 0; di < portForm.children.length; di++) {
+                      pf[portForm.children[di].getAttribute('name')] = portForm.children[di].getAttribute('value');
+                    }
+                  }
+                  ok(pf.language === 'python' && String(pf.title).indexOf('(Python)') !== -1 && String(pf.code).indexOf('def figur1_') !== -1 && pf.csrf === 'tok', 'T108e das Port-Formular traegt Sprache, Titel, Code und Sicherheitsfeld (#141)');
 
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;
