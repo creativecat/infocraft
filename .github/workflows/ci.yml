@@ -359,7 +359,7 @@ jobs:
           CODE_BLKSAVE=$(curl -sS -L -o blksave.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" -d "title=Block Demo" --data-urlencode "content@blksrc.json" http://127.0.0.1:8080/werkstatt/code/$BLKID)
           grep -q "Gespeichert" blksave.html && BLK_SAVE_OK=1 || BLK_SAVE_OK=0
           CODE_BLKRL=$(curl -sS -o blkrl.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/werkstatt/code/$BLKID)
-          grep -q '"op":"flag"' blkrl.html && grep -q "blk-ide" blkrl.html && BLK_RL_OK=1 || BLK_RL_OK=0
+          grep -q '&quot;punkte&quot;' blkrl.html && grep -q "blk-ide" blkrl.html && BLK_RL_OK=1 || BLK_RL_OK=0
           CODE_PYDIAG=$(curl -sS -L -o pydiag.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" http://127.0.0.1:8080/werkstatt/code/$PYPROJ/diagramm)
           grep -q "PNG herunterladen" pydiag.html && PY_DIAG_OK=1 || PY_DIAG_OK=0
           grep -q "Hund" pydiag.html && PY_DIAG_CLASS_OK=1 || PY_DIAG_CLASS_OK=0
