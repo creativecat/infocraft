@@ -593,6 +593,311 @@ jobs:
           IBKMID=$(grep -o '"id":[0-9]*' ibkup.json | head -n1 | cut -d: -f2)
           [ -n "$IBKMID" ] && IBK_UPID_OK=1 || IBK_UPID_OK=0
           CODE_IBKMED=$(curl -sS -o ibkmed.bin -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/infobuecher/medium/$IBKMID")
+          [ "$CODE_IBKMED" = "200" ] && [ "$(head -c 8 ibkmed.bin | od -An -tx1 | tr -d ' \n')" = "89504e470d0a1a0a" ] && IBK_MED_OK=1 || IBK_MED_OK=0
+          CODE_IBKMED2=$(curl -sS -o /dev/null -w "%{http_code}" "http://127.0.0.1:8080/infobuecher/medium/$IBKMID")
+          [ "$CODE_IBKMED2" = "302" ] && IBK_MED_ANON_OK=1 || IBK_MED_ANON_OK=0
+          SEEDBOOK=$(sqlite3 "$DB" "SELECT id FROM ibooks WHERE title = 'Informatik 9 - Unterlagen' AND class_id IS NULL LIMIT 1")
+          SEEDPG=$(sqlite3 "$DB" "SELECT p.id FROM ibook_pages p JOIN ibook_sections s ON s.id = p.section_id WHERE s.book_id = $SEEDBOOK AND p.title = 'Vererbung verstehen' LIMIT 1")
+          [ -n "$SEEDPG" ] && IBK_SEEDPG_OK=1 || IBK_SEEDPG_OK=0
+          CODE_IBKDIST=$(curl -sS -L -o ibkdist.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "page_id=$SEEDPG" -d "class_id=$CLASS6" -d "bereich=lernbereich" http://127.0.0.1:8080/infobuecher/$SEEDBOOK/verteilen)
+          grep -q "Seite verteilt" ibkdist.html && IBK_DIST_OK=1 || IBK_DIST_OK=0
+          CODE_IBKALSP=$(curl -sS -L -o ibkalsp.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "level=9" http://127.0.0.1:8080/infobuecher/$SEEDBOOK/als-praesentation)
+          grep -q "Präsentation erstellt" ibkalsp.html && IBK_ALSP_OK=1 || IBK_ALSP_OK=0
+          grep -q "Vererbung bei Tieren" ibkalsp.html && IBK_ALSP_SLIDE_OK=1 || IBK_ALSP_SLIDE_OK=0
+          IBKALSPID=$(sqlite3 "$DB" "SELECT id FROM presentations WHERE title = 'Informatik 9 - Unterlagen (aus InfoBook)' LIMIT 1")
+          [ -n "$IBKALSPID" ] && IBK_ALSP_DB_OK=1 || IBK_ALSP_DB_OK=0
+          # #114: Buchpaket-Import (JSON) - Abschnitte + Seiten am Server anlegen,
+          # Bloecke durchlaufen die normale Bereinigung (boese Embed wird entfernt).
+          cat > ibkpaket.json <<'PKT'
+          {"sections":[{"title":"CI SQL Import","area":"lernbereich","pages":[{"title":"CI SQL Seite","blocks":[{"type":"canvas","w":1600,"h":1000,"items":[{"kind":"text","body":":::merksatz\nSQL kommt per Paket.","x":40,"y":40,"w":400,"bg":"#eff6ff"},{"kind":"db","dbseed":"CREATE TABLE ci_imp (name TEXT, p INT);INSERT INTO ci_imp VALUES ('CI', 7)","dbq":"SELECT * FROM ci_imp","x":40,"y":200,"w":420},{"kind":"embed","url":"https://evil.example.com/x","title":"Boese","x":40,"y":640,"w":480}]}]}]}]}
+          PKT
+          CODE_IBKIMP=$(curl -sS -L -o ibkimp.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" --data-urlencode "paket@ibkpaket.json" http://127.0.0.1:8080/infobuecher/$SEEDBOOK/import)
+          grep -q "Import fertig" ibkimp.html && IBK_IMPORT_OK=1 || IBK_IMPORT_OK=0
+          grep -q "Buchpaket importieren" ibkimp.html && IBK_IMPFORM_OK=1 || IBK_IMPFORM_OK=0
+          IBKIMPSEC=$(sqlite3 "$DB" "SELECT id FROM ibook_sections WHERE book_id = $SEEDBOOK AND title = 'CI SQL Import' LIMIT 1")
+          [ -n "$IBKIMPSEC" ] && IBK_IMPSEC_DB_OK=1 || IBK_IMPSEC_DB_OK=0
+          IBKIMPPG=$(sqlite3 "$DB" "SELECT id FROM ibook_pages WHERE section_id = $IBKIMPSEC AND title = 'CI SQL Seite' LIMIT 1")
+          [ -n "$IBKIMPPG" ] && IBK_IMPPG_DB_OK=1 || IBK_IMPPG_DB_OK=0
+          IMPJSON=$(sqlite3 "$DB" "SELECT content FROM ibook_pages WHERE id = $IBKIMPPG")
+          printf '%s' "$IMPJSON" | grep -q "evil.example.com" && IBK_IMPEVIL_OK=0 || IBK_IMPEVIL_OK=1
+          printf '%s' "$IMPJSON" | grep -q "SELECT \* FROM ci_imp" && IBK_IMPDB_OK=1 || IBK_IMPDB_OK=0
+          CODE_IBKIMPRO=$(curl -sS -o ibkimpro.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/infobuecher/$SEEDBOOK/seite/$IBKIMPPG?lesen=1")
+          grep -q "SQL kommt per Paket" ibkimpro.html && IBK_IMPROK_OK=1 || IBK_IMPROK_OK=0
+          grep -q "icv-db-in" ibkimpro.html && IBK_IMPDBUI_OK=1 || IBK_IMPDBUI_OK=0
+
+          # InfoBook Freie Flaeche (#63): Canvas-Baustein (Drag&Drop-Bilder, Text frei,
+          # Freihand ueber allem), Positionen werden serverseitig begrenzt, Verteilen
+          # kopiert die gebundenen Bilder mit, Lesemodus/Präsentation rendern die Flaeche
+          CODE_IBKCVUP=$(curl -sS -o ibkcvup.json -w "%{http_code}" -b cookies5.txt -c cookies5.txt -F "csrf=$CSRF8" -F "kind=image" -F "file=@ibk.png;type=image/png" http://127.0.0.1:8080/infobuecher/$SEEDBOOK/medium)
+          grep -q '"ok":true' ibkcvup.json && IBK_CV_UP_OK=1 || IBK_CV_UP_OK=0
+          IBKCVMID=$(grep -o '"id":[0-9]*' ibkcvup.json | head -n1 | cut -d: -f2)
+          [ -n "$IBKCVMID" ] && IBK_CV_UPID_OK=1 || IBK_CV_UPID_OK=0
+          SEEDSEC=$(sqlite3 "$DB" "SELECT id FROM ibook_sections WHERE book_id = $SEEDBOOK ORDER BY id LIMIT 1")
+          CODE_IBKCVPG=$(curl -sS -L -o ibkcvpage.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "section_id=$SEEDSEC" -d "title=CI Freie Flaeche" http://127.0.0.1:8080/infobuecher/$SEEDBOOK/seite)
+          grep -q "Seite angelegt" ibkcvpage.html && IBK_CV_PG_OK=1 || IBK_CV_PG_OK=0
+          grep -q 'data-icv-tool' public/assets/js/app.js && IBK_CV_BTN_OK=1 || IBK_CV_BTN_OK=0
+          IBKCVPG=$(sqlite3 "$DB" "SELECT id FROM ibook_pages WHERE section_id = $SEEDSEC AND title = 'CI Freie Flaeche' LIMIT 1")
+          CODE_IBKCVSAVE=$(curl -sS -L -o ibkcvsave.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Freie Flaeche" --data-urlencode "blocks=[{\"type\":\"canvas\",\"w\":1600,\"h\":1000,\"items\":[{\"kind\":\"text\",\"body\":\":::merksatz\\nFreihand ueber allem\",\"x\":80,\"y\":60,\"w\":360,\"bg\":\"#eff6ff\",\"align\":\"right\",\"link\":999999},{\"kind\":\"ink\",\"c\":\"#ef4444\",\"sw\":8,\"p\":[0,0,40,30,80,10],\"x\":100,\"y\":700,\"w\":80,\"h\":30},{\"kind\":\"ink\",\"c\":\"javascript:evil\",\"sw\":999,\"p\":[0,0,10,10],\"x\":100,\"y\":760,\"w\":10,\"h\":10},{\"kind\":\"embed\",\"url\":\"https://learningapps.org/watch?v=abc\",\"title\":\"Lernapp\",\"x\":100,\"y\":800,\"w\":480},{\"kind\":\"embed\",\"url\":\"https://evil.example.com/x\",\"title\":\"Boese\",\"x\":100,\"y\":850,\"w\":480},{\"kind\":\"embed\",\"url\":\"https://h5p.com/content/12345\",\"title\":\"Uebung\",\"x\":100,\"y\":880,\"w\":480},{\"kind\":\"embed\",\"url\":\"https://h5p.org/watch?v=abc\",\"title\":\"BoeseH5P\",\"x\":100,\"y\":920,\"w\":480},{\"kind\":\"code\",\"code\":\"console.log('CI Code'); 6 * 7;\",\"lang\":\"java\",\"x\":100,\"y\":960,\"w\":520},{\"kind\":\"code\",\"code\":\"<b>fett</b> alert(1)\",\"lang\":\"pascal\",\"x\":100,\"y\":1000,\"w\":520},{\"kind\":\"db\",\"dbseed\":\"CREATE TABLE ci_tab (name TEXT, punkte INT);INSERT INTO ci_tab VALUES ('CI Schueler', 3)\",\"dbq\":\"SELECT * FROM ci_tab\",\"x\":100,\"y\":1020,\"w\":420},{\"kind\":\"db\",\"dbseed\":\"<i>boese</i>\",\"dbq\":\"DROP TABLE x\",\"x\":100,\"y\":1040,\"w\":420},{\"kind\":\"diagram\",\"src\":\"graph TD\nCI_START --> CI_ZIEL\",\"dmode\":\"nope\",\"x\":100,\"y\":1060,\"w\":480},{\"kind\":\"diagram\",\"src\":\"graph TD\nCI_SPLIT_A --> CI_SPLIT_B\",\"dmode\":\"split\",\"x\":100,\"y\":1070,\"w\":560},{\"kind\":\"image\",\"media\":$IBKCVMID,\"name\":\"ibk.png\",\"alt\":\"CI Bild\",\"x\":-999,\"y\":5000,\"w\":99999,\"h\":-40,\"link\":$IBKCVPG}]}]" http://127.0.0.1:8080/infobuecher/$SEEDBOOK/seite/$IBKCVPG)
+          grep -q "Seite gespeichert" ibkcvsave.html && IBK_CV_SAVE_OK=1 || IBK_CV_SAVE_OK=0
+          CVJSON=$(sqlite3 "$DB" "SELECT content FROM ibook_pages WHERE id = $IBKCVPG")
+          printf '%s' "$CVJSON" | grep -q '"x":0' && printf '%s' "$CVJSON" | grep -q '"y":1000' && printf '%s' "$CVJSON" | grep -q '"h":16' && IBK_CV_CLAMP_OK=1 || IBK_CV_CLAMP_OK=0
+          printf '%s' "$CVJSON" | grep -q '"link":999999' && IBK_LINKEVIL_OK=0 || IBK_LINKEVIL_OK=1
+          printf '%s' "$CVJSON" | grep -q "\\\"link\\\":$IBKCVPG" && IBK_LINKCV_OK=1 || IBK_LINKCV_OK=0
+          CODE_IBKCVVIEW=$(curl -sS -o ibkcvview.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/infobuecher/$SEEDBOOK/seite/$IBKCVPG)
+          grep -q '&quot;canvas&quot;' ibkcvview.html && IBK_CV_EDITOR_OK=1 || IBK_CV_EDITOR_OK=0
+          CODE_IBKPREV=$(curl -sS -o ibkpreview.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/infobuecher/$SEEDBOOK/seite/$IBKCVPG?lesen=1")
+          grep -Fq '?lesen=1' ibkpreview.html && grep -q 'Bearbeiten' ibkpreview.html && IBK_LESENAVRO_OK=1 || IBK_LESENAVRO_OK=0
+          grep -q 'ibook-pagenav-box' ibkcvview.html && grep -q 'ibook-pagenav-box' ibkpreview.html && IBK_COLLRO_OK=1 || IBK_COLLRO_OK=0
+          grep -q 'ibook-navnew' ibkcvview.html && IBK_NAVNEWRO_OK=1 || IBK_NAVNEWRO_OK=0
+          grep -q 'icv-item-link' ibkpreview.html && IBK_LINKRO_OK=1 || IBK_LINKRO_OK=0
+          CODE_IBKCVDIST=$(curl -sS -L -o ibkcvdist.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "page_id=$IBKCVPG" -d "class_id=$CLASS6" -d "bereich=lernbereich" http://127.0.0.1:8080/infobuecher/$SEEDBOOK/verteilen)
+          grep -q "Seite verteilt" ibkcvdist.html && IBK_CV_DIST_OK=1 || IBK_CV_DIST_OK=0
+          IBKCVT=$(sqlite3 "$DB" "SELECT p.id FROM ibook_pages p JOIN ibook_sections s ON s.id = p.section_id WHERE s.book_id = $IBKID6 AND p.title = 'CI Freie Flaeche' LIMIT 1")
+          [ -n "$IBKCVT" ] && IBK_CV_TID_OK=1 || IBK_CV_TID_OK=0
+          CVTMEDIA=$(sqlite3 "$DB" "SELECT id FROM ibook_media WHERE book_id = $IBKID6 AND kind = 'image' AND name LIKE 'ibk%' AND id != $IBKMID ORDER BY id DESC LIMIT 1")
+          [ -n "$CVTMEDIA" ] && [ "$CVTMEDIA" != "$IBKCVMID" ] && IBK_CV_MEDCOPY_OK=1 || IBK_CV_MEDCOPY_OK=0
+          CVTJSON=$(sqlite3 "$DB" "SELECT content FROM ibook_pages WHERE id = $IBKCVT")
+          printf '%s' "$CVTJSON" | grep -q "\"media\":$CVTMEDIA" && IBK_CV_REF_OK=1 || IBK_CV_REF_OK=0
+          printf '%s' "$CVTJSON" | grep -q '"link"' && IBK_LINKDROP_OK=0 || IBK_LINKDROP_OK=1
+          CODE_IBKCVLENA=$(curl -sS -o ibkcvlena.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/infobuecher/$IBKID6/seite/$IBKCVT)
+          grep -q "icv-stage" ibkcvlena.html && grep -q "Freihand ueber allem" ibkcvlena.html && IBK_CV_RO_OK=1 || IBK_CV_RO_OK=0
+          grep -q "left:0%" ibkcvlena.html && grep -q "top:100%" ibkcvlena.html && IBK_CV_STYLE_OK=1 || IBK_CV_STYLE_OK=0
+          grep -q "medium/$CVTMEDIA" ibkcvlena.html && IBK_CV_ROMED_OK=1 || IBK_CV_ROMED_OK=0
+          grep -q "icv-ink-svg" ibkcvlena.html && grep -q "stroke=\"#ef4444\"" ibkcvlena.html && IBK_CV_INK_OK=1 || IBK_CV_INK_OK=0
+          grep -q "stroke=\"#1f2937\"" ibkcvlena.html && IBK_CV_INKSAN_OK=1 || IBK_CV_INKSAN_OK=0
+          grep -q "learningapps.org" ibkcvlena.html && IBK_CV_EMB_OK=1 || IBK_CV_EMB_OK=0
+          printf '%s' "$CVTJSON" | grep -q "evil.example.com" && IBK_CV_EMBEVIL_OK=0 || IBK_CV_EMBEVIL_OK=1
+          grep -q "h5p.com/content/12345/embed" ibkcvlena.html && IBK_H5P_OK=1 || IBK_H5P_OK=0
+          printf '%s' "$CVJSON" | grep -q "h5p.org/watch" && IBK_H5PEVIL_OK=0 || IBK_H5PEVIL_OK=1
+          grep -q "icv-code-run" ibkcvlena.html && grep -q "CI Code" ibkcvlena.html && IBK_CODE_OK=1 || IBK_CODE_OK=0
+          grep -q "<b>fett</b>" ibkcvlena.html && IBK_CODEEVIL_OK=0 || IBK_CODEEVIL_OK=1
+          grep -q "icv-db-run" ibkcvlena.html && grep -q "CI Schueler" ibkcvlena.html && IBK_DB_OK=1 || IBK_DB_OK=0
+          grep -q "ci_tab (name TEXT" ibkcvlena.html && IBK_DBSCHEMA_OK=1 || IBK_DBSCHEMA_OK=0
+          grep -q "icv-diagram-ro" ibkcvlena.html && grep -q "CI_ZIEL" ibkcvlena.html && IBK_DIAG_OK=1 || IBK_DIAG_OK=0
+          grep -q "icv-diagram-split-ro" ibkcvlena.html && grep -q "icv-diagram-split-bar" ibkcvlena.html && grep -q "CI_SPLIT_A" ibkcvlena.html && IBK_DGSPLITRO_OK=1 || IBK_DGSPLITRO_OK=0
+          printf '%s' "$CVJSON" | grep -q '"dmode":"split"' && IBK_DGSPLITCV_OK=1 || IBK_DGSPLITCV_OK=0
+          printf '%s' "$CVJSON" | grep -q '"dmode":"nope"' && IBK_DGEVIL_OK=0 || IBK_DGEVIL_OK=1
+          grep -q 'icv-code-langtag' ibkcvlena.html && grep -q 'data-lang="java"' ibkcvlena.html && IBK_LANGRO_OK=1 || IBK_LANGRO_OK=0
+          printf '%s' "$CVJSON" | grep -q '"lang":"java"' && IBK_LANGCV_OK=1 || IBK_LANGCV_OK=0
+          printf '%s' "$CVJSON" | grep -q 'pascal' && IBK_LANGEVIL_OK=0 || IBK_LANGEVIL_OK=1
+          grep -q 'java-vm.js' ibkcvlena.html && grep -q 'java-vm.js' ibkcvview.html && IBK_JAVAVM_OK=1 || IBK_JAVAVM_OK=0
+          grep -q 'ibook-pagenav-fold' ibkcvview.html && grep -q 'ibook-pagenav-fold' ibkpreview.html && IBK_FOLDRO_OK=1 || IBK_FOLDRO_OK=0
+          grep -q 'ibook-topnav-title' ibkcvview.html && grep -q 'ibook-topnav-title' ibkpreview.html && IBK_HERORO_OK=1 || IBK_HERORO_OK=0
+          grep -q 'data-dbtemplates' ibkcvview.html && IBK_DBTPLRO_OK=1 || IBK_DBTPLRO_OK=0
+          grep -q 'textarea class="mono icv-code-src"' ibkcvlena.html && IBK_ROVIEW_OK=1 || IBK_ROVIEW_OK=0
+          grep -q "icv-diagram-code" src/Controllers/InfoBookController.php && grep -q "icv-diagram-code" public/assets/css/style.css && grep -q 'icv-diagram-code' ibkcvlena.html && IBK_SPLITEDIT_OK=1 || IBK_SPLITEDIT_OK=0
+          grep -q 'icv-diagram-ro-hint' ibkcvlena.html && IBK_NOHINT_OK=0 || IBK_NOHINT_OK=1
+          grep -q 'data-diagrams' ibkcvview.html && IBK_DGLIBRO_OK=1 || IBK_DGLIBRO_OK=0
+          grep -q "background:#eff6ff" ibkcvlena.html && grep -q "text-align:right" ibkcvlena.html && IBK_CV_TXT_OK=1 || IBK_CV_TXT_OK=0
+          CODE_IBKCVPRES=$(curl -sS -o ibkcvpres.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/infobuecher/$SEEDBOOK/praesentation?abschnitt=$SEEDSEC")
+          grep -q "icv-stage" ibkcvpres.html && grep -q "Freihand ueber allem" ibkcvpres.html && IBK_CV_PRES_OK=1 || IBK_CV_PRES_OK=0
+          CODE_IBKEM=$(curl -sS -L -o ibkemma.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt http://127.0.0.1:8080/infobuecher)
+          grep -q "Mein Bereich - Emma" ibkemma.html && IBK_EM_OWN_OK=1 || IBK_EM_OWN_OK=0
+          grep -q "Zusammenarbeit" ibkemma.html && IBK_EM_GM_OK=1 || IBK_EM_GM_OK=0
+          IBKID9=$(sqlite3 "$DB" "SELECT id FROM ibooks WHERE class_id = (SELECT id FROM classes WHERE name = '9R') LIMIT 1")
+          EMSEC=$(sqlite3 "$DB" "SELECT id FROM ibook_sections WHERE book_id = $IBKID9 AND area = 'gemeinsam' LIMIT 1")
+          CODE_IBKEMW=$(curl -sS -o ibkemmaw.html -w "%{http_code}" -b cookies2.txt "http://127.0.0.1:8080/infobuecher/$IBKID9?abschnitt=$EMSEC")
+          grep -q "Neue Seite" ibkemmaw.html && IBK_EM_WRITE_OK=1 || IBK_EM_WRITE_OK=0
+          CODE_IBKEMR=$(curl -sS -o ibkemmar.html -w "%{http_code}" -b cookies2.txt "http://127.0.0.1:8080/infobuecher/$IBKID9")
+          grep -q "Neue Seite" ibkemmar.html && IBK_EM_RO_OK=0 || IBK_EM_RO_OK=1
+          CODE_IBKEM6=$(curl -sS -L -o ibkemma6.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt "http://127.0.0.1:8080/infobuecher/$IBKID6")
+          grep -q "keinen Zugriff" ibkemma6.html && IBK_EM_DENY_OK=1 || IBK_EM_DENY_OK=0
+          CODE_IBKLENA=$(curl -sS -L -o ibklena.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/infobuecher)
+          grep -q "Vererbung verstehen" ibklena.html && IBK_LENA_PAGE_OK=1 || IBK_LENA_PAGE_OK=0
+          grep -q "Mein Bereich - Lena" ibklena.html && IBK_LENA_OWN_OK=1 || IBK_LENA_OWN_OK=0
+          CDN_PAGE=$(grep -l jsdelivr praes.html psave.html pmod.html pslide2.html pthema2.html ws.html htmled.html pyed.html jsave.html ibk6.html ibkpres.html 2>/dev/null | head -n3 | tr '\n' ',' )
+          [ -z "$CDN_PAGE" ] && NO_CDN_OK=1 || NO_CDN_OK=0
+          CDN_WHY=$(grep -ho '.\{0,70\}jsdelivr.\{0,90\}' praes.html psave.html pmod.html pslide2.html pthema2.html ws.html htmled.html pyed.html jsave.html ibk6.html ibkpres.html 2>/dev/null | head -n2 | tr '\n' ' ')
+          echo "::notice::praes-show highlight-src: $(grep -o 'src="[^"]*highlight[^"]*"' psave.html | head -n1) | ws highlight-src: $(grep -o 'src="[^"]*highlight[^"]*"' ws.html | head -n1)"
+          echo "::notice::vendor im Smoke: highlight=$(wc -c < public/assets/vendor/highlight.min.js 2>/dev/null) mermaid=$(wc -c < public/assets/vendor/mermaid.min.js 2>/dev/null)"
+          CODE_PDEL=$(curl -sS -L -o pdel.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/praesentationen/$PID/loeschen)
+          grep -q "gelöscht" pdel.html && PRAES_DEL_OK=1 || PRAES_DEL_OK=0
+          # Permanente Themen-Links, Übungs-/Lösungsfolien, Wiki-Themenübersicht, Gruppierung, Katalog
+          CODE_PTSLUG=$(curl -sS -o pthema.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/praesentationen/thema/datenschutz)
+          grep -q "Datenschutz" pthema.html && PT_SLUG_OK=1 || PT_SLUG_OK=0
+          grep -q "Übung" pthema.html && PT_UEB_OK=1 || PT_UEB_OK=0
+          CODE_PTKONV=$(curl -sS -o ptkonv.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/praesentationen/thema/java-klassen)
+          grep -q "nameStart" ptkonv.html && PT_KONV_OK=1 || PT_KONV_OK=0
+          grep -q "Jahrgangsstufe 9" praes.html && PT_GRUPPE_OK=1 || PT_GRUPPE_OK=0
+          WTIDX=$(sqlite3 "$DB" "SELECT id FROM wiki_pages WHERE title = 'Präsentationen: Themenübersicht'")
+          CODE_PTIDX=$(curl -sS -o widx.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/wiki/$WTIDX)
+          grep -q "href=\"/praesentationen/thema/datenschutz\"" widx.html && PT_INDEX_OK=1 || PT_INDEX_OK=0
+          CODE_PTKAT=$(curl -sS -o tkat.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/aufgaben?level=9")
+          grep -q "Tabellenkalkulation" tkat.html && PT_KAT_OK=1 || PT_KAT_OK=0
+          CODE_PTLOCK=$(curl -sS -o ptlock.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/praesentationen/thema/java-klassen)
+          grep -q "höheren Jahrgangsstufe" ptlock.html && PT_LOCK_OK=1 || PT_LOCK_OK=0
+          # Aufgabenpool: Katalog, Stufen-Filter, Uebernahme, Duplikat, Sammel-Import, Loeschen
+          CODE_TCAT=$(curl -sS -o tcat.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/aufgaben?view=katalog&level=6")
+          grep -q "Aufgabenkatalog" tcat.html && TCAT_OK=1 || TCAT_OK=0
+          grep -q "Alltag" tcat.html && TCAT_LEVEL_OK=1 || TCAT_LEVEL_OK=0
+          grep -q "Normalisierung" tcat.html && TCAT_NOLEAK_OK=0 || TCAT_NOLEAK_OK=1
+          CODE_TIMPORT=$(curl -sS -L -o timport.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "template_id=1" http://127.0.0.1:8080/aufgaben/katalog)
+          grep -q "übernommen" timport.html && TIMPORT_OK=1 || TIMPORT_OK=0
+          TCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM tasks WHERE teacher_id = $STEFAN AND title = 'Einen Alltag als Algorithmus beschreiben'")
+          [ "$TCNT" = "1" ] && TIMPORT_DB_OK=1 || TIMPORT_DB_OK=0
+          CODE_TDUP=$(curl -sS -L -o tdup.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "template_id=1" http://127.0.0.1:8080/aufgaben/katalog)
+          grep -q "schon im Pool" tdup.html && TDUP_OK=1 || TDUP_OK=0
+          CODE_TLEVEL=$(curl -sS -L -o tlevel.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "level=6" http://127.0.0.1:8080/aufgaben/katalog/stufe)
+          grep -q "übernommen" tlevel.html && TLEVEL_OK=1 || TLEVEL_OK=0
+          TLCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM tasks WHERE teacher_id = $STEFAN AND level = 6")
+          [ "$TLCNT" -ge 5 ] && TLEVEL_DB_OK=1 || TLEVEL_DB_OK=0
+          TID=$(sqlite3 "$DB" "SELECT id FROM tasks WHERE teacher_id = $STEFAN AND title = 'Einen Alltag als Algorithmus beschreiben'")
+          CODE_TDEL=$(curl -sS -L -o tdel.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/aufgaben/$TID/loeschen)
+          grep -q "gelöscht" tdel.html && TDEL_OK=1 || TDEL_OK=0
+          TDELCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM tasks WHERE id = $TID")
+          [ "$TDELCNT" = "0" ] && TDEL_DB_OK=1 || TDEL_DB_OK=0
+          # Aufgabenverwaltung 2: Teilen, Pool-Kopie, Bearbeiten, Abgabetermin, Abgabe, Korrektur, KI-Schnittstelle
+          CODE_TANEW=$(curl -sS -L -o tanew.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Aufgabe Termin" --data-urlencode "description=Testaufgabe mit Termin" -d "type=code" -d "level=6" --data-urlencode "sample_solution=Muster Alt" http://127.0.0.1:8080/aufgaben/anlegen)
+          grep -q "CI Aufgabe Termin" tanew.html && TANEW_OK=1 || TANEW_OK=0
+          TAID=$(sqlite3 "$DB" "SELECT id FROM tasks WHERE teacher_id = $STEFAN AND title = 'CI Aufgabe Termin'")
+          CODE_TAEDIT=$(curl -sS -L -o taedit.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Aufgabe Termin" --data-urlencode "description=Geaenderte Beschreibung" -d "type=code" -d "level=6" --data-urlencode "sample_solution=Muster Neu" http://127.0.0.1:8080/aufgaben/$TAID/bearbeiten)
+          grep -q "gespeichert" taedit.html && TAEDIT_OK=1 || TAEDIT_OK=0
+          grep -q "todos/eigene" taedit.html && TOWN_UI_OK=1 || TOWN_UI_OK=0
+          curl -sS -L -o townadd.html -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" --data-urlencode "todo_title=CI eigene Notiz" http://127.0.0.1:8080/aufgaben/$TAID/todos/eigene
+          grep -q "hinzugefügt" townadd.html && TOWN_ADD_OK=1 || TOWN_ADD_OK=0
+          grep -q "CI eigene Notiz" townadd.html && TOWN_LIST_OK=1 || TOWN_LIST_OK=0
+          TOWNCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_todos WHERE task_id = $TAID AND student_id = $STEFAN AND template_id IS NULL")
+          [ "$TOWNCNT" = "1" ] && TOWN_DB_OK=1 || TOWN_DB_OK=0
+          EDITARROW=$(awk '/←/{if(!a)a=NR} /Verteilen &amp;/{if(!h)h=NR} END{print (a && h && a<h) ? 1 : 0}' taedit.html)
+          [ "$EDITARROW" = "1" ] && EDIT_ARROW_OK=1 || EDIT_ARROW_OK=0
+          TASOL=$(sqlite3 "$DB" "SELECT sample_solution FROM tasks WHERE id = $TAID")
+          [ "$TASOL" = "Muster Neu" ] && TAEDIT_DB_OK=1 || TAEDIT_DB_OK=0
+          CODE_TASHARE=$(curl -sS -L -o tashare.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "shared=1" http://127.0.0.1:8080/aufgaben/$TAID/teilen)
+          grep -q "gemeinsamen Pool" tashare.html && TASHARE_OK=1 || TASHARE_OK=0
+          CODE_TASHPAGE=$(curl -sS -o tashpage.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/aufgaben)
+          grep -q "im gemeinsamen Pool" tashpage.html && TASHARE_BADGE_OK=1 || TASHARE_BADGE_OK=0
+          CODE_TASCHOOL=$(curl -sS -o tapool.html -w "%{http_code}" -b cookies4.txt http://127.0.0.1:8080/aufgaben?view=pool)
+          grep -q "CI Aufgabe Termin" tapool.html && TAPOOL_OK=1 || TAPOOL_OK=0
+          grep -q "von Stefan Schmidt" tapool.html && TAPOOL_AUTHOR_OK=1 || TAPOOL_AUTHOR_OK=0
+          CSRF9=$(grep -o 'value="[a-f0-9]*"' tapool.html | head -n1 | cut -d'"' -f2)
+          CODE_TAADOPT=$(curl -sS -L -o taadopt.html -w "%{http_code}" -b cookies4.txt -c cookies4.txt -d "csrf=$CSRF9" http://127.0.0.1:8080/aufgaben/pool/$TAID/uebernehmen)
+          grep -q "als Kopie übernommen" taadopt.html && TAADOPT_OK=1 || TAADOPT_OK=0
+          TAAD=$(sqlite3 "$DB" "SELECT COUNT(*) FROM tasks WHERE teacher_id = $CLAUDIA AND title = 'CI Aufgabe Termin'")
+          [ "$TAAD" = "1" ] && TAADOPT_DB_OK=1 || TAADOPT_DB_OK=0
+          CODE_TAADOPT2=$(curl -sS -L -o taadopt2.html -w "%{http_code}" -b cookies4.txt -c cookies4.txt -d "csrf=$CSRF9" http://127.0.0.1:8080/aufgaben/pool/$TAID/uebernehmen)
+          grep -q "schon im Pool" taadopt2.html && TAADOPT2_OK=1 || TAADOPT2_OK=0
+          TAID2=$(sqlite3 "$DB" "SELECT id FROM tasks WHERE teacher_id = $CLAUDIA AND title = 'CI Aufgabe Termin'")
+          CODE_TAKINONE=$(curl -sS -L -o takinone.html -w "%{http_code}" -b cookies4.txt -c cookies4.txt -d "csrf=$CSRF9" http://127.0.0.1:8080/aufgaben/$TAID2/ki)
+          grep -q "Keine KI-Schnittstelle hinterlegt" takinone.html && TAKINONE_OK=1 || TAKINONE_OK=0
+          CODE_TAASSIGN=$(curl -sS -L -o taassign.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "task_id=$TAID" -d "class_id=$CLASS6" -d "user_id=0" -d "due_at=2031-01-15T14:30" http://127.0.0.1:8080/aufgaben/austeilen)
+          grep -q "ausgeteilt" taassign.html && TAASSIGN_OK=1 || TAASSIGN_OK=0
+          TADUE=$(sqlite3 "$DB" "SELECT due_at FROM task_targets WHERE task_id = $TAID")
+          [ "$TADUE" = "2031-01-15 14:30" ] && TADUE_DB_OK=1 || TADUE_DB_OK=0
+          TATGT=$(sqlite3 "$DB" "SELECT id FROM task_targets WHERE task_id = $TAID")
+          CODE_TATERM=$(curl -sS -L -o taterm.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "target_id=$TATGT" -d "due_at=2031-02-20T09:15" http://127.0.0.1:8080/aufgaben/termin)
+          grep -q "Abgabetermin gespeichert" taterm.html && TATERM_OK=1 || TATERM_OK=0
+          TADUE2=$(sqlite3 "$DB" "SELECT due_at FROM task_targets WHERE task_id = $TAID")
+          [ "$TADUE2" = "2031-02-20 09:15" ] && TATERM_DB_OK=1 || TATERM_DB_OK=0
+          CODE_TATERM2=$(curl -sS -L -o taterm2.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "target_id=$TATGT" -d "due_at=kein-datum" http://127.0.0.1:8080/aufgaben/termin)
+          grep -q "Bitte den Abgabetermin" taterm2.html && TATERM2_OK=1 || TATERM2_OK=0
+          CODE_TASTUDENT=$(curl -sS -o tastudent.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/aufgaben)
+          grep -q "CI Aufgabe Termin" tastudent.html && TASTUDENT_OK=1 || TASTUDENT_OK=0
+          grep -q "2031-02-20 09:15" tastudent.html && TASTUDENT_DUE_OK=1 || TASTUDENT_DUE_OK=0
+          CSRF10=$(grep -o 'value="[a-f0-9]*"' tastudent.html | head -n1 | cut -d'"' -f2)
+          CODE_TASUBMIT=$(curl -sS -L -o tasubmit.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF10" --data-urlencode "content=Meine Loesung mit Schleife" http://127.0.0.1:8080/aufgaben/$TAID/abgeben)
+          grep -q "Abgabe gespeichert" tasubmit.html && TASUBMIT_OK=1 || TASUBMIT_OK=0
+          TACNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_submissions WHERE task_id = $TAID AND student_id = $LENA")
+          [ "$TACNT" = "1" ] && TASUBMIT_DB_OK=1 || TASUBMIT_DB_OK=0
+          CODE_TACORR=$(curl -sS -o tacorr.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/aufgaben/$TAID/korrektur)
+          grep -q "Lena Müller" tacorr.html && TACORR_OK=1 || TACORR_OK=0
+          grep -q "Meine Loesung mit Schleife" tacorr.html && TACORR_SUB_OK=1 || TACORR_SUB_OK=0
+          grep -q "Muster Neu" tacorr.html && TACORR_SOL_OK=1 || TACORR_SOL_OK=0
+          CODE_TAGRADE=$(curl -sS -L -o tagrade.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "grade_$LENA=2" --data-urlencode "comment_$LENA=Gute Schleife, weiter so" http://127.0.0.1:8080/aufgaben/$TAID/korrigieren)
+          grep -q "Korrektur gespeichert" tagrade.html && TAGRADE_OK=1 || TAGRADE_OK=0
+          TAGR=$(sqlite3 "$DB" "SELECT grade FROM task_gradings WHERE task_id = $TAID AND student_id = $LENA")
+          [ "$TAGR" = "2" ] && TAGRADE_DB_OK=1 || TAGRADE_DB_OK=0
+          CODE_TASTUDENT2=$(curl -sS -o tastudent2.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/aufgaben)
+          grep -q "Korrigiert: Note 2" tastudent2.html && TASTUDENT_GRADE_OK=1 || TASTUDENT_GRADE_OK=0
+          CODE_TARESUBMIT=$(curl -sS -L -o taresubmit.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF10" --data-urlencode "content=Noch eine Version" http://127.0.0.1:8080/aufgaben/$TAID/abgeben)
+          grep -q "bereits korrigiert" taresubmit.html && TARESUBMIT_OK=1 || TARESUBMIT_OK=0
+          CODE_TAKI=$(curl -sS -o taki.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/aufgaben/ki)
+          grep -q "KI-Schnittstelle" taki.html && TAKI_OK=1 || TAKI_OK=0
+          grep -q "Schulweite" taki.html && TAKI_TEACHER_OK=0 || TAKI_TEACHER_OK=1
+          CODE_TAKISAVE=$(curl -sS -L -o takisave.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "mode=chat" -d "url=http://127.0.0.1:9/v1/chat/completions" -d "api_key=ci-key" -d "model=ci-model" http://127.0.0.1:8080/aufgaben/ki)
+          grep -q "gespeichert" takisave.html && TAKISAVE_OK=1 || TAKISAVE_OK=0
+          TAKICNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM ai_settings WHERE user_id = $STEFAN AND mode = 'chat'")
+          [ "$TAKICNT" = "1" ] && TAKI_DB_OK=1 || TAKI_DB_OK=0
+          CODE_TAKIADM=$(curl -sS -o takiadm.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/aufgaben/ki)
+          grep -q "Schulweite" takiadm.html && TAKI_ADM_OK=1 || TAKI_ADM_OK=0
+          CSRF11=$(grep -o 'value="[a-f0-9]*"' takiadm.html | head -n1 | cut -d'"' -f2)
+          CODE_TAKISCHULE=$(curl -sS -L -o takischule.html -w "%{http_code}" -b cookies.txt -c cookies.txt -d "csrf=$CSRF11" -d "mode=json" -d "url=http://127.0.0.1:9/v1/bewerten" -d "api_key=school-key" -d "model=" http://127.0.0.1:8080/aufgaben/ki/schule)
+          grep -q "Schulweite KI-Schnittstelle gespeichert" takischule.html && TAKISCHULE_OK=1 || TAKISCHULE_OK=0
+          TAKISCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM ai_settings WHERE user_id IS NULL AND mode = 'json'")
+          [ "$TAKISCNT" = "1" ] && TAKISCHULE_DB_OK=1 || TAKISCHULE_DB_OK=0
+          CODE_TAKINONE2=$(curl -sS -L -o takinone2.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/aufgaben/$TAID/ki)
+          grep -q "keine abgegebenen Lösungen" takinone2.html && TAKINONE2_OK=1 || TAKINONE2_OK=0
+          # Admin-Einstellungen: Standard-Programmiersprache Java, speicherbare Navigationsansicht
+          CODE_ADMSET=$(curl -sS -o admset.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/admin/einstellungen)
+          grep -q "Admin-Einstellungen" admset.html && ADMSET_OK=1 || ADMSET_OK=0
+          grep -q "Standard-Programmiersprache" admset.html && ADMSET_LANG_OK=1 || ADMSET_LANG_OK=0
+          TSETDB=$(sqlite3 "$DB" "SELECT setting_value FROM site_settings WHERE setting_key = 'default_language'")
+          [ "$TSETDB" = "java" ] && SETT_DB_OK=1 || SETT_DB_OK=0
+          CSRF12=$(grep -o 'value="[a-f0-9]*"' admset.html | head -n1 | cut -d'"' -f2)
+          CODE_NAVVIEW=$(curl -sS -o navview.html -w "%{http_code}" -b cookies.txt -c cookies.txt -d "csrf=$CSRF12" -d "view=mini" http://127.0.0.1:8080/einstellungen/navigation)
+          grep -q '"ok":true' navview.html && NAVVIEW_OK=1 || NAVVIEW_OK=0
+          TNAVDB=$(sqlite3 "$DB" "SELECT pref_value FROM user_prefs WHERE pref_key = 'nav_view'")
+          [ "$TNAVDB" = "mini" ] && NAVVIEW_DB_OK=1 || NAVVIEW_DB_OK=0
+          # Anlegen auf eigener Seite: Formular mit Themengebieten und Beschreibung
+          CODE_TANEW5=$(curl -sS -o tanew5.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/aufgaben/neu)
+          grep -q "Neue Aufgabe" tanew5.html && TANEW5_OK=1 || TANEW5_OK=0
+          grep -q "Themengebiet" tanew5.html && TANEW5_TOPIC_OK=1 || TANEW5_TOPIC_OK=0
+          # Katalog-Uebernahme einer Aufgabe der 10. Klasse: ToDos, Vorlage und Musterloesung muessen mitkommen
+          CODE_KAT34=$(curl -sS -L -o kat34.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "template_id=34" http://127.0.0.1:8080/aufgaben/katalog)
+          grep -q "Datenmodellierung: Bibliothek mit n:m-Beziehung" kat34.html && KAT34_OK=1 || KAT34_OK=0
+          T34=$(sqlite3 "$DB" "SELECT id FROM tasks WHERE teacher_id = $STEFAN AND title = 'Datenmodellierung: Bibliothek mit n:m-Beziehung' LIMIT 1")
+          [ "$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_todos WHERE task_id = $T34")" = "5" ] && KAT34_TODO_OK=1 || KAT34_TODO_OK=0
+          [ "$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_materials WHERE task_id = $T34")" = "1" ] && KAT34_MAT_OK=1 || KAT34_MAT_OK=0
+          sqlite3 "$DB" "SELECT sample_solution FROM tasks WHERE id = $T34" | grep -q "CREATE TABLE ausleihe" && KAT34_SOL_OK=1 || KAT34_SOL_OK=0
+          sqlite3 "$DB" "SELECT filename FROM task_materials WHERE task_id = $T34" | grep -q "bibliothek.sql" && KAT34_FILE_OK=1 || KAT34_FILE_OK=0
+          # Katalog-Ansicht der 10. Klasse: Kacheln mit ToDos/Musterloesung/Vorlage-Hinweisen
+          CODE_TGKAT2=$(curl -sS -o tgkat2.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/aufgaben?view=katalog&level=10")
+          grep -q "Fahrradverleih" tgkat2.html && TGKATV_OK=1 || TGKATV_OK=0
+          grep -q "Jahrgangsstufe 10" tgkat2.html && TGKATV_LEVEL_OK=1 || TGKATV_LEVEL_OK=0
+          # Lehrplan-Bereinigung: kein Informatik in Jgst. 8 (Basiskurs ab 9), 10. Klasse komplett
+          CODE_KATNO8=$(curl -sS -o katno8.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/aufgaben?view=katalog")
+          grep -q "Jahrgangsstufe 8" katno8.html && KAT_NO8_OK=0 || KAT_NO8_OK=1
+          [ "$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_topics WHERE level = 8")" = "0" ] && TOP8_DB_OK=1 || TOP8_DB_OK=0
+          grep -q "Online-Shop" tgkat2.html && KAT10SHOP_OK=1 || KAT10SHOP_OK=0
+          grep -q "Redundanz" tgkat2.html && KAT10RED_OK=1 || KAT10RED_OK=0
+          # Neue Katalog-Aufgaben 45 (AND/OR/NOT) und 46 (Datenanalyse und Gesellschaft), keine Jgst.-8-Auswahl
+          grep -q '>Jahrgangsstufe 8<' tanew5.html && NO8SEL_OK=0 || NO8SEL_OK=1
+          grep -q '>Jahrgangsstufe 9<' tanew5.html && YES9SEL_OK=1 || YES9SEL_OK=0
+          grep -q "AND, OR und NOT" tgkat2.html && KAT45_OK=1 || KAT45_OK=0
+          grep -q "Chancen und Risiken" tgkat2.html && KAT46_OK=1 || KAT46_OK=0
+          CODE_KAT45=$(curl -sS -L -o kat45.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "template_id=45" http://127.0.0.1:8080/aufgaben/katalog)
+          grep -q "AND, OR und NOT" kat45.html && KAT45_IMPORT_OK=1 || KAT45_IMPORT_OK=0
+          T45=$(sqlite3 "$DB" "SELECT id FROM tasks WHERE teacher_id = $STEFAN AND title LIKE 'SQL: Bedingungen%' LIMIT 1")
+          [ "$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_todos WHERE task_id = $T45")" = "6" ] && KAT45_TODO_OK=1 || KAT45_TODO_OK=0
+          [ "$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_materials WHERE task_id = $T45")" = "1" ] && KAT45_MAT_OK=1 || KAT45_MAT_OK=0
+          sqlite3 "$DB" "SELECT sample_solution FROM tasks WHERE id = $T45" | grep -q "bezahlt" && KAT45_SOL_OK=1 || KAT45_SOL_OK=0
+          sqlite3 "$DB" "SELECT filename FROM task_materials WHERE task_id = $T45" | grep -q "shop.sql" && KAT45_FILE_OK=1 || KAT45_FILE_OK=0
+          CODE_KAT46=$(curl -sS -L -o kat46.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "template_id=46" http://127.0.0.1:8080/aufgaben/katalog)
+          grep -q "Chancen und Risiken" kat46.html && KAT46_IMPORT_OK=1 || KAT46_IMPORT_OK=0
+          T46=$(sqlite3 "$DB" "SELECT id FROM tasks WHERE teacher_id = $STEFAN AND title LIKE 'Datenanalyse und Gesellschaft%' LIMIT 1")
+          [ "$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_todos WHERE task_id = $T46")" = "6" ] && KAT46_TODO_OK=1 || KAT46_TODO_OK=0
+          sqlite3 "$DB" "SELECT sample_solution FROM tasks WHERE id = $T46" | grep -q "Profilbildung" && KAT46_SOL_OK=1 || KAT46_SOL_OK=0
+          # Aufgabenverwaltung 3: Starttermin (Sichtbarkeit), Einziehen, Frist-Sperre, Punkte, Erwartungshorizont
+          CODE_TASTART=$(curl -sS -L -o tastart.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "target_id=$TATGT" -d "visible_from=2032-01-01T08:00" http://127.0.0.1:8080/aufgaben/start)
+          grep -q "Starttermin gespeichert" tastart.html && TASTART_OK=1 || TASTART_OK=0
+          TAVFROM=$(sqlite3 "$DB" "SELECT visible_from FROM task_targets WHERE id = $TATGT")
+          [ "$TAVFROM" = "2032-01-01 08:00" ] && TASTART_DB_OK=1 || TASTART_DB_OK=0
+          CODE_TAHIDE=$(curl -sS -o tahide.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/aufgaben)
+          grep -q "CI Aufgabe Termin" tahide.html && TASTARTHIDE_OK=0 || TASTARTHIDE_OK=1
+          CODE_TASTART2=$(curl -sS -L -o tastart2.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "target_id=$TATGT" -d "visible_from=" http://127.0.0.1:8080/aufgaben/start)
+          grep -q "Starttermin gestrichen" tastart2.html && TASTART2_OK=1 || TASTART2_OK=0
+          CODE_TASHOW=$(curl -sS -o tashow.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/aufgaben)
+          grep -q "CI Aufgabe Termin" tashow.html && TASTARTSHOW_OK=1 || TASTARTSHOW_OK=0
+          CODE_TANEW3=$(curl -sS -L -o tanew3.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Aufgabe Start" --data-urlencode "description=Testaufgabe mit Starttermin und Sperre" -d "type=allgemein" -d "level=6" -d "max_points=10" --data-urlencode "rubric=2 Punkte je korrekter Zeile, Abzug fuer fehlende Kommentare" -d "late_lock=1" http://127.0.0.1:8080/aufgaben/anlegen)
+          grep -q "CI Aufgabe Start" tanew3.html && TANEW3_OK=1 || TANEW3_OK=0
+          TAID3=$(sqlite3 "$DB" "SELECT id FROM tasks WHERE teacher_id = $STEFAN AND title = 'CI Aufgabe Start'")
+          TAROW=$(sqlite3 "$DB" "SELECT max_points || '/' || late_lock || '/' || rubric FROM tasks WHERE id = $TAID3")
+          [ "$TAROW" = "10/1/2 Punkte je korrekter Zeile, Abzug fuer fehlende Kommentare" ] && TANEW3_DB_OK=1 || TANEW3_DB_OK=0
+          CODE_TAASSIGN2=$(curl -sS -L -o taassign2.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "task_id=$TAID3" -d "class_id=$CLASS6" -d "user_id=0" -d "due_at=2020-01-01T10:00" http://127.0.0.1:8080/aufgaben/austeilen)
+          grep -q "ausgeteilt" taassign2.html && TAASSIGN2_OK=1 || TAASSIGN2_OK=0
+          TADUE3=$(sqlite3 "$DB" "SELECT due_at FROM task_targets WHERE task_id = $TAID3")
+          [ "$TADUE3" = "2020-01-01 10:00" ] && TAASSIGN2_DB_OK=1 || TAASSIGN2_DB_OK=0
+          CODE_TALATELOCK=$(curl -sS -L -o talatelock.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF10" --data-urlencode "content=Zu spaete Loesung" http://127.0.0.1:8080/aufgaben/$TAID3/abgeben)
+          grep -q "abgelaufen" talatelock.html && TALATELOCK_OK=1 || TALATELOCK_OK=0
           TALCNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM task_submissions WHERE task_id = $TAID3")
           [ "$TALCNT" = "0" ] && TALATELOCK_DB_OK=1 || TALATELOCK_DB_OK=0
           CODE_TACORR2=$(curl -sS -o tacorr2.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/aufgaben/$TAID3/korrektur)
@@ -1053,6 +1358,446 @@ jobs:
           CODE_TKAT67=$(curl -sS -o tkat67.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/aufgaben?view=katalog")
           grep -q "Hypertext: Zwei verlinkte Seiten bauen" tkat67.html && KAT48_OK=1 || KAT48_OK=0
           grep -q "Alltags-Algorithmus schriftlich beschreiben" tkat67.html && KAT50_OK=1 || KAT50_OK=0
+          echo "login:$CODE_LOGIN demo:$CODE_DEMO sql:$CODE_SQL sql:$SQLOV_OK/$SQLTWS_OK/ code:$CODE_CODE/$C_JDEF_OK/$C_GROUP_OK/$C_NEWLANG_OK/$C_NEWFORM_OK/$GHOST_CSS_OK tasks:$CODE_TASKS/aufgaben2:$CODE_TANEW/$TANEW_OK/$TAEDIT_OK/$TOWN_UI_OK/$TOWN_ADD_OK/$TOWN_LIST_OK/$TOWN_DB_OK/$TOWN_WK_OK/$TAEDIT_DB_OK/$TASHARE_OK/$TASHARE_BADGE_OK/$CODE_TASCHOOL/$TAPOOL_OK/$TAPOOL_AUTHOR_OK/$TAADOPT_OK/$TAADOPT_DB_OK/$TAADOPT2_OK/$TAKINONE_OK/$TAASSIGN_OK/$TADUE_DB_OK/$TATERM_OK/$TATERM_DB_OK/$TATERM2_OK/$CODE_TASTUDENT/$TASTUDENT_OK/$TASTUDENT_DUE_OK/$TASUBMIT_OK/$TASUBMIT_DB_OK/$TACORR_OK/$TACORR_SUB_OK/$TACORR_SOL_OK/$TAGRADE_OK/$TAGRADE_DB_OK/$TASTUDENT_GRADE_OK/$TARESUBMIT_OK/$TAKI_OK/$TAKI_TEACHER_OK/$TAKISAVE_OK/$TAKI_DB_OK/$TAKI_ADM_OK/$TAKISCHULE_OK/$TAKISCHULE_DB_OK/$TAKINONE2_OK/aufgaben3:$CODE_TANEW3/$TANEW3_OK/$TANEW3_DB_OK/$TAASSIGN2_OK/$TAASSIGN2_DB_OK/$TALATELOCK_OK/$TALATELOCK_DB_OK/$TARUBRIC_OK/$TAMAXPTS_OK/$TAWITHDRAW_OK/$TAWITHDRAW_DB_OK/$TAWITHDRAWSTUDENT_OK/$TASTART_OK/$TASTART_DB_OK/$TASTARTHIDE_OK/$TASTART2_OK/$TASTARTSHOW_OK/aufgaben4:$CODE_TANEW4/$TANEW4_OK/$TANEW4_DB_OK/$TAORG_HTML_OK/$TAORG_SAN_OK/$TAORG_TOPIC_OK/$TATOPICS_OK/$TAORG_KAT_OK/$TAORG_KATTOPIC_OK/$TAORG_KAT_DB_OK/$TAORG_TODO_OK/$TAORG_TODO_DB_OK/$TAORG_MAT_OK/$TAORG_MAT_DB_OK/$TAORG_ASSIGN_OK/$TAORG_ASSIGN_DB_OK/$TAORG_STUDENT_OK/$TAORG_STODO_OK/$TAORG_SMAT_OK/$TAORG_STOGGLE_OK/$TAORG_TCHECK_DB_OK/$TAORG_SOWN_DB_OK/$TAORG_DL_OK/$TAORG_OPEN_BTN_OK/$TAORG_OPEN_OK/$TAORG_OPEN_UI_OK/$TAORG_OPEN_CODE_OK/$TAORG_OPEN_DB_OK/$TAORG_OPEN_SUBMIT_OK/$TAORG_OPEN_SUBMIT_DB_OK/$TAORG_MAT2_DB_OK/$TAORG_SEED_UI_OK/$TAORG_SEED_DB_OK/$TAW_SAVE_UI_OK/$TAW_REPL_DB_OK/$TAW_DBSTATE_DB_OK/$TAW_NODUP_OK/$TAW_REPL_UI_OK/$TAW_SEED_UI_OK/$TAW_SEED_UI2_OK/$TAORG_FTOPIC_OK/$TAORG_FTOPIC2_OK/$TAORG_FCLASS_OK/$TAORG_FSTAT_OK/$TAORG_FSTAT2_OK/$TAORG_VAR_OK/$TAORG_VAR_DB_OK/$TAORG_VARCOPY_DB_OK/zehnteklasse:$CODE_TGHOME/$HOME10_OK/$HOME_NOROADMAP_OK/$HOME_NOKAHOOT_OK/$TGDECKS_OK/$TGSEEDNOTES_OK/$TGQUIZSEED_OK/$TGQUIZLIST_OK/$TGQUIZSTUDENT_OK/$TGQUIZDENY_OK/$TGEXAMS_OK/$TGEXTASKS_OK/$TGEXBE_OK/$TGEXLIST_OK/$TGKAT10_OK/$TGKAT10B_OK/$TGPN_OK/$TGPNID_OK/$TGPSLIDE_OK/$TGNOTESAVE_OK/$TGNOTES_DB_OK/$TGMODSHOW_OK/$TGMODNOTE_OK/$TGSTUNONOTE_OK/$TANEW21_OK/$TANEW21_DB_OK/$TGASSIGN21_OK/$TGTERM21_OK/$TGUPCOMING_OK/$TGSUBMIT21_OK/$TGSELFRATING_DB_OK/$TGNOSOL_OK/$TGOPEN_OK/$TGSELRATING_OK/$TGSTATS_OK/$TGGRADE21_OK/$TGSOL_OK/$TGEXPORT_OK/$TGIMPORT_OK/$TGIMPORT_DB_OK admset:$CODE_ADMSET/$ADMSET_OK/$ADMSET_LANG_OK/$SETT_DB_OK/$CODE_NAVVIEW/$NAVVIEW_OK/$NAVVIEW_DB_OK neu:$CODE_TANEW5/$TANEW5_OK/$TANEW5_TOPIC_OK kat34:$CODE_KAT34/$KAT34_OK/$KAT34_TODO_OK/$KAT34_MAT_OK/$KAT34_SOL_OK/$KAT34_FILE_OK tgkatv:$CODE_TGKAT2/$TGKATV_OK/$TGKATV_LEVEL_OK lehrplan:$CODE_KATNO8/$KAT_NO8_OK/$TOP8_DB_OK/$KAT10SHOP_OK/$KAT10RED_OK no8sel:$NO8SEL_OK/$YES9SEL_OK kat45:$CODE_KAT45/$KAT45_OK/$KAT45_IMPORT_OK/$KAT45_TODO_OK/$KAT45_MAT_OK/$KAT45_SOL_OK/$KAT45_FILE_OK kat46:$CODE_KAT46/$KAT46_OK/$KAT46_IMPORT_OK/$KAT46_TODO_OK/$KAT46_SOL_OK ws:$CODE_WS html:$CODE_HTML/$CODE_HTMLED/$CODE_HTMLSAVE/$HTML_SAVE_OK/$H_WY_OK/$H_TABS_OK/$H_DL_OK/$H_UP_OK/$H_TAG_OK/$H_NW_OK/$H_FOLD_OK py:$CODE_PYED/$PY_RUN_OK query:$QUERY_OK otp:$CODE_OTP/$OTP_OK emma:$CODE_EMMA/$EMMA_SQL/$EMMA_CODE/$EMMA_HTML lena:$CODE_LENA/$LENA_SQL/$LENA_CODE/$LENA_HTML quiz:$CODE_QUIZ/$QUIZ_LIST_OK/$CODE_PLAY/$CODE_ANSWER/$QUIZ_NEXT_OK qmanage:$CODE_QMANAGE/$QMANAGE_OK/$CODE_QRES exam:$CODE_STEFAN/$CODE_EXAM/$EX_OVER_OK/$EX_CREATE_OK/$EX_MEMBER_OK/$EX_TPL_OK/$EX_TASKS_OK/$CODE_EXSTART/$EX_START_OK/$LOCK_OK/$LOCK_REDIRECT_OK/$CODE_EXWORK/$EX_WORK_OK/$CODE_EXSAVE/$EXSAVE_OK/$EX_SUBMIT_OK/$EX_END_OK/$CODE_EXCORRECT/$EX_CORRECT_OK/$EX_GRADE_OK/$EX_API_OK/$EX_RELEASE_OK/$EX_RESULT_OK/$EX_FEEDBACK_OK/$EX_UNLOCK_OK/$CODE_JONAS/$JONAS_LOCK_OK/$CODE_ARBEITRES/$ARBEIT_RES_OK diagram:$CODE_DLIST/$DIAG_OVER_OK/$CODE_DCREATE/$DIAG_CREATE_OK/$DIAG_EDIT_OK/$CODE_DSAVE/$DIAG_SAVE_OK/$CODE_PYPROJ/$CODE_PYSAVE/$PY_SAVE_OK/$CODE_PYDIAG/$PY_DIAG_OK/$PY_DIAG_CLASS_OK/$PY_DIAG_REL_OK/$PY_DIAG_METH_OK/$CODE_JPROJ/$CODE_JSAVE/$J_SAVE_OK/$CODE_JDIAG/$JAVA_DIAG_OK/$JAVA_DIAG_FIELD_OK/$JAVA_DIAG_METH_OK/$J_UI_OK/$J_RUN_OK/$J_DBHINT_OK/$J_DBHELP_OK/$J_FILE_OK/$J_GID_OK/$J_FILE_SAVE_OK/$J_SYNC_OK/$J_FDEL_OK/$IMGUP_OK/$IMGLIST_OK/$IMGFETCH_OK/$IMGDEL_OK/$J_IDE_OK/$J_OBJ_OK/$J_REPL_OK/$J_WIDE_OK/$J_START_OK/$J_NOMAIN_OK/$J_TOP_OK/$J_CLTAB_OK/$J_STEP_OK/$J_STEPINFO_OK/$J_APIH_OK/$J_FMT_OK/$J_GFX_OK/$J_INPUT_OK/$J_RAND_OK/$J_ASSERT_OK/$J_MTOOL_OK/$J_VEC_OK/$J_SOUND_OK/$J_GAMEPAD_OK/$J_SECTOR_OK/$J_SYSTOOL_OK/$J_KEY_OK/$J_CPAIR_OK/$J_DIR_OK/$J_PUNKT_OK/$J_STOP_OK/$J_GFXDOCK_OK/$J_APIOPEN_OK/$J_ICON_OK/$J_ERRBOX_OK/$J_AUTOSAVE_OK/$J_DBPANEL_OK/$DB_2COL_OK/$J_OBJDIAG_OK/$J_SPRITE_OK/$J_IMGUP_OK/$J_SPRITELIB_OK/$J_IMGMARK_OK/$J_SPRITETAB_OK/$J_GFXOPEN_OK/$J_REPLEDIT_OK/$J_REPLRUN_OK/$J_GFXHINT_OK/$J_GFXHIDE_OK/$J_OBJTAB_OK/$J_DBSCHEMA_OK/$J_DBCONSOLE_OK/$J_DBPANEL2_OK/$J_DBNOTAB_OK/$J_CTRLHINT_OK/$J_OBJHINT_OK/asm:$CODE_APROJ/$CODE_ASMED/$A_ID_OK/$A_RUN_OK/$A_STEP_OK/$A_REG_OK/$A_CMD_OK/$A_CMDTAB_OK/$A_ABITUR_OK/$A_JNZERO_OK/$A_FILE_OK wiki:$CODE_WIKI/$WIKI_OK/$CODE_WCREATE/$WCREATE_OK/$W_GID_OK/$CODE_WPAGE/$WPAGE_OK/$CODE_WEDIT/$WSAVE_OK/$CODE_WCREATE9/$WLOCK_OK/$CODE_WDEL/$WDEL_OK guide:$WGUIDE_OK/$CODE_WGUIDE/$WGUIDE_PAGE_OK praes:$CODE_PRAES/$PRAES_OVER_OK/$PRAES_SEED_OK/$CODE_PCREATE/$PRAES_CREATE_OK/$PRAES_GID_OK/$CODE_PSLIDE/$PRAES_SLIDE_OK/$CODE_PSAVE/$PRAES_SAVE_OK/$PRAES_VIEW_OK/$PRAES_FULL_OK/$PRAES_HL_OK/$PRAES_LIVE_OK/$PRAES_E9_OK/$PRAES_E9NOJ_OK/$PRAES_E6NO_OK/$PRAES_E6SEED_OK/$PRAES_E6NO7_OK/moderator:$CODE_PMOD/$PRAES_MOD_OK/$PRAES_MOD_UI_OK/$CODE_PMODDENY/$PRAES_MOD_DENY_OK/$CODE_PMODJK/$PRAES_NLFIX_OK/$PRAES_GR6_OK/$PRAES_GR6SEED_OK/$PRAES_GR7_OK/$PRAES_GR7SEED_OK/$PRAES_JAHR_OK/$PRAES_JAHR10_OK/$CODE_PDEL/$PRAES_DEL_OK/thema:$CODE_PTSLUG/$PT_SLUG_OK/$PT_UEB_OK/$PT_KONV_OK/$PT_INDEX_OK/$PT_GRUPPE_OK/$PT_KAT_OK/$PT_LOCK_OK katalog:$CODE_TCAT/$TCAT_OK/$TCAT_LEVEL_OK/$TCAT_NOLEAK_OK/$CODE_TIMPORT/$TIMPORT_OK/$TIMPORT_DB_OK/$CODE_TDUP/$TDUP_OK/$CODE_TLEVEL/$TLEVEL_OK/$TLEVEL_DB_OK/$CODE_TDEL/$TDEL_OK/$TDEL_DB_OK $CODE_SQLDIAG/$SQL_DIAG_OK/$SQL_DIAG_MER_OK/$CODE_DCLASSES/$DIAG_CLASSES_OK/$CODE_DTOGGLE/$DIAG_TOGGLE_OFF_OK/$CODE_DLOCK/$DIAG_LOCK_OK/$CODE_DTUNTOGGLE/$DIAG_TOGGLE_ON_OK/$CODE_DBDOWN/$DB_TOGGLE_OFF_OK/$DB_OFF_OK/$DB_ERR_OK/$CODE_DBUP/$DB_TOGGLE_ON_OK/$CODE_DDELETE/$DIAG_DEL_OK/struktur:$CODE_DSTR/$DSTR_CREATE_OK/$DSTR_START_OK/$DSTR_GID_OK/$DSTR_SAVE_OK/$DSTR_RENDER_OK/$DSTR_IF_OK/$DSTR_LOOP_OK/$DSTR_NOKIND_OK/$DSTR_ERR_OK/$DSTR_DEL_OK/datenfluss:$CODE_DDF/$DF_CREATE_OK/$DF_GID_OK/$DF_MER_OK/$DF_PNG_OK/$DF_TEXT_OK/$DF_ERR_OK/$DF_DEL_OK typwechsel:$CODE_DSWITCH/$DSWITCH_DB_OK/$DSWITCH_UI_OK/$CODE_DSWBACK/$DSWBACK_DB_OK/$DSWBACK_UI_OK dedit:$KIND_BTN_OK/$KSWITCH_OK/$KHELP_OK/$SHELP_OK/$DHELP_OK/$S_HL_OK/$NOMERMAID_OK/$CODE_DJS/$DJS_DEBOUNCE_OK/$DJS_HLACT_OK/$DJS_AUTOBRACKET_OK/$DJS_AUTOSAVE_OK/$DJS_NASSI_OK/$DJS_UMLSTYLE_OK/$DJS_GUTTER_OK/$WORKBENCH_OK/$DFULL_OK/$DFIT_OK/$HELP_CLOSED_OK mods:$MODSP_OK/$MODSP_NAV_OK/$MODSP_BLOCK_OK/$MODSP_RESET_OK/$MODSP_NAV_BACK_OK/$MODFREE_OK/$MODFREE_NAV_OK/$MODFREE_BACK_OK schueler:$SPUPIL_OK/$SPUPIL_OPEN_OK/$SPUPIL_DENY_OK hl:$HL_HTML_OK/$HL_CODE_OK/$HL_SQL_OK/$HL_SQLHL_OK/$AC_SQL_OK/$AC_SQLTB_OK/$HL_DIAG_OK praesmod:$CODE_TAPSTART/$TAP_START_OK/$TAP_INFO_OK/$TAP_DESC_OK/$TAP_PILL_OK/$TAP_SOLBTN_OK/$TAP_DB_OK/$CODE_TAPDL/$TAP_DL_OK/$TAP_DL_ONCE_OK/$CODE_TAPEND/$TAP_END_OK/$TAP_DEL_DB_OK/$CODE_TAPWIN/$TAP_WIN_OK/$CODE_TAPWDENY/$TAP_WIN_DENY_OK/$CODE_TAPROG/$FORT_OK/$TAPROJ_SUB_OK/$TAPROJ_DB_OK/$TAPROJ_CORR_OK/$TANEWW_OK/$TAASSIGNW_OK/$TAREC_DB_OK/$TAREC_ROLL_OK/$SEEDEND_OK/$SEEDREL_OK/$TITLE_OK/$WIN_BARE_OK/$JONLOGIN_OK poll:$CODE_POLP/$POL_CREATE_OK/$CODE_POLSTART/$POL_START_OK/$CODE_POLSTAT/$POL_STAT_OK/$CODE_POLVOTE/$POL_VOTE_OK/$CODE_POLEND/$POL_END_OK/$POL_DB_OK seeds:$SEED_L11_OK/$SEED_L12_OK/$INSEL_CH2_OK/$KODEX_OK/$KAT48_OK/$KAT50_OK/iss44:$NMAIN_OK/iss45:$SQLTPL5_OK/$SQLMIS2_OK/$SQLDIST_OK/$SQLRO_OK/$SQLNOCOPY_OK/$SQLCOPY_OK/$TADB_DB_OK/$TADB_SEED_UI_OK/$TADB_RO_UI_OK/$TADB_RO_PILL_OK/$TADB_SEED_DB_OK/$TADB_RW_UI_OK/$CDB_UI_OK/$CDB_SEL_OK/$CDB_LOAD_OK/$CDB_DB_OK/$CDB_SEEDUI_OK/$CDB_CARDS_OK/$CDB_TYPES_OK/$CDB_STATIC_OK/$CDB_DETAILS_OK/$CDB_UPLFORM_OK/$CDBUP_OK/$CDBUP_DB_OK/$CDBUP_UI_OK/$CDBUP_CARDS_OK/$CDBUP_TYPES_OK/$TADB_RO_NOLOAD_OK/$CFOL_SUB_DB_OK/$CFOL_MOVE_OK/$CFOL_TREE_OK/$CFOL_SUB_UI_OK/$CFOL_NOGROUP_OK/$CFOL_INDENT_OK/$CFOL_NOEMPTY_OK/$CFOLDRAG_UI_OK/$CFOLMOVE_OK/$CFOLMOVE_DB_OK/$CFOLMOVE_CYCLE_OK/$EX_ARROW_OK/$EDIT_ARROW_OK/$DSTR_PREFIX_OK/nacharbeit:$GHOSTJS_OK/$GUTTER_GUARD_OK/$GFXDOCK_CSS_OK/$EDAC_MEM_OK/$ACSCROLL_OK/$DBCONS_OK/$SQLNEST_OK/sqlapp:$SQLAPP_SHOP_OK/$SQLAPPLINK_OK/$SQLAPP_BUY_OK/$SQLAPP_DB_OK/$SQLAPP_INSTA_OK/$SQLAPP_INSTA_AC_OK/$SQLAPP_LIKE_OK/nacharbeit2:$NAV_HTML_OK/$DIAG_RESTORE_OK/$EDAC_FB_OK/$DBCONS_DELEG_OK/$REPL_FOCUS_OK/$VENDOR_OK/$ASSETV_OK/sblock:$SBLOCK_OK/$SBLOCK_TITEL_OK/prtpl:$PRAES_TPL_OK/$PRAES_TPL_INS_OK/$SEEDV_OK/$NO_CDN_OK/uifix:$DBCONSFIX_OK/$DBRUN_GUARD_OK/$GFXFIT_OK/$GFXFITJS_OK/$REPLW_OK/$BOOTDOM_OK/$REPLGROW_OK/$REPLOVL_OK/$IBK_AUTH_OK/ibook:$IBK_OVER_OK/$IBK_CLS_OK/$IBK_LB_OK/$IBK_GM_OK/$IBK_SEC_OK/$IBK_PAGE_OK/$IBK_SAVE_OK/$IBK_EVIL_OK/$IBK_PRES_OK/$IBK_UP_OK/$IBK_MED_OK/$IBK_DIST_OK/$IBK_ALSP_OK/$IBK_EM_OWN_OK/$IBK_EM_WRITE_OK/$IBK_EM_RO_OK/$IBK_EM_DENY_OK/$IBK_LENA_PAGE_OK/$IBK_LENA_OWN_OK/cv:$IBK_CV_UP_OK/$IBK_CV_UPID_OK/$IBK_CV_PG_OK/$IBK_CV_BTN_OK/$IBK_CV_SAVE_OK/$IBK_CV_CLAMP_OK/$IBK_CV_EDITOR_OK/$IBK_CV_DIST_OK/$IBK_CV_TID_OK/$IBK_CV_MEDCOPY_OK/$IBK_CV_REF_OK/$IBK_CV_RO_OK/$IBK_CV_STYLE_OK/$IBK_CV_ROMED_OK/$IBK_CV_PRES_OK/$IBK_CV_INK_OK/$IBK_CV_INKSAN_OK/$IBK_CV_EMB_OK/$IBK_CV_EMBEVIL_OK/$IBK_CV_TXT_OK/cvguard:$IBK_CVJS_OK/$IBK_CVCSS_OK/$IBK_DEL_OK/$IBK_DELKEY_OK/$IBK_FITTA_OK/$IBK_SELNB_OK/$IBK_DELCSS_OK/$IBK_NAVL_OK/$IBK_DIST_OK/$IBK_PREV_OK/$IBK_ASAVE_OK/$IBK_ASAVEJS_OK/$IBK_NOBTN_OK/$IBK_4C_OK/$IBK_YT_OK/$IBK_VID_OK/$IBK_INF_OK/$IBK_DRAG_OK/$IBK_POSTIT_OK/$IBK_NAV68_OK/$IBK_NAVPHP_OK/$IBK_ICONS_OK/$IBK_LASSO_OK/$IBK_GROUP_OK/$IBK_NONE_OK/$IBK_NOBLOCKS_OK/$IBK_LESENAV_OK/$IBK_LESENAVRO_OK/$IBK_COLL_OK/$IBK_COLLRO_OK/$IBK_NAVNEW_OK/$IBK_NAVNEWPHP_OK/$IBK_NAVNEWRO_OK/$IBK_LINK_OK/$IBK_LINKTPL_OK/$IBK_LINKPHP_OK/$IBK_LINKEVIL_OK/$IBK_LINKCV_OK/$IBK_LINKRO_OK/$IBK_LINKDROP_OK/$IBK_H5P_OK/$IBK_H5PEVIL_OK/$IBK_H5PJS_OK/$IBK_H5PPHP_OK/$IBK_CODE_OK/$IBK_CODEEVIL_OK/$IBK_CODEPHP_OK/$IBK_DB_OK/$IBK_DBSCHEMA_OK/$IBK_DBPHP_OK/$IBK_DIAG_OK/$IBK_DIAGPHP_OK/$IBK_DIAGTPL_OK/$IBK_MOVEGRIP_OK/$IBK_FOLD_OK/$IBK_FOLDRO_OK/$IBK_HERO_OK/$IBK_HERORO_OK/$IBK_DGMODE_OK/$IBK_DGSPLITRO_OK/$IBK_DGSPLITCV_OK/$IBK_DGSPLITPHP_OK/$IBK_DGEVIL_OK/$IBK_DGLIBRO_OK/$IBK_LANGJS_OK/$IBK_LANGPHP_OK/$IBK_LANGRO_OK/$IBK_LANGCV_OK/$IBK_LANGEVIL_OK/$IBK_JAVAVM_OK/$IBK_DBTPL_OK/$IBK_DBTPLRO_OK/$IBK_JAVAFIX_OK/$IBK_DBTAB_OK/$IBK_CLSPROJ_OK/$IBK_CLSCARD_OK/$IBK_AUTOCOMP_OK/$IBK_DBROWS_OK/$IBK_SPLITEDIT_OK/$IBK_NOHINT_OK/$IBK_EOFMSG_OK/$IBK_DROPGRP_OK/$IBK_ROCODE_OK/$IBK_ROVIEW_OK/$IBK_EDITPAR_OK/$IBK_GUTTERPAD_OK/$IBK_ALTGR_OK/$IBK_ROCLS_OK/$IBK_NAVINHALT_OK/$IBK_NAVDND_OK/$IBK_MODCLS_OK/$IBK_TAB_OK/$IBK_GUTALIGN_OK/$IBK_IBHL_OK/$WSC_REPLAUTO_OK/$WSC_OBJOVER_OK/$WSC_REPLOUT_OK/$WSC_REPLHL_OK/$WSC_GFXFIT2_OK/$GFX_DOCKPOS_OK/$REPL_CLRTXT_OK/$IBK_SQLAC_OK/$IBK_FITLOAD_OK/import:$IBK_IMPORT_OK/$IBK_IMPFORM_OK/$IBK_IMPSEC_DB_OK/$IBK_IMPPG_DB_OK/$IBK_IMPEVIL_OK/$IBK_IMPDB_OK/$IBK_IMPROK_OK/$IBK_IMPDBUI_OK/blk:$CODE_BLKPROJ/$BLK_LANG_OK/$BLK_NEW_OK/$BLK_ED_OK/$BLK_SAVE_OK/$BLK_RL_OK/$BLK_UI_OK/$BLK_VM_OK/$BLK_OPS_OK/$BLK_STAGE_OK/$BLK_AUTOSAVE_OK/$BLK_DRAG_OK/$BLK_SHAPE_OK/$BLK_PLAY_OK/$BLK_SPR_OK/$BLK_TGT_OK/$BLK_NOBTN_OK/$BLK_UNCHAIN_OK/$BLK_SOUND_OK/$BLK_MSG_OK/$BLK_SENSE_OK/$BLK_MOVE2_OK/$BLK_LOOKS2_OK/$BLK_OPS2_OK/$BLK_CODE_OK/$BLK_PORT_OK/seite:$CDN_PAGE/why:$CDN_WHY/rf:$RENDERFIX_OK/dbg:$CODE_SQLAPP_SHOP/$SQLAPPLINK_CNT/$CODE_SQLAPP_INSTA/$SQLAPP_INSTA_CNT/$WSINSTA_SZ/$WSINSTA_HEAD"
+          FAILED=0
+          [ "$CODE_LOGIN" = "200" ] || FAILED=1
+          [ "$CODE_DEMO" = "200" ] || FAILED=1
+          [ "$CODE_SQL" = "200" ] || FAILED=1
+          [ "$SQLOV_OK" = "1" ] || FAILED=1
+          [ "$SQLTWS_OK" = "1" ] || FAILED=1
+          [ "$CODE_CODE" = "200" ] || FAILED=1
+          [ "$CODE_TASKS" = "200" ] || FAILED=1
+          [ "$CODE_WS" = "200" ] || FAILED=1
+          [ "$QUERY_OK" = "1" ] || FAILED=1
+          [ "$SQLAPP_SHOP_OK" = "1" ] || FAILED=1
+          [ "$RENDERFIX_OK" = "1" ] || FAILED=1
+          [ "$SQLAPPLINK_OK" = "1" ] || FAILED=1
+          [ "$SQLNEST_OK" = "1" ] || FAILED=1
+          [ "$SQLNEST_BAD" = "0" ] || FAILED=1
+          [ "$GHOSTJS_OK" = "1" ] || FAILED=1
+          [ "$GUTTER_GUARD_OK" = "1" ] || FAILED=1
+          [ "$GFXDOCK_CSS_OK" = "1" ] || FAILED=1
+          [ "$EDAC_MEM_OK" = "1" ] || FAILED=1
+          [ "$ACSCROLL_OK" = "1" ] || FAILED=1
+          [ "$DBCONS_OK" = "1" ] || FAILED=1
+          [ "$SQLAPP_BUY_OK" = "1" ] || FAILED=1
+          [ "$SQLAPP_DB_OK" = "1" ] || FAILED=1
+          [ "$SQLAPP_INSTA_OK" = "1" ] || FAILED=1
+          [ "$SQLAPP_INSTA_AC_OK" = "1" ] || FAILED=1
+          [ "$SQLAPP_LIKE_OK" = "1" ] || FAILED=1
+          [ "$NAV_HTML_OK" = "1" ] || FAILED=1
+          [ "$DIAG_RESTORE_OK" = "1" ] || FAILED=1
+          [ "$EDAC_FB_OK" = "1" ] || FAILED=1
+          [ "$DBCONS_DELEG_OK" = "1" ] || FAILED=1
+          [ "$REPL_FOCUS_OK" = "1" ] || FAILED=1
+          [ "$VENDOR_OK" = "1" ] || FAILED=1
+          [ "$ASSETV_OK" = "1" ] || FAILED=1
+          [ "$PRAES_TPL_OK" = "1" ] || FAILED=1
+          [ "$PRAES_TPL_INS_OK" = "1" ] || FAILED=1
+          [ "$SBLOCK_OK" = "1" ] || FAILED=1
+          [ "$SBLOCK_TITEL_OK" = "1" ] || FAILED=1
+          [ "$SEEDV_OK" = "1" ] || FAILED=1
+          [ "$NO_CDN_OK" = "1" ] || FAILED=1
+          [ "$DBCONSFIX_OK" = "1" ] || FAILED=1
+          [ "$DBRUN_GUARD_OK" = "1" ] || FAILED=1
+          [ "$GFXFIT_OK" = "1" ] || FAILED=1
+          [ "$GFXFITJS_OK" = "1" ] || FAILED=1
+          [ "$REPLW_OK" = "1" ] || FAILED=1
+          [ "$BOOTDOM_OK" = "1" ] || FAILED=1
+          [ "$REPLGROW_OK" = "1" ] || FAILED=1
+          [ "$REPLOVL_OK" = "1" ] || FAILED=1
+          [ "$IBK_AUTH_OK" = "1" ] || FAILED=1
+          [ "$IBK_JS_OK" = "1" ] || FAILED=1
+          [ "$CONFIRM_OK" = "1" ] || FAILED=1
+          [ "$IBK_CSS_OK" = "1" ] || FAILED=1
+          [ "$IBK_CVJS_OK" = "1" ] || FAILED=1
+          [ "$IBK_CVCSS_OK" = "1" ] || FAILED=1
+          [ "$IBK_DEL_OK" = "1" ] || FAILED=1
+          [ "$IBK_DELKEY_OK" = "1" ] || FAILED=1
+          [ "$IBK_FITTA_OK" = "1" ] || FAILED=1
+          [ "$IBK_SELNB_OK" = "1" ] || FAILED=1
+          [ "$IBK_DELCSS_OK" = "1" ] || FAILED=1
+          [ "$IBK_NAVL_OK" = "1" ] || FAILED=1
+          [ "$IBK_DIST_OK" = "1" ] || FAILED=1
+          [ "$IBK_PREV_OK" = "1" ] || FAILED=1
+          [ "$IBK_ASAVE_OK" = "1" ] || FAILED=1
+          [ "$IBK_ASAVEJS_OK" = "1" ] || FAILED=1
+          [ "$IBK_NOBTN_OK" = "1" ] || FAILED=1
+          [ "$IBK_4C_OK" = "1" ] || FAILED=1
+          [ "$IBK_YT_OK" = "1" ] || FAILED=1
+          [ "$IBK_VID_OK" = "1" ] || FAILED=1
+          [ "$IBK_H5PJS_OK" = "1" ] || FAILED=1
+          [ "$IBK_H5PPHP_OK" = "1" ] || FAILED=1
+          [ "$IBK_INF_OK" = "1" ] || FAILED=1
+          [ "$IBK_DRAG_OK" = "1" ] || FAILED=1
+          [ "$IBK_POSTIT_OK" = "1" ] || FAILED=1
+          [ "$IBK_NAV68_OK" = "1" ] || FAILED=1
+          [ "$IBK_NAVPHP_OK" = "1" ] || FAILED=1
+          [ "$IBK_ICONS_OK" = "1" ] || FAILED=1
+          [ "$IBK_LASSO_OK" = "1" ] || FAILED=1
+          [ "$IBK_GROUP_OK" = "1" ] || FAILED=1
+          [ "$IBK_NONE_OK" = "1" ] || FAILED=1
+          [ "$IBK_NOBLOCKS_OK" = "1" ] || FAILED=1
+          [ "$IBK_LESENAV_OK" = "1" ] || FAILED=1
+          [ "$IBK_LESENAVRO_OK" = "1" ] || FAILED=1
+          [ "$IBK_COLL_OK" = "1" ] || FAILED=1
+          [ "$IBK_COLLRO_OK" = "1" ] || FAILED=1
+          [ "$IBK_NAVNEW_OK" = "1" ] || FAILED=1
+          [ "$IBK_NAVNEWPHP_OK" = "1" ] || FAILED=1
+          [ "$IBK_NAVNEWRO_OK" = "1" ] || FAILED=1
+          [ "$IBK_LINK_OK" = "1" ] || FAILED=1
+          [ "$IBK_LINKTPL_OK" = "1" ] || FAILED=1
+          [ "$IBK_LINKPHP_OK" = "1" ] || FAILED=1
+          [ "$IBK_LINKEVIL_OK" = "1" ] || FAILED=1
+          [ "$IBK_LINKCV_OK" = "1" ] || FAILED=1
+          [ "$IBK_LINKRO_OK" = "1" ] || FAILED=1
+          [ "$IBK_LINKDROP_OK" = "1" ] || FAILED=1
+          [ "$IBK_H5P_OK" = "1" ] || FAILED=1
+          [ "$IBK_H5PEVIL_OK" = "1" ] || FAILED=1
+          [ "$IBK_CODE_OK" = "1" ] || FAILED=1
+          [ "$IBK_CODEEVIL_OK" = "1" ] || FAILED=1
+          [ "$IBK_CODEPHP_OK" = "1" ] || FAILED=1
+          [ "$IBK_DB_OK" = "1" ] || FAILED=1
+          [ "$IBK_DBSCHEMA_OK" = "1" ] || FAILED=1
+          [ "$IBK_DBPHP_OK" = "1" ] || FAILED=1
+          [ "$IBK_DIAG_OK" = "1" ] || FAILED=1
+          [ "$IBK_DIAGPHP_OK" = "1" ] || FAILED=1
+          [ "$IBK_DIAGTPL_OK" = "1" ] || FAILED=1
+          [ "$IBK_MOVEGRIP_OK" = "1" ] || FAILED=1
+          [ "$IBK_FOLD_OK" = "1" ] || FAILED=1
+          [ "$IBK_FOLDRO_OK" = "1" ] || FAILED=1
+          [ "$IBK_HERO_OK" = "1" ] || FAILED=1
+          [ "$IBK_HERORO_OK" = "1" ] || FAILED=1
+          [ "$IBK_DGMODE_OK" = "1" ] || FAILED=1
+          [ "$IBK_DGSPLITRO_OK" = "1" ] || FAILED=1
+          [ "$IBK_DGSPLITCV_OK" = "1" ] || FAILED=1
+          [ "$IBK_DGSPLITPHP_OK" = "1" ] || FAILED=1
+          [ "$IBK_DGEVIL_OK" = "1" ] || FAILED=1
+          [ "$IBK_DGLIBRO_OK" = "1" ] || FAILED=1
+          [ "$IBK_LANGJS_OK" = "1" ] || FAILED=1
+          [ "$IBK_LANGPHP_OK" = "1" ] || FAILED=1
+          [ "$IBK_LANGRO_OK" = "1" ] || FAILED=1
+          [ "$IBK_LANGCV_OK" = "1" ] || FAILED=1
+          [ "$IBK_LANGEVIL_OK" = "1" ] || FAILED=1
+          [ "$IBK_JAVAVM_OK" = "1" ] || FAILED=1
+          [ "$IBK_DBTPL_OK" = "1" ] || FAILED=1
+          [ "$IBK_DBTPLRO_OK" = "1" ] || FAILED=1
+          [ "$IBK_JAVAFIX_OK" = "1" ] || FAILED=1
+          [ "$IBK_DBTAB_OK" = "1" ] || FAILED=1
+          [ "$IBK_CLSPROJ_OK" = "1" ] || FAILED=1
+          [ "$IBK_CLSCARD_OK" = "1" ] || FAILED=1
+          [ "$IBK_AUTOCOMP_OK" = "1" ] || FAILED=1
+          [ "$IBK_DBROWS_OK" = "1" ] || FAILED=1
+          [ "$IBK_SPLITEDIT_OK" = "1" ] || FAILED=1
+          [ "$IBK_NOHINT_OK" = "1" ] || FAILED=1
+          [ "$IBK_EOFMSG_OK" = "1" ] || FAILED=1
+          [ "$IBK_DROPGRP_OK" = "1" ] || FAILED=1
+          [ "$IBK_ROCODE_OK" = "1" ] || FAILED=1
+          [ "$IBK_ROVIEW_OK" = "1" ] || FAILED=1
+          [ "$IBK_EDITPAR_OK" = "1" ] || FAILED=1
+          [ "$IBK_GUTTERPAD_OK" = "1" ] || FAILED=1
+          [ "$IBK_ALTGR_OK" = "1" ] || FAILED=1
+          [ "$IBK_ROCLS_OK" = "1" ] || FAILED=1
+          [ "$IBK_NAVINHALT_OK" = "1" ] || FAILED=1
+          [ "$IBK_NAVDND_OK" = "1" ] || FAILED=1
+          [ "$IBK_MODCLS_OK" = "1" ] || FAILED=1
+          [ "$IBK_TAB_OK" = "1" ] || FAILED=1
+          [ "$IBK_GUTALIGN_OK" = "1" ] || FAILED=1
+          [ "$IBK_IBHL_OK" = "1" ] || FAILED=1
+          [ "$WSC_REPLAUTO_OK" = "1" ] || FAILED=1
+          [ "$WSC_OBJOVER_OK" = "1" ] || FAILED=1
+          [ "$WSC_REPLOUT_OK" = "1" ] || FAILED=1
+          [ "$WSC_REPLHL_OK" = "1" ] || FAILED=1
+          [ "$WSC_GFXFIT2_OK" = "1" ] || FAILED=1
+          [ "$GFX_DOCKPOS_OK" = "1" ] || FAILED=1
+          [ "$REPL_CLRTXT_OK" = "1" ] || FAILED=1
+          [ "$IBK_SQLAC_OK" = "1" ] || FAILED=1
+          [ "$IBK_FITLOAD_OK" = "1" ] || FAILED=1
+          [ "$CODE_BLKPROJ" = "200" ] || FAILED=1
+          [ "$BLK_LANG_OK" = "1" ] || FAILED=1
+          [ "$BLK_NEW_OK" = "1" ] || FAILED=1
+          [ "$BLK_ED_OK" = "1" ] || FAILED=1
+          [ "$BLK_SAVE_OK" = "1" ] || FAILED=1
+          [ "$BLK_RL_OK" = "1" ] || FAILED=1
+          [ "$BLK_UI_OK" = "1" ] || FAILED=1
+          [ "$BLK_VM_OK" = "1" ] || FAILED=1
+          [ "$BLK_OPS_OK" = "1" ] || FAILED=1
+          [ "$BLK_STAGE_OK" = "1" ] || FAILED=1
+          [ "$BLK_AUTOSAVE_OK" = "1" ] || FAILED=1
+          [ "$BLK_DRAG_OK" = "1" ] || FAILED=1
+          [ "$BLK_SHAPE_OK" = "1" ] || FAILED=1
+          [ "$BLK_PLAY_OK" = "1" ] || FAILED=1
+          [ "$BLK_SPR_OK" = "1" ] || FAILED=1
+          [ "$BLK_TGT_OK" = "1" ] || FAILED=1
+          [ "$BLK_NOBTN_OK" = "1" ] || FAILED=1
+          [ "$BLK_UNCHAIN_OK" = "1" ] || FAILED=1
+          [ "$BLK_SOUND_OK" = "1" ] || FAILED=1
+          [ "$BLK_MSG_OK" = "1" ] || FAILED=1
+          [ "$BLK_SENSE_OK" = "1" ] || FAILED=1
+          [ "$BLK_MOVE2_OK" = "1" ] || FAILED=1
+          [ "$BLK_LOOKS2_OK" = "1" ] || FAILED=1
+          [ "$BLK_OPS2_OK" = "1" ] || FAILED=1
+          [ "$BLK_CODE_OK" = "1" ] || FAILED=1
+          [ "$BLK_PORT_OK" = "1" ] || FAILED=1
+          [ "$IBK_IMPORT_OK" = "1" ] || FAILED=1
+          [ "$IBK_IMPFORM_OK" = "1" ] || FAILED=1
+          [ "$IBK_IMPSEC_DB_OK" = "1" ] || FAILED=1
+          [ "$IBK_IMPPG_DB_OK" = "1" ] || FAILED=1
+          [ "$IBK_IMPEVIL_OK" = "1" ] || FAILED=1
+          [ "$IBK_IMPDB_OK" = "1" ] || FAILED=1
+          [ "$IBK_IMPROK_OK" = "1" ] || FAILED=1
+          [ "$IBK_IMPDBUI_OK" = "1" ] || FAILED=1
+          [ "$IBK_NAV_OK" = "1" ] || FAILED=1
+          [ "$IBK_OVER_OK" = "1" ] || FAILED=1
+          [ "$IBK_FORM_OK" = "1" ] || FAILED=1
+          [ "$IBK_CLS_OK" = "1" ] || FAILED=1
+          [ "$IBK_LB_OK" = "1" ] || FAILED=1
+          [ "$IBK_GM_OK" = "1" ] || FAILED=1
+          [ "$IBK_SEC_OK" = "1" ] || FAILED=1
+          [ "$IBK_SECID_OK" = "1" ] || FAILED=1
+          [ "$IBK_PAGE_OK" = "1" ] || FAILED=1
+          [ "$IBK_EDITOR_OK" = "1" ] || FAILED=1
+          [ "$IBK_PGUID_OK" = "1" ] || FAILED=1
+          [ "$IBK_SAVE_OK" = "1" ] || FAILED=1
+          [ "$IBK_EVIL_OK" = "1" ] || FAILED=1
+          [ "$IBK_PRES_OK" = "1" ] || FAILED=1
+          [ "$IBK_PRES_SB_OK" = "1" ] || FAILED=1
+          [ "$IBK_PRES_LA_OK" = "1" ] || FAILED=1
+          [ "$IBK_UP_OK" = "1" ] || FAILED=1
+          [ "$IBK_UPID_OK" = "1" ] || FAILED=1
+          [ "$IBK_MED_OK" = "1" ] || FAILED=1
+          [ "$IBK_MED_ANON_OK" = "1" ] || FAILED=1
+          [ "$IBK_SEEDPG_OK" = "1" ] || FAILED=1
+          [ "$IBK_DIST_OK" = "1" ] || FAILED=1
+          [ "$IBK_ALSP_OK" = "1" ] || FAILED=1
+          [ "$IBK_ALSP_SLIDE_OK" = "1" ] || FAILED=1
+          [ "$IBK_ALSP_DB_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_UP_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_UPID_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_PG_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_BTN_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_SAVE_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_CLAMP_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_EDITOR_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_DIST_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_TID_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_MEDCOPY_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_REF_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_RO_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_STYLE_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_ROMED_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_PRES_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_INK_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_INKSAN_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_EMB_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_EMBEVIL_OK" = "1" ] || FAILED=1
+          [ "$IBK_CV_TXT_OK" = "1" ] || FAILED=1
+          [ "$IBK_EM_OWN_OK" = "1" ] || FAILED=1
+          [ "$IBK_EM_GM_OK" = "1" ] || FAILED=1
+          [ "$IBK_EM_WRITE_OK" = "1" ] || FAILED=1
+          [ "$IBK_EM_RO_OK" = "1" ] || FAILED=1
+          [ "$IBK_EM_DENY_OK" = "1" ] || FAILED=1
+          [ "$IBK_LENA_PAGE_OK" = "1" ] || FAILED=1
+          [ "$IBK_LENA_OWN_OK" = "1" ] || FAILED=1
+          [ "$HL_SQLHL_OK" = "1" ] || FAILED=1
+          [ "$AC_SQL_OK" = "1" ] || FAILED=1
+          [ "$AC_SQLTB_OK" = "1" ] || FAILED=1
+          [ "$CODE_OTP" = "200" ] || FAILED=1
+          [ "$OTP_OK" = "1" ] || FAILED=1
+          [ "$CODE_EMMA" = "200" ] || FAILED=1
+          [ "$EMMA_SQL" = "1" ] || FAILED=1
+          [ "$EMMA_CODE" = "1" ] || FAILED=1
+          [ "$CODE_LENA" = "200" ] || FAILED=1
+          [ "$LENA_SQL" = "0" ] || FAILED=1
+          [ "$LENA_CODE" = "1" ] || FAILED=1
+          [ "$CODE_HTML" = "200" ] || FAILED=1
+          [ "$CODE_HTMLED" = "200" ] || FAILED=1
+          [ "$CODE_HTMLSAVE" = "200" ] || FAILED=1
+          [ "$HTML_SAVE_OK" = "1" ] || FAILED=1
+          [ "$H_WY_OK" = "1" ] || FAILED=1
+          [ "$KAT48_OK" = "1" ] || FAILED=1
+          [ "$KAT50_OK" = "1" ] || FAILED=1
+          [ "$CODE_QUIZ" = "200" ] || FAILED=1
+          [ "$QUIZ_LIST_OK" = "1" ] || FAILED=1
+          [ "$CODE_PLAY" = "200" ] || FAILED=1
+          [ "$CODE_ANSWER" = "200" ] || FAILED=1
+          [ "$QUIZ_NEXT_OK" = "1" ] || FAILED=1
+          [ "$CODE_CLAUDIA" = "200" ] || FAILED=1
+          [ "$CODE_QMANAGE" = "200" ] || FAILED=1
+          [ "$QMANAGE_OK" = "1" ] || FAILED=1
+          [ "$CODE_QRES" = "200" ] || FAILED=1
+          [ "$CODE_STEFAN" = "200" ] || FAILED=1
+          [ "$CODE_EXAM" = "200" ] || FAILED=1
+          [ "$EX_OVER_OK" = "1" ] || FAILED=1
+          [ "$EX_CREATE_OK" = "1" ] || FAILED=1
+          [ "$EX_MEMBER_OK" = "1" ] || FAILED=1
+          [ "$EX_TPL_OK" = "1" ] || FAILED=1
+          [ "$EX_TASKS_OK" = "1" ] || FAILED=1
+          [ "$CODE_EXSTART" = "200" ] || FAILED=1
+          [ "$EX_START_OK" = "1" ] || FAILED=1
+          [ "$CODE_EXHOME" = "200" ] || FAILED=1
+          [ "$LOCK_OK" = "1" ] || FAILED=1
+          [ "$LOCK_REDIRECT_OK" = "1" ] || FAILED=1
+          [ "$CODE_EXWORK" = "200" ] || FAILED=1
+          [ "$EX_WORK_OK" = "1" ] || FAILED=1
+          [ "$CODE_EXSAVE" = "200" ] || FAILED=1
+          [ "$EXSAVE_OK" = "1" ] || FAILED=1
+          [ "$EX_SUBMIT_OK" = "1" ] || FAILED=1
+          [ "$EX_END_OK" = "1" ] || FAILED=1
+          [ "$CODE_EXCORRECT" = "200" ] || FAILED=1
+          [ "$EX_CORRECT_OK" = "1" ] || FAILED=1
+          [ "$EX_GRADE_OK" = "1" ] || FAILED=1
+          [ "$EX_API_OK" = "1" ] || FAILED=1
+          [ "$EX_RELEASE_OK" = "1" ] || FAILED=1
+          [ "$EX_RESULT_OK" = "1" ] || FAILED=1
+          [ "$EX_FEEDBACK_OK" = "1" ] || FAILED=1
+          [ "$EX_UNLOCK_OK" = "1" ] || FAILED=1
+          [ "$CODE_JONAS" = "200" ] || FAILED=1
+          [ "$JONAS_LOCK_OK" = "1" ] || FAILED=1
+          [ "$CODE_ARBEITRES" = "200" ] || FAILED=1
+          [ "$ARBEIT_RES_OK" = "1" ] || FAILED=1
+          [ "$CODE_DLIST" = "200" ] || FAILED=1
+          [ "$DIAG_OVER_OK" = "1" ] || FAILED=1
+          [ "$CODE_DCREATE" = "200" ] || FAILED=1
+          [ "$DIAG_CREATE_OK" = "1" ] || FAILED=1
+          [ "$DIAG_EDIT_OK" = "1" ] || FAILED=1
+          [ "$CODE_DSAVE" = "200" ] || FAILED=1
+          [ "$DIAG_SAVE_OK" = "1" ] || FAILED=1
+          [ "$CODE_PYPROJ" = "200" ] || FAILED=1
+          [ "$CODE_PYSAVE" = "200" ] || FAILED=1
+          [ "$PY_SAVE_OK" = "1" ] || FAILED=1
+          [ "$CODE_PYDIAG" = "200" ] || FAILED=1
+          [ "$PY_DIAG_OK" = "1" ] || FAILED=1
+          [ "$PY_DIAG_CLASS_OK" = "1" ] || FAILED=1
+          [ "$PY_DIAG_REL_OK" = "1" ] || FAILED=1
+          [ "$PY_DIAG_METH_OK" = "1" ] || FAILED=1
+          [ "$CODE_JPROJ" = "200" ] || FAILED=1
+          [ "$C_JDEF_OK" = "1" ] || FAILED=1
+          [ "$C_GROUP_OK" = "1" ] || FAILED=1
+          [ "$C_NEWLANG_OK" = "1" ] || FAILED=1
+          [ "$C_NEWFORM_OK" = "1" ] || FAILED=1
+          [ "$GHOST_CSS_OK" = "1" ] || FAILED=1
+          [ "$CODE_JSAVE" = "200" ] || FAILED=1
+          [ "$J_SAVE_OK" = "1" ] || FAILED=1
+          [ "$CODE_JDIAG" = "200" ] || FAILED=1
+          [ "$JAVA_DIAG_OK" = "1" ] || FAILED=1
+          [ "$JAVA_DIAG_FIELD_OK" = "1" ] || FAILED=1
+          [ "$JAVA_DIAG_METH_OK" = "1" ] || FAILED=1
+          [ "$J_UI_OK" = "1" ] || FAILED=1
+          [ "$J_RUN_OK" = "1" ] || FAILED=1
+          [ "$J_CONSOLE_OK" = "1" ] || FAILED=1
+          [ "$J_ERR_OK" = "1" ] || FAILED=1
+          [ "$J_DBHINT_OK" = "1" ] || FAILED=1
+          [ "$J_DBHELP_OK" = "1" ] || FAILED=1
+          [ "$J_FILE_OK" = "1" ] || FAILED=1
+          [ "$J_TABS_OK" = "1" ] || FAILED=1
+          [ "$J_IDE_OK" = "1" ] || FAILED=1
+          [ "$J_OBJ_OK" = "1" ] || FAILED=1
+          [ "$J_REPL_OK" = "1" ] || FAILED=1
+          [ "$J_WIDE_OK" = "1" ] || FAILED=1
+          [ "$J_TOP_OK" = "1" ] || FAILED=1
+          [ "$J_CLTAB_OK" = "1" ] || FAILED=1
+          [ "$J_STEP_OK" = "1" ] || FAILED=1
+          [ "$J_STEPINFO_OK" = "1" ] || FAILED=1
+          [ "$J_APIH_OK" = "1" ] || FAILED=1
+          [ "$J_FMT_OK" = "1" ] || FAILED=1
+          [ "$J_GFX_OK" = "1" ] || FAILED=1
+          [ "$J_INPUT_OK" = "1" ] || FAILED=1
+          [ "$J_RAND_OK" = "1" ] || FAILED=1
+          [ "$J_ASSERT_OK" = "1" ] || FAILED=1
+          [ "$J_MTOOL_OK" = "1" ] || FAILED=1
+          [ "$J_VEC_OK" = "1" ] || FAILED=1
+          [ "$J_SOUND_OK" = "1" ] || FAILED=1
+          [ "$J_GAMEPAD_OK" = "1" ] || FAILED=1
+          [ "$J_SECTOR_OK" = "1" ] || FAILED=1
+          [ "$J_SYSTOOL_OK" = "1" ] || FAILED=1
+          [ "$J_KEY_OK" = "1" ] || FAILED=1
+          [ "$J_CPAIR_OK" = "1" ] || FAILED=1
+          [ "$J_DIR_OK" = "1" ] || FAILED=1
+          [ "$J_PUNKT_OK" = "1" ] || FAILED=1
+          [ "$J_STOP_OK" = "1" ] || FAILED=1
+          [ "$J_GFXDOCK_OK" = "1" ] || FAILED=1
+          [ "$J_APIOPEN_OK" = "1" ] || FAILED=1
+          [ "$J_ICON_OK" = "1" ] || FAILED=1
+          [ "$J_ERRBOX_OK" = "1" ] || FAILED=1
+          [ "$J_AUTOSAVE_OK" = "1" ] || FAILED=1
+          [ "$J_DBPANEL_OK" = "1" ] || FAILED=1
+          [ "$DB_2COL_OK" = "1" ] || FAILED=1
+          [ "$J_OBJDIAG_OK" = "1" ] || FAILED=1
+          [ "$J_SPRITE_OK" = "1" ] || FAILED=1
+          [ "$J_IMGUP_OK" = "1" ] || FAILED=1
+          [ "$J_SPRITELIB_OK" = "1" ] || FAILED=1
+          [ "$J_IMGMARK_OK" = "1" ] || FAILED=1
+          [ "$J_SPRITETAB_OK" = "1" ] || FAILED=1
+          [ "$J_GFXOPEN_OK" = "1" ] || FAILED=1
+          [ "$J_REPLEDIT_OK" = "1" ] || FAILED=1
+          [ "$J_REPLRUN_OK" = "1" ] || FAILED=1
+          [ "$J_GFXHINT_OK" = "1" ] || FAILED=1
+          [ "$J_GFXHIDE_OK" = "1" ] || FAILED=1
+          [ "$J_OBJTAB_OK" = "1" ] || FAILED=1
+          [ "$J_DBSCHEMA_OK" = "1" ] || FAILED=1
+          [ "$J_DBCONSOLE_OK" = "1" ] || FAILED=1
+          [ "$J_DBPANEL2_OK" = "1" ] || FAILED=1
+          [ "$J_DBNOTAB_OK" = "1" ] || FAILED=1
+          [ "$J_CTRLHINT_OK" = "1" ] || FAILED=1
+          [ "$J_OBJHINT_OK" = "1" ] || FAILED=1
+          [ "$A_ID_OK" = "1" ] || FAILED=1
+          [ "$A_RUN_OK" = "1" ] || FAILED=1
+          [ "$A_STEP_OK" = "1" ] || FAILED=1
+          [ "$A_REG_OK" = "1" ] || FAILED=1
+          [ "$A_CMD_OK" = "1" ] || FAILED=1
+          [ "$A_CMDTAB_OK" = "1" ] || FAILED=1
+          [ "$A_ABITUR_OK" = "1" ] || FAILED=1
+          [ "$A_JNZERO_OK" = "1" ] || FAILED=1
+          [ "$A_FILE_OK" = "1" ] || FAILED=1
+          [ "$J_START_OK" = "1" ] || FAILED=1
+          [ "$J_NOMAIN_OK" = "1" ] || FAILED=1
+          [ "$J_GID_OK" = "1" ] || FAILED=1
+          [ "$J_FILE_SAVE_OK" = "1" ] || FAILED=1
+          [ "$J_SYNC_OK" = "1" ] || FAILED=1
+          [ "$J_FDEL_OK" = "1" ] || FAILED=1
+          [ "$IMGUP_OK" = "1" ] || FAILED=1
+          [ "$IMGLIST_OK" = "1" ] || FAILED=1
+          [ "$IMGFETCH_OK" = "1" ] || FAILED=1
+          [ "$IMGDEL_OK" = "1" ] || FAILED=1
+          [ "$CODE_WIKI" = "200" ] || FAILED=1
+          [ "$WIKI_OK" = "1" ] || FAILED=1
+          [ "$CODE_WCREATE" = "200" ] || FAILED=1
+          [ "$WCREATE_OK" = "1" ] || FAILED=1
+          [ "$W_GID_OK" = "1" ] || FAILED=1
+          [ "$CODE_WPAGE" = "200" ] || FAILED=1
+          [ "$WPAGE_OK" = "1" ] || FAILED=1
+          [ "$CODE_WEDIT" = "200" ] || FAILED=1
+          [ "$WSAVE_OK" = "1" ] || FAILED=1
+          [ "$CODE_WCREATE9" = "200" ] || FAILED=1
+          [ "$CODE_WLOCK" = "404" ] || FAILED=1
+          [ "$WLOCK_OK" = "1" ] || FAILED=1
+          [ "$CODE_WDEL" = "200" ] || FAILED=1
+          [ "$WDEL_OK" = "1" ] || FAILED=1
+          [ "$WGUIDE_OK" = "1" ] || FAILED=1
+          [ "$CODE_WGUIDE" = "200" ] || FAILED=1
+          [ "$WGUIDE_PAGE_OK" = "1" ] || FAILED=1
+          [ "$CODE_PRAES" = "200" ] || FAILED=1
+          [ "$PRAES_OVER_OK" = "1" ] || FAILED=1
+          [ "$PRAES_SEED_OK" = "1" ] || FAILED=1
+          [ "$CODE_PCREATE" = "200" ] || FAILED=1
+          [ "$PRAES_CREATE_OK" = "1" ] || FAILED=1
+          [ "$PRAES_GID_OK" = "1" ] || FAILED=1
+          [ "$CODE_PSLIDE" = "200" ] || FAILED=1
+          [ "$PRAES_SLIDE_OK" = "1" ] || FAILED=1
+          [ "$CODE_PSAVE" = "200" ] || FAILED=1
+          [ "$PRAES_SAVE_OK" = "1" ] || FAILED=1
+          [ "$PRAES_VIEW_OK" = "1" ] || FAILED=1
+          [ "$PRAES_FULL_OK" = "1" ] || FAILED=1
+          [ "$PRAES_HL_OK" = "1" ] || FAILED=1
+          [ "$PRAES_LIVE_OK" = "1" ] || FAILED=1
+          [ "$CODE_PEMA" = "200" ] || FAILED=1
+          [ "$PRAES_E9_OK" = "1" ] || FAILED=1
+          [ "$PRAES_E9NOJ_OK" = "1" ] || FAILED=1
+          [ "$CODE_PLENA" = "200" ] || FAILED=1
+          [ "$PRAES_E6NO_OK" = "1" ] || FAILED=1
+          [ "$CODE_PDEL" = "200" ] || FAILED=1
+          [ "$PRAES_DEL_OK" = "1" ] || FAILED=1
           [ "$PT_SLUG_OK" = "1" ] || FAILED=1
           [ "$PT_UEB_OK" = "1" ] || FAILED=1
           [ "$PT_KONV_OK" = "1" ] || FAILED=1

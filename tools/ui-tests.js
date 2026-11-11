@@ -1728,6 +1728,76 @@ setTimeout(function () {
 
                 /* T63 (#79): Bibliothek am Diagramm-Element: Auswahl uebernimmt
                  * den Mermaid-Code, pur bleibt pur (kein Rendern im Editor). */
+                global.window.mermaid = { render: function (id) { return { svg: '<svg class="icv-dg-t63">' + id + '</svg>' }; } };
+                ibDiagBtn59.dispatch('click');
+                var ibDiagBoxes63 = ibStage.querySelectorAll('.icv-diagram');
+                var ibDiagBox63 = ibDiagBoxes63[ibDiagBoxes63.length - 1];
+                ok(ibDiagBox63 !== null && ibDiagBox63.querySelector('.icv-diagram-lib') !== null, 'T63 neues Diagramm-Element bietet die eigene Bibliothek an');
+                if (ibDiagBox63) {
+                  var ibDiagWrap63 = ibDiagBox63.querySelector('.icv-diagram-wrap');
+                  ok(ibDiagWrap63.classList.contains('icv-diagram-noprev') === true, 'T63b pur (Standard): im Editor steht nur der Quelltext, keine Vorschau');
+                  var ibDiagLib63 = ibDiagBox63.querySelector('.icv-diagram-lib');
+                  ibDiagLib63.value = '5';
+                  ibDiagLib63.dispatch('change');
+                  ok(String(ibDiagBox63.querySelector('.icv-diagram-src').value).indexOf('classDiagram') !== -1, 'T63c die Bibliotheks-Auswahl uebernimmt den Mermaid-Code');
+                  ok(ibDiagLib63.value === '', 'T63d das Bibliotheks-Dropdown springt zurueck auf die neutrale Auswahl');
+                  var cv63 = ibCollect();
+                  var t63 = cv63 && cv63.items ? cv63.items.filter(function (it) { return it.kind === 'diagram'; })[cv63.items.filter(function (it) { return it.kind === 'diagram'; }).length - 1] : null;
+                  ok(t63 && String(t63.src).indexOf('Auto <|-- BMW') !== -1 && t63.dmode === undefined, 'T63e der uebernommene Code wird serialisiert, Variante bleibt pur');
+                  /* Lesemodus geteilt (#79): die Split-Box zeichnet auch, der
+                   * Balken zwischen Code und Diagramm laesst sich ziehen und
+                   * begrenzt beide Fenster (nichts wird unbedienbar). */
+                  var ibRoSplit63 = new FakeEl('div');
+                  ibRoSplit63.className = 'icv-item icv-diagram icv-diagram-split-ro';
+                  ibRoSplit63.setAttribute('data-src', 'graph TD\nS63[SPLIT]');
+                  var ibRoSplitPrev63 = new FakeEl('div');
+                  ibRoSplitPrev63.className = 'icv-diagram-prev';
+                  ibRoSplit63.appendChild(ibRoSplitPrev63);
+                  ibDoc.body.appendChild(ibRoSplit63);
+                  ibDoc._fire('DOMContentLoaded', { type: 'DOMContentLoaded' });
+                  ok(String(ibRoSplitPrev63.innerHTML).indexOf('<svg class="icv-dg-t63">') === 0, 'T63g die geteilte Lesemodus-Box zeichnet ihr Diagramm');
+                  var ibSplitWrap63 = new FakeEl('div');
+                  ibSplitWrap63.className = 'icv-diagram-split';
+                  var ibSplitCode63 = new FakeEl('textarea');
+                  ibSplitCode63.className = 'icv-diagram-code';
+                  ibSplitCode63.value = 'graph TD\nS63[SPLIT]';
+                  var ibSplitBar63 = new FakeEl('div');
+                  ibSplitBar63.className = 'icv-diagram-split-bar';
+                  var ibSplitPrev63 = new FakeEl('div');
+                  ibSplitPrev63.className = 'icv-diagram-prev';
+                  ibSplitWrap63.appendChild(ibSplitCode63);
+                  ibSplitWrap63.appendChild(ibSplitBar63);
+                  ibSplitWrap63.appendChild(ibSplitPrev63);
+                  ibDoc.body.appendChild(ibSplitWrap63);
+                  ibSplitBar63.dispatch('pointerdown', { clientX: 8, clientY: 8 });
+                  ibDoc._fire('pointermove', { clientX: 218, clientY: 8 });
+                  ok(String(ibSplitCode63.style.width) === '50%', 'T63h der Balken teilt Code und Diagramm nach Zug');
+                  ibDoc._fire('pointermove', { clientX: 5000, clientY: 8 });
+                  ok(String(ibSplitCode63.style.width) === '85%', 'T63i der Balken begrenzt: Code hoechstens 85%, das Diagramm bleibt bedienbar');
+                  ibDoc._fire('pointermove', { clientX: -5000, clientY: 8 });
+                  ok(String(ibSplitCode63.style.width) === '15%', 'T63j nach unten bleibt dem Code mindestens 15% - nichts geht verloren');
+                  ibDoc._fire('pointerup', {});
+                  /* #85: Der Quelltext bleibt im Lesemodus bearbeitbar,
+                   * jede Aenderung zeichnet das Diagramm sofort neu. */
+                  global.window.mermaid = { render: function (id, src) { return { svg: '<svg class="icv-dg-t63">' + id + '|' + String(src) + '</svg>' }; } };
+                  ibSplitCode63.value = 'graph TD\nS63[NEU]';
+                  ibSplitCode63.dispatch('input');
+                  ibSplitCode63.value = 'graph TD\nS63[NOCHNEU]';
+                  ibSplitCode63.dispatch('input');
+                  ok(String(ibSplitPrev63.innerHTML).indexOf('S63[NOCHNEU]') !== -1, 'T63k geteilt im Lesemodus: Tippen am Quelltext zeichnet das Diagramm live neu');
+                  ibDoc._fire('pointerup', {});
+                  delete global.window.mermaid;
+                }
+
+                /* T64 (#80): Vorhandene Datenbanken der SQL-Werkstatt fuellen
+                 * das DB-Element: Schema und Beispieldaten landen im Seed-Feld,
+                 * Abfragen laufen damit auf den echten Vorlagen-Tabellen. */
+                ibDbBtn58.dispatch('click');
+                var ibDbBoxes64 = ibStage.querySelectorAll('.icv-db');
+                var ibDbBox64 = ibDbBoxes64[ibDbBoxes64.length - 1];
+                ok(ibDbBox64 !== null && ibDbBox64.querySelector('.icv-db-libsel') !== null, 'T64 neues DB-Element bietet vorhandene Datenbanken an');
+                if (ibDbBox64) {
+                  var ibDbLib64 = ibDbBox64.querySelector('.icv-db-libsel');
                   ibDbLib64.value = 'shop';
                   ibDbLib64.dispatch('change');
                   var ibDbSeedTa64 = ibDbBox64.querySelector('.icv-db-seed-ta');
@@ -2587,6 +2657,47 @@ setTimeout(function () {
                       { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
                         scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('move_steps', { steps: '10' })) }] },
                       { id: 'sp2', name: 'Figur 2', costume: 'fish', x: -60, y: 30, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's2', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('move_steps', { steps: '20' })) }] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt98 = BLK.newRuntime(blkTwo);
+                  rt98.flag(0);
+                  rt98.frame(0);
+                  ok(rt98.sprites[0].x === 10 && rt98.sprites[1].x === -40, 'T98b zwei Figuren laufen unabhaengig voneinander (hier: 10 und 20 Schritte)');
+                  var rt98c = BLK.newRuntime(blkTwo);
+                  rt98c.flag(0);
+                  rt98c.stopAll();
+                  ok(rt98c.running() === false && rt98c.sprites[0].x === 0 && rt98c.sprites[1].x === -60, 'T98c stoppe alles haelt beide Figuren an');
+
+                  /* T99: die Buehne als eigenes Ziel (#126) */
+                  var blkStageProg = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: ['buehne'],
+                    sprites: [],
+                    stage: { scripts: [{ id: 'st1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('var_set', { name: 'buehne', value: '1' }, blkRaw('move_steps', { steps: '30' }))) }] }
+                  }));
+                  var rt99 = BLK.newRuntime(blkStageProg);
+                  rt99.flag(0);
+                  rt99.frame(0);
+                  ok(rt99.vars.buehne === 1 && rt99.errors.length === 0 && rt99.sprites.length === 0, 'T99 das Buehnen-Skript laeuft mit und Bewegung stoert die Buehne nicht');
+                  /* Figurenliste + Zielwechsel in der UI */
+                  ok(blkSpritesEl.children.length === 3, 'T98 die Figurenliste zeigt die Buehne, eine Figur und den Figuren-Knopf');
+                  var blkSpr2 = blkUi.addSprite('fish');
+                  ok(blkSpr2 !== null && blkUi.program.sprites.length === 2 && blkSpritesEl.children.length === 4, 'T98d eine neue Figur landet in der Liste und wird zum Ziel');
+                  blkUi.selectTarget(null);
+                  ok(blkUi.isStage() === true && blkCatsEl.children.length === 6, 'T99b die Buehne zeigt nur passende Kategorien (sechs statt neun)');
+                  blkUi.addBlock('flag', 10, 10);
+                  ok(blkUi.program.stage.scripts.length === 1 && blkUi.program.sprites[0].scripts.length === blkUi.program.sprites[0].scripts.length, 'T99c ein Block auf der Buehne landet im Buehnen-Skript');
+                  blkUi.selectTarget(blkUi.program.sprites[0]);
+                  ok(blkUi.isStage() === false && blkCatsEl.children.length === 9, 'T99d zurueck auf der Figur sind alle neun Kategorien da');
+                  blkUi.deleteSprite(blkUi.program.sprites[1]);
+                  ok(blkUi.program.sprites.length === 1 && blkUi.target() === blkUi.program.sprites[0], 'T99e das Loeschen der zweiten Figur waehlt die erste zurueck');
+                  ok(blkUi.program.stage.scripts.length === 1, 'T99f das Buehnen-Skript bleibt beim Figuren-Wechsel erhalten');
+
+                  /* T100-T100e (#129): Block aus der Mitte/Unten eines Stapels
+                   * wegnehmen darf den Rest des Stapels nie verlieren. Vorher
+                   * meldete findBlockPos jeden Block der next-Kette mit
+                   * parentKind 'top' und der Editor raeumte das GESAMTE Skript
                    * weg. Eigener FakeDoc mit vollstaendigen Rechtecken (auch
                    * right/bottom, sonst ist dist() NaN) und Pointer-Events
                    * wie im Browser; der Editor wird je Szenario frisch

@@ -737,6 +737,167 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
             <h3>📚 Befehlsübersicht</h3>
         </div>
         <p class="muted">Alle Blöcke mit Erklärung - automatisch aus derselben Registry erzeugt, die auch die Palette füllt.</p>
+        <div id="blk-help" class="blk-help"></div>
+    </section>
+    <?php else: ?>
+    <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="form">
+        <?= csrf_field() ?>
+        <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
+        <label class="field"><span>Inhalt <?= $project->type === 'html' ? '(HTML)' : '(' . e($project->language ?? 'Code') . ')' ?></span>
+            <div class="hlwrap" data-hl="<?= e($project->type === 'html' ? 'xml' : ($project->language ?? 'plaintext')) ?>">
+                <textarea name="content" id="code-editor" rows="18" class="mono code-editor" spellcheck="false"><?= e($project->content) ?></textarea>
+            </div>
+        </label>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
+    </form>
+    <?php endif; ?>
+</section>
+
+<?php if ($project->type === 'code' && $project->language === 'python'): ?>
+<section class="panel">
+    <div class="panel-head">
+        <h3>📐 Klassendiagramm</h3>
+    </div>
+    <?php if ($diagramAuto): ?>
+    <p class="muted">Aus diesem <?= e($project->language ?? 'Code') ?>-Skript wird automatisch ein Klassendiagramm erzeugt (Klassen, Attribute, Methoden, Vererbung). Danach kannst du es weiterbearbeiten und als PNG exportieren.</p>
+    <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/diagramm') ?>" class="form-inline">
+        <?= csrf_field() ?>
+        <button class="btn btn-primary" type="submit" title="Klassendiagramm erzeugen">📐</button>
+    </form>
+    <?php else: ?>
+    <div class="notice">
+        <strong>Deaktiviert</strong>
+        <p>Deine Lehrkraft hat das automatische Erzeugen von Klassendiagrammen für deine Klasse deaktiviert. Eigene Diagramme kannst du weiterhin in der Diagramm-Werkstatt anlegen.</p>
+    </div>
+    <?php endif; ?>
+</section>
+<?php endif; ?>
+<script src="<?= vendor_asset('assets/vendor/highlight.min.js', 'https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.12.0/highlight.min.js', 100000) ?>"></script>
+
+<?php if ($project->type === 'code' && $project->language === 'python'): ?>
+<section class="panel">
+    <div class="panel-head">
+        <h3>▶️ Python ausführen</h3>
+        <button class="btn btn-primary" id="run-python" type="button" title="Los">▶</button>
+    </div>
+    <p class="muted">Dein Programm läuft vollständig in deinem Browser (Pyodide): Es wird kein Code auf dem Server ausgeführt. Mit Strg + Enter startest du ebenfalls. Beim ersten Start wird Python geladen, das dauert einen Moment.</p>
+    <pre id="code-output" class="code">Noch nichts ausgeführt.</pre>
+</section>
+<?php elseif ($project->type === 'code' && $project->language === 'java'): ?>
+<script src="<?= asset_url('assets/js/java-vm.js') ?>"></script>
+<script>window.IC_IMAGES = <?= json_encode((object) ($imageUrls ?? []), JSON_HEX_TAG | JSON_UNESCAPED_SLASHES) ?>;</script>
+<?php elseif ($project->type === 'code' && $project->language === 'asm'): ?>
+<script src="<?= asset_url('assets/js/asm-vm.js') ?>"></script>
+<?php elseif ($project->type === 'code' && $project->language === 'blocks'): ?>
+<script src="<?= asset_url('assets/js/block-editor.js') ?>"></script>
+<?php elseif ($project->type === 'html'): ?>
+<section class="panel">
+    <div class="notice">
+        <strong>💡 Tipp</strong>
+        <p>Für HTML-Seiten gibt es die <a href="<?= url('werkstatt/html') ?>">HTML-Werkstatt</a> mit Sofortvorschau beim Tippen.</p>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php if ($project->type === 'code' && $project->language === 'java' && $dbPanel): ?>
+<section class="panel" id="db-panel">
+    <input type="hidden" id="java-db-seed" value="<?= e($dbSql ?? '') ?>">
+    <?php if (!empty($dbReadOnly)): ?>
+    <input type="hidden" id="java-db-ro" value="1">
+    <?php endif; ?>
+    <div class="panel-head">
+        <h3>💾 Mini-Datenbank: SQL direkt in Java</h3>
+        <?php if (!empty($dbReadOnly)): ?>
+        <span class="pill" title="Deine Lehrkraft hat diese Datenbank nur mit Leserechten an die Aufgabe angehängt: Alle arbeiten mit denselben Daten, SELECT und Database.query sind erlaubt, schreibende Befehle sind gesperrt.">🔒 Nur Leserechte</span>
+        <?php endif; ?>
+    </div>
+    <p>Die eingebaute Klasse <code>Database</code> speichert Tabellen im Speicher deines Browsers – ganz ohne Installation:</p>
+    <pre class="code">Database.execute("CREATE TABLE schueler (name TEXT, punkte INT)");
+Database.execute("INSERT INTO schueler VALUES ('Anna', 12), ('Ben', 8)");
+System.out.println(Database.query("SELECT * FROM schueler WHERE punkte > 10"));
+
+int anzahl = Database.count("SELECT * FROM schueler");   // Zeilen einer Abfrage
+String beste = Database.value("SELECT name FROM schueler ORDER BY punkte DESC");
+System.out.println(Database.tables());                     // alle Tabellen</pre>
+    <p class="muted">Verfügbar: <code>execute</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>query</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>count</code> die Zeilenanzahl, <code>value</code> den ersten Wert, <code>tables</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank bleibt mit deinem Projekt gespeichert: Bei jedem ▶ Ausführen startet sie mit den Tabellen und Daten aus deinem letzten Stand (und der Beispieldatenbank deiner Aufgabe, falls die Lehrkraft eine .sql-Datei als Material angehängt hat).</p>
+
+    <?php if (!empty($dbTemplates)): ?>
+    <form method="post" enctype="multipart/form-data" action="<?= url('werkstatt/code/' . $project->id . '/datenbank/datei') ?>" class="form-inline db-load-form">
+        <?= csrf_field() ?>
+        <label for="db-sql-file"><strong>Eigene SQL-Datei:</strong></label>
+        <input type="file" name="sql_file" id="db-sql-file" accept=".sql" required>
+        <button class="btn btn-ghost" type="submit" title="Lädt eine eigene .sql-Datei mit CREATE TABLE- und INSERT-Befehlen als Mini-Datenbank deines Projekts.">📤 SQL-Datei hochladen</button>
+    </form>
+    <form method="post" action="<?= url('werkstatt/code/' . $project->id . '/datenbank') ?>" class="form-inline db-load-form">
+        <?= csrf_field() ?>
+        <label for="db-template-select"><strong>Beispieldatenbank laden:</strong></label>
+        <select name="template_id" id="db-template-select">
+            <option value="0">Datenbank leeren</option>
+            <?php foreach ($dbTemplates as $dbTemplate): ?>
+            <option value="<?= (int) $dbTemplate->id ?>"><?= e($dbTemplate->title) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <button class="btn btn-ghost" type="submit" title="Ersetzt die Mini-Datenbank durch die gewählte Beispieldatenbank mit ihren Tabellen und Daten.">📦 Laden</button>
+    </form>
+    <p class="muted">Ersetzt deine aktuelle Mini-Datenbank durch die Tabellen und Daten der gewählten Vorlage (z. B. Schule oder Schulbibliothek). Eigene Tabellen und Daten gehen dabei verloren.</p>
+    <?php endif; ?>
+
+    <div class="db-two-col">
+        <div class="db-block">
+            <h4 class="diag-head">🗄 Vorhandene Tabellen</h4>
+            <p class="muted">Alle Tabellen und Spalten deiner Datenbank, live nach jedem ▶ Ausführen: Hier siehst du, worauf dein Programm zugreifen kann (<code>Database.execute(...)</code> und <code>Database.query(...)</code>).</p>
+            <div id="java-dbschema-static" class="umldiag">
+                <?php if (empty($seedTables)): ?>
+                <p class="muted">Noch keine Tabellen: Lade oben eine Beispieldatenbank oder lade eine eigene SQL-Datei hoch - die Tabellen erscheinen dann sofort hier (und bleiben mit jedem ▶ Ausführen erhalten).</p>
+                <?php else: ?>
+                <?php foreach ($seedTables as $seedTable): ?>
+                <table class="db-schema-table">
+                    <thead>
+                        <tr><th colspan="2"><?= e($seedTable['name']) ?></th></tr>
+                        <tr><th>Spalte</th><th>Typ</th></tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($seedTable['cols'] as $seedCol): ?>
+                        <tr><td><?= e($seedCol['name']) ?></td><td><?= e($seedCol['type']) ?></td></tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+            <div id="java-dbschema" class="umldiag"></div>
+        </div>
+
+        <div class="db-block">
+            <details class="db-console-details">
+            <summary class="diag-head">🧪 DB-Konsole: eigene Abfragen und Tabellen ausprobieren (aufklappen)</summary>
+                        <p class="muted"><?php if (empty($dbReadOnly)): ?>Schicke Abfragen direkt an die Datenbank, ohne dein Programm zu ändern: <code>SELECT</code> zeigt das Ergebnis an, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>CREATE TABLE</code> und <code>DROP TABLE</code> ändern die Datenbank dauerhaft (sie wird automatisch mit deinem Projekt gespeichert). Damit legst du hier auch neue Daten an und prüfst sofort, was dein Programm daraus liest.<?php else: ?>Schicke Abfragen an die angehängte Datenbank: <code>SELECT</code> zeigt das Ergebnis an. Schreibende Befehle sind gesperrt, weil deine Lehrkraft nur Leserechte vergeben hat - alle arbeiten mit denselben Daten.<?php endif; ?></p>
+            <div class="hlwrap" data-hl="sql" data-ac="sqldb"><textarea id="java-db-in" class="mono db-console-in" rows="3" autocomplete="off" spellcheck="false"></textarea></div>
+            <div class="repl-actions">
+                <button class="btn btn-primary" id="java-db-run" type="button" title="Abfrage ausführen (Strg + Enter): schickt den SQL-Befehl an die Datenbank und zeigt das Ergebnis.">▶ Abfrage ausführen</button>
+            </div>
+            <pre id="java-db-out" class="code ide-console-out db-console-out"></pre>
+            </details>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php if (($presentationTask ?? null) !== null): ?>
+<script>
+/* Präsentationsmodus: ToDos lokal abhakbar machen (bleibt im Browser erhalten,
+ * auch nach einem Reload, ohne die Aufgaben-ToDos der Schüler zu verändern). */
+(function () {
+  'use strict';
+  var box = document.getElementById('pres-todos');
+  if (!box) { return; }
+  var key = 'pres-todos-' + box.getAttribute('data-task');
+  function readState() {
+    try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (e) { return {}; }
+  }
+  var boxes = box.querySelectorAll('input[data-pres-todo]');
+  var i;
+  var state = readState();
   for (i = 0; i < boxes.length; i++) {
     var tid = boxes[i].getAttribute('data-pres-todo');
     boxes[i].checked = !!state[tid];
