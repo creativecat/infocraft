@@ -877,29 +877,34 @@ final class CodeController
             return "# " . $title . "\nprint(\"Hallo InfoCraft!\")\n";
         }
         if ($language === 'blocks') {
-            /* Startprogramm: Fahne -> begruessen -> ein Stueck gehen. Das
-             * JSON-Format entspricht genau dem, was der Block-Editor laedt
+            /* Startprogramm: ▶ -> begruessen -> ein Stueck gehen. Das
+             * JSON-Format (Version 2 mit Figuren-Liste und Buehne,
+             * #125/#126) entspricht genau dem, was der Block-Editor laedt
              * und automatisch speichert (#121). */
             $starterBlocks = [
-                'v' => 1,
+                'v' => 2,
                 'vars' => [],
-                'sprite' => ['x' => 0, 'y' => 0, 'dir' => 90, 'costume' => 'robot', 'size' => 100, 'visible' => true],
-                'scripts' => [[
-                    'id' => 's1', 'x' => 24, 'y' => 16,
-                    'top' => [
-                        'op' => 'flag', 'id' => 'b1', 'f' => [], 'sub' => [],
-                        'next' => [
-                            'op' => 'say_for', 'id' => 'b2',
-                            'f' => ['msg' => ['v' => 'Hallo!'], 'secs' => ['v' => '2']],
-                            'sub' => [],
+                'sprites' => [[
+                    'id' => 'sp1', 'name' => 'Figur 1', 'costume' => 'robot',
+                    'x' => 0, 'y' => 0, 'dir' => 90, 'size' => 100, 'visible' => true,
+                    'scripts' => [[
+                        'id' => 's1', 'x' => 24, 'y' => 16,
+                        'top' => [
+                            'op' => 'flag', 'id' => 'b1', 'f' => [], 'sub' => [],
                             'next' => [
-                                'op' => 'move_steps', 'id' => 'b3',
-                                'f' => ['steps' => ['v' => '50']], 'sub' => [],
-                                'next' => null,
+                                'op' => 'say_for', 'id' => 'b2',
+                                'f' => ['msg' => ['v' => 'Hallo!'], 'secs' => ['v' => '2']],
+                                'sub' => [],
+                                'next' => [
+                                    'op' => 'move_steps', 'id' => 'b3',
+                                    'f' => ['steps' => ['v' => '50']], 'sub' => [],
+                                    'next' => null,
+                                ],
                             ],
                         ],
-                    ],
+                    ]],
                 ]],
+                'stage' => ['scripts' => []],
             ];
             return json_encode($starterBlocks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }

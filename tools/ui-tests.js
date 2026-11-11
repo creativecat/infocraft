@@ -2401,12 +2401,13 @@ setTimeout(function () {
                   var ibStatus52 = ibDoc.body.querySelector('.ibook-status');
                   ok(ibStatus52 !== null && ibStatus52.textContent.indexOf('Automatisch gespeichert') !== -1, 'T52b der Editor meldet den automatischen Speichervorgang im Statusfeld');
 
-                  /* ============================================================
-                     T87-T95 (#116-#121): Block-Werkstatt. Zunaechst headless
+                                    /* ============================================================
+                     T87-T99 (#116-#128): Block-Werkstatt. Zunaechst headless
                      (Laufzeit ohne DOM), danach ein eigener FakeDoc fuer den
                      Editor (T86-Muster: eigenes document + frisches require,
                      weil window-Exponate auf die zuletzt initialisierte
-                     Instanz zeigen). */
+                     Instanz zeigen). Seit #125/#126: Figuren-Liste, die
+                     Buehne als eigenes Ziel, Migration von Version 1. */
                   var blkDocSaved = global.document;
                   var blkFetchSaved = global.fetch;
                   var blkFetchCalls = [];
@@ -2427,6 +2428,7 @@ setTimeout(function () {
                   var blkPalEl = blkReg('blk-pal');
                   var blkHelpEl = blkReg('blk-help');
                   var blkScriptEl = blkReg('blk-script');
+                  var blkSpritesEl = blkReg('blk-sprites');
                   var blkFlagBtn = blkReg('blk-flag', 'button');
                   blkReg('blk-stop', 'button');
                   var blkRuninfoEl = blkReg('blk-runinfo');
@@ -2448,6 +2450,8 @@ setTimeout(function () {
                   blkFormEl.appendChild(blkTitleEl);
                   var blkJsonEl = new FakeEl('textarea');
                   blkDoc.register(blkJsonEl, 'blocks-json');
+                  /* Absichtlich noch Version 1 (eine Figur, flache Skriptliste):
+                   * T87 und T97 pruefen die Migration auf Version 2. */
                   blkJsonEl.value = JSON.stringify({
                     v: 1, vars: [],
                     sprite: { x: 0, y: 0, dir: 90, costume: 'robot', size: 100, visible: true },
@@ -2480,39 +2484,40 @@ setTimeout(function () {
                   ok(BLK && BLK.BLOCKS && BLK.BLOCKS.flag && BLK.newRuntime, 'T87 der Block-Editor meldet Registry und Laufzeit als Exponat');
                   ok(Object.keys(BLK.BLOCKS).length >= 40, 'T87b die Registry enthaelt alle Bloecke der acht Kategorien');
                   var blkParsed = BLK.parseProgram(blkJsonEl.value);
-                  ok(blkParsed.scripts.length === 1 && blkParsed.scripts[0].top.op === 'flag' && blkParsed.scripts[0].top.next.op === 'say_for', 'T87c das gespeicherte JSON laedt als Skript mit Fahne und sage-Befehl');
-                  ok(BLK.parseProgram('kein json').scripts.length === 0, 'T87d ungueltiges JSON laedt als leeres Programm statt zu abstuerzen');
+                  ok(blkParsed.v === 2 && blkParsed.sprites.length === 1 && blkParsed.sprites[0].scripts.length === 1 && blkParsed.sprites[0].scripts[0].top.op === 'flag' && blkParsed.sprites[0].scripts[0].top.next.op === 'say_for', 'T87c das gespeicherte JSON laedt als Skript mit Start-Hut und sage-Befehl');
+                  var blkEmpty = BLK.parseProgram('kein json');
+                  ok(blkEmpty.sprites.length === 1 && blkEmpty.sprites[0].scripts.length === 0, 'T87d ungueltiges JSON laedt als leeres Programm statt zu abstuerzen');
 
                   /* T88: Bewegung, warte, wiederhole, fortlaufend, stoppe alles */
                   var rt88 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('move_steps', { steps: '10' }))));
                   rt88.flag(0);
                   rt88.frame(0);
-                  ok(rt88.sprite.x === 10, 'T88 gehe 10 Schritte in Richtung 90 Grad bewegt die Figur nach rechts');
+                  ok(rt88.sprites[0].x === 10, 'T88 gehe 10 Schritte in Richtung 90 Grad bewegt die Figur nach rechts');
                   var rt88b = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('point_dir', { deg: '0' }, blkRaw('move_steps', { steps: '10' })))));
                   rt88b.flag(0);
                   rt88b.frame(0);
-                  ok(rt88b.sprite.y === 10, 'T88b Richtung 0 Grad heisst nach oben');
+                  ok(rt88b.sprites[0].y === 10, 'T88b Richtung 0 Grad heisst nach oben');
                   var rt88c = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('wait', { secs: '1' }, blkRaw('change_y', { dy: '7' })))));
                   rt88c.flag(0);
                   rt88c.frame(999);
-                  ok(rt88c.sprite.y === 0, 'T88c waehrend des Wartens steht das Skript still');
+                  ok(rt88c.sprites[0].y === 0, 'T88c waehrend des Wartens steht das Skript still');
                   rt88c.frame(1000);
-                  ok(rt88c.sprite.y === 0, 'T88d die Wartezeit zaehlt ab dem ersten Anlauf (hier: bis Frame 1999)');
+                  ok(rt88c.sprites[0].y === 0, 'T88d die Wartezeit zaehlt ab dem ersten Anlauf (hier: bis Frame 1999)');
                   rt88c.frame(2500);
-                  ok(rt88c.sprite.y === 7, 'T88e nach Ablauf der Wartezeit laeuft es weiter');
+                  ok(rt88c.sprites[0].y === 7, 'T88e nach Ablauf der Wartezeit laeuft es weiter');
                   var rt88e = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('repeat', { count: '3' }, null, [blkRaw('change_y', { dy: '5' })])) }] })));
                   rt88e.flag(0);
                   rt88e.frame(0);
                   rt88e.frame(0);
                   rt88e.frame(0);
-                  ok(rt88e.sprite.y === 15, 'T88f wiederhole 3 mal lauft mit einem Durchlauf pro Bild');
+                  ok(rt88e.sprites[0].y === 15, 'T88f wiederhole 3 mal lauft mit einem Durchlauf pro Bild');
                   rt88e.frame(0);
                   ok(rt88e.running() === false, 'T88g nach dem letzten Durchlauf ist der Thread beendet');
                   var rt88g = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('forever', {}, null, [blkRaw('move_steps', { steps: '1' })])) }] })));
                   rt88g.flag(0);
                   var f88;
                   for (f88 = 0; f88 < 10; f88++) { rt88g.frame(f88); }
-                  ok(rt88g.sprite.x === 10, 'T88h wiederhole fortlaufend bewegt Bild fuer Bild');
+                  ok(rt88g.sprites[0].x === 10, 'T88h wiederhole fortlaufend bewegt Bild fuer Bild');
                   var rt88h = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('forever', {}, null, [blkRaw('stop_all')])) }] })));
                   rt88h.flag(0);
                   rt88h.frame(0);
@@ -2560,49 +2565,49 @@ setTimeout(function () {
                   var rt90c = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: ['t'], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('if_then', blkCond(blkRaw('gt', { a: { b: blkRaw('timer') }, b: '0.5' })), null, [blkRaw('var_set', { name: 't', value: '1' })])) }] })));
                   rt90c.flag(5000);
                   rt90c.frame(6000);
-                  ok(rt90c.vars.t === 1, 'T90c die Stoppuhr zaehlt die Sekunden seit dem Fahnen-Start');
+                  ok(rt90c.vars.t === 1, 'T90c die Stoppuhr zaehlt die Sekunden seit dem Start');
 
                   /* T91: Stift und Sprechblase */
                   var rt91 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('pen_down', {}, blkRaw('move_steps', { steps: '100' })))));
                   rt91.flag(0);
                   rt91.frame(0);
-                  ok(rt91.pen.segments.length === 1 && rt91.pen.segments[0].x2 === 100, 'T91 Stift ab zeichnet beim Bewegen eine Spur');
+                  ok(rt91.sprites[0].pen.segments.length === 1 && rt91.sprites[0].pen.segments[0].x2 === 100, 'T91 Stift ab zeichnet beim Bewegen eine Spur');
                   var rt91b = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('pen_down', {}, blkRaw('move_steps', { steps: '50' }, blkRaw('pen_clear'))))));
                   rt91b.flag(0);
                   rt91b.frame(0);
-                  ok(rt91b.pen.segments.length === 0, 'T91b loesche alle Spuren leert die Spuren');
+                  ok(rt91b.sprites[0].pen.segments.length === 0, 'T91b loesche alle Spuren leert die Spuren');
                   var rt91c = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('say_for', { msg: 'Hallo!', secs: '2' }))));
                   rt91c.flag(0);
                   rt91c.frame(0);
-                  ok(rt91c.bubble() !== null && rt91c.bubble().text === 'Hallo!', 'T91c sage ... fuer n Sekunden zeigt die Sprechblase');
+                  ok(rt91c.sprites[0].bubble !== null && rt91c.sprites[0].bubble.text === 'Hallo!', 'T91c sage ... fuer n Sekunden zeigt die Sprechblase');
                   rt91c.frame(2500);
-                  ok(rt91c.bubble() === null, 'T91d die Sprechblase verschwindet nach Ablauf der Zeit');
+                  ok(rt91c.sprites[0].bubble === null, 'T91d die Sprechblase verschwindet nach Ablauf der Zeit');
 
                   /* T92: Serialisierung und Validierung */
                   var blkSer = BLK.serializeProgram(blkParsed);
-                  ok(blkSer.v === 1 && blkSer.scripts.length === 1 && blkSer.scripts[0].top.next.op === 'say_for', 'T92 das Programm serialisiert sich mit Skripten, Feldern und Ketten');
+                  ok(blkSer.v === 2 && blkSer.sprites.length === 1 && blkSer.sprites[0].scripts.length === 1 && blkSer.sprites[0].scripts[0].top.next.op === 'say_for' && blkSer.stage.scripts.length === 0, 'T92 das Programm serialisiert sich mit Figuren, Skripten und Buehne');
                   var blkRawMany = { v: 1, vars: [], sprite: {}, scripts: [] };
                   var i92;
                   for (i92 = 0; i92 < 100; i92++) { blkRawMany.scripts.push({ id: 's' + i92, x: 0, y: 0, top: blkRaw('flag') }); }
                   var blkMany = BLK.parseProgram(JSON.stringify(blkRawMany));
-                  ok(blkMany.scripts.length === 60, 'T92b mehr als 60 Skripte werden auf das Limit begrenzt');
+                  ok(blkMany.sprites[0].scripts.length === 60, 'T92b mehr als 60 Skripte werden auf das Limit begrenzt');
                   var blkEvil = BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('hakemeister', {}, blkRaw('hackemeister_zwei'))) }] }));
-                  ok(blkEvil.scripts.length === 1 && blkEvil.scripts[0].top.next === null, 'T92c unbekannte Bloecke im geladenen JSON entfallen kommentarlos');
+                  ok(blkEvil.sprites[0].scripts.length === 1 && blkEvil.sprites[0].scripts[0].top.next === null, 'T92c unbekannte Bloecke im geladenen JSON entfallen kommentarlos');
 
                   /* T93: Editor-UI am eigenen FakeDoc */
                   var blkUi = BLK.ui;
                   ok(blkUi !== null && typeof blkUi === 'object', 'T93 der Editor initialisiert sich auf der Blöcke-Seite von selbst');
                   ok(blkCatsEl.children.length === 8, 'T93b die Palette listet alle acht Kategorien');
-                  ok(blkPalEl.children.length === 2, 'T93c die Ereignis-Kategorie zeigt Fahne und Tast-Hut');
+                  ok(blkPalEl.children.length === 2, 'T93c die Ereignis-Kategorie zeigt Start- und Tast-Hut');
                   blkCatsEl.children[1].dispatch('click');
                   ok(blkPalEl.querySelector('.blk[data-pal-op="move_steps"]') !== null, 'T93d der Kategorie-Wechsel zeigt die Bewegungs-Bloecke');
                   ok(blkHelpEl.querySelectorAll('.blk-help-row').length === Object.keys(BLK.BLOCKS).length, 'T93e die Befehlsuebersicht erklaert jeden Block der Registry');
-                  var blkBefore = blkUi.program.scripts.length;
+                  var blkBefore = blkUi.program.sprites[0].scripts.length;
                   blkUi.addBlock('flag', 200, 120);
-                  ok(blkUi.program.scripts.length === blkBefore + 1 && blkScriptEl.querySelectorAll('.blk-chain').length === blkBefore + 1, 'T93f ein neuer Fahne-Block entsteht als Skript auf der Flaeche');
-                  var blkDelId = blkUi.program.scripts[blkUi.program.scripts.length - 1].top.id;
+                  ok(blkUi.program.sprites[0].scripts.length === blkBefore + 1 && blkScriptEl.querySelectorAll('.blk-chain').length === blkBefore + 1, 'T93f ein neuer Start-Block entsteht als Skript auf der Flaeche');
+                  var blkDelId = blkUi.program.sprites[0].scripts[blkUi.program.sprites[0].scripts.length - 1].top.id;
                   blkUi.deleteBlockTree(blkDelId);
-                  ok(blkUi.program.scripts.length === blkBefore, 'T93g der Loesch-Knopf entfernt den Block samt Skript');
+                  ok(blkUi.program.sprites[0].scripts.length === blkBefore, 'T93g der Loesch-Knopf entfernt den Block samt Skript');
                   ok(blkUi.addVariable('punkte') === true && blkUi.program.vars.indexOf('punkte') !== -1, 'T93h eine neue Variable landet in der Liste');
                   ok(blkUi.addVariable('punkte') === false, 'T93i doppelte Variablennamen lehnt der Editor ab');
 
@@ -2610,21 +2615,84 @@ setTimeout(function () {
                   blkFetchCalls.length = 0;
                   blkUi.saveNow();
                   ok(blkFetchCalls.length === 1 && blkFetchCalls[0].url === '/werkstatt/code/5', 'T94 das Autospeichern geht als POST auf die Projekt-URL');
-                  
+
                   var blkBodyJson = decodeURIComponent(blkFetchCalls[0].body.split('content=')[1] || '');
-                  ok(blkBodyJson.indexOf('{"v":1') === 0 && blkBodyJson.indexOf('"op":"flag"') !== -1, 'T94c das komplette Skriptmodell wird als JSON gespeichert');
-                  ok(blkJsonEl.value.indexOf('"op":"flag"') !== -1, 'T94d das JSON-Feld fuer den normalen Speichern-Knopf bleibt synchron');
+                  ok(blkBodyJson.indexOf('{"v":2') === 0 && blkBodyJson.indexOf('"op":"flag"') !== -1 && blkBodyJson.indexOf('"sprites"') !== -1 && blkBodyJson.indexOf('"stage"') !== -1, 'T94c das komplette Skriptmodell wird als JSON mit Figuren und Buehne gespeichert');
+                  ok(blkJsonEl.value.indexOf('"op":"flag"') !== -1, 'T94d das JSON-Feld im Formular bleibt synchron');
                   ok(blkSaveinfoEl.textContent.indexOf('automatisch gespeichert') !== -1, 'T94e der Editor meldet den automatischen Speichervorgang im Statusfeld');
 
                   /* T95: Buehne und Lauf in der UI */
                   blkFlagBtn.dispatch('click');
-                  ok(blkUi.runtime() !== null && blkRuninfoEl.textContent.indexOf('läuft') !== -1, 'T95 der Fahne-Knopf startet das Programm auf der Buehne');
+                  ok(blkUi.runtime() !== null && blkRuninfoEl.textContent.indexOf('läuft') !== -1, 'T95 der Start-Knopf startet das Programm auf der Buehne');
                   ok(blkPenEl.__ctx.__calls.indexOf('clearRect') !== -1, 'T95b jeder Start loescht zunaechst alle Spuren von der Buehne');
                   blkUi.tick(0);
                   blkUi.tick(1500);
                   ok(blkCtrEl.__ctx.__calls.indexOf('fillText:🤖') !== -1, 'T95c die Figur zeichnet sich in der Mitte der Buehne');
                   blkUi.tick(2500);
-                  ok(blkUi.runtime().sprite.x === 50, 'T95d nach der Sprechblase laeuft der weitere Block (hier: 50 Schritte)');
+                  ok(blkUi.runtime().sprites[0].x === 50, 'T95d nach der Sprechblase laeuft der weitere Block (hier: 50 Schritte)');
+
+                  /* T96: Formen (#127): Registry traegt die Form je Block,
+                   * der Start-Hut nennt den Play-Knopf (#128). */
+                  var blkKinds = { hat: 0, stack: 0, c: 0, c2: 0, rep: 0, bool: 0 };
+                  var blkAllForms = true;
+                  var op96;
+                  for (op96 in BLK.BLOCKS) {
+                    if (Object.prototype.hasOwnProperty.call(BLK.BLOCKS, op96)) {
+                      if (blkKinds[BLK.BLOCKS[op96].kind] === undefined) { blkAllForms = false; }
+                      else { blkKinds[BLK.BLOCKS[op96].kind]++; }
+                    }
+                  }
+                  ok(blkAllForms && blkKinds.hat >= 2 && blkKinds.stack >= 20 && blkKinds.rep >= 6 && blkKinds.bool >= 8, 'T96 jeder Block traegt seine Form (Hut, Stapel, C, Pille, Sechseck)');
+                  ok(BLK.BLOCKS.flag.parts[0] === 'Wenn ▶ angeklickt wird', 'T96b der Start-Hut nennt den Play-Knopf statt der Fahne');
+
+                  /* T97: Migration von Version 1 auf Version 2 (#125) */
+                  ok(blkParsed.sprites[0].name === 'Figur 1' && blkParsed.sprites[0].id && blkParsed.stage.scripts.length === 0, 'T97 ein altes Programm der Version 1 laedt als Version 2 mit einer Figur und einer Buehne');
+                  var blkRound = BLK.parseProgram(JSON.stringify(BLK.serializeProgram(blkParsed)));
+                  ok(blkRound.v === 2 && blkRound.sprites.length === blkParsed.sprites.length && blkRound.sprites[0].scripts.length === blkParsed.sprites[0].scripts.length && blkRound.stage.scripts.length === 0, 'T97b speichern und laden ergibt denselben Stand (Round-trip)');
+
+                  /* T98: mehrere Figuren, jede mit eigenen Skripten (#125) */
+                  var blkTwo = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('move_steps', { steps: '10' })) }] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: -60, y: 30, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's2', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('move_steps', { steps: '20' })) }] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt98 = BLK.newRuntime(blkTwo);
+                  rt98.flag(0);
+                  rt98.frame(0);
+                  ok(rt98.sprites[0].x === 10 && rt98.sprites[1].x === -40, 'T98b zwei Figuren laufen unabhaengig voneinander (hier: 10 und 20 Schritte)');
+                  var rt98c = BLK.newRuntime(blkTwo);
+                  rt98c.flag(0);
+                  rt98c.stopAll();
+                  ok(rt98c.running() === false && rt98c.sprites[0].x === 0 && rt98c.sprites[1].x === -60, 'T98c stoppe alles haelt beide Figuren an');
+
+                  /* T99: die Buehne als eigenes Ziel (#126) */
+                  var blkStageProg = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: ['buehne'],
+                    sprites: [],
+                    stage: { scripts: [{ id: 'st1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('var_set', { name: 'buehne', value: '1' }, blkRaw('move_steps', { steps: '30' }))) }] }
+                  }));
+                  var rt99 = BLK.newRuntime(blkStageProg);
+                  rt99.flag(0);
+                  rt99.frame(0);
+                  ok(rt99.vars.buehne === 1 && rt99.errors.length === 0 && rt99.sprites.length === 0, 'T99 das Buehnen-Skript laeuft mit und Bewegung stoert die Buehne nicht');
+                  /* Figurenliste + Zielwechsel in der UI */
+                  ok(blkSpritesEl.children.length === 3, 'T98 die Figurenliste zeigt die Buehne, eine Figur und den Figuren-Knopf');
+                  var blkSpr2 = blkUi.addSprite('fish');
+                  ok(blkSpr2 !== null && blkUi.program.sprites.length === 2 && blkSpritesEl.children.length === 4, 'T98d eine neue Figur landet in der Liste und wird zum Ziel');
+                  blkUi.selectTarget(null);
+                  ok(blkUi.isStage() === true && blkCatsEl.children.length === 5, 'T99b die Buehne zeigt nur passende Kategorien (fuenf statt acht)');
+                  blkUi.addBlock('flag', 10, 10);
+                  ok(blkUi.program.stage.scripts.length === 1 && blkUi.program.sprites[0].scripts.length === blkUi.program.sprites[0].scripts.length, 'T99c ein Block auf der Buehne landet im Buehnen-Skript');
+                  blkUi.selectTarget(blkUi.program.sprites[0]);
+                  ok(blkUi.isStage() === false && blkCatsEl.children.length === 8, 'T99d zurueck auf der Figur sind alle acht Kategorien da');
+                  blkUi.deleteSprite(blkUi.program.sprites[1]);
+                  ok(blkUi.program.sprites.length === 1 && blkUi.target() === blkUi.program.sprites[0], 'T99e das Loeschen der zweiten Figur waehlt die erste zurueck');
+                  ok(blkUi.program.stage.scripts.length === 1, 'T99f das Buehnen-Skript bleibt beim Figuren-Wechsel erhalten');
 
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;

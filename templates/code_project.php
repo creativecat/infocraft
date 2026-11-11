@@ -704,7 +704,6 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
         <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
         <textarea name="content" id="blocks-json" aria-hidden="true" spellcheck="false"><?= e($project->content) ?></textarea>
         <div class="btn-row">
-            <button class="btn btn-primary" type="submit" title="Speichern">💾 Speichern</button>
             <span class="save-status" id="blk-saveinfo" hidden></span>
         </div>
     </form>
@@ -720,7 +719,7 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
         </div>
         <aside class="blk-stage-col">
             <div class="blk-stagebar">
-                <button class="btn btn-primary" id="blk-flag" type="button" title="Start: alle Fahne-Skripte laufen los">▶</button>
+                <button class="btn btn-primary" id="blk-flag" type="button" title="Start: alle ▶-Skripte laufen los">▶</button>
                 <button class="btn" id="blk-stop" type="button" title="Stop: alle laufenden Skripte anhalten">⏹</button>
                 <span class="muted" id="blk-runinfo"></span>
             </div>
@@ -728,7 +727,8 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
                 <canvas id="blk-pen" width="480" height="360"></canvas>
                 <canvas id="blk-ctr" width="480" height="360"></canvas>
             </div>
-            <p class="muted blk-stage-hint">Bühne 480 × 360. Die Mitte ist x = 0, y = 0; oben ist y = 180. Richtung: 0 Grad schaut nach oben, 90 Grad nach rechts.</p>
+            <div class="blk-sprites" id="blk-sprites"></div>
+            <p class="muted blk-stage-hint">Bühne 480 × 360. Die Mitte ist x = 0, y = 0; oben ist y = 180. Richtung: 0 Grad schaut nach oben, 90 Grad nach rechts. Wähle oben eine Figur oder die Bühne aus, um ihre Skripte zu bearbeiten.</p>
         </aside>
     </div>
     <section class="panel">
