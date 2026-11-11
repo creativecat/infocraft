@@ -2694,6 +2694,121 @@ setTimeout(function () {
                   ok(blkUi.program.sprites.length === 1 && blkUi.target() === blkUi.program.sprites[0], 'T99e das Loeschen der zweiten Figur waehlt die erste zurueck');
                   ok(blkUi.program.stage.scripts.length === 1, 'T99f das Buehnen-Skript bleibt beim Figuren-Wechsel erhalten');
 
+                  /* T100-T100e (#129): Block aus der Mitte/Unten eines Stapels
+                   * wegnehmen darf den Rest des Stapels nie verlieren. Vorher
+                   * meldete findBlockPos jeden Block der next-Kette mit
+                   * parentKind 'top' und der Editor raeumte das GESAMTE Skript
+                   * weg. Eigener FakeDoc mit vollstaendigen Rechtecken (auch
+                   * right/bottom, sonst ist dist() NaN) und Pointer-Events
+                   * wie im Browser; der Editor wird je Szenario frisch
+                   * geladen, damit keine Handler aelterer Instanzen am
+                   * selben Dokument haengen. */
+                  var blkDragDoc = new FakeDoc();
+                  (function () {
+                    var d = blkDragDoc;
+                    function reg2(id, tag) { var e = d.createElement(tag || 'div'); d.register(e, id); return e; }
+                    var pal2 = reg2('blk-pal');
+                    var wrap2 = reg2('blk-scriptwrap');
+                    var scr2 = reg2('blk-script');
+                    reg2('blk-ide'); reg2('blk-cats'); reg2('blk-help'); reg2('blk-sprites');
+                    reg2('blk-flag', 'button'); reg2('blk-stop', 'button'); reg2('blk-runinfo');
+                    reg2('blk-saveinfo'); reg2('blk-var-add', 'button');
+                    reg2('blk-pen', 'canvas'); reg2('blk-ctr', 'canvas');
+                    var f2 = reg2('blocks-save-form', 'form');
+                    f2.setAttribute('action', '/x');
+                    var cs2 = new FakeEl('input'); cs2.setAttribute('name', 'csrf'); cs2.value = 'tok'; f2.appendChild(cs2);
+                    var ti2 = new FakeEl('input'); ti2.setAttribute('name', 'title'); ti2.value = 'B'; f2.appendChild(ti2);
+                    var jt2 = new FakeEl('textarea'); d.register(jt2, 'blocks-json');
+                    pal2.getBoundingClientRect = function () { return { left: 8, top: 100, width: 160, height: 500, right: 168, bottom: 600 }; };
+                    wrap2.getBoundingClientRect = function () { return { left: 200, top: 100, width: 600, height: 500, right: 800, bottom: 600 }; };
+                    scr2.getBoundingClientRect = function () { return { left: 200, top: 100, width: 600, height: 500, right: 800, bottom: 600 }; };
+                    blkDragDoc.scriptEl = scr2;
+                    blkDragDoc.jsonEl = jt2;
+                  })();
+                  function blkDragFresh() {
+                    blkDragDoc.jsonEl.value = JSON.stringify({
+                      v: 2, vars: [], sprites: [{ id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true, scripts: [{
+                        id: 's1', x: 24, y: 16,
+                        top: { op: 'flag', id: 'b1', f: {}, sub: [],
+                          next: { op: 'say_for', id: 'b2', f: { msg: { v: 'Hallo!' }, secs: { v: '2' } }, sub: [],
+                            next: { op: 'move_steps', id: 'b3', f: { steps: { v: '50' } }, sub: [], next: null } } }
+                      }] }], stage: { scripts: [] }
+                    });
+                    var dSaved = global.document;
+                    global.document = blkDragDoc;
+                    delete require.cache[require.resolve('../public/assets/js/block-editor.js')];
+                    var B2 = require('../public/assets/js/block-editor.js');
+                    blkDragDoc.setRects = function () {
+                      var y = 116;
+                      for (var c = 0; c < blkDragDoc.scriptEl.children.length; c++) {
+                        var kids = blkDragDoc.scriptEl.children[c].children;
+                        for (var k = 0; k < kids.length; k++) {
+                          (function (bb, yy) { bb.getBoundingClientRect = function () { return { left: 224, top: yy, width: 180, height: 34, right: 404, bottom: yy + 34 }; }; })(kids[k], y);
+                          y += 34;
+                        }
+                        y += 20;
+                      }
+                    };
+                    blkDragDoc.restoreDoc = function () { global.document = dSaved; };
+                    return B2.ui; /* Autoboot hat an blkDrag attached */
+                  }
+                  function blkDragOps(ui) {
+                    var out = [];
+                    var spr = ui.program.sprites[0];
+                    for (var i = 0; i < spr.scripts.length; i++) {
+                      var s = [], n = spr.scripts[i].top;
+                      while (n) { s.push(n.op); n = n.next; }
+                      out.push(s.join(','));
+                    }
+                    return out;
+                  }
+                  function blkDragPull(elIdx, sx, sy, moves, ex, ey) {
+                    var el = blkDragDoc.scriptEl.children[0].children[elIdx];
+                    el.dispatch('pointerdown', { clientX: sx, clientY: sy, pointerId: 1 });
+                    for (var i = 0; i < moves.length; i++) {
+                      blkDragDoc._fire('pointermove', { clientX: moves[i][0], clientY: moves[i][1], pointerId: 1 });
+                      blkDragDoc.setRects();
+                    }
+                    blkDragDoc._fire('pointerup', { clientX: ex, clientY: ey, pointerId: 1 });
+                  }
+
+                  var ui2 = blkDragFresh();
+                  blkDragPull(2, 250, 200, [[250, 212], [260, 260], [500, 400]], 500, 400);
+                  var opsA = blkDragOps(ui2);
+                  blkDragDoc.restoreDoc();
+                  ok(opsA.length === 2 && opsA[0] === 'flag,say_for' && opsA[1] === 'move_steps', 'T100 der unterste Block loest nur sich, der Rest des Stapels bleibt');
+
+                  var ui2 = blkDragFresh();
+                  blkDragPull(2, 250, 200, [[250, 212], [150, 300]], 80, 320);
+                  var opsB = blkDragOps(ui2);
+                  blkDragDoc.restoreDoc();
+                  ok(opsB.length === 1 && opsB[0] === 'flag,say_for', 'T100b Loeschen per Palette trifft nur den gezogenen Block, nicht den Stapel');
+
+                  var ui2 = blkDragFresh();
+                  var elC = blkDragDoc.scriptEl.children[0].children[2];
+                  elC.dispatch('pointerdown', { clientX: 250, clientY: 200, pointerId: 1 });
+                  blkDragDoc._fire('pointermove', { clientX: 250, clientY: 212, pointerId: 1 });
+                  blkDragDoc.setRects();
+                  blkDragDoc._fire('pointercancel', { clientX: 250, clientY: 212, pointerId: 1 });
+                  var opsC = blkDragOps(ui2);
+                  blkDragDoc.restoreDoc();
+                  ok(opsC.length === 1 && opsC[0] === 'flag,say_for,move_steps', 'T100c pointercancel nach dem Loesen stellt den Block an seinen alten Platz');
+
+                  var ui2 = blkDragFresh();
+                  var midRow = blkDragDoc.scriptEl.children[0].children[1].children[0];
+                  var midX = null;
+                  for (var qx = 0; qx < midRow.children.length; qx++) { if (midRow.children[qx].tagName === 'BUTTON') { midX = midRow.children[qx]; } }
+                  if (midX) { midX.dispatch('click', {}); }
+                  var opsD = blkDragOps(ui2);
+                  blkDragDoc.restoreDoc();
+                  ok(midX && opsD.length === 1 && opsD[0] === 'flag', 'T100d ✕ auf einen Mittelblock loescht nur ihn und seinen Teilbaum');
+
+                  var ui2 = blkDragFresh();
+                  blkDragPull(1, 250, 160, [[250, 172], [500, 400]], 500, 400);
+                  var opsE = blkDragOps(ui2);
+                  blkDragDoc.restoreDoc();
+                  ok(opsE.length === 2 && opsE[0] === 'flag' && opsE[1] === 'say_for,move_steps', 'T100e der Mittelblock nimmt nur seinen eigenen Teilbaum mit');
+
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;
 

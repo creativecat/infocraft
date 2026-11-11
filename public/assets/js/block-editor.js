@@ -1216,7 +1216,13 @@
               if (result) { return; }
             }
           }
+          /* Weiter in der Kette: der Nachfolger haengt am aktuellen Block
+           * ('next'), nicht mehr am Kettenanfang (#129: vorher trug jeder
+           * Block unter dem Hut parentKind 'top' und loeschte beim
+           * Wegnehmen den ganzen Stapel). */
+          var prev = n;
           n = n.next;
+          if (n) { parentKind = 'next'; parentNode = prev; }
         }
       }
       for (i = 0; i < list.length; i++) {
