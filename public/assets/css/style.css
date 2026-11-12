@@ -2459,9 +2459,9 @@ table.delta { border-collapse: collapse; font-family: var(--font-mono, monospace
     border-radius: 8px; color: var(--muted, #64748b); cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
-.ibook-navtoggle::after { content: '☰'; font-size: 0.95rem; line-height: 1; }
+.ibook-navtoggle::after { content: '«'; font-size: 1.05rem; line-height: 1; letter-spacing: -1px; }
 .ibook-navtoggle:hover { background: rgba(29, 78, 216, 0.06); color: #1d4ed8; border-color: #a5b4fc; }
-.ibook-navtoggle.ibook-navtoggle-off::after { content: '▸'; }
+.ibook-navtoggle.ibook-navtoggle-off::after { content: '»'; }
 
 /* #185: Breadcrumb in der Kopfzeile beider Ansichten: Buch > Abschnitt >
  * (Seite). Zeigt immer den Standort, der Buch-Eintrag startet die zuletzt
@@ -2534,3 +2534,35 @@ table.delta { border-collapse: collapse; font-family: var(--font-mono, monospace
 .icv-clsbox-comp { padding: 5px 10px; }
 .icv-clsbox-comp + .icv-clsbox-comp { border-top: 1px solid #93c5fd; }
 .icv-clsbox-empty { color: var(--muted, #64748b); font-style: italic; font-size: 0.72rem; }
+
+/* =====================================================================
+ * Runde 23 (#191-#194): Praesentations-Schritte am Element, eigene
+ * Einblend-Animationen, Schritt-Badge im Editor, neues Icon fuer das
+ * Ein-/Ausklappen der Navigation, Beispiel-Buchpakete siehe
+ * docs/beispielpakete.
+ * ===================================================================== */
+
+/* #191: Einblend-Animationen im Praesentationsmodus. slide-step-in
+ * ist die Weiterentwicklung von 0.22.0 (Blenden), die Daten-Attribute
+ * am Element waehlen die Variante. */
+@keyframes slide-in-up { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+@keyframes slide-in-left { from { opacity: 0; transform: translateX(-36px); } to { opacity: 1; transform: none; } }
+@keyframes slide-in-zoom { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: none; } }
+.slide-step-in[data-anim="up"] { animation: slide-in-up 380ms ease-out; }
+.slide-step-in[data-anim="left"] { animation: slide-in-left 380ms ease-out; }
+.slide-step-in[data-anim="zoom"] { animation: slide-in-zoom 380ms ease-out; }
+/* Flaeche der Folie passt in den Bildschirm: Hoehe begrenzt, Breite
+ * folgt dem Verhaeltnis (Inline-Style aus der Vorlage). */
+.slide .icv-stage { margin: 0 auto; }
+
+/* #191: Schritt-Badge im Editor (analog zum Link-Badge, unten rechts,
+ * mit der Schritt-Nummer). */
+.icv-stepbadge {
+    position: absolute; right: -9px; bottom: -9px; min-width: 22px; height: 20px; z-index: 6;
+    background: #7c3aed; color: #ffffff; border: 2px solid #ffffff; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;
+    padding: 0 5px; pointer-events: none;
+}
+/* Schritt-Feld im Kontextbereich: schmal, mit Beschriftung davor. */
+.icv-ctx-steplabel { font-size: 0.78rem; font-weight: 600; color: #334155; }
+.icv-ctx-step { width: 64px; text-align: center; }

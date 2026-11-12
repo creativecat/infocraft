@@ -2917,6 +2917,7 @@
       }, 0);
     }
     refreshLinkBadge(div, item); /* verlinktes Element zeigt das Badge (#73) */
+    refreshStepBadge(div, item); /* Schritt-Badge fuer die Praesentation (#191) */
     /* Vier Ecken zum Skalieren (#67), sichtbar nur bei Auswahl (CSS). */
     var corners = ['nw', 'ne', 'sw', 'se'];
     for (var ci = 0; ci < corners.length; ci++) {
@@ -3055,6 +3056,56 @@
     collect(); markDirty();
   });
   ctxLink.appendChild(ctxLinkSel);
+  /* Präsentations-Schritt (#191): Reihenfolge der Einblendung festlegen.
+   * 0 oder leer = sofort mit der Folie, gleiche Nummern erscheinen
+   * zusammen; die Animation ist die Art des Einblendens. */
+  var ctxPres = el('div', 'icv-ctx-group');
+  var ctxStep = el('input', 'icv-ctx-input icv-ctx-step');
+  ctxStep.type = 'number';
+  ctxStep.min = '0';
+  ctxStep.max = '99';
+  ctxStep.title = 'Präsentation: In welchem Schritt erscheint dieses Element? Gleiche Nummern erscheinen zusammen, 0 = sofort mit der Folie.';
+  ctxStep.setAttribute('aria-label', 'Präsentationsschritt dieses Elements');
+  ctxStep.addEventListener('input', function () {
+    if (!sel) { return; }
+    var v = parseInt(ctxStep.value, 10);
+    if (!isNaN(v) && v > 0) { sel.step = Math.min(99, Math.max(1, v)); }
+    else { delete sel.step; }
+    refreshStepBadge(selDiv, sel);
+    collect(); markDirty();
+  });
+  var ctxAnim = el('select', 'icv-ctx-select');
+  ctxAnim.title = 'Präsentation: Wie blendet dieses Element ein?';
+  ctxAnim.setAttribute('aria-label', 'Einblend-Animation dieses Elements');
+  [['', 'Einblenden (Standard)'], ['fade', 'Weich einblenden'], ['up', 'Von unten'], ['left', 'Von links'], ['zoom', 'Zoom']].forEach(function (pair) {
+    var o = el('option', '', pair[1]);
+    o.value = pair[0];
+    ctxAnim.appendChild(o);
+  });
+  ctxAnim.addEventListener('change', function () {
+    if (!sel) { return; }
+    if (ctxAnim.value) { sel.anim = ctxAnim.value; } else { delete sel.anim; }
+    collect(); markDirty();
+  });
+  var ctxPresLabel = el('span', 'icv-ctx-steplabel', 'Schritt');
+  ctxPres.appendChild(ctxPresLabel);
+  ctxPres.appendChild(ctxStep);
+  ctxPres.appendChild(ctxAnim);
+  function refreshStepBadge(div, item) {
+    if (!div || !div.querySelector || !div.removeChild) { return; }
+    var old = div.querySelector('.icv-stepbadge');
+    if (item && item.step) {
+      if (!old) {
+        var b = el('div', 'icv-stepbadge', String(item.step));
+        b.title = 'Erscheint in der Präsentation in Schritt ' + item.step + ' (im Kontextbereich aenderbar)';
+        div.appendChild(b);
+      } else {
+        old.textContent = String(item.step);
+      }
+    } else if (old && old.parentNode === div) {
+      div.removeChild(old);
+    }
+  }
   function refreshLinkBadge(div, item) {
     if (!div || !div.querySelector || !div.removeChild) { return; }
     var old = div.querySelector('.icv-linkbadge');
@@ -3102,6 +3153,7 @@
   ctxBar.appendChild(ctxText);
   ctxBar.appendChild(ctxEmbed);
   ctxBar.appendChild(ctxLink);
+  ctxBar.appendChild(ctxPres);
 
   function updateCtx() {
     if (!ctxBar.classList) { return; }
@@ -3117,6 +3169,7 @@
       if (ctxText.style) { ctxText.style.display = 'none'; }
       if (ctxEmbed.style) { ctxEmbed.style.display = 'none'; }
       if (ctxLink.style) { ctxLink.style.display = 'none'; }
+      if (ctxPres.style) { ctxPres.style.display = 'none'; }
       if (grpBtn.style) { grpBtn.style.display = ''; }
       var sameGroup = selList.every(function (it) { return it.g && it.g === selList[0].g; });
       if (ungrpBtn.style) { ungrpBtn.style.display = sameGroup ? '' : 'none'; }
@@ -3127,6 +3180,10 @@
       /* Seiten-Link (#73): passt zu jedem Element, nur die Auswahl braucht Ziele. */
       if (ctxLink.style) { ctxLink.style.display = navPages.length > 0 ? '' : 'none'; }
       if (navPages.length > 0) { ctxLinkSel.value = sel && sel.link ? String(sel.link) : ''; }
+      /* Präsentations-Schritt (#191): gehoert zu jedem einzelnen Element. */
+      if (ctxPres.style) { ctxPres.style.display = ''; }
+      ctxStep.value = sel && sel.step ? String(sel.step) : '0';
+      ctxAnim.value = (sel && sel.anim) || '';
       if (grpBtn.style) { grpBtn.style.display = 'none'; }
       if (ungrpBtn.style) { ungrpBtn.style.display = (sel && sel.g) ? '' : 'none'; }
       if (sel.kind === 'embed') { ctxUrl.value = sel.url || ''; ctxTitle.value = sel.title || ''; }
@@ -3716,6 +3773,8 @@
         e.w = num(item.w || 320, 2);
         if (item.g) { e.g = item.g; } /* Gruppen-ID (#68): Objekte bewegen sich gemeinsam */
         if (item.link) { e.link = item.link; } /* Seiten-Link (#73) */
+        if (item.step) { e.step = item.step; } /* Präsentationsschritt (#191) */
+        if (item.anim) { e.anim = item.anim; } /* Einblend-Animation (#191) */
         if (item.kind === 'image' || item.kind === 'ink' || item.kind === 'video') { e.h = num(item.h || 120, 2); }
         return e;
       })
@@ -4542,19 +4601,20 @@
 })();
 
 
-/* InfoBook Präsentationsmodus (#177, #188): Folien-Navigation und
+/* InfoBook Präsentationsmodus (#177, #188, #191): Folien-Navigation und
  * Elemente-Einblendung per Klick statt Autoplay mit Zeitsteuerung.
- * Klick, Leertaste oder Pfeil rechts blenden das nächste Element der
- * Folie ein (slide-step-hidden raus, slide-step-in als Animation),
- * Pfeil links blendet in umgekehrter Reihenfolge wieder aus; ist eine
- * Folie komplett sichtbar, geht der nächste Klick zur nächsten Folie,
- * der Weg zurück zeigt Folien wieder komplett aufgedeckt. Titel und
- * Bereichs-Pill (ibook-slide-section) bleiben immer sichtbar. Die
- * Logik laeuft als IC_PRESENT-Modul wie die anderen InfoBook-Werkzeuge,
- * reine Helfer (stepsOf, stepInfoText, nextIndex) haengen an window,
- * damit die UI-Tests sie direkt pruefen koennen. Folien ohne
- * ibook-slide-blocks (aeltere Präsentationsansicht) haben keine
- * Einblend-Schritte, Klick blaettert dort direkt um. */
+ * #191: Die Reihenfolge steht am Element selbst (data-step): Elemente
+ * mit gleicher Schritt-Nummer erscheinen ZUSAMMEN, die Schritte der
+ * Reihe nach (Klick, Leertaste, Pfeil rechts); Pfeil links blendet
+ * rückwärts wieder aus. data-anim wählt die Einblend-Animation
+ * (fade/up/left/zoom). Ist eine Folie komplett sichtbar, geht der
+ * nächste Klick zur nächsten Folie, der Weg zurück zeigt Folien
+ * wieder komplett aufgedeckt. Titel und Bereichs-Pill
+ * (ibook-slide-section) bleiben immer sichtbar. Folien OHNE
+ * data-step-Elemente fallen auf die Block-Ebene zurück (jedes Kind
+ * von ibook-slide-blocks ist ein Schritt, wie in 0.22.0). Reine
+ * Helfer (stepsOf, stepInfoText, nextIndex) haengen an window, damit
+ * die UI-Tests sie direkt pruefen koennen. */
 (function () {
   'use strict';
   if (typeof window === 'undefined') { return; }
@@ -4564,26 +4624,42 @@
     if (n >= count) { return loop ? 0 : count - 1; }
     return n;
   }
-  /* Revealbare Elemente einer Folie: Kinder von .ibook-slide-blocks in
-   * Seitenreihenfolge, ohne die Bereichs-Pill (bleibt immer sichtbar). */
+  /* Schritt-Gruppen einer Folie: Elemente mit data-step werden nach
+   * Nummer sortiert, gleiche Nummern bilden eine Gruppe und erscheinen
+   * zusammen. Ohne data-step im Blockkasten faellt die Folie auf die
+   * Block-Ebene zurueck: jedes direkte Kind (ohne die Bereichs-Pill)
+   * ist ein Schritt. */
   function stepsOf(slideEl) {
     if (!slideEl || !slideEl.querySelector || !slideEl.querySelectorAll) { return []; }
     var box = slideEl.querySelector('.ibook-slide-blocks');
-    if (!box || !box.children) { return []; }
-    var out = [];
-    for (var i = 0; i < box.children.length; i++) {
-      var ch = box.children[i];
+    if (!box || !box.querySelectorAll) { return []; }
+    var stepped = box.querySelectorAll('[data-step]');
+    var groups = [];
+    if (stepped && stepped.length > 0) {
+      var byNum = {};
+      for (var i = 0; i < stepped.length; i++) {
+        var st = stepped[i];
+        var n = parseInt(st.getAttribute('data-step'), 10) || 0;
+        if (!byNum[n]) { byNum[n] = { n: n, els: [] }; groups.push(byNum[n]); }
+        byNum[n].els.push(st);
+      }
+      groups.sort(function (a, b) { return a.n - b.n; });
+      return groups;
+    }
+    if (!box.children) { return []; }
+    for (var j = 0; j < box.children.length; j++) {
+      var ch = box.children[j];
       if (!ch || !ch.classList) { continue; }
       if (ch.classList.contains('ibook-slide-section')) { continue; }
-      out.push(ch);
+      groups.push({ n: groups.length + 1, els: [ch] });
     }
-    return out;
+    return groups;
   }
-  /* Anzeige fuer die Kopfzeile: nennt das Element, das der naechste
+  /* Anzeige fuer die Kopfzeile: nennt den Schritt, den der naechste
    * Klick einblendet; ist alles sichtbar, bleibt die Anzeige leer. */
   function stepInfoText(revealed, total) {
     if (!total || total <= 1 || revealed >= total) { return ''; }
-    return 'Element ' + (revealed + 1) + ' / ' + total;
+    return 'Schritt ' + (revealed + 1) + ' / ' + total;
   }
   window.IC_PRESENT = {
     nextIndex: nextIndex,
@@ -4600,14 +4676,18 @@
     if (!stepsCache[current]) { stepsCache[current] = stepsOf(slides[current]); }
     return stepsCache[current];
   }
-  function showStep(el, on) {
-    if (!el || !el.classList) { return; }
-    if (on) {
-      el.classList.remove('slide-step-hidden');
-      el.classList.add('slide-step-in');
-    } else {
-      el.classList.add('slide-step-hidden');
-      el.classList.remove('slide-step-in');
+  function showStep(group, on) {
+    if (!group || !group.els) { return; }
+    for (var i = 0; i < group.els.length; i++) {
+      var el = group.els[i];
+      if (!el || !el.classList) { continue; }
+      if (on) {
+        el.classList.remove('slide-step-hidden');
+        el.classList.add('slide-step-in');
+      } else {
+        el.classList.add('slide-step-hidden');
+        el.classList.remove('slide-step-in');
+      }
     }
   }
   function updateStepInfo() {
@@ -4621,7 +4701,7 @@
     current = n;
     if (slides[current] && slides[current].classList) { slides[current].classList.add('slide-active'); }
     if (counter) { counter.textContent = (current + 1) + ' / ' + slides.length; }
-    /* #188: Neue Folie startet mit verborgenen Elementen; beim
+    /* #188/#191: Neue Folie startet mit verborgenen Schritten; beim
      * Zurueckblaettern erscheint die Folie komplett aufgedeckt. */
     var steps = stepsOfCurrent();
     revealed = revealAll ? steps.length : 0;

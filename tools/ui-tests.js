@@ -3879,13 +3879,14 @@ setTimeout(function () {
                   stepBox123.appendChild(stepB123);
                   stepSlide123.appendChild(stepBox123);
                   var steps123 = global.window.IC_PRESENT.stepsOf(stepSlide123);
-                  ok(steps123.length === 2 && steps123[0] === stepA123 && steps123[1] === stepB123,
-                    'T123c die Einblend-Schritte sind die Elemente der Folie, ohne die Bereichs-Pill (#188)');
-                  ok(global.window.IC_PRESENT.stepInfoText(0, 2) === 'Element 1 / 2'
-                    && global.window.IC_PRESENT.stepInfoText(1, 2) === 'Element 2 / 2'
+                  ok(steps123.length === 2 && steps123[0].els.length === 1 && steps123[0].els[0] === stepA123
+                    && steps123[1].els[0] === stepB123,
+                    'T123c ohne Schrittnummern ist jedes Element der Folie ein Schritt, ohne die Bereichs-Pill (#188, #191)');
+                  ok(global.window.IC_PRESENT.stepInfoText(0, 2) === 'Schritt 1 / 2'
+                    && global.window.IC_PRESENT.stepInfoText(1, 2) === 'Schritt 2 / 2'
                     && global.window.IC_PRESENT.stepInfoText(2, 2) === ''
                     && global.window.IC_PRESENT.stepInfoText(0, 1) === '',
-                    'T123d die Schritt-Anzeige nennt das nächste Element und schweigt, wenn alles sichtbar ist (#188)');
+                    'T123d die Schritt-Anzeige nennt den nächsten Schritt und schweigt, wenn alles sichtbar ist (#188, #191)');
                   /* Folgeseite mit zwei Folien nachbauen, jede mit zwei
                    * Elementen unter der Bereichs-Pill. Boot laeuft beim
                    * Einbinden von app.js, weil das Fake-DOM nie "loading" ist. */
@@ -3924,11 +3925,11 @@ setTimeout(function () {
                   require('../public/assets/js/app.js');
                   ok(sl1_123.slide.classList.contains('slide-active') && pCounter123.textContent === '1 / 2'
                     && sl1_123.b1.classList.contains('slide-step-hidden') && sl1_123.b2.classList.contains('slide-step-hidden')
-                    && pStep123.textContent === 'Element 1 / 2',
+                    && pStep123.textContent === 'Schritt 1 / 2',
                     'T123e der Boot zeigt die erste Folie und haelt ihre Elemente zurueck (#188)');
                   pNext123.dispatch('click');
                   ok(sl1_123.b1.classList.contains('slide-step-in') && !sl1_123.b1.classList.contains('slide-step-hidden')
-                    && sl1_123.b2.classList.contains('slide-step-hidden') && pStep123.textContent === 'Element 2 / 2',
+                    && sl1_123.b2.classList.contains('slide-step-hidden') && pStep123.textContent === 'Schritt 2 / 2',
                     'T123f der Weiter-Knopf blendet das erste Element einzeln per Klick ein (#188)');
                   pNext123.dispatch('click');
                   ok(!sl1_123.b2.classList.contains('slide-step-hidden') && pStep123.textContent === '',
@@ -3943,7 +3944,7 @@ setTimeout(function () {
                     'T123i der Rueck-Knopf zeigt die vorige Folie komplett aufgedeckt (#188)');
                   pPrev123.dispatch('click');
                   ok(sl1_123.b2.classList.contains('slide-step-hidden') && !sl1_123.b1.classList.contains('slide-step-hidden')
-                    && pStep123.textContent === 'Element 2 / 2',
+                    && pStep123.textContent === 'Schritt 2 / 2',
                     'T123j auf der Folie blendet der Rueck-Knopf das zuletzt eingeblendete Element wieder aus (#188)');
                   presDoc123._fire('keydown', { key: 'ArrowRight', preventDefault: function () {} });
                   ok(!sl1_123.b2.classList.contains('slide-step-hidden') && pStep123.textContent === '',
@@ -4079,6 +4080,128 @@ setTimeout(function () {
                     && navJs126.indexOf('IC_EDIT_TOOLS.clsCard') !== -1
                     && navJs126.indexOf('clsCardDetail(name, code)') !== -1,
                     'T126l Editor und Lesemodus zeichnen die Klassenkarte aus demselben Baustein (#190)');
+
+                  /* T127 (#191-#194): Runde 23. Praesentations-Schritte am
+                   * Element: data-step gruppiert und sortiert, gleiche
+                   * Nummern erscheinen zusammen; der Editor setzt Schritt
+                   * und Animation im Kontextbereich, Badge am Element. */
+                  var grpSlide127 = new FakeEl('section');
+                  var grpBox127 = new FakeEl('div');
+                  grpBox127.className = 'ibook-slide-blocks';
+                  var grpPill127 = new FakeEl('p');
+                  grpPill127.className = 'pill ibook-slide-section';
+                  grpBox127.appendChild(grpPill127);
+                  var grpEls127 = [];
+                  [[2, 'a'], [1, 'b'], [1, 'c'], [3, 'd']].forEach(function (pair) {
+                    var e = new FakeEl('p');
+                    e.setAttribute('data-step', String(pair[0]));
+                    e.textContent = 'El ' + pair[1];
+                    grpBox127.appendChild(e);
+                    grpEls127.push(e);
+                  });
+                  grpSlide127.appendChild(grpBox127);
+                  var grp127 = global.window.IC_PRESENT.stepsOf(grpSlide127);
+                  ok(grp127.length === 3 && grp127[0].n === 1 && grp127[0].els.length === 2
+                    && grp127[0].els[0] === grpEls127[1] && grp127[0].els[1] === grpEls127[2]
+                    && grp127[1].els[0] === grpEls127[0] && grp127[2].els[0] === grpEls127[3],
+                    'T127 data-step sortiert die Schritte aufsteigend, gleiche Nummern bilden eine Gruppe (#191)');
+
+                  /* Folgenseite mit einer Schritt-Folie und einer Fallback-
+                   * Folie: Boot verhaelt beide wie erwartet. */
+                  delete require.cache[presPath123];
+                  var presDoc127 = new FakeDoc();
+                  var stage127 = new FakeEl('div');
+                  stage127.setAttribute('data-ibook', '47');
+                  var slA127 = new FakeEl('section');
+                  slA127.className = 'slide';
+                  var boxA127 = new FakeEl('div');
+                  boxA127.className = 'ibook-slide-blocks';
+                  var pillA127 = new FakeEl('p');
+                  pillA127.className = 'pill ibook-slide-section';
+                  boxA127.appendChild(pillA127);
+                  var s1a127 = new FakeEl('p');
+                  s1a127.setAttribute('data-step', '1');
+                  var s1b127 = new FakeEl('p');
+                  s1b127.setAttribute('data-step', '1');
+                  var s1c127 = new FakeEl('p');
+                  s1c127.setAttribute('data-step', '2');
+                  boxA127.appendChild(s1a127);
+                  boxA127.appendChild(s1b127);
+                  boxA127.appendChild(s1c127);
+                  slA127.appendChild(boxA127);
+                  var slB127 = new FakeEl('section');
+                  slB127.className = 'slide';
+                  var boxB127 = new FakeEl('div');
+                  boxB127.className = 'ibook-slide-blocks';
+                  var bx127 = new FakeEl('p');
+                  var by127 = new FakeEl('p');
+                  boxB127.appendChild(bx127);
+                  boxB127.appendChild(by127);
+                  slB127.appendChild(boxB127);
+                  stage127.appendChild(slA127);
+                  stage127.appendChild(slB127);
+                  presDoc127.register(stage127, 'slide-stage');
+                  var c127 = new FakeEl('span'); presDoc127.register(c127, 'slide-counter');
+                  var pr127 = new FakeEl('button'); presDoc127.register(pr127, 'slide-prev');
+                  var nx127 = new FakeEl('button'); presDoc127.register(nx127, 'slide-next');
+                  var si127 = new FakeEl('span'); presDoc127.register(si127, 'slide-stepinfo');
+                  global.document = presDoc127;
+                  require('../public/assets/js/app.js');
+                  ok(slA127.classList.contains('slide-active')
+                    && s1a127.classList.contains('slide-step-hidden') && s1b127.classList.contains('slide-step-hidden')
+                    && s1c127.classList.contains('slide-step-hidden') && si127.textContent === 'Schritt 1 / 2',
+                    'T127b der Boot haelt alle Schritte der ersten Folie zurueck (#191)');
+                  nx127.dispatch('click');
+                  ok(!s1a127.classList.contains('slide-step-hidden') && s1a127.classList.contains('slide-step-in')
+                    && !s1b127.classList.contains('slide-step-hidden') && s1b127.classList.contains('slide-step-in')
+                    && s1c127.classList.contains('slide-step-hidden') && si127.textContent === 'Schritt 2 / 2',
+                    'T127c ein Klick blendet eine ganze Schritt-Gruppe gemeinsam ein (#191)');
+                  nx127.dispatch('click');
+                  ok(!s1c127.classList.contains('slide-step-hidden') && si127.textContent === '',
+                    'T127d der zweite Schritt folgt, danach schweigt die Anzeige (#191)');
+                  nx127.dispatch('click');
+                  ok(slB127.classList.contains('slide-active') && bx127.classList.contains('slide-step-hidden')
+                    && c127.textContent === '2 / 2',
+                    'T127e ohne Schrittnummern faellt die Folie auf Block-Ebene zurueck (#188, #191)');
+                  pr127.dispatch('click');
+                  ok(slA127.classList.contains('slide-active') && !s1a127.classList.contains('slide-step-hidden')
+                    && !s1b127.classList.contains('slide-step-hidden') && !s1c127.classList.contains('slide-step-hidden'),
+                    'T127f der Rueckweg zeigt die Folie komplett aufgedeckt (#191)');
+                  pr127.dispatch('click');
+                  ok(s1c127.classList.contains('slide-step-hidden') && !s1b127.classList.contains('slide-step-hidden')
+                    && si127.textContent === 'Schritt 2 / 2',
+                    'T127g der Rueck-Knopf blendet den letzten Schritt wieder aus (#191)');
+
+                  var php127 = require('fs').readFileSync(require.resolve('../src/Models/InfoBook.php'), 'utf8');
+                  ok(php127.indexOf("$it['step'] = $step") !== -1 && php127.indexOf("$it['anim'] = $anim") !== -1
+                    && php127.indexOf("'fade', 'up', 'left', 'zoom'") !== -1 && php127.indexOf('$step > 99') !== -1,
+                    'T127h die Bereinigung behaelt Schritt und Animation je Element, mit Obergrenze (#191)');
+                  var ctrl127 = require('fs').readFileSync(require.resolve('../src/Controllers/InfoBookController.php'), 'utf8');
+                  ok(ctrl127.indexOf('data-step') !== -1 && ctrl127.indexOf('data-anim') !== -1
+                    && ctrl127.indexOf("renderBlock($block, (int) $book->id, $linkPages, 'present')") !== -1
+                    && ctrl127.indexOf('66vh') !== -1,
+                    'T127i der Präsentationsmodus rendert Schrittnummer, Animation und Flaechen-Anpassung (#191)');
+                  var js127 = require('fs').readFileSync(presPath123, 'utf8');
+                  ok(js127.indexOf('icv-ctx-step') !== -1 && js127.indexOf('refreshStepBadge') !== -1
+                    && js127.indexOf('icv-stepbadge') !== -1 && js127.indexOf('e.step = item.step') !== -1
+                    && js127.indexOf('e.anim = item.anim') !== -1,
+                    'T127j der Editor setzt Schritt und Animation im Kontextbereich, Badge und Speicherung folgen (#191)');
+                  var css127 = require('fs').readFileSync(require.resolve('../public/assets/css/style.css'), 'utf8');
+                  ok(css127.indexOf('slide-in-up') !== -1 && css127.indexOf('slide-in-left') !== -1
+                    && css127.indexOf('slide-in-zoom') !== -1 && css127.indexOf('.icv-stepbadge') !== -1,
+                    'T127k die Einblend-Animationen und das Schritt-Badge liegen im Stylesheet (#191)');
+                  ok(css127.indexOf("content: '«'") !== -1 && css127.indexOf("content: '»'") !== -1
+                    && css127.indexOf("content: '☰'") === -1,
+                    'T127l das Ein-/Ausklapp-Icon der Navigation ist kein Hamburger mehr (#192)');
+                  var pageTpl127 = require('fs').readFileSync(require.resolve('../templates/ibook_page.php'), 'utf8');
+                  ok(pageTpl127.indexOf('Freie Fläche') === -1,
+                    'T127m die Ueberschrift "Freie Flaeche" ist aus dem Editor entfernt (#193)');
+                  var pkgIf127 = require('fs').readFileSync(require.resolve('../docs/beispielpakete/if-anweisungen-java.json'), 'utf8');
+                  var pkgVb127 = require('fs').readFileSync(require.resolve('../docs/beispielpakete/vererbung-java.json'), 'utf8');
+                  ok(pkgIf127.indexOf('sections') !== -1 && pkgIf127.indexOf('"step"') !== -1
+                    && pkgVb127.indexOf('sections') !== -1 && pkgVb127.indexOf('"step"') !== -1
+                    && pkgIf127.indexOf('"anim"') !== -1 && pkgVb127.indexOf('"anim"') !== -1,
+                    'T127n die Beispiel-Buchpakete liegen im Import-Format mit Schritten und Animationen (#194)');
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;
 
