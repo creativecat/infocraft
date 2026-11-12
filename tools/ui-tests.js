@@ -1265,3 +1265,2712 @@ setTimeout(function () {
               /* Stift: Strich als eigenes Objekt zeichnen (standardfarbe wechselt vorab) */
               ibDoc.body.querySelector('[data-icv-color="#ef4444"]').dispatch('click');
               ibDoc.body.querySelector('[data-icv-tool="draw"]').dispatch('click');
+              ok(ibStage.classList.contains('icv-mode-draw'), 'T40l Stift-Modus schaltet die Flaeche um');
+              ibInk.dispatch('pointerdown', { clientX: 10, clientY: 10, pointerId: 3, pressure: 0.5 });
+              ibInk.dispatch('pointermove', { clientX: 50, clientY: 30, pointerId: 3, pressure: 0.5 });
+              ibInk.dispatch('pointerup', { pointerId: 3 });
+              var inkCalls = ibInk.__ctx.__calls;
+              ok(inkCalls.indexOf('beginPath') !== -1 && inkCalls.indexOf('stroke') !== -1, 'T40m der Strich zeichnet sich live auf die Ebene ueber allem');
+              var cvInk = ibCollect();
+              var inkA = cvInk && cvInk.items ? cvInk.items.filter(function (it) { return it.kind === 'ink'; })[0] : null;
+              ok(inkA && inkA.c === '#ef4444' && inkA.sw === 4 && inkA.x === 20 && inkA.y === 20 && inkA.w === 80 && inkA.h === 40, 'T40n Stift-Strich landet als Objekt (Farbe, Staerke, Bounding-Box) in collect()');
+              ok(inkA && inkA.p.length === 4 && inkA.p[0] === 0 && inkA.p[1] === 0 && inkA.p[2] === 80 && inkA.p[3] === 40, 'T40o Strichpunkte relativ zum Ursprung, direkt mit der Seite speicherbar');
+
+              /* Auswahl: Strich umfaerben, Staerke aendern, verschieben */
+              ibDoc.body.querySelector('[data-icv-tool="select"]').dispatch('click');
+              var ibStrokeDiv = ibStage.querySelector('.icv-stroke');
+              ok(ibStrokeDiv !== null && ibStrokeDiv.querySelector('path') !== null, 'T40p gezeichneter Strich ist als SVG-Objekt auf der Flaeche');
+              ibStrokeDiv.dispatch('pointerdown', { target: ibStrokeDiv });
+              ibDoc.body.querySelector('[data-icv-color="#3b82f6"]').dispatch('click');
+              ibDoc.body.querySelector('[data-icv-sw="8"]').dispatch('click');
+              var ibStrokePath = ibStage.querySelector('.icv-stroke path');
+              ok(ibStrokePath.getAttribute('stroke') === '#3b82f6' && ibStrokePath.getAttribute('stroke-width') === '8', 'T40q ausgewaehlter Strich laesst Farbe und Staerke nachtraeglich aendern');
+              var ibStrokeMove = ibStage.querySelector('.icv-stroke .icv-move');
+              ibStrokeMove.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 9 });
+              ibStrokeMove.dispatch('pointermove', { clientX: 160, clientY: 50, pointerId: 9 });
+              ibStrokeMove.dispatch('pointerup', { pointerId: 9 });
+              var ibStrokeDiv2 = ibStage.querySelector('.icv-stroke');
+              ok(ibStrokeDiv2.style.left === '21.25%', 'T40r Strich laesst sich wie ein Bild verschieben (21.25%)');
+
+              /* Radierer: Striche wegwischen, Bilder und Textfelder bleiben */
+              ibDoc.body.querySelector('[data-icv-tool="eraser"]').dispatch('click');
+              ok(ibStage.classList.contains('icv-mode-eraser'), 'T40s Radierer-Modus schaltet die Flaeche um');
+              ibInk.dispatch('pointerdown', { clientX: 200, clientY: 70, pointerId: 4 });
+              ibInk.dispatch('pointerup', { pointerId: 4 });
+              ok(ibStage.querySelector('.icv-stroke') === null, 'T40t Radierer entfernt den getroffenen Strich');
+              var cvErased = ibCollect();
+              var inkCount = cvErased && cvErased.items ? cvErased.items.filter(function (it) { return it.kind === 'ink'; }).length : -1;
+              ok(inkCount === 0, 'T40u nur der Strich ist weg, serialisiert ist kein Ink-Objekt mehr');
+
+              /* Einbettung: Platzhalter im Editor, Adresse im Kontextbereich */
+              var ibEmbBtn = null;
+              var ibBarBtns = ibBar.querySelectorAll('button');
+              var ibi;
+              for (ibi = 0; ibi < ibBarBtns.length; ibi++) {
+                /* Icons only (#68): Der Einbettungs-Knopf zeigt nur sein Icon,
+                 * gefunden wird er ueber seine Hover-Beschreibung. */
+                var ibTitle68 = String(ibBarBtns[ibi].title || ibBarBtns[ibi].getAttribute('title') || '');
+                if (ibTitle68.indexOf('einbetten') !== -1 || ibTitle68.indexOf('Einbettung') !== -1) { ibEmbBtn = ibBarBtns[ibi]; }
+              }
+              ibEmbBtn.dispatch('click');
+              var ibEmbDiv = ibStage.querySelector('.icv-embed');
+              ok(ibEmbDiv !== null, 'T40v Einbettung liegt als Platzhalter auf der Flaeche');
+              var ibUrlIn = ibBar.querySelector('.icv-ctx-input');
+              ibUrlIn.value = 'https://learningapps.org/watch?v=abc123';
+              ibUrlIn.dispatch('input');
+              var cvEmb = ibCollect();
+              var embSel = cvEmb && cvEmb.items ? cvEmb.items.filter(function (it) { return it.kind === 'embed'; })[0] : null;
+              ok(embSel && embSel.url === 'https://learningapps.org/watch?v=abc123', 'T40w Einbettungs-Adresse aus dem Kontextbereich wird serialisiert');
+
+              /* Radierer soll Textfeld und Bild unberuehrt lassen */
+              ok(ibStage.querySelector('.icv-text textarea') !== null, 'T40x Textfeld steht noch nach dem Radieren');
+              ok(inkCount === 0 && ibookUrls.indexOf('/infobuecher/77/zeichnung') === -1, 'T40y Striche brauchen keinen PNG-Upload mehr (Speicher-Bug behoben)');
+
+              setTimeout(function () {
+                var ibImg = ibStage.querySelector('.icv-image img');
+                ok(ibImg !== null && ibImg.src === '/infobuecher/medium/4242', 'T40z hochgeladenes Bild liegt nach dem Upload auf der Flaeche');
+                var ibImgDiv = ibStage.querySelector('.icv-image');
+                ok(ibImgDiv.style.left === '40%', 'T40za Bild liegt an der Ablege-Position (40%)');
+                ok(ibookUrls.indexOf('/infobuecher/77/medium') === ibookUrls.lastIndexOf('/infobuecher/77/medium'), 'T40zb genau ein Upload pro abgelegtem Bild');
+                var collected = JSON.parse(ibDoc.getElementById('ibook-blocks-json').value);
+                var cv = collected[0];
+                ok(cv && cv.type === 'canvas' && cv.w === 1600 && cv.h === 1000, 'T40zc collect() schreibt genau den Canvas-Block');
+                var imgItem = cv && cv.items ? cv.items.filter(function (it) { return it.kind === 'image'; })[0] : null;
+                ok(imgItem && imgItem.media === 4242 && imgItem.x === 640 && imgItem.y === 380, 'T40zd Bild mit Medien-ID und Ablege-Position wird serialisiert');
+
+                /* T43 (#66): Loeschen-Knopf direkt am Element: Einbettung
+                 * auswaehlen, auf das rote X am Objekt klicken, Element ist weg. */
+                var ibEmbDiv66 = ibStage.querySelector('.icv-embed');
+                ok(ibEmbDiv66 !== null, 'T43a Einbettung liegt noch vor dem Loesch-Test auf der Flaeche');
+                if (ibEmbDiv66) { ibEmbDiv66.dispatch('pointerdown', { target: ibEmbDiv66 }); }
+                var ibDelBtn66 = ibStage.querySelector('.icv-embed .icv-del');
+                ok(ibDelBtn66 !== null, 'T43b am Element sitzt ein Loeschen-Knopf (icv-del)');
+                if (ibDelBtn66) { ibDelBtn66.dispatch('click', { target: ibDelBtn66 }); }
+                var cvDel66 = ibCollect();
+                var embCount66 = cvDel66 && cvDel66.items ? cvDel66.items.filter(function (it) { return it.kind === 'embed'; }).length : -1;
+                ok(ibStage.querySelector('.icv-embed') === null && embCount66 === 0, 'T43c X am Element entfernt es, serialisiert ist es auch weg');
+
+                /* T44 (#66): Entf-Taste loescht die Auswahl (nicht waehrend der Texteingabe). */
+                ibDoc.body.querySelector('[data-icv-tool="select"]').dispatch('click');
+                ibStage.dispatch('dblclick', { clientX: 300, clientY: 60, target: ibStage });
+                var textCount66 = ibStage.querySelectorAll('.icv-text').length;
+                ok(textCount66 === 2, 'T44a zweites Textfeld steht vor der Entf-Taste auf der Flaeche');
+                ibDoc._fire('keydown', { key: 'Delete', target: ibStage });
+                ok(ibStage.querySelectorAll('.icv-text').length === textCount66 - 1, 'T44b Entf-Taste entfernt das ausgewaehlte Element');
+                var growTa66 = ibStage.querySelector('.icv-text textarea');
+                ok(growTa66 !== null && growTa66.style.height === 'auto', 'T45 Textfeld-Hoehe folgt dem Text (Auto-Grow statt manuellem Ziehen)');
+
+                /* T46 (#66): Strich auf der GANZEN Flaeche greifen und verschieben. */
+                ibDoc.body.querySelector('[data-icv-tool="draw"]').dispatch('click');
+                ibInk.dispatch('pointerdown', { clientX: 10, clientY: 10, pointerId: 66, pressure: 0.5 });
+                ibInk.dispatch('pointermove', { clientX: 50, clientY: 30, pointerId: 66, pressure: 0.5 });
+                ibInk.dispatch('pointerup', { pointerId: 66 });
+                ibDoc.body.querySelector('[data-icv-tool="select"]').dispatch('click');
+                var ibStroke66 = ibStage.querySelector('.icv-stroke');
+                ok(ibStroke66 !== null && ibStroke66.style.left === '1.25%', 'T46a neuer Strich liegt bei 1.25% (20 von 1600)');
+                if (ibStroke66) {
+                  ibStroke66.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 67 });
+                  ibStroke66.dispatch('pointermove', { clientX: 160, clientY: 50, pointerId: 67 });
+                  ibStroke66.dispatch('pointerup', { pointerId: 67 });
+                }
+                var ibStroke66b = ibStage.querySelector('.icv-stroke');
+                ok(ibStroke66b !== null && ibStroke66b.style.left === '21.25%', 'T46b Strich laesst sich an jeder Stelle seiner Flaeche anfassen (21.25%)');
+
+                /* T47 (#67): Waehrend eines Drags duerfen Klicks auf andere
+                 * Objekte die Auswahl NICHT wechseln - erst wenn das Objekt
+                 * wieder liegt, ist die Flaeche frei. */
+                var ibImgDiv67 = ibStage.querySelector('.icv-image');
+                ok(ibImgDiv67 !== null, 'T47a Bild liegt vor dem Drag-Guard-Test auf der Flaeche');
+                if (ibStroke66b) { ibStroke66b.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 70 }); }
+                if (ibImgDiv67) { ibImgDiv67.dispatch('pointerdown', { target: ibImgDiv67 }); }
+                ok(ibImgDiv67 !== null && ibStroke66b.classList.contains('icv-selected') && !ibImgDiv67.classList.contains('icv-selected'), 'T47 waehrend des Drags bleibt die Auswahl beim gezogenen Objekt (Klick aufs Bild waehlt nicht um)');
+                if (ibStroke66b) { ibStroke66b.dispatch('pointerup', { pointerId: 70 }); }
+                ok(ibImgDiv67 !== null && !ibImgDiv67.classList.contains('icv-selected'), 'T47b nach dem Ablegen ist immer noch nichts anderes ausgewaehlt');
+
+                /* T48 (#67): Vier Eck-Handles statt randloser Skalier-Bereich,
+                 * proportionales Skalieren von allen Ecken mit fester Anker-Ecke. */
+                if (ibImgDiv67) { ibImgDiv67.dispatch('pointerdown', { target: ibImgDiv67 }); }
+                var rsCount67 = ibImgDiv67 ? ibImgDiv67.querySelectorAll('.icv-rs').length : -1;
+                ok(rsCount67 === 4, 'T48a das ausgewaehlte Bild hat genau vier Eck-Handles (nur bei Auswahl sichtbar, CSS)');
+                var rsSe67 = ibImgDiv67 ? ibImgDiv67.querySelector('.icv-rs-se') : null;
+                var rsNw67 = ibImgDiv67 ? ibImgDiv67.querySelector('.icv-rs-nw') : null;
+                ok(rsSe67 !== null && rsNw67 !== null, 'T48b alle Ecken sind als eigene Dragzonen da (SE und NW)');
+                if (rsSe67) {
+                  rsSe67.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 71 });
+                  rsSe67.dispatch('pointermove', { clientX: 100, clientY: 75, pointerId: 71 });
+                  rsSe67.dispatch('pointerup', { pointerId: 71 });
+                }
+                ok(ibImgDiv67 !== null && ibImgDiv67.style.width === '32.5%' && ibImgDiv67.style.height === '39%', 'T48c SE-Ecke vergroessert proportional (320x240 wird 520x390)');
+                if (rsNw67) {
+                  rsNw67.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 72 });
+                  rsNw67.dispatch('pointermove', { clientX: -100, clientY: -75, pointerId: 72 });
+                  rsNw67.dispatch('pointerup', { pointerId: 72 });
+                }
+                ok(ibImgDiv67 !== null && ibImgDiv67.style.left === '27.5%' && ibImgDiv67.style.top === '23%' && ibImgDiv67.style.width === '45%', 'T48d NW-Ecke skaliert mit fester Anker-Ecke unten rechts (Position laeuft mit)');
+                var cv48 = ibCollect();
+                var img48 = cv48 && cv48.items ? cv48.items.filter(function (it) { return it.kind === 'image'; })[0] : null;
+                ok(img48 && img48.w === 720 && img48.h === 540 && img48.x === 440 && img48.y === 230, 'T48e die skalierte Groesse und Position werden mit der Seite serialisiert');
+
+                /* T51 (#67): Die Flaeche wächst automatisch mit, sobald ein
+                 * Objekt nach unten gezogen wird, und laesst sich manuell
+                 * vergroessern bzw. bis knapp unter das unterste Element
+                 * verkleinern. */
+                var stroke51 = ibStage.querySelector('.icv-stroke');
+                ok(stroke51 !== null, 'T51a Strich liegt vor dem Flaechen-Test auf der Flaeche');
+                if (stroke51) {
+                  stroke51.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 73 });
+                  stroke51.dispatch('pointermove', { clientX: 160, clientY: 900, pointerId: 73 });
+                  stroke51.dispatch('pointerup', { pointerId: 73 });
+                }
+                ok(ibStage.getAttribute('style').indexOf('1600/2040') !== -1, 'T51 ein Objekt unten angefasst laesst die Flaeche automatisch mitwachsen (1000 wird 2040)');
+                ibDoc.body.querySelector('[data-icv-shrink]').dispatch('click');
+                ok(ibStage.getAttribute('style').indexOf('1600/2020') !== -1, 'T51b verkleinern stoppt knapp unter dem untersten Element (Minimum 2020)');
+                ibDoc.body.querySelector('[data-icv-grow]').dispatch('click');
+                ok(ibStage.getAttribute('style').indexOf('1600/2320') !== -1 && ibInk.height === 2320, 'T51c vergroessern schlaegt 300 dazu, die Zeichenebene wächst mit (2320)');
+
+                /* T50 (#67): Vorschau fuer eingebettete Videos (erster Frame)
+                 * und YouTube-Einbettungen (Thumbnail aus der URL). */
+                var appPath50 = require.resolve('../public/assets/js/app.js');
+                delete require.cache[appPath50];
+                var ibDoc2 = new FakeDoc();
+                ibDoc2.documentElement = new FakeEl('html');
+                ibDoc2.body.setAttribute('data-csrf', 'csrf-t50');
+                var ibEditor2 = new FakeEl('div');
+                ibEditor2.setAttribute('data-book-id', '77');
+                ibEditor2.setAttribute('data-page-id', '42');
+                ibEditor2.setAttribute('data-blocks', JSON.stringify([{ type: 'canvas', w: 1600, h: 1000, items: [
+                  { kind: 'video', media: 11, name: 'clip.mp4', x: 100, y: 100, w: 480, h: 270 },
+                  { kind: 'embed', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', title: 'Demo', x: 100, y: 500, w: 480 }
+                ] }]));
+                ibDoc2.register(ibEditor2, 'ibook-editor');
+                ibDoc2.register(new FakeEl('input'), 'ibook-blocks-json');
+                var ibForm2 = new FakeEl('form');
+                ibForm2.setAttribute('action', '/infobuecher/77/seite/42');
+                ibDoc2.register(ibForm2, 'ibook-saveform');
+                var savedDoc50 = global.document;
+                global.document = ibDoc2;
+                require(appPath50);
+                var vid50 = ibDoc2.body.querySelector('video.icv-video-preview');
+                ok(vid50 !== null && vid50.getAttribute('src') === '/infobuecher/medium/11', 'T50a eingebettetes Video zeigt seinen ersten Frame als Vorschau (preload=metadata)');
+                var yt50 = ibDoc2.body.querySelector('img.icv-embed-thumb');
+                ok(yt50 !== null && yt50.getAttribute('src') === 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', 'T50b YouTube-Einbettung zeigt das Vorschaubild direkt aus der Video-Nummer der URL');
+                global.document = savedDoc50;
+
+                /* T53 (#68): Der Hintergrund faerbt den GESAMTEN Zettel,
+                 * 'Ohne' nimmt ihm Hintergrund, gelbes Post-It und Schatten. */
+                var ibText53 = ibStage.querySelector('.icv-text');
+                ok(ibText53 !== null, 'T53a Textfeld liegt vor dem Post-It-Test auf der Flaeche');
+                if (ibText53) { ibText53.dispatch('pointerdown', { target: ibText53 }); }
+                ibDoc.body.querySelector('[data-icv-bg="none"]').dispatch('click');
+                ok(ibText53 !== null && ibText53.style.background === 'transparent' && ibText53.style.borderColor === 'transparent' && ibText53.style.boxShadow === 'none', 'T53 Ohne Hintergrund meint den ganzen Zettel: transparent, ohne Rand und Schatten');
+                var cv53 = ibCollect();
+                var txt53 = cv53 && cv53.items ? cv53.items.filter(function (it) { return it.kind === 'text'; })[0] : null;
+                ok(txt53 && txt53.bg === 'none', 'T53b der ganze Zettel ohne Hintergrund wird mit der Seite serialisiert (bg none)');
+                ibDoc.body.querySelector('[data-icv-bg="#eff6ff"]').dispatch('click');
+                ok(ibText53 !== null && ibText53.style.background === '#eff6ff', 'T53c eine Hintergrundfarbe faerbt ebenfalls den ganzen Zettel, nicht nur die Schreibfläche');
+
+                /* T54 (#68): Lasso-Auswahl mit gedrueckter Maustaste und
+                 * Gruppieren. Die Flaeche ist 1600x2320, das Harness-Stadium
+                 * 800x500: clientX halbiert, clientY mit 4,64 multipliziert. */
+                ibStage.dispatch('pointerdown', { clientX: 50, clientY: 45, pointerId: 81, target: ibStage });
+                ibStage.dispatch('pointermove', { clientX: 450, clientY: 45, pointerId: 81 });
+                ibStage.dispatch('pointermove', { clientX: 450, clientY: 430, pointerId: 81 });
+                ibStage.dispatch('pointermove', { clientX: 50, clientY: 430, pointerId: 81 });
+                ibStage.dispatch('pointerup', { pointerId: 81 });
+                var ibImg54 = ibStage.querySelector('.icv-image');
+                var ibStroke54 = ibStage.querySelector('.icv-stroke');
+                var ibText54 = ibStage.querySelector('.icv-text');
+                ok(ibImg54 !== null && ibStroke54 !== null && ibImg54.classList.contains('icv-selected') && ibStroke54.classList.contains('icv-selected'), 'T54 Lasso waehlt alles, was es beruehrt (Bild und Strich markiert)');
+                ok(ibText54 !== null && !ibText54.classList.contains('icv-selected'), 'T54b das Textfeld ausserhalb des Lassos bleibt unmarkiert');
+                ok(ibDoc.body.querySelector('.icv-ctx').textOf().indexOf('2 Objekte') !== -1, 'T54c Kontextleiste meldet zwei ausgewaehlte Objekte');
+                ok(ibStage.querySelector('polyline') !== null, 'T54d das Lasso-Overlay liegt mit auf der Flaeche');
+                ibDoc.body.querySelector('[data-icv-group]').dispatch('click');
+                var cv54 = ibCollect();
+                var g54img = cv54 && cv54.items ? cv54.items.filter(function (it) { return it.kind === 'image'; })[0] : null;
+                var g54stroke = cv54 && cv54.items ? cv54.items.filter(function (it) { return it.kind === 'ink'; })[0] : null;
+                ok(g54img && g54stroke && g54img.g > 0 && g54img.g === g54stroke.g, 'T54e Gruppieren gibt allen Lasso-Objekten dieselbe Gruppen-ID');
+                ibImg54.dispatch('pointerdown', { clientX: 0, clientY: 0, pointerId: 82 });
+                ibImg54.dispatch('pointermove', { clientX: 100, clientY: 0, pointerId: 82 });
+                ibImg54.dispatch('pointerup', { pointerId: 82 });
+                var ibStroke54b = ibStage.querySelector('.icv-stroke');
+                ok(ibStroke54b !== null && ibStroke54b.style.left === '53.75%', 'T54f Gruppenmitglieder bewegen sich gemeinsam (Strich laeuft mit auf 53.75%)');
+                ibDoc.body.querySelector('[data-icv-ungroup]').dispatch('click');
+                var cv54b = ibCollect();
+                var g54bimg = cv54b && cv54b.items ? cv54b.items.filter(function (it) { return it.kind === 'image'; })[0] : null;
+                var g54bstroke = cv54b && cv54b.items ? cv54b.items.filter(function (it) { return it.kind === 'ink'; })[0] : null;
+                ok(g54bimg && g54bstroke && g54bimg.g === undefined && g54bstroke.g === undefined, 'T54g Gruppe loesen entfernt die Gruppen-ID von allen Mitgliedern');
+
+                /* T55 (#68): Icons only in der Leiste, Flaechen-Knoepfe unten
+                 * rechts in der Flaeche, Auswahl-Sachen im Kontextbereich. */
+                var ibSelBtn55 = ibDoc.body.querySelector('[data-icv-tool="select"]');
+                ok(ibSelBtn55 !== null && ibSelBtn55.textOf() === '🖱️' && String(ibSelBtn55.title || '').indexOf('Auswahl') !== -1, 'T55 Werkzeug-Knoepfe zeigen nur das Icon, die Beschreibung steht als Hover (title)');
+                ok(ibBar.querySelector('[data-icv-grow]') === null && ibBar.querySelector('[data-icv-shrink]') === null && ibStage.querySelector('[data-icv-grow]') !== null, 'T55b die Flaechen-Knoepfe sitzen unten rechts in der Flaeche, nicht mehr in der Leiste');
+                var ibDel55 = ibDoc.body.querySelector('.icv-ctx .icv-delbtn');
+                ok(ibDel55 !== null && ibDel55.parent && String(ibDel55.parent.className).indexOf('icv-ctx') !== -1, 'T55c Loeschen liegt im Auswahl-Kontext (Kontextleiste erscheint nur mit Auswahl)');
+                ok(ibDoc.body.querySelector('.icv-ctx [data-icv-group]') !== null, 'T55d Gruppieren liegt ebenfalls im Auswahl-Kontext');
+                var ibSwatches55 = ibBar.querySelector('.icv-swatches');
+                ok(ibSwatches55 !== null && ibSwatches55.style.display === 'none', 'T55e ohne Stift-Modus und ohne Strich-Auswahl bleiben Stift-Farben und Staerken aus der Leiste');
+
+                /* T56 (#73): Objekt mit einer anderen Seite des Buchs
+                 * verlinken: Auswahl im Kontextbereich, Badge am Element,
+                 * Serialisierung, und wieder weg. */
+                var ibTxt56 = ibStage.querySelector('.icv-text');
+                if (ibTxt56) { ibTxt56.dispatch('pointerdown', { target: ibTxt56 }); }
+                var ibSel56 = ibDoc.body.querySelector('.icv-ctx .icv-ctx-select');
+                ok(ibSel56 !== null, 'T56 Kontextbereich hat die Seiten-Auswahl zum Verlinken');
+                if (ibSel56) {
+                  ibSel56.value = '43';
+                  ibSel56.dispatch('change');
+                  ok(ibTxt56 !== null && ibTxt56.querySelector('.icv-linkbadge') !== null, 'T56b verlinktes Objekt traegt das Kettenglied-Badge');
+                  var cv56 = ibCollect();
+                  var t56 = cv56 && cv56.items ? cv56.items.filter(function (it) { return it.kind === 'text'; })[0] : null;
+                  ok(t56 && t56.link === 43, 'T56c der Seiten-Link wird mit serialisiert (link: 43)');
+                  ibSel56.value = '';
+                  ibSel56.dispatch('change');
+                  var cv56b = ibCollect();
+                  var t56b = cv56b && cv56b.items ? cv56b.items.filter(function (it) { return it.kind === 'text'; })[0] : null;
+                  ok(t56b && t56b.link === undefined, 'T56d ohne Link-Auswahl verschwindet der Link wieder');
+                  ok(ibTxt56 !== null && ibTxt56.querySelector('.icv-linkbadge') === null, 'T56e auch das Badge verschwindet wieder');
+                }
+
+                /* T57 (#75): Code-Fenster mit Konsole. Einfuegen ueber den
+                 * Laptop-Knopf in der Leiste, Quelltext tippen, Ausfuehren
+                 * laeuft ueber die globale Delegation am document. */
+                var ibCodeBtn57 = null;
+                var ibBarBtns57 = ibBar.querySelectorAll('button');
+                for (var ci57 = 0; ci57 < ibBarBtns57.length; ci57++) {
+                  if (String(ibBarBtns57[ci57].title || '').indexOf('Code-Fenster') !== -1) { ibCodeBtn57 = ibBarBtns57[ci57]; }
+                }
+                ok(ibCodeBtn57 !== null && ibCodeBtn57.textOf() === '💻', 'T57 Code-Fenster-Knopf in der Leiste zeigt nur das Icon');
+                if (ibCodeBtn57) {
+                  ibCodeBtn57.dispatch('click');
+                  var ibCodeBox57 = ibStage.querySelector('.icv-code');
+                  ok(ibCodeBox57 !== null && ibCodeBox57.querySelector('.icv-code-ta') !== null && ibCodeBox57.querySelector('.icv-code-out') !== null, 'T57b das Code-Fenster hat Editor, Ausfuehren-Knopf und Konsole');
+                  if (ibCodeBox57) {
+                    var ibLang57 = ibCodeBox57.querySelector('.icv-code-langsel');
+                    ok(ibLang57 !== null && ibLang57.value === 'java', 'T57b2 Sprachauswahl ist da, Standard Java');
+                    if (ibLang57) {
+                      ibLang57.value = 'javascript';
+                      ibLang57.dispatch('change');
+                      ok(ibCodeBox57.querySelector('.icv-code-run').getAttribute('data-lang') === 'javascript', 'T57b3 die Sprache wandert an den Ausfuehren-Knopf');
+                    }
+                    var ibCodeTa57 = ibCodeBox57.querySelector('.icv-code-ta');
+                    ibCodeTa57.value = "console.log('Hallo InfoBook'); 6 * 7;";
+                    ibCodeTa57.dispatch('input');
+                    var cv57 = ibCollect();
+                    var t57 = cv57 && cv57.items ? cv57.items.filter(function (it) { return it.kind === 'code'; })[0] : null;
+                    ok(t57 && t57.code === "console.log('Hallo InfoBook'); 6 * 7;" && t57.lang === 'javascript', 'T57c der Quelltext wird mit Sprache serialisiert');
+                    ibCodeBox57.querySelector('.icv-code-run').dispatch('click');
+                    var ibCodeOut57 = ibCodeBox57.querySelector('.icv-code-out');
+                    ok(ibCodeOut57 !== null && ibCodeOut57.textContent.indexOf('Hallo InfoBook') !== -1 && ibCodeOut57.textContent.indexOf('42') !== -1, 'T57d Ausfuehren schreibt console-Ausgaben und Ergebnis in die Konsole');
+                  }
+                }
+
+                /* T62 (#81): Java laeuft ueber die Java-VM (kein "System is
+                 * not defined" mehr), Compiler-Fehler zeigen Zeile und Datei,
+                 * ohne VM gibt es einen klaren Hinweis. */
+                if (ibCodeBox57 && ibLang57) {
+                  global.window.InfoCraftJavaVM = {
+                    run: function (files) {
+                      ok(files && typeof files === 'object' && !Array.isArray(files) && typeof files['Main.java'] === 'string' && files['Main.java'].indexOf('System.out.println') !== -1, 'T62 Java-Quelltext geht als Objekt mit Main.java-String an die Java-VM (kein Array mehr)');
+                      return { output: 'Hallo aus Java', errors: [], ok: true };
+                    }
+                  };
+                  ibLang57.value = 'java';
+                  ibLang57.dispatch('change');
+                  ibCodeBox57.querySelector('.icv-code-ta').value = 'System.out.println("Hallo Java");';
+                  ibCodeBox57.querySelector('.icv-code-ta').dispatch('input');
+                  ibCodeBox57.querySelector('.icv-code-run').dispatch('click');
+                  ok(ibCodeOut57.textContent.indexOf('Hallo aus Java') !== -1, 'T62b Sprache Java: die Ausgabe der Java-VM landet in der Konsole');
+                  global.window.InfoCraftJavaVM = {
+                    run: function () { return { output: '', errors: [{ kind: 'error', message: 'Semikolon fehlt', line: 3, file: 'Main.java' }], ok: false }; }
+                  };
+                  ibCodeBox57.querySelector('.icv-code-run').dispatch('click');
+                  ok(ibCodeOut57.textContent.indexOf('✖ Semikolon fehlt') !== -1 && ibCodeOut57.textContent.indexOf('Zeile 3') !== -1, 'T62c Compiler-Fehler kommen mit Zeilennummer zurueck');
+                  delete global.window.InfoCraftJavaVM;
+                  ibCodeBox57.querySelector('.icv-code-run').dispatch('click');
+                  ok(ibCodeOut57.textContent.indexOf('nicht geladen') !== -1, 'T62d ohne Java-VM gibt es einen klaren Hinweis statt "System is not defined"');
+                }
+
+                /* T58 (#76): Datenbank-Element mit Schema und SQL-Abfrage.
+                 * Seed baut die Beispieldatenbank im Browser auf, die kleine
+                 * Engine versteht WHERE, LIKE, ORDER BY und LIMIT. */
+                var ibDbBtn58 = null;
+                var ibBarBtns58 = ibBar.querySelectorAll('button');
+                for (var ci58 = 0; ci58 < ibBarBtns58.length; ci58++) {
+                  if (String(ibBarBtns58[ci58].title || '').indexOf('Datenbank') !== -1) { ibDbBtn58 = ibBarBtns58[ci58]; }
+                }
+                ok(ibDbBtn58 !== null && ibDbBtn58.textOf() === '🗄️', 'T58 Datenbank-Knopf in der Leiste zeigt nur das Icon');
+                if (ibDbBtn58) {
+                  ibDbBtn58.dispatch('click');
+                  var ibDbBox58 = ibStage.querySelector('.icv-db');
+                  ok(ibDbBox58 !== null && ibDbBox58.querySelector('.icv-db-seed-ta') !== null && ibDbBox58.querySelector('.icv-db-in') !== null && ibDbBox58.querySelector('.icv-db-run') !== null && ibDbBox58.querySelector('.icv-db-out') !== null, 'T58b das Datenbank-Element hat Seed-Feld, Abfrage, Ausfuehren und Ausgabe');
+                  if (ibDbBox58) {
+                    var ibDbSeed58 = ibDbBox58.querySelector('.icv-db-seed-ta');
+                    ibDbSeed58.value = "CREATE TABLE schueler (name TEXT, punkte INT); INSERT INTO schueler VALUES ('Anna', 12); INSERT INTO schueler VALUES ('Ben', 9)";
+                    ibDbSeed58.dispatch('input');
+                    ok(ibDbBox58.querySelector('.icv-db-schema').textContent.indexOf('schueler') !== -1 && ibDbBox58.querySelector('.icv-db-schema').textContent.indexOf('punkte INT') !== -1, 'T58c das Schema aktualisiert sich live aus den CREATE-TABLE-Zeilen');
+                    var ibDbQ58 = ibDbBox58.querySelector('.icv-db-in');
+                    /* T83 (#113): Die Abfrage des DB-Elements hat dieselbe SQL-
+                     * Autovervollstaendigung wie der SQL-Arbeitsbereich -
+                     * Schluesselwoerter plus Tabellen aus dem eigenen Schema,
+                     * Tab uebernimmt. */
+                    ok(ibDbQ58.__icAc === true, 'T83 die SQL-Abfrage des DB-Elements ist an die Autovervollstaendigung angeschlossen (Editor)');
+                    ok(String(ibDbQ58.getAttribute('data-tables') || '').indexOf('schueler') !== -1, 'T83b die Tabellen des Schemas stehen als Vorschlagsquelle am Feld');
+                    ibDbQ58.value = 'SEL';
+                    ibDbQ58.selectionStart = 3;
+                    ibDbQ58.selectionEnd = 3;
+                    ibDbQ58.dispatch('input');
+                    var ac83 = ibDbBox58.querySelector('.ac-item');
+                    ok(ac83 !== null && ac83.textOf().indexOf('SELECT') !== -1, 'T83c SQL-Schluesselwoerter erscheinen als Vorschlaege');
+                    ibDbQ58.dispatch('keydown', { key: 'Tab' });
+                    ok(String(ibDbQ58.value).indexOf('SELECT') === 0, 'T83d Tab uebernimmt den SQL-Vorschlag');
+                    ibDbQ58.value = 'SELECT name, punkte FROM schueler WHERE punkte > 10';
+                    ibDbQ58.dispatch('input');
+                    ibDbBox58.querySelector('.icv-db-run').dispatch('click');
+                    var ibDbOut58 = ibDbBox58.querySelector('.icv-db-out');
+                    ok(ibDbOut58.innerHTML.indexOf('<table class="icv-db-table">') !== -1 && ibDbOut58.innerHTML.indexOf('<th>name</th>') !== -1 && ibDbOut58.innerHTML.indexOf('<th>punkte</th>') !== -1, 'T58d DB-Ausgabe ist eine echte HTML-Tabelle mit Kopfzeile');
+                    ok(ibDbOut58.innerHTML.indexOf('Anna') !== -1 && ibDbOut58.innerHTML.indexOf('Ben') === -1 && ibDbOut58.innerHTML.indexOf('1 Zeile') !== -1, 'T58d2 WHERE punkte > 10 liefert nur Anna (1 Zeile)');
+                    ibDbQ58.value = 'SELECT * FROM schueler ORDER BY punkte ASC';
+                    ibDbQ58.dispatch('input');
+                    ibDbBox58.querySelector('.icv-db-run').dispatch('click');
+                    ok(ibDbOut58.innerHTML.indexOf('Ben') !== -1 && ibDbOut58.innerHTML.indexOf('Ben') < ibDbOut58.innerHTML.indexOf('Anna'), 'T58e ORDER BY punkte ASC sortiert Ben (9) vor Anna (12)');
+                    ibDbQ58.value = "SELECT name FROM schueler WHERE name LIKE 'A%'";
+                    ibDbQ58.dispatch('input');
+                    ibDbBox58.querySelector('.icv-db-run').dispatch('click');
+                    ok(ibDbOut58.innerHTML.indexOf('Anna') !== -1 && ibDbOut58.innerHTML.indexOf('Ben') === -1, 'T58f LIKE A% findet Anna');
+                    var cv58 = ibCollect();
+                    var t58 = cv58 && cv58.items ? cv58.items.filter(function (it) { return it.kind === 'db'; })[0] : null;
+                    ok(t58 && t58.dbseed.indexOf('CREATE TABLE schueler') !== -1 && t58.dbq.indexOf('LIKE') !== -1, 'T58g Seed und Abfrage werden serialisiert');
+                    /* Mehrzeilige VALUES (#88): jede Klammergruppe ist eine
+                     * Zeile, ohne Klammerreste in der Ausgabe. */
+                    ibDbSeed58.value = "CREATE TABLE schueler (name TEXT, punkte INT); INSERT INTO schueler VALUES ('Anna', 12), ('Ben', 9)";
+                    ibDbSeed58.dispatch('input');
+                    ibDbQ58.value = 'SELECT * FROM schueler';
+                    ibDbQ58.dispatch('input');
+                    ibDbBox58.querySelector('.icv-db-run').dispatch('click');
+                    ok(ibDbOut58.innerHTML.indexOf('Anna') !== -1 && ibDbOut58.innerHTML.indexOf('Ben') !== -1 && ibDbOut58.innerHTML.indexOf(')') === -1, 'T58h mehrzeilige VALUES liefern saubere Zeilen ohne Klammerreste');
+                    ok(ibDbOut58.innerHTML.indexOf('2 Zeilen') !== -1, 'T58i beide Zeilen der mehrzeiligen VALUES kommen an');
+                  }
+                }
+
+                /* T59 (#77): Diagramm-Element (Mermaid): Code links, Diagramm
+                 * rechts, live beim Tippen, Doppelklick auf die Vorschau
+                 * springt zurueck in den Code. */
+                global.window.mermaid = { render: function (id, src) { return { svg: '<svg class="icv-dg-test">' + id + '</svg>' }; } };
+                var ibDiagBtn59 = null;
+                var ibBarBtns59 = ibBar.querySelectorAll('button');
+                for (var ci59 = 0; ci59 < ibBarBtns59.length; ci59++) {
+                  if (String(ibBarBtns59[ci59].title || '').indexOf('Diagramm') !== -1) { ibDiagBtn59 = ibBarBtns59[ci59]; }
+                }
+                ok(ibDiagBtn59 !== null && ibDiagBtn59.textOf() === '📊', 'T59 Diagramm-Knopf in der Leiste zeigt nur das Icon');
+                if (ibDiagBtn59) {
+                  ibDiagBtn59.dispatch('click');
+                  var ibDiagBox59 = ibStage.querySelector('.icv-diagram');
+                  ok(ibDiagBox59 !== null && ibDiagBox59.querySelector('.icv-diagram-src') !== null && ibDiagBox59.querySelector('.icv-diagram-prev') !== null, 'T59b das Diagramm-Element hat Code links und Vorschau rechts');
+                  if (ibDiagBox59) {
+                    var ibDiagTa59 = ibDiagBox59.querySelector('.icv-diagram-src');
+                    ok(String(ibDiagTa59.value).indexOf('graph TD') !== -1, 'T59c neuer Code startet mit einer Mermaid-Vorlage');
+                    /* #79: pur ist Standard (im Editor keine Vorschau), fuer den
+                     * Live-Test wird auf geteilt gestellt. */
+                    var ibDiagMode59 = ibDiagBox59.querySelector('.icv-diagram-mode');
+                    ok(ibDiagMode59 !== null && ibDiagMode59.value === 'pur', 'T59b2 Varianten-Auswahl ist da, Standard pur (im Editor keine Vorschau)');
+                    if (ibDiagMode59) {
+                      ibDiagMode59.value = 'split';
+                      ibDiagMode59.dispatch('change');
+                    }
+                    ibDiagTa59.value = 'graph LR\nCI_A --> CI_B';
+                    ibDiagTa59.dispatch('input');
+                    ok(String(ibDiagBox59.querySelector('.icv-diagram-prev').innerHTML).indexOf('<svg class="icv-dg-test">') === 0, 'T59d die Vorschau rendert live mit');
+                    ibDiagBox59.querySelector('.icv-diagram-prev').dispatch('dblclick');
+                    ok(ibDiagTa59._focused === true, 'T59e Doppelklick auf die Vorschau fokussiert den Code');
+                    var cv59 = ibCollect();
+                    var t59 = cv59 && cv59.items ? cv59.items.filter(function (it) { return it.kind === 'diagram'; })[0] : null;
+                    ok(t59 && t59.src.indexOf('CI_A --> CI_B') !== -1, 'T59f der Diagramm-Code wird serialisiert');
+                    ok(t59 && t59.dmode === 'split', 'T59f2 die Variante geteilt wird serialisiert');
+                    /* Lesemodus: div.icv-diagram-ro[data-src] zeichnet einmalig
+                     * beim DOMContentLoaded-Lauf. */
+                    var ibRoBox59 = new FakeEl('div');
+                    ibRoBox59.className = 'icv-item icv-diagram icv-diagram-ro';
+                    ibRoBox59.setAttribute('data-src', 'graph TD\nRO_A[RO_ZIEL]');
+                    var ibRoPrev59 = new FakeEl('div');
+                    ibRoPrev59.className = 'icv-diagram-prev';
+                    ibRoBox59.appendChild(ibRoPrev59);
+                    ibDoc.body.appendChild(ibRoBox59);
+                    ibDoc._fire('DOMContentLoaded', { type: 'DOMContentLoaded' });
+                    ok(String(ibRoPrev59.innerHTML).indexOf('<svg class="icv-dg-test">') === 0, 'T59g im Lesemodus zeichnet die fertige Diagramm-Box ohne Editor');
+                    delete global.window.mermaid;
+                    var ibOffPrev59 = new FakeEl('div');
+                    window.IC_RENDER_DIAGRAM(ibOffPrev59, 'graph TD\nX --> Y');
+                    ok(ibOffPrev59.textContent.indexOf('graph TD') !== -1 && ibOffPrev59.getAttribute('data-mermaid-missing') === '1', 'T59h ohne Mermaid bleibt der Quelltext als Fallback lesbar');
+                  }
+                }
+
+                /* T60 (#78): Die Quelltext-Fenster von Diagramm, Code und DB
+                 * sind frei klickbar: Die Elementflaeche ist kein Verschiebe-
+                 * Griff mehr, preventDefault (blockierte den Textarea-Fokus)
+                 * wird nicht mehr gerufen. Verschieben geht ueber die Leiste. */
+                var pd60 = false;
+                ibDiagBox59.dispatch('pointerdown', { clientX: 5, clientY: 5, preventDefault: function () { pd60 = true; } });
+                ok(pd60 === false, 'T60 Diagramm-Element ruft preventDefault nicht mehr: Quelltext laesst sich anklicken');
+                var ibCodeBox60 = ibStage.querySelector('.icv-code');
+                var pdCode60 = false;
+                if (ibCodeBox60) { ibCodeBox60.dispatch('pointerdown', { clientX: 5, clientY: 5, preventDefault: function () { pdCode60 = true; } }); }
+                ok(pdCode60 === false, 'T60b Code-Fenster: Flaeche blockiert das Anklicken der Textarea nicht mehr');
+                var ibDbBox60 = ibStage.querySelector('.icv-db');
+                var pdDb60 = false;
+                if (ibDbBox60) { ibDbBox60.dispatch('pointerdown', { clientX: 5, clientY: 5, preventDefault: function () { pdDb60 = true; } }); }
+                ok(pdDb60 === false, 'T60c DB-Element: Schema-Feld bleibt frei klickbar');
+                ok(ibDiagBox59.querySelector('.icv-move') !== null, 'T60d Verschieben bleibt: Jedes Element hat seine Leiste oben');
+
+                /* T61 (#82): Seitenleiste komplett einklappbar: Der Knopf
+                 * schaltet die Leiste, der Zustand bleibt gespeichert. */
+                ok(typeof window.IC_IBOOK_NAVFOLD === 'function', 'T61 app.js stellt die Einklapp-Logik bereit');
+                var ibStore61 = {};
+                global.localStorage = {
+                  getItem: function (k) { return k in ibStore61 ? ibStore61[k] : null; },
+                  setItem: function (k, v) { ibStore61[k] = v; }
+                };
+                var ibAside61 = new FakeEl('aside');
+                ibAside61.className = 'ibook-pagenav';
+                var ibFoldBtn61 = new FakeEl('button');
+                window.IC_IBOOK_NAVFOLD(ibAside61, ibFoldBtn61);
+                ok(ibFoldBtn61.textContent === 'Inhalt ◂' && !ibAside61.classList.contains('ibook-pagenav-off'), 'T61b Standard ist aufgeklappt');
+                ibFoldBtn61.dispatch('click');
+                ok(ibAside61.classList.contains('ibook-pagenav-off') === true && ibFoldBtn61.textContent === 'Inhalt ▸' && ibFoldBtn61.getAttribute('aria-expanded') === 'false', 'T61c Klick klappt die komplette Leiste ein');
+                ok(ibStore61['ic-ibook-navfold'] === '1', 'T61d der Zustand wird im Browser gespeichert');
+                ibFoldBtn61.dispatch('click');
+                ok(ibAside61.classList.contains('ibook-pagenav-off') === false && ibFoldBtn61.getAttribute('aria-expanded') === 'true', 'T61e zweiter Klick klappt wieder auf');
+                global.localStorage = { getItem: function () { return '1'; }, setItem: function () {} };
+                var ibAside61b = new FakeEl('aside');
+                var ibFoldBtn61b = new FakeEl('button');
+                window.IC_IBOOK_NAVFOLD(ibAside61b, ibFoldBtn61b);
+                ok(ibAside61b.classList.contains('ibook-pagenav-off') === true && ibFoldBtn61b.textContent === 'Inhalt ▸', 'T61f gespeicherter eingeklappter Zustand wird beim Laden wiederhergestellt');
+                global.localStorage = { getItem: function () { return null; }, setItem: function () {} };
+
+                /* T63 (#79): Bibliothek am Diagramm-Element: Auswahl uebernimmt
+                 * den Mermaid-Code, pur bleibt pur (kein Rendern im Editor). */
+                global.window.mermaid = { render: function (id) { return { svg: '<svg class="icv-dg-t63">' + id + '</svg>' }; } };
+                ibDiagBtn59.dispatch('click');
+                var ibDiagBoxes63 = ibStage.querySelectorAll('.icv-diagram');
+                var ibDiagBox63 = ibDiagBoxes63[ibDiagBoxes63.length - 1];
+                ok(ibDiagBox63 !== null && ibDiagBox63.querySelector('.icv-diagram-lib') !== null, 'T63 neues Diagramm-Element bietet die eigene Bibliothek an');
+                if (ibDiagBox63) {
+                  var ibDiagWrap63 = ibDiagBox63.querySelector('.icv-diagram-wrap');
+                  ok(ibDiagWrap63.classList.contains('icv-diagram-noprev') === true, 'T63b pur (Standard): im Editor steht nur der Quelltext, keine Vorschau');
+                  var ibDiagLib63 = ibDiagBox63.querySelector('.icv-diagram-lib');
+                  ibDiagLib63.value = '5';
+                  ibDiagLib63.dispatch('change');
+                  ok(String(ibDiagBox63.querySelector('.icv-diagram-src').value).indexOf('classDiagram') !== -1, 'T63c die Bibliotheks-Auswahl uebernimmt den Mermaid-Code');
+                  ok(ibDiagLib63.value === '', 'T63d das Bibliotheks-Dropdown springt zurueck auf die neutrale Auswahl');
+                  var cv63 = ibCollect();
+                  var t63 = cv63 && cv63.items ? cv63.items.filter(function (it) { return it.kind === 'diagram'; })[cv63.items.filter(function (it) { return it.kind === 'diagram'; }).length - 1] : null;
+                  ok(t63 && String(t63.src).indexOf('Auto <|-- BMW') !== -1 && t63.dmode === undefined, 'T63e der uebernommene Code wird serialisiert, Variante bleibt pur');
+                  /* Lesemodus geteilt (#79): die Split-Box zeichnet auch, der
+                   * Balken zwischen Code und Diagramm laesst sich ziehen und
+                   * begrenzt beide Fenster (nichts wird unbedienbar). */
+                  var ibRoSplit63 = new FakeEl('div');
+                  ibRoSplit63.className = 'icv-item icv-diagram icv-diagram-split-ro';
+                  ibRoSplit63.setAttribute('data-src', 'graph TD\nS63[SPLIT]');
+                  var ibRoSplitPrev63 = new FakeEl('div');
+                  ibRoSplitPrev63.className = 'icv-diagram-prev';
+                  ibRoSplit63.appendChild(ibRoSplitPrev63);
+                  ibDoc.body.appendChild(ibRoSplit63);
+                  ibDoc._fire('DOMContentLoaded', { type: 'DOMContentLoaded' });
+                  ok(String(ibRoSplitPrev63.innerHTML).indexOf('<svg class="icv-dg-t63">') === 0, 'T63g die geteilte Lesemodus-Box zeichnet ihr Diagramm');
+                  var ibSplitWrap63 = new FakeEl('div');
+                  ibSplitWrap63.className = 'icv-diagram-split';
+                  var ibSplitCode63 = new FakeEl('textarea');
+                  ibSplitCode63.className = 'icv-diagram-code';
+                  ibSplitCode63.value = 'graph TD\nS63[SPLIT]';
+                  var ibSplitBar63 = new FakeEl('div');
+                  ibSplitBar63.className = 'icv-diagram-split-bar';
+                  var ibSplitPrev63 = new FakeEl('div');
+                  ibSplitPrev63.className = 'icv-diagram-prev';
+                  ibSplitWrap63.appendChild(ibSplitCode63);
+                  ibSplitWrap63.appendChild(ibSplitBar63);
+                  ibSplitWrap63.appendChild(ibSplitPrev63);
+                  ibDoc.body.appendChild(ibSplitWrap63);
+                  ibSplitBar63.dispatch('pointerdown', { clientX: 8, clientY: 8 });
+                  ibDoc._fire('pointermove', { clientX: 218, clientY: 8 });
+                  ok(String(ibSplitCode63.style.width) === '50%', 'T63h der Balken teilt Code und Diagramm nach Zug');
+                  ibDoc._fire('pointermove', { clientX: 5000, clientY: 8 });
+                  ok(String(ibSplitCode63.style.width) === '85%', 'T63i der Balken begrenzt: Code hoechstens 85%, das Diagramm bleibt bedienbar');
+                  ibDoc._fire('pointermove', { clientX: -5000, clientY: 8 });
+                  ok(String(ibSplitCode63.style.width) === '15%', 'T63j nach unten bleibt dem Code mindestens 15% - nichts geht verloren');
+                  ibDoc._fire('pointerup', {});
+                  /* #85: Der Quelltext bleibt im Lesemodus bearbeitbar,
+                   * jede Aenderung zeichnet das Diagramm sofort neu. */
+                  global.window.mermaid = { render: function (id, src) { return { svg: '<svg class="icv-dg-t63">' + id + '|' + String(src) + '</svg>' }; } };
+                  ibSplitCode63.value = 'graph TD\nS63[NEU]';
+                  ibSplitCode63.dispatch('input');
+                  ibSplitCode63.value = 'graph TD\nS63[NOCHNEU]';
+                  ibSplitCode63.dispatch('input');
+                  ok(String(ibSplitPrev63.innerHTML).indexOf('S63[NOCHNEU]') !== -1, 'T63k geteilt im Lesemodus: Tippen am Quelltext zeichnet das Diagramm live neu');
+                  ibDoc._fire('pointerup', {});
+                  delete global.window.mermaid;
+                }
+
+                /* T64 (#80): Vorhandene Datenbanken der SQL-Werkstatt fuellen
+                 * das DB-Element: Schema und Beispieldaten landen im Seed-Feld,
+                 * Abfragen laufen damit auf den echten Vorlagen-Tabellen. */
+                ibDbBtn58.dispatch('click');
+                var ibDbBoxes64 = ibStage.querySelectorAll('.icv-db');
+                var ibDbBox64 = ibDbBoxes64[ibDbBoxes64.length - 1];
+                ok(ibDbBox64 !== null && ibDbBox64.querySelector('.icv-db-libsel') !== null, 'T64 neues DB-Element bietet vorhandene Datenbanken an');
+                if (ibDbBox64) {
+                  var ibDbLib64 = ibDbBox64.querySelector('.icv-db-libsel');
+                  ibDbLib64.value = 'shop';
+                  ibDbLib64.dispatch('change');
+                  var ibDbSeedTa64 = ibDbBox64.querySelector('.icv-db-seed-ta');
+                  ok(String(ibDbSeedTa64.value).indexOf('CREATE TABLE artikel') !== -1 && ibDbSeedTa64.value.indexOf('Kaugummi') !== -1, 'T64b die Vorlage laedt Schema und Beispieldaten ins Feld');
+                  ok(ibDbBox64.querySelector('.icv-db-schema').textContent.indexOf('artikel') !== -1, 'T64c die Schema-Anzeige aktualisiert sich aus der Vorlage');
+                  ok(ibDbLib64.value === '', 'T64d das Vorlagen-Dropdown springt zurueck');
+                  var ibDbQ64 = ibDbBox64.querySelector('.icv-db-in');
+                  ibDbQ64.value = 'SELECT name FROM artikel WHERE preis < 5';
+                  ibDbQ64.dispatch('input');
+                  ibDbBox64.querySelector('.icv-db-run').dispatch('click');
+                  var ibDbOut64 = ibDbBox64.querySelector('.icv-db-out');
+                  ok(ibDbOut64.innerHTML.indexOf('<table class="icv-db-table">') !== -1 && ibDbOut64.innerHTML.indexOf('<th>name</th>') !== -1 && ibDbOut64.innerHTML.indexOf('Kaugummi') !== -1, 'T64e Abfragen laufen gegen die Tabellen der Vorlage (als echte Tabelle)');
+                  var cv64 = ibCollect();
+                  var t64 = cv64 && cv64.items ? cv64.items.filter(function (it) { return it.kind === 'db'; })[cv64.items.filter(function (it) { return it.kind === 'db'; }).length - 1] : null;
+                  ok(t64 && t64.dbseed.indexOf('Kaugummi') !== -1, 'T64f der Vorlagen-Seed wird serialisiert');
+                }
+
+                /* T65 (#87): Klassen aus Projekten erscheinen als Karte ueber
+                 * dem Code, nicht im Quelltext. Karte klappt Attribute und
+                 * Methoden auf, das x nimmt sie wieder mit. */
+                ibCodeBtn57.dispatch('click');
+                var ibCodeBoxes65 = ibStage.querySelectorAll('.icv-code');
+                var ibCodeBox65 = ibCodeBoxes65[ibCodeBoxes65.length - 1];
+                var ibProj65 = ibCodeBox65 ? ibCodeBox65.querySelector('.icv-code-projsel') : null;
+                ok(ibProj65 !== null, 'T65 das Code-Fenster bietet Klassen aus Java-Projekten an');
+                if (ibProj65) {
+                  var ibCodeTa65 = ibCodeBox65.querySelector('.icv-code-ta');
+                  ibCodeTa65.value = 'System.out.println("Los");';
+                  ibCodeTa65.selectionStart = 23;
+                  ibCodeTa65.dispatch('input');
+                  ibProj65.value = '0';
+                  ibProj65.dispatch('change');
+                  var ibCard65 = ibCodeBox65.querySelector('.icv-code-card');
+                  ok(ibCard65 !== null, 'T65b die Klassen-Auswahl legt eine Karte ans Fenster');
+                  ok(String(ibCodeTa65.value).indexOf('class Auto') === -1 && ibCodeTa65.value.indexOf('System.out.println("Los");') !== -1, 'T65c der Klassen-Quelltext bleibt draussen, der eigene Code unangetastet');
+                  ok(ibCard65 && ibCodeBox65.querySelector('.icv-code-card-name') && ibCodeBox65.querySelector('.icv-code-card-name').textOf() === 'Auto', 'T65d die Karte zeigt nur den Klassennamen');
+                  ok(ibProj65.value === '', 'T65e das Projekt-Dropdown springt zurueck auf die neutrale Auswahl');
+                  var ibCardName65 = ibCodeBox65.querySelector('.icv-code-card-name');
+                  ok(ibCard65.classList.contains('open') === false, 'T65f die Karte startet zugeklappt');
+                  ibCardName65.dispatch('click');
+                  ok(ibCard65.classList.contains('open') === true, 'T65g Klick auf den Namen klappt Attribute und Methoden auf');
+                  ok(ibCard65.querySelector('.icv-code-card-field') !== null && ibCard65.querySelector('.icv-code-card-field').textOf().indexOf('name : String') !== -1, 'T65h das Attribut steht in den Details');
+                  ok(ibCard65.querySelector('.icv-code-card-method') !== null && ibCard65.querySelector('.icv-code-card-method').textOf().indexOf('fahren()') !== -1, 'T65i die Methode steht in den Details');
+                  ibCardName65.dispatch('click');
+                  ok(ibCard65.classList.contains('open') === false, 'T65j der zweite Klappt die Karte wieder zu');
+                  var cv65 = ibCollect();
+                  var t65 = cv65 && cv65.items ? cv65.items.filter(function (it) { return it.kind === 'code'; })[cv65.items.filter(function (it) { return it.kind === 'code'; }).length - 1] : null;
+                  ok(t65 && t65.cls && t65.cls.length === 1 && t65.cls[0].name === 'Auto.java' && t65.cls[0].project === 'Fahrzeuge' && String(t65.cls[0].code).indexOf('class Auto') !== -1, 'T65k die Karte wird mit Name, Projekt und Quelltext serialisiert');
+                  ibCard65.querySelector('.icv-code-card-x').dispatch('click');
+                  ok(ibCodeBox65.querySelector('.icv-code-card') === null, 'T65l das x entfernt die Karte wieder');
+                  var cv65b = ibCollect();
+                  var t65b = cv65b && cv65b.items ? cv65b.items.filter(function (it) { return it.kind === 'code'; })[cv65b.items.filter(function (it) { return it.kind === 'code'; }).length - 1] : null;
+                  ok(t65b && t65b.cls === undefined, 'T65m ohne Karte verschwindet die Klasse aus der Serialisierung');
+                  /* T66 (#87): Beim Ausfuehren reist die importierte Klasse als
+                   * eigene Datei mit zur Java-VM, der Hauptcode bleibt Main.java. */
+                  ibProj65.value = '0';
+                  ibProj65.dispatch('change');
+                  global.window.InfoCraftJavaVM = {
+                    run: function (files) {
+                      ok(files && typeof files === 'object' && typeof files['Main.java'] === 'string' && files['Main.java'].indexOf('System.out.println("Los");') !== -1, 'T66 der Hauptcode geht als Main.java an die Java-VM');
+                      ok(typeof files['Auto.java'] === 'string' && files['Auto.java'].indexOf('class Auto') !== -1 && files['Auto.java'].indexOf('void fahren') !== -1, 'T66b die importierte Klasse reist als eigene Datei Auto.java mit');
+                      return { output: 'Auto faehrt los', errors: [], ok: true };
+                    }
+                  };
+                  ibCodeBox65.querySelector('.icv-code-run').dispatch('click');
+                  ok(ibCodeBox65.querySelector('.icv-code-out').textContent.indexOf('Auto faehrt los') !== -1, 'T66c die Ausgabe der Java-VM landet in der Konsole');
+                  delete global.window.InfoCraftJavaVM;
+                  /* T67 (#87/#95): Autovervollstaendigung an der GEMEINSAMEN
+                   * Vorschlags-Engine wie im Lesemodus: Klassennamen beim
+                   * Tippen, nach dem Punkt Attribute und Methoden, Tab
+                   * uebernimmt, Klick fuegt ein. */
+                  var ibAc67 = ibCodeBox65.querySelector('.ac-drop');
+                  ibCodeTa65.value = 'Au';
+                  ibCodeTa65.selectionStart = 2;
+                  ibCodeTa65.selectionEnd = 2;
+                  ibCodeTa65.dispatch('input');
+                  var acOpen67 = ibAc67 && ibAc67.style.display !== 'none';
+                  var acText67 = '';
+                  if (ibAc67) {
+                    for (var ai0 = 0; ai0 < ibAc67.children.length; ai0++) { acText67 += ibAc67.children[ai0].textOf() + '|'; }
+                  }
+                  ok(acOpen67 === true && acText67.indexOf('Auto') !== -1, 'T67 tippen oeffnet die Vorschlaege mit dem Klassennamen');
+                  ibCodeTa65.dispatch('keydown', { key: 'Tab' });
+                  ok(ibCodeTa65.value === 'Auto', 'T67b Tab uebernimmt den Vorschlag ins Code-Feld');
+                  ok(ibAc67.style.display === 'none', 'T67c nach der Uebernahme schliessen die Vorschlaege');
+                  ibCodeTa65.value = 'Auto.fa';
+                  ibCodeTa65.selectionStart = 7;
+                  ibCodeTa65.selectionEnd = 7;
+                  ibCodeTa65.dispatch('input');
+                  var acLabels67 = [];
+                  for (var ai67 = 0; ai67 < ibAc67.children.length; ai67++) { acLabels67.push(ibAc67.children[ai67].textOf()); }
+                  ok(acLabels67.join('|').indexOf('fahren()') !== -1, 'T67d nach dem Punkt schlagen Attribute und Methoden vor');
+                  var acPick67 = null;
+                  for (var ai2 = 0; ai2 < ibAc67.children.length; ai2++) {
+                    if (ibAc67.children[ai2].textOf() === 'fahren()') { acPick67 = ibAc67.children[ai2]; }
+                  }
+                  acPick67.dispatch('click');
+                  ok(ibCodeTa65.value === 'Auto.fahren(', 'T67e ein Klick auf den Vorschlag fuegt die Methode ein');
+                  var cv67 = ibCollect();
+                  var t67 = cv67 && cv67.items ? cv67.items.filter(function (it) { return it.kind === 'code'; })[cv67.items.filter(function (it) { return it.kind === 'code'; }).length - 1] : null;
+                  ok(t67 && t67.code === 'Auto.fahren(', 'T67f der ergaenzte Quelltext wird serialisiert');
+                }
+
+                /* T69 (#93): Editor-Paritaet am Code-Fenster - Zeilennummern
+                 * und Klammer-Automatik wie in der Werkstatt. */
+                var NLt = String.fromCharCode(10);
+                var ibEdWrap69 = ibCodeBox65 ? ibCodeBox65.querySelector('.icv-edwrap') : null;
+                ok(ibEdWrap69 !== null, 'T69 das Code-Fenster im Editor traegt den Zeilennummern-Gutter (icv-edwrap)');
+                if (ibEdWrap69) {
+                  var ibGut69 = ibEdWrap69.querySelector('.icv-gutter');
+                  ok(ibGut69 !== null && ibEdWrap69.querySelector('textarea.icv-code-ta') === ibCodeTa65, 'T69b der Gutter haelt die Zeilennummern-Spalte, das Code-Feld steckt im Wrap');
+                  ibCodeTa65.value = 'int a = 1;' + NLt + 'int b = 2;' + NLt + 'int c = 3;';
+                  ibCodeTa65.selectionStart = 32;
+                  ibCodeTa65.selectionEnd = 32;
+                  ibCodeTa65.dispatch('input');
+                  var ibGutCells69 = ibGut69 && ibGut69.querySelector('.icv-gutter-inner') ? String(ibGut69.querySelector('.icv-gutter-inner').innerHTML).split('icv-gutter-cell').length - 1 : 0;
+                  ok(ibGutCells69 === 3, 'T69c drei Zeilen Quelltext geben drei Zeilennummern');
+                  ibCodeTa65.value = '';
+                  ibCodeTa65.selectionStart = 0;
+                  ibCodeTa65.selectionEnd = 0;
+                  ibCodeTa65.dispatch('keydown', { key: '{' });
+                  ok(ibCodeTa65.value === '{}' && ibCodeTa65.selectionStart === 1, 'T69d die oeffnende Klammer schliesst sofort mit }');
+                  ibCodeTa65.value = 'System.out.println("Hi"';
+                  ibCodeTa65.selectionStart = 23;
+                  ibCodeTa65.selectionEnd = 23;
+                  ibCodeTa65.dispatch('keydown', { key: '(' });
+                  ok(ibCodeTa65.value === 'System.out.println("Hi"()', 'T69e auch ( schliesst sofort mit dem Gegenstueck');
+                  ibCodeTa65.value = 'Auto.fahren()';
+                  ibCodeTa65.selectionStart = 12;
+                  ibCodeTa65.selectionEnd = 12;
+                  ibCodeTa65.dispatch('keydown', { key: ')' });
+                  ok(ibCodeTa65.value === 'Auto.fahren()' && ibCodeTa65.selectionStart === 13, 'T69f ein getipptes ) ueberspringt das vorhandene statt es zu verdoppeln');
+                  /* #94: Enter direkt nach einer oeffnenden Klammer legt
+                   * zwei eingerueckte Zeilen an, darunter die schliessende. */
+                  ibCodeTa65.value = '{}';
+                  ibCodeTa65.selectionStart = 1;
+                  ibCodeTa65.selectionEnd = 1;
+                  ibCodeTa65.dispatch('keydown', { key: 'Enter' });
+                  ok(ibCodeTa65.value === '{' + NLt + '  ' + NLt + '}' && ibCodeTa65.selectionStart === 4, 'T115 Enter nach einer oeffnenden Klammer legt zwei eingerueckte Zeilen an (#94)');
+                }
+
+                /* T71 (#93): Mermaid-Vorschlaege am Diagramm-Quelltext im
+                 * Editor, dazu Gutter und Klammer-Automatik. */
+                ibDiagBtn59.dispatch('click');
+                var ibDiagBoxes71 = ibStage.querySelectorAll('.icv-diagram');
+                var ibDiagBox71 = ibDiagBoxes71[ibDiagBoxes71.length - 1];
+                var ibDiagTa71 = ibDiagBox71 ? ibDiagBox71.querySelector('textarea.icv-diagram-src') : null;
+                var ibDiagWrap71 = (ibDiagTa71 && ibDiagTa71.parentNode && ibDiagTa71.parentNode.classList && ibDiagTa71.parentNode.classList.contains('icv-edwrap')) ? ibDiagTa71.parentNode : null;
+                ok(ibDiagWrap71 !== null && ibDiagWrap71.querySelector('.ac-drop') !== null, 'T71 der Diagramm-Quelltext im Editor traegt den Gutter-Wrap mit Vorschlagsbox darunter');
+                if (ibDiagWrap71) {
+                  var ibAcDrop71 = ibDiagWrap71.querySelector('.ac-drop');
+                  ibDiagTa71.value = 'gr';
+                  ibDiagTa71.selectionStart = 2;
+                  ibDiagTa71.selectionEnd = 2;
+                  ibDiagTa71.dispatch('input');
+                  var ibAc71Labels = [];
+                  for (var ai71 = 0; ai71 < ibAcDrop71.children.length; ai71++) { ibAc71Labels.push(ibAcDrop71.children[ai71].textOf()); }
+                  ok(ibAc71Labels.join('|').indexOf('graph TD') !== -1, 'T71b tippen schlaegt Mermaid-Schluesselwoerter vor (graph TD)');
+                  ibDiagTa71.dispatch('keydown', { key: 'Tab' });
+                  ok(ibDiagTa71.value === 'graph TD', 'T71c Tab uebernimmt den Vorschlag in den Quelltext');
+                  ibDiagTa71.value = 'graph TD' + NLt + 'A --';
+                  ibDiagTa71.selectionStart = 13;
+                  ibDiagTa71.selectionEnd = 13;
+                  ibDiagTa71.dispatch('input');
+                  var ibAc71LabelsB = [];
+                  for (var bi71 = 0; bi71 < ibAcDrop71.children.length; bi71++) { ibAc71LabelsB.push(ibAcDrop71.children[bi71].textOf()); }
+                  ok(ibAc71LabelsB.join('|').indexOf('-->') !== -1, 'T71d nach dem Minus schlagen die Pfeile vor (-->)');
+                  ibDiagTa71.dispatch('keydown', { key: 'Enter' });
+                  ok(ibDiagTa71.value === 'graph TD' + NLt + 'A -->', 'T71e Enter fuegt den Pfeil ein');
+                  ibDiagTa71.value = 'graph TD' + NLt + 'A --> B';
+                  ibDiagTa71.selectionStart = 16;
+                  ibDiagTa71.selectionEnd = 16;
+                  ibDiagTa71.dispatch('keydown', { key: '{' });
+                  ok(ibDiagTa71.value === 'graph TD' + NLt + 'A --> B{}', 'T71f die Klammer-Automatik schliesst { auch am Diagramm-Quelltext');
+                  /* #96: ganze Mermaid-Snippets stehen in der Vervoll-
+                   * staendigung, hier subgraph aus dem erDiagram. */
+                  ibDiagTa71.value = 'sub';
+                  ibDiagTa71.selectionStart = 3;
+                  ibDiagTa71.selectionEnd = 3;
+                  ibDiagTa71.dispatch('input');
+                  var ibAc96Labels = [];
+                  for (var ai96 = 0; ai96 < ibAcDrop71.children.length; ai96++) { ibAc96Labels.push(ibAcDrop71.children[ai96].textOf()); }
+                  ok(ibAc96Labels.join('|').indexOf('subgraph Titel') !== -1, 'T115b die Mermaid-Vervollstaendigung schlaegt ganze Snippets vor (#96)');
+                }
+
+                /* T72/T73 (#92/#93): Lesemodus-Paritaet. Der Server rendert das
+                 * Code-Fenster als editierbares Feld (#92), app.js legt beim
+                 * Laden Gutter, Klammer-Automatik und Vorschlaege darauf; das
+                 * geteilte Diagramm rendert live weiter. */
+                var roPath72 = require.resolve('../public/assets/js/app.js');
+                delete require.cache[roPath72];
+                var roDoc = new FakeDoc();
+                roDoc.documentElement = new FakeEl('html');
+                roDoc.body.setAttribute('data-csrf', 'csrf-t72');
+                var roCodeBox = new FakeEl('div');
+                roCodeBox.className = 'icv-item icv-code';
+                var roCodeTa = new FakeEl('textarea');
+                roCodeTa.className = 'mono icv-code-src';
+                roCodeTa.value = 'class Main {' + NLt + '  public static void main(String[] args) {' + NLt + '    Auto a = new Auto();' + NLt + '  }' + NLt + '}';
+                var roRunBtn = new FakeEl('button');
+                roRunBtn.className = 'icv-code-run';
+                roRunBtn.setAttribute('data-lang', 'java');
+                roRunBtn.setAttribute('data-clsfiles', JSON.stringify([{ name: 'Auto.java', code: 'class Auto {' + NLt + '  String name;' + NLt + '  void fahren() {}' + NLt + '}' + NLt }]));
+                /* #99: Klassen-Chip im Lesemodus, app.js baut die Karte dazu. */
+                var roChip = new FakeEl('div');
+                roChip.className = 'icv-code-card icv-code-card-ro';
+                roChip.setAttribute('data-clsname', 'Auto');
+                roChip.setAttribute('title', 'Auto.java');
+                roChip.appendChild(new FakeEl('text'));
+                roChip.children[0].textContent = 'Auto';
+                roCodeBox.appendChild(roChip);
+                var roOut = new FakeEl('pre');
+                roOut.className = 'icv-code-out';
+                roCodeBox.appendChild(roCodeTa);
+                roCodeBox.appendChild(roRunBtn);
+                roCodeBox.appendChild(roOut);
+                roDoc.body.appendChild(roCodeBox);
+                var roSplitRo = new FakeEl('div');
+                roSplitRo.className = 'icv-item icv-diagram icv-diagram-split-ro';
+                roSplitRo.setAttribute('data-src', 'graph TD' + NLt + 'A --> B');
+                var roSplitWrap = new FakeEl('div');
+                roSplitWrap.className = 'icv-diagram-split';
+                var roSplitTa = new FakeEl('textarea');
+                roSplitTa.className = 'mono icv-diagram-code';
+                roSplitTa.value = 'graph TD' + NLt + 'A --> B';
+                var roSplitBar = new FakeEl('div');
+                roSplitBar.className = 'icv-diagram-split-bar';
+                var roSplitPrev = new FakeEl('div');
+                roSplitPrev.className = 'icv-diagram-prev';
+                roSplitWrap.appendChild(roSplitTa);
+                roSplitWrap.appendChild(roSplitBar);
+                roSplitWrap.appendChild(roSplitPrev);
+                roSplitRo.appendChild(roSplitWrap);
+                roDoc.body.appendChild(roSplitRo);
+                var savedDocR = global.document;
+                global.document = roDoc;
+                require(roPath72);
+                var roWrap72 = (roCodeTa.parentNode && roCodeTa.parentNode.classList && roCodeTa.parentNode.classList.contains('icv-edwrap')) ? roCodeTa.parentNode : null;
+                ok(roWrap72 !== null && roWrap72.querySelector('.icv-gutter') !== null, 'T72 das Lesemodus-Code-Fenster (#92) traegt den Zeilennummern-Gutter');
+                if (roWrap72) {
+                  var roGutCells72 = String(roWrap72.querySelector('.icv-gutter').querySelector('.icv-gutter-inner').innerHTML).split('icv-gutter-cell').length - 1;
+                  ok(roGutCells72 === 5, 'T72b fuenf Zeilen Quelltext geben fuenf Zeilennummern');
+                  roCodeTa.value = '';
+                  roCodeTa.selectionStart = 0;
+                  roCodeTa.selectionEnd = 0;
+                  roCodeTa.dispatch('keydown', { key: '{' });
+                  ok(roCodeTa.value === '{}', 'T72c die Klammer-Automatik schliesst { auch im Lesemodus');
+                  var roDrop72 = roWrap72.querySelector('.ac-drop');
+                  roCodeTa.value = 'Aut';
+                  roCodeTa.selectionStart = 3;
+                  roCodeTa.selectionEnd = 3;
+                  roCodeTa.dispatch('input');
+                  var roLabels72 = [];
+                  for (var ri72 = 0; roDrop72 && ri72 < roDrop72.children.length; ri72++) { roLabels72.push(roDrop72.children[ri72].textOf()); }
+                  ok(roLabels72.join('|').indexOf('Auto') !== -1, 'T72d tippen schlaegt die importierte Klasse Auto vor');
+                  roCodeTa.dispatch('keydown', { key: 'Tab' });
+                  ok(roCodeTa.value === 'Auto', 'T72e Tab uebernimmt den Klassennamen');
+                  roCodeTa.value = 'Auto.fa';
+                  roCodeTa.selectionStart = 7;
+                  roCodeTa.selectionEnd = 7;
+                  roCodeTa.dispatch('input');
+                  var roLabels72b = [];
+                  for (var rj72 = 0; roDrop72 && rj72 < roDrop72.children.length; rj72++) { roLabels72b.push(roDrop72.children[rj72].textOf()); }
+                  ok(roLabels72b.join('|').indexOf('fahren()') !== -1, 'T72f nach dem Punkt schlagen Attribute und Methoden der importierten Klasse vor');
+                  roCodeTa.dispatch('keydown', { key: 'Enter' });
+                  ok(roCodeTa.value === 'Auto.fahren(', 'T72g Enter fuegt die Methode ein');
+                  global.window.InfoCraftJavaVM = {
+                    run: function (files) {
+                      ok(files && typeof files === 'object' && typeof files['Main.java'] === 'string' && files['Main.java'].indexOf('Auto.fahren(') !== -1, 'T72h der im Lesemodus getippte Quelltext geht als Main.java an die Java-VM');
+                      ok(typeof files['Auto.java'] === 'string' && files['Auto.java'].indexOf('class Auto') !== -1, 'T72i die importierte Klasse reist als Auto.java mit');
+                      return { output: 'Auto faehrt', errors: [], ok: true };
+                    }
+                  };
+                  roRunBtn.dispatch('click');
+                  ok(roOut.textContent.indexOf('Auto faehrt') !== -1, 'T72j die Ausgabe der Java-VM landet in der Konsole des Lesemodus-Fensters');
+                  delete global.window.InfoCraftJavaVM;
+                }
+                var roWrap73 = (roSplitTa.parentNode && roSplitTa.parentNode.classList && roSplitTa.parentNode.classList.contains('icv-edwrap')) ? roSplitTa.parentNode : null;
+                ok(roWrap73 !== null && roWrap73.querySelector('.ac-drop') !== null, 'T73 der Quelltext im geteilten Lesemodus traegt Gutter und Mermaid-Vorschlagsbox');
+                if (roWrap73) {
+                  roSplitTa.value = 'gr';
+                  roSplitTa.selectionStart = 2;
+                  roSplitTa.selectionEnd = 2;
+                  roSplitTa.dispatch('input');
+                  roSplitTa.dispatch('keydown', { key: 'Tab' });
+                  ok(roSplitTa.value === 'graph TD', 'T73b Tab uebernimmt den Mermaid-Vorschlag in den geteilten Quelltext');
+                  global.window.mermaid = { render: function (id, src) { return { svg: '<svg class="icv-dg-t73">' + String(src) + '</svg>' }; } };
+                  roSplitTa.value = 'graph TD' + NLt + 'A --> C';
+                  roSplitTa.selectionStart = 16;
+                  roSplitTa.selectionEnd = 16;
+                  roSplitTa.dispatch('input');
+                  ok(String(roSplitPrev.innerHTML).indexOf('A --> C') !== -1, 'T73c Tippen am Gutter-Feld zeichnet das Diagramm live neu');
+                  delete global.window.mermaid;
+                }
+                global.document = savedDocR;
+
+                /* T74 (#98): AltGr-Klammern. Auf deutschen Tastaturen melden
+                 * { und [ sich als ctrlKey+altKey; die Klammer-Automatik
+                 * darf sie nicht mehr wegfiltern, echte Strg-Kuerzel schon. */
+                roCodeTa.value = '';
+                roCodeTa.selectionStart = 0;
+                roCodeTa.selectionEnd = 0;
+                roCodeTa.dispatch('keydown', { key: '{', ctrlKey: true, altKey: true });
+                ok(roCodeTa.value === '{}', 'T74 AltGr-{ (ctrlKey+altKey) schliesst die geschweifte Klammer mit');
+                roCodeTa.value = '';
+                roCodeTa.selectionStart = 0;
+                roCodeTa.selectionEnd = 0;
+                roCodeTa.dispatch('keydown', { key: '[', ctrlKey: true, altKey: true });
+                ok(roCodeTa.value === '[]', 'T74b AltGr-[ schliesst die eckige Klammer mit');
+                roCodeTa.value = '';
+                roCodeTa.selectionStart = 0;
+                roCodeTa.selectionEnd = 0;
+                roCodeTa.dispatch('keydown', { key: '(', ctrlKey: true });
+                ok(roCodeTa.value === '', 'T74c ein echtes Strg-Kuerzel bleibt unangetastet');
+
+                /* T75 (#99): Klassenkarte im Lesemodus. Der Chip klappt auf
+                 * und zeigt Attribute und Methoden der importierten Klasse. */
+                var roDet75 = roChip.querySelector('.icv-code-card-detail');
+                ok(roDet75 !== null, 'T75 der Lesemodus-Chip traegt die aufklappbare Klassenkarte');
+                if (roDet75) {
+                  var roTxt75 = roChip.textOf();
+                  ok(roTxt75.indexOf('name : String') !== -1, 'T75b die Karte nennt das Attribut der importierten Klasse');
+                  ok(roTxt75.indexOf('fahren()') !== -1, 'T75c die Karte nennt die Methode der importierten Klasse');
+                  roChip.dispatch('click');
+                  ok(roChip.classList.contains('open'), 'T75d ein Klick klappt die Karte im Lesemodus auf');
+                }
+
+                /* T76 (#100): Inhalt-Knopf in der Kopfzeile. Der Knopf sitzt
+                 * neben dem Zurueck-Button und traegt die Beschriftung Inhalt,
+                 * die Leiste verschwindet eingeklappt komplett. */
+                var p76 = require.resolve('../public/assets/js/app.js');
+                delete require.cache[p76];
+                var doc76 = new FakeDoc();
+                doc76.documentElement = new FakeEl('html');
+                var aside76 = new FakeEl('aside');
+                doc76.register(aside76, 'ibook-pagenav');
+                var foldBtn76 = new FakeEl('button');
+                foldBtn76.className = 'btn btn-ghost ibook-pagenav-fold';
+                doc76.register(foldBtn76, 'ibook-pagenav-fold');
+                doc76.body.appendChild(aside76);
+                doc76.body.appendChild(foldBtn76);
+                var savedDoc76 = global.document;
+                global.document = doc76;
+                require(p76);
+                ok(String(foldBtn76.textContent).indexOf('Inhalt') !== -1, 'T76 der Ausklapp-Knopf heisst Inhalt');
+                aside76.classList.add('ibook-pagenav-off');
+                foldBtn76.dispatch('click');
+                ok(!aside76.classList.contains('ibook-pagenav-off'), 'T76b ein Klick klappt die Leiste wieder aus');
+                ok(String(foldBtn76.textContent).indexOf('Inhalt') !== -1, 'T76c die Beschriftung bleibt auch eingeklappt lesbar');
+                aside76.classList.add('ibook-pagenav-off');
+                foldBtn76.dispatch('click');
+                global.document = savedDoc76;
+
+                /* T77 (#101): Seiten per Drag&Drop sortieren. Ziehen im selben
+                 * Abschnitt sortiert das DOM und schickt die neue Reihenfolge
+                 * an den Endpunkt seiten-reihenfolge. */
+                var p77 = require.resolve('../public/assets/js/app.js');
+                delete require.cache[p77];
+                var doc77 = new FakeDoc();
+                doc77.documentElement = new FakeEl('html');
+                var aside77 = new FakeEl('aside');
+                doc77.register(aside77, 'ibook-pagenav');
+                var sec77 = new FakeEl('a');
+                sec77.className = 'ibook-pagenav-section';
+                var pgA = new FakeEl('a');
+                pgA.className = 'ibook-pagenav-page ibook-pagenav-drag';
+                pgA.setAttribute('draggable', 'true');
+                pgA.setAttribute('data-page-id', '1');
+                pgA.setAttribute('href', '/infobuecher/12/seite/1');
+                var pgB = new FakeEl('a');
+                pgB.className = 'ibook-pagenav-page ibook-pagenav-drag';
+                pgB.setAttribute('draggable', 'true');
+                pgB.setAttribute('data-page-id', '2');
+                pgB.setAttribute('href', '/infobuecher/12/seite/2');
+                var pgC = new FakeEl('a');
+                pgC.className = 'ibook-pagenav-page ibook-pagenav-drag';
+                pgC.setAttribute('draggable', 'true');
+                pgC.setAttribute('data-page-id', '3');
+                pgC.setAttribute('href', '/infobuecher/12/seite/3');
+                aside77.appendChild(sec77);
+                aside77.appendChild(pgA);
+                aside77.appendChild(pgB);
+                aside77.appendChild(pgC);
+                doc77.body.appendChild(aside77);
+                var dndUrl = null;
+                var dndBody = null;
+                var savedFetch = global.fetch;
+                global.fetch = function (u, o) { dndUrl = u; dndBody = o && o.body ? String(o.body) : ''; return { catch: function () {} }; };
+                var savedDoc77 = global.document;
+                global.document = doc77;
+                require(p77);
+                pgA.dispatch('dragstart', { dataTransfer: { setData: function () {}, effectAllowed: '' } });
+                ok(pgA.classList.contains('ibook-pagenav-dragging'), 'T77 die gezogene Seite markiert sich');
+                pgC.dispatch('dragover', { dataTransfer: { dropEffect: '' } });
+                ok(pgC.classList.contains('ibook-pagenav-dragover'), 'T77b die Zielzeile hebt sich hervor');
+                pgC.dispatch('drop', { dataTransfer: { dropEffect: '' } });
+                ok(aside77.children[3] === pgA, 'T77c die gezogene Seite landet hinter dem Ziel (DOM-Reihenfolge B, C, A)');
+                ok(dndUrl === '/infobuecher/12/seiten-reihenfolge', 'T77d die neue Reihenfolge geht an den Sortier-Endpunkt');
+                ok(dndBody !== null && dndBody.indexOf('page_ids=2%2C3%2C1') !== -1, 'T77e die Reihenfolge wandert als page_ids an den Server');
+                global.fetch = savedFetch;
+                global.document = savedDoc77;
+
+                /* T78 (#102): Editor-Bausteine sind Module: clsMembers liegt
+                 * genau einmal vor (IC_EDIT_TOOLS) und dient Editor, Lesemodus
+                 * und Klassenkarte. */
+                ok(global.window.IC_EDIT_TOOLS && typeof global.window.IC_EDIT_TOOLS.clsMembers === 'function', 'T78 IC_EDIT_TOOLS exportiert die Member-Erkennung als Baustein');
+                var mem78 = global.window.IC_EDIT_TOOLS ? global.window.IC_EDIT_TOOLS.clsMembers('class Auto {' + NLt + '  String name;' + NLt + '  void fahren() {}' + NLt + '}') : null;
+                ok(mem78 !== null && mem78.fields.length === 1 && mem78.fields[0].name === 'name', 'T78b der Baustein erkennt Attribute einer Klasse');
+                ok(mem78 !== null && mem78.methods.length === 1 && mem78.methods[0].name === 'fahren', 'T78c der Baustein erkennt Methoden einer Klasse');
+
+                /* T79 (#103): Tab-Verhalten vereinheitlicht. Ohne offenen
+                 * Vorschlag rueckt Tab um zwei Leerzeichen ein, statt den
+                 * Fokus zu verlieren; mit Vorschlag uebernimmt Tab wie bisher. */
+                roCodeTa.value = 'qq';
+                roCodeTa.selectionStart = 2;
+                roCodeTa.selectionEnd = 2;
+                roCodeTa.dispatch('input');
+                roCodeTa.dispatch('keydown', { key: 'Tab' });
+                ok(roCodeTa.value === 'qq  ', 'T79 Tab ohne Vorschlag fuegt im Lesemodus zwei Leerzeichen ein');
+                ok(roCodeTa.selectionStart === 4 && roCodeTa.selectionEnd === 4, 'T79b der Cursor steht nach dem Vorschub');
+                roCodeTa.value = 'Sys';
+                roCodeTa.selectionStart = 3;
+                roCodeTa.selectionEnd = 3;
+                roCodeTa.dispatch('input');
+                roCodeTa.dispatch('keydown', { key: 'Tab' });
+                ok(roCodeTa.value === 'System.out.println(', 'T79c Tab mit offenem Vorschlag uebernimmt weiterhin den Vorschlag');
+                /* Diagramm-Quelltext im geteilten Lesemodus: gleiche Regel. */
+                roSplitTa.value = 'zz';
+                roSplitTa.selectionStart = 2;
+                roSplitTa.selectionEnd = 2;
+                roSplitTa.dispatch('input');
+                roSplitTa.dispatch('keydown', { key: 'Tab' });
+                ok(roSplitTa.value === 'zz  ', 'T79d Tab ohne Vorschlag fuegt auch im Diagramm-Quelltext zwei Leerzeichen ein');
+                /* Auswahl ueber mehrere Zeilen: jede Zeile rueckt ein. */
+                var ta79 = new FakeEl('textarea');
+                ta79.value = 'a' + NLt + 'b';
+                ta79.selectionStart = 0;
+                ta79.selectionEnd = 3;
+                global.window.IC_EDIT_TOOLS.tabIndent(ta79);
+                ok(ta79.value === '  a' + NLt + '  b', 'T79e Auswahl ueber zwei Zeilen rueckt jede Zeile ein');
+
+                /* T80 (#105): Syntax-Highlighting als Baustein. highlight()
+                 * haengt das Overlay hinter das Feld, feuerert bei input neu
+                 * und schaltet die Sprache um; ohne hljs bleibt alles weg. */
+                global.window.hljs = {
+                  getLanguage: function (l) { return l === 'java' || l === 'javascript' || l === 'mermaid'; },
+                  highlight: function (src, o) { return { value: '<b class="hl-mock">' + o.language + '</b>' }; }
+                };
+                var wrap80 = new FakeEl('div');
+                var ta80 = new FakeEl('textarea');
+                wrap80.appendChild(ta80);
+                var ctl80 = global.window.IC_EDIT_TOOLS.highlight(ta80, 'java');
+                ok(ctl80 !== null && wrap80.classList.contains('hl-on'), 'T80 das Overlay aktiviert sich (hl-on) nur, wenn es wirklich da ist');
+                var pre80 = wrap80.querySelector('.icv-hl-pre');
+                ok(pre80 !== null, 'T80b das farbige pre-Overlay liegt hinter dem Feld');
+                var code80 = pre80 ? pre80.children[0] : null;
+                ok(code80 !== null && String(code80.className).indexOf('language-java') !== -1, 'T80c das Overlay traegt die Sprache Java');
+                ok(code80 !== null && String(code80.innerHTML).indexOf('hl-mock') !== -1, 'T80d der Quelltext wird durch highlight.js gefaerbt');
+                ta80.value = 'class A {}';
+                ta80.dispatch('input');
+                ok(code80 !== null && String(code80.innerHTML).indexOf('hl-mock') !== -1, 'T80e Tippen faerbt das Overlay neu');
+                ctl80.setLang('javascript');
+                ok(code80 !== null && String(code80.className).indexOf('language-javascript') !== -1, 'T80f der Sprachwechsel schaltet das Overlay um');
+                /* Ohne hljs: Rueckgabe null, Feld unangetastet. */
+                delete global.window.hljs;
+                var wrap80b = new FakeEl('div');
+                var ta80b = new FakeEl('textarea');
+                wrap80b.appendChild(ta80b);
+                ok(global.window.IC_EDIT_TOOLS.highlight(ta80b, 'java') === null && !wrap80b.classList.contains('hl-on'), 'T80g ohne highlight.js bleibt das Feld unangetastet');
+
+                /* T81 (#105): boostRead verdrahtet das Highlighting im
+                 * Lesemodus mit - gleicher Baustein, nur angebunden. */
+                var p81 = require.resolve('../public/assets/js/app.js');
+                delete require.cache[p81];
+                var doc81 = new FakeDoc();
+                doc81.documentElement = new FakeEl('html');
+                var box81 = new FakeEl('div');
+                box81.className = 'icv-item icv-code';
+                var ta81 = new FakeEl('textarea');
+                ta81.className = 'mono icv-code-src';
+                ta81.value = 'class Main {}';
+                var btn81 = new FakeEl('button');
+                btn81.className = 'icv-code-run';
+                btn81.setAttribute('data-lang', 'java');
+                btn81.setAttribute('data-clsfiles', '[]');
+                box81.appendChild(ta81);
+                box81.appendChild(btn81);
+                doc81.body.appendChild(box81);
+                var savedDoc81 = global.document;
+                global.document = doc81;
+                global.window.hljs = {
+                  getLanguage: function () { return true; },
+                  highlight: function (src, o) { return { value: '<b class="hl-mock81">' + o.language + '</b>' }; }
+                };
+                require(p81);
+                var wrap81 = (ta81.parentNode && ta81.parentNode.classList.contains('icv-edwrap')) ? ta81.parentNode : null;
+                ok(wrap81 !== null && wrap81.classList.contains('hl-on') && wrap81.querySelector('.icv-hl-pre') !== null, 'T81 der Lesemodus holt sich das Syntax-Highlighting aus demselben Baustein');
+                var code81 = wrap81 && wrap81.querySelector('.icv-hl-pre') ? wrap81.querySelector('.icv-hl-pre').children[0] : null;
+                ok(code81 !== null && String(code81.innerHTML).indexOf('hl-mock81') !== -1, 'T81b der Java-Quelltext der Seite ist gefaerbt');
+                delete global.window.hljs;
+                global.document = savedDoc81;
+
+                /* T41 (#65): Das Anweisungsfeld wächst mit dem Text: rows folgt der Zeilenzahl. */
+                var NL41 = String.fromCharCode(10);
+                replIn.value = ['a', 'b', 'c', 'd', 'e', 'f'].join(NL41);
+                replIn.dispatch('input');
+                ok(String(replIn.getAttribute('rows')) === '6', 'T41 Anweisungsfeld: 6 Zeilen Text geben rows 6');
+                replIn.value = 'eins';
+                replIn.dispatch('input');
+                ok(String(replIn.getAttribute('rows')) === '4', 'T41b kuerzere Eingabe behaelt mindestens rows 4');
+                var t41long = '';
+                var t41i;
+                for (t41i = 0; t41i < 20; t41i++) { t41long += 'z' + NL41; }
+                replIn.value = t41long;
+                replIn.dispatch('input');
+                ok(String(replIn.getAttribute('rows')) === '14', 'T41c viele Zeilen stoppen bei rows 14 (dann scrollt das Feld)');
+
+                /* T42 (#65): Der Boot wartet auf DOMContentLoaded. java-vm.js laeuft
+                 * im Browser mitten im Body (Script-Tag vor dem DB-Panel), die
+                 * DB-Konsole steht erst danach im HTML. Bisher lief die Verdrahtung
+                 * ins Leere und 'Abfrage ausfuehren' tat nichts. */
+                var vmPath42 = require.resolve('../public/assets/js/java-vm.js');
+                delete require.cache[vmPath42];
+                var doc42 = new FakeDoc();
+                doc42.readyState = 'loading';
+                var dbSeed42 = new FakeEl('input');
+                dbSeed42.value = 'CREATE TABLE produkte (name TEXT);' + NL41 + "INSERT INTO produkte VALUES ('Heft');";
+                doc42.register(dbSeed42, 'java-db-seed');
+                var dbIn42 = new FakeEl('textarea');
+                doc42.register(dbIn42, 'java-db-in');
+                var dbOut42 = new FakeEl('pre');
+                doc42.register(dbOut42, 'java-db-out');
+                var dbRunBtn42 = new FakeEl('button');
+                doc42.register(dbRunBtn42, 'java-db-run');
+                var savedDoc42 = global.document;
+                global.document = doc42;
+                require(vmPath42);
+                ok(dbOut42.textContent === '', 'T42 solange das Dokument laedt, laeuft der Boot noch nicht');
+                doc42._fire('DOMContentLoaded', { type: 'DOMContentLoaded' });
+                ok(dbOut42.textContent.indexOf('Noch keine Abfrage') !== -1, 'T42b nach DOMContentLoaded ist die DB-Konsole verdrahtet (Platzhalter steht)');
+                dbIn42.value = 'SELECT * FROM produkte';
+                dbOut42.textContent = '';
+                dbRunBtn42.dispatch('click');
+                ok(dbOut42.textContent.indexOf('Heft') !== -1, 'T42c Abfrage ausfuehren liefert nach dem Boot die Zeilen (Seed geladen)');
+                global.document = savedDoc42;
+
+                /* T84 (#113): Lesemodus - boostRead verdrahtet auch das
+                 * SQL-Abfrage-Feld des DB-Elements mit der Werkstatt-
+                 * Autovervollstaendigung, Tabellen aus dem Seed-pre. */
+                var p84 = require.resolve('../public/assets/js/app.js');
+                delete require.cache[p84];
+                var doc84 = new FakeDoc();
+                doc84.documentElement = new FakeEl('html');
+                var box84 = new FakeEl('div');
+                box84.className = 'icv-item icv-db';
+                var seed84 = new FakeEl('pre');
+                seed84.className = 'icv-db-seed-src';
+                seed84.textContent = "CREATE TABLE klassen (name TEXT); INSERT INTO klassen VALUES ('7a');";
+                var qta84 = new FakeEl('textarea');
+                qta84.className = 'mono icv-db-in';
+                box84.appendChild(seed84);
+                box84.appendChild(qta84);
+                doc84.body.appendChild(box84);
+                var savedDoc84 = global.document;
+                global.document = doc84;
+                require(p84);
+                ok(qta84.__icAc === true, 'T84 das SQL-Abfrage-Feld des Lesemodus ist an die Autovervollstaendigung angeschlossen');
+                ok(String(qta84.getAttribute('data-tables') || '') === 'klassen', 'T84b die Tabellen aus dem Schema stehen als data-tables am Feld');
+                qta84.value = 'SEL';
+                qta84.selectionStart = 3;
+                qta84.selectionEnd = 3;
+                qta84.dispatch('input');
+                var ac84 = box84.querySelector('.ac-item');
+                ok(ac84 !== null && ac84.textOf().indexOf('SELECT') !== -1, 'T84c SQL-Vorschlaege erscheinen im Lesemodus');
+                qta84.dispatch('keydown', { key: 'Tab' });
+                ok(String(qta84.value).indexOf('SELECT') === 0, 'T84d Tab uebernimmt den Vorschlag im Lesemodus');
+                global.document = savedDoc84;
+
+                /* T85 (#111/#112): CSS-Marker. Die Dock-Regel neutralisiert
+                 * die Offsets der Overlay-Basisregel; die Objektkonsole wird
+                 * per ID-Regel transparent, sobald das Overlay aktiv ist. */
+                var css85 = require('fs').readFileSync(require.resolve('../public/assets/css/style.css'), 'utf8');
+                var dock85 = css85.slice(css85.indexOf('.gfx-dock .gfx-window'), css85.indexOf('.gfx-dock .gfx-window') + 500);
+                ok(/top:\s*auto;\s*right:\s*auto;/.test(dock85), 'T85 die Dock-Regel neutralisiert top/right der Overlay-Basisregel');
+                ok(css85.indexOf('.hlwrap.hl-active > #java-repl-in { color: transparent; }') !== -1, 'T85b die ID-Regel macht den Originaltext der Objektkonsole transparent');
+
+                /* T86 (#115): Textfeld-Hoehe nach Laden/Import. fitTa lief in
+                 * buildItem, bevor das Feld im Dokument hing (scrollHeight 0),
+                 * geladene/importierte Felder blieben auf Mindesthoehe.
+                 * renderStage zieht die Hoehe jetzt nach dem Einfuegen fuer
+                 * ALLE Felder nach (fitStageTas, als IC_IBOOK_FITTA exponiert). */
+                var p86 = require.resolve('../public/assets/js/app.js');
+                delete require.cache[p86];
+                var doc86 = new FakeDoc();
+                doc86.documentElement = new FakeEl('html');
+                doc86.body.setAttribute('data-csrf', 'csrf-t86');
+                var ed86 = new FakeEl('div');
+                ed86.setAttribute('data-book-id', '77');
+                ed86.setAttribute('data-page-id', '42');
+                ed86.setAttribute('data-blocks', JSON.stringify([{ type: 'canvas', w: 1600, h: 1000, items: [
+                  { kind: 'text', body: 'Importierter Zettel', x: 40, y: 40, w: 320 }
+                ] }]));
+                doc86.register(ed86, 'ibook-editor');
+                doc86.register(new FakeEl('input'), 'ibook-blocks-json');
+                var form86 = new FakeEl('form');
+                form86.setAttribute('action', '/infobuecher/77/seite/42');
+                doc86.register(form86, 'ibook-saveform');
+                var savedDoc86 = global.document;
+                global.document = doc86;
+                require(p86);
+                global.document = savedDoc86;
+                ok(typeof global.window.IC_IBOOK_FITTA === 'function', 'T86 der Nachzieh-Lauf ist als Baustein exponiert (renderStage ruft ihn nach dem Einfuegen)');
+                var ta86 = ed86.querySelector('.icv-ta');
+                ok(ta86 !== null, 'T86b das importierte Textfeld steht auf der Flaeche');
+                if (ta86 && global.window.IC_IBOOK_FITTA) {
+                  ta86.style.height = ''; /* Mindesthoehe, wie direkt nach dem Import */
+                  ta86.scrollHeight = 234; /* jetzt liegt das Feld im Layout */
+                  global.window.IC_IBOOK_FITTA();
+                  ok(ta86.style.height === '234px', 'T86c nach dem Laden/Import passt sich die Textfeld-Hoehe an den Inhalt an');
+                }
+
+                /* T52 (#67): Autospeichern. Der 900ms-Timer des Editors feuert
+                 * erst nach diesem Callback, deshalb sitzt die Pruefung (und
+                 * die Zusammenfassung) eine setTimeout-Ebene tiefer. */
+                setTimeout(function () {
+                  ok(ibookUrls.indexOf('/infobuecher/77/seite/42') !== -1, 'T52 jede Aenderung speichert sich von selbst (POST auf die Seite, ohne Speichern-Knopf)');
+                  var ibStatus52 = ibDoc.body.querySelector('.ibook-status');
+                  ok(ibStatus52 !== null && ibStatus52.textContent.indexOf('Automatisch gespeichert') !== -1, 'T52b der Editor meldet den automatischen Speichervorgang im Statusfeld');
+
+                                    /* ============================================================
+                     T87-T99 (#116-#128): Block-Werkstatt. Zunaechst headless
+                     (Laufzeit ohne DOM), danach ein eigener FakeDoc fuer den
+                     Editor (T86-Muster: eigenes document + frisches require,
+                     weil window-Exponate auf die zuletzt initialisierte
+                     Instanz zeigen). Seit #125/#126: Figuren-Liste, die
+                     Buehne als eigenes Ziel, Migration von Version 1. */
+                  var blkDocSaved = global.document;
+                  var blkFetchSaved = global.fetch;
+                  var blkFetchCalls = [];
+                  global.fetch = function (url, opts) {
+                    blkFetchCalls.push({ url: String(url), body: opts ? String(opts.body) : '' });
+                    return { then: function (fn) { fn({ ok: true }); return { catch: function () {} }; } };
+                  };
+
+                  var blkDoc = new FakeDoc();
+                  function blkReg(id, tag) {
+                    var e = blkDoc.createElement(tag || 'div');
+                    blkDoc.register(e, id);
+                    return e;
+                  }
+                  blkReg('blk-ide');
+                  blkReg('blk-scriptwrap');
+                  var blkCatsEl = blkReg('blk-cats');
+                  var blkPalEl = blkReg('blk-pal');
+                  var blkHelpEl = blkReg('blk-help');
+                  var blkScriptEl = blkReg('blk-script');
+                  var blkSpritesEl = blkReg('blk-sprites');
+                  var blkFlagBtn = blkReg('blk-flag', 'button');
+                  blkReg('blk-stop', 'button');
+                  var blkRuninfoEl = blkReg('blk-runinfo');
+                  var blkSaveinfoEl = blkReg('blk-saveinfo');
+                  var blkVarAddEl = blkReg('blk-var-add', 'button');
+                  var blkListAddEl = blkReg('blk-list-add', 'button');
+                  var blkProcAddEl = blkReg('blk-proc-add', 'button');
+                  var blkTemplatesBtn = blkReg('blk-templates', 'button');
+                  var blkFullBtn = blkReg('blk-full', 'button');
+                  var blkStageEl = blkReg('blk-stage');
+                  var blkBgEl = blkDoc.createElement('canvas');
+                  blkDoc.register(blkBgEl, 'blk-bg');
+                  var blkModeEl = blkReg('blk-mode', 'div');
+                  var blkModeLearnEl = blkReg('blk-mode-learn', 'button');
+                  var blkModeExpertEl = blkReg('blk-mode-expert', 'button');
+                  /* #161: Modus am Werkstatt-Geruest (Konto-Vorgabe) und
+                   * Speicher-Route fuer die Moduswahl. */
+                  var blkIdeEl = blkDoc.getElementById('blk-ide');
+                  blkIdeEl.setAttribute('data-blk-mode', 'learn');
+                  blkIdeEl.setAttribute('data-mode-url', '/einstellungen/werkstattmodus');
+                  var blkCodeEl = blkReg('blk-code', 'button');
+                  blkCodeEl.setAttribute('data-port', '/werkstatt/code/blocks/port');
+                  var blkConsoleBox = blkReg('blk-console');
+                  var blkConsoleLogEl = blkReg('blk-console-log');
+                  blkReg('blk-console-in', 'input');
+                  blkReg('blk-console-send', 'button');
+                  var blkPenEl = blkDoc.createElement('canvas');
+                  blkDoc.register(blkPenEl, 'blk-pen');
+                  var blkCtrEl = blkDoc.createElement('canvas');
+                  blkDoc.register(blkCtrEl, 'blk-ctr');
+                  var blkFormEl = blkReg('blocks-save-form', 'form');
+                  blkFormEl.setAttribute('action', '/werkstatt/code/5');
+                  var blkCsrfEl = new FakeEl('input');
+                  blkCsrfEl.setAttribute('name', 'csrf');
+                  blkCsrfEl.value = 'tok';
+                  blkFormEl.appendChild(blkCsrfEl);
+                  var blkTitleEl = new FakeEl('input');
+                  blkTitleEl.setAttribute('name', 'title');
+                  blkTitleEl.value = 'Block Demo';
+                  blkFormEl.appendChild(blkTitleEl);
+                  var blkJsonEl = new FakeEl('textarea');
+                  blkDoc.register(blkJsonEl, 'blocks-json');
+                  /* Absichtlich noch Version 1 (eine Figur, flache Skriptliste):
+                   * T87 und T97 pruefen die Migration auf Version 2. */
+                  blkJsonEl.value = JSON.stringify({
+                    v: 1, vars: [],
+                    sprite: { x: 0, y: 0, dir: 90, costume: 'robot', size: 100, visible: true },
+                    scripts: [{
+                      id: 's1', x: 24, y: 16,
+                      top: { op: 'flag', id: 'b1', f: {}, sub: [],
+                        next: { op: 'say_for', id: 'b2', f: { msg: { v: 'Hallo!' }, secs: { v: '2' } }, sub: [],
+                          next: { op: 'move_steps', id: 'b3', f: { steps: { v: '50' } }, sub: [], next: null } } }
+                    }]
+                  });
+
+                  global.document = blkDoc;
+                  delete require.cache[require.resolve('../public/assets/js/block-editor.js')];
+                  var BLK = require('../public/assets/js/block-editor.js');
+
+                  function blkRaw(op, fields, next, subs) {
+                    var f = {};
+                    var k;
+                    for (k in (fields || {})) {
+                      var fv = fields[k];
+                      f[k] = (fv && typeof fv === 'object' && fv.b) ? { b: fv.b } : { v: fv };
+                    }
+                    return { op: op, f: f, sub: subs || [], next: next || null };
+                  }
+                  function blkProgram(top) {
+                    return BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: top }] }));
+                  }
+                  function blkCond(raw) { return { cond: { b: raw } }; }
+
+                  ok(BLK && BLK.BLOCKS && BLK.BLOCKS.flag && BLK.newRuntime, 'T87 der Block-Editor meldet Registry und Laufzeit als Exponat');
+                  ok(Object.keys(BLK.BLOCKS).length >= 40, 'T87b die Registry enthaelt alle Bloecke der jetzt neun Kategorien');
+                  var blkParsed = BLK.parseProgram(blkJsonEl.value);
+                  ok(blkParsed.v === 3 && blkParsed.sprites.length === 1 && blkParsed.sprites[0].scripts.length === 1 && blkParsed.sprites[0].scripts[0].top.op === 'flag' && blkParsed.sprites[0].scripts[0].top.next.op === 'say_for', 'T87c das gespeicherte JSON laedt als Skript (Version 3, Ursprung oben links) mit Start-Hut und sage-Befehl');
+                  var blkEmpty = BLK.parseProgram('kein json');
+                  ok(blkEmpty.sprites.length === 1 && blkEmpty.sprites[0].scripts.length === 0, 'T87d ungueltiges JSON laedt als leeres Programm statt zu abstuerzen');
+
+                  /* T88: Bewegung, warte, wiederhole, fortlaufend, stoppe alles */
+                  var rt88 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('move_steps', { steps: '10' }))));
+                  rt88.flag(0);
+                  rt88.frame(0);
+                  ok(rt88.sprites[0].x === 250, 'T88 gehe 10 Schritte in Richtung 90 Grad bewegt die Figur nach rechts (Start in der Buehnenmitte 240/180)');
+                  var rt88b = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('point_dir', { deg: '0' }, blkRaw('move_steps', { steps: '10' })))));
+                  rt88b.flag(0);
+                  rt88b.frame(0);
+                  ok(rt88b.sprites[0].y === 170, 'T88b Richtung 0 Grad heisst nach oben (y wird kleiner)');
+                  var rt88c = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('wait', { secs: '1' }, blkRaw('change_y', { dy: '7' })))));
+                  rt88c.flag(0);
+                  rt88c.frame(999);
+                  ok(rt88c.sprites[0].y === 180, 'T88c waehrend des Wartens steht das Skript still');
+                  rt88c.frame(1000);
+                  ok(rt88c.sprites[0].y === 180, 'T88d die Wartezeit zaehlt ab dem ersten Anlauf (hier: bis Frame 1999)');
+                  rt88c.frame(2500);
+                  ok(rt88c.sprites[0].y === 187, 'T88e nach Ablauf der Wartezeit laeuft es weiter (y nach unten)');
+                  var rt88e = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('repeat', { count: '3' }, null, [blkRaw('change_y', { dy: '5' })])) }] })));
+                  rt88e.flag(0);
+                  rt88e.frame(0);
+                  rt88e.frame(0);
+                  rt88e.frame(0);
+                  ok(rt88e.sprites[0].y === 195, 'T88f wiederhole 3 mal lauft mit einem Durchlauf pro Bild');
+                  rt88e.frame(0);
+                  ok(rt88e.running() === false, 'T88g nach dem letzten Durchlauf ist der Thread beendet');
+                  var rt88g = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('forever', {}, null, [blkRaw('move_steps', { steps: '1' })])) }] })));
+                  rt88g.flag(0);
+                  var f88;
+                  for (f88 = 0; f88 < 10; f88++) { rt88g.frame(f88); }
+                  ok(rt88g.sprites[0].x === 250, 'T88h wiederhole fortlaufend bewegt Bild fuer Bild');
+                  var rt88h = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('forever', {}, null, [blkRaw('stop_all')])) }] })));
+                  rt88h.flag(0);
+                  rt88h.frame(0);
+                  ok(rt88h.running() === false, 'T88i stoppe alles beendet alle laufenden Skripte sofort');
+
+                  /* T89: wenn/sonst, Operatoren, Division durch 0, Zufall */
+                  function blkVarProgram(condRaw, name) {
+                    return BLK.parseProgram(JSON.stringify({
+                      v: 1, vars: ['punkte'], sprite: {},
+                      scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('if_then', blkCond(condRaw), null, [blkRaw('var_set', { name: name, value: '5' })])) }]
+                    }));
+                  }
+                  var rt89 = BLK.newRuntime(blkVarProgram(blkRaw('gt', { a: '3', b: '2' }), 'punkte'));
+                  rt89.flag(0);
+                  rt89.frame(0);
+                  ok(rt89.vars.punkte === 5, 'T89 wenn 3 > 2 setzt den dann-Zweig um');
+                  var rt89b = BLK.newRuntime(blkVarProgram(blkRaw('lt', { a: '3', b: '2' }), 'punkte'));
+                  rt89b.flag(0);
+                  rt89b.frame(0);
+                  ok(rt89b.vars.punkte === 0, 'T89b eine falsche Bedingung ueberspringt den dann-Zweig');
+                  var rt89c = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: ['a'], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('if_else', blkCond(blkRaw('eq', { a: 'hi', b: 'hi' })), null, [blkRaw('var_set', { name: 'a', value: '1' })], [blkRaw('var_set', { name: 'a', value: '2' })])) }] })));
+                  rt89c.flag(0);
+                  rt89c.frame(0);
+                  ok(rt89c.vars.a === 1, 'T89c wenn ... sonst nimmt bei wahrer Bedingung den dann-Zweig');
+                  var rt89d = BLK.newRuntime(blkVarProgram(blkRaw('div', { a: '4', b: '0' }), 'punkte'));
+                  rt89d.flag(0);
+                  rt89d.frame(0);
+                  ok(rt89d.errors.length === 1 && rt89d.vars.punkte === 0, 'T89d Division durch 0 erzeugt einen Hinweis statt eines Absturzes');
+                  var rt89e = BLK.newRuntime(blkVarProgram(blkRaw('random', { from: '1', to: '10' }), 'punkte'));
+                  rt89e.flag(0);
+                  rt89e.frame(0);
+                  ok(rt89e.errors.length === 0, 'T89e die ganzzahlige Zufallszahl laeuft ohne Fehler durch');
+
+                  /* T90: Wahrnehmung (Rand, Taste, Stoppuhr) */
+                  var rt90 = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: ['r'], sprite: { x: 238, y: 0 }, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('if_then', blkCond(blkRaw('touching_edge')), null, [blkRaw('var_set', { name: 'r', value: '1' })])) }] })));
+                  rt90.flag(0);
+                  rt90.frame(0);
+                  ok(rt90.vars.r === 1, 'T90 am Rand berueht die Wahrnehmung den Rand');
+                  var rt90b = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: ['k'], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('forever', {}, null, [blkRaw('if_then', blkCond(blkRaw('key_pressed', { key: 'leertaste' })), null, [blkRaw('var_set', { name: 'k', value: '1' })])])) }] })));
+                  rt90b.flag(0);
+                  rt90b.keys.leertaste = true;
+                  rt90b.frame(0);
+                  rt90b.frame(0);
+                  ok(rt90b.vars.k === 1, 'T90b Taste gedrueckt? liest den Tastaturstatus ohne Fokus im Fenster');
+                  var rt90c = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: ['t'], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('if_then', blkCond(blkRaw('gt', { a: { b: blkRaw('timer') }, b: '0.5' })), null, [blkRaw('var_set', { name: 't', value: '1' })])) }] })));
+                  rt90c.flag(5000);
+                  rt90c.frame(6000);
+                  ok(rt90c.vars.t === 1, 'T90c die Stoppuhr zaehlt die Sekunden seit dem Start');
+
+                  /* T91: Stift und Sprechblase */
+                  var rt91 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('pen_down', {}, blkRaw('move_steps', { steps: '100' })))));
+                  rt91.flag(0);
+                  rt91.frame(0);
+                  ok(rt91.sprites[0].pen.segments.length === 1 && rt91.sprites[0].pen.segments[0].x2 === 340, 'T91 Stift ab zeichnet beim Bewegen eine Spur (240 nach 340)');
+                  var rt91b = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('pen_down', {}, blkRaw('move_steps', { steps: '50' }, blkRaw('pen_clear'))))));
+                  rt91b.flag(0);
+                  rt91b.frame(0);
+                  ok(rt91b.sprites[0].pen.segments.length === 0, 'T91b loesche alle Spuren leert die Spuren');
+                  var rt91c = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('say_for', { msg: 'Hallo!', secs: '2' }))));
+                  rt91c.flag(0);
+                  rt91c.frame(0);
+                  ok(rt91c.sprites[0].bubble !== null && rt91c.sprites[0].bubble.text === 'Hallo!', 'T91c sage ... fuer n Sekunden zeigt die Sprechblase');
+                  rt91c.frame(2500);
+                  ok(rt91c.sprites[0].bubble === null, 'T91d die Sprechblase verschwindet nach Ablauf der Zeit');
+
+                  /* T92: Serialisierung und Validierung */
+                  var blkSer = BLK.serializeProgram(blkParsed);
+                  ok(blkSer.v === 3 && blkSer.sprites.length === 1 && blkSer.sprites[0].scripts.length === 1 && blkSer.sprites[0].scripts[0].top.next.op === 'say_for' && blkSer.stage.scripts.length === 0, 'T92 das Programm serialisiert sich (Version 3) mit Figuren, Skripten und Buehne');
+                  var blkRawMany = { v: 1, vars: [], sprite: {}, scripts: [] };
+                  var i92;
+                  for (i92 = 0; i92 < 100; i92++) { blkRawMany.scripts.push({ id: 's' + i92, x: 0, y: 0, top: blkRaw('flag') }); }
+                  var blkMany = BLK.parseProgram(JSON.stringify(blkRawMany));
+                  ok(blkMany.sprites[0].scripts.length === 60, 'T92b mehr als 60 Skripte werden auf das Limit begrenzt');
+                  var blkEvil = BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('hakemeister', {}, blkRaw('hackemeister_zwei'))) }] }));
+                  ok(blkEvil.sprites[0].scripts.length === 1 && blkEvil.sprites[0].scripts[0].top.next === null, 'T92c unbekannte Bloecke im geladenen JSON entfallen kommentarlos');
+
+                  /* T93: Editor-UI am eigenen FakeDoc */
+                  var blkUi = BLK.ui;
+                  ok(blkUi !== null && typeof blkUi === 'object', 'T93 der Editor initialisiert sich auf der Blöcke-Seite von selbst');
+                  ok(blkCatsEl.children.length === 9, 'T93b die Palette listet im Lernmodus neun Kategorien (inklusive Meine Bloecke), die Variablen-Kategorie bleibt dem Expertenmodus vorbehalten (#162, #138)');
+                  ok(blkPalEl.children.length === 4, 'T93c die Ereignis-Kategorie zeigt im Lernmodus die vier Basis-Bloecke inklusive Klon-Start (#162, #132)');
+                  blkCatsEl.children[1].dispatch('click');
+                  ok(blkPalEl.querySelector('.blk[data-pal-op="move_steps"]') !== null, 'T93d der Kategorie-Wechsel zeigt die Bewegungs-Bloecke');
+                  ok(blkHelpEl.querySelectorAll('.blk-help-row').length === Object.keys(BLK.BLOCKS).length, 'T93e die Befehlsuebersicht erklaert jeden Block der Registry');
+                  var blkBefore = blkUi.program.sprites[0].scripts.length;
+                  blkUi.addBlock('flag', 200, 120);
+                  ok(blkUi.program.sprites[0].scripts.length === blkBefore + 1 && blkScriptEl.querySelectorAll('.blk-chain').length === blkBefore + 1, 'T93f ein neuer Start-Block entsteht als Skript auf der Flaeche');
+                  var blkDelId = blkUi.program.sprites[0].scripts[blkUi.program.sprites[0].scripts.length - 1].top.id;
+                  blkUi.deleteBlockTree(blkDelId);
+                  ok(blkUi.program.sprites[0].scripts.length === blkBefore, 'T93g der Loesch-Knopf entfernt den Block samt Skript');
+                  ok(blkUi.addVariable('punkte') === true && blkUi.program.vars.indexOf('punkte') !== -1, 'T93h eine neue Variable landet in der Liste');
+                  ok(blkUi.addVariable('punkte') === false, 'T93i doppelte Variablennamen lehnt der Editor ab');
+
+                  /* T94: Autospeichern */
+                  blkFetchCalls.length = 0;
+                  blkUi.saveNow();
+                  ok(blkFetchCalls.length === 1 && blkFetchCalls[0].url === '/werkstatt/code/5', 'T94 das Autospeichern geht als POST auf die Projekt-URL');
+
+                  var blkBodyJson = decodeURIComponent(blkFetchCalls[0].body.split('content=')[1] || '');
+                  ok(blkBodyJson.indexOf('{"v":3') === 0 && blkBodyJson.indexOf('"op":"flag"') !== -1 && blkBodyJson.indexOf('"sprites"') !== -1 && blkBodyJson.indexOf('"stage"') !== -1, 'T94c das komplette Skriptmodell wird als JSON (Version 3) mit Figuren und Buehne gespeichert');
+                  ok(blkJsonEl.value.indexOf('"op":"flag"') !== -1, 'T94d das JSON-Feld im Formular bleibt synchron');
+                  ok(blkSaveinfoEl.textContent.indexOf('automatisch gespeichert') !== -1, 'T94e der Editor meldet den automatischen Speichervorgang im Statusfeld');
+
+                  /* T95: Buehne und Lauf in der UI */
+                  blkFlagBtn.dispatch('click');
+                  ok(blkUi.runtime() !== null && blkRuninfoEl.textContent.indexOf('läuft') !== -1, 'T95 der Start-Knopf startet das Programm auf der Buehne');
+                  ok(blkPenEl.__ctx.__calls.indexOf('clearRect') !== -1, 'T95b jeder Start loescht zunaechst alle Spuren von der Buehne');
+                  blkUi.tick(0);
+                  blkUi.tick(1500);
+                  ok(blkCtrEl.__ctx.__calls.indexOf('fillText:🤖') !== -1, 'T95c die Figur zeichnet sich in der Mitte der Buehne');
+                  blkUi.tick(2500);
+                  ok(blkUi.runtime().sprites[0].x === 290, 'T95d nach der Sprechblase laeuft der weitere Block (hier: 50 Schritte nach rechts)');
+
+                  /* T96: Formen (#127): Registry traegt die Form je Block,
+                   * der Start-Hut nennt den Play-Knopf (#128). */
+                  var blkKinds = { hat: 0, stack: 0, c: 0, c2: 0, rep: 0, bool: 0 };
+                  var blkAllForms = true;
+                  var op96;
+                  for (op96 in BLK.BLOCKS) {
+                    if (Object.prototype.hasOwnProperty.call(BLK.BLOCKS, op96)) {
+                      if (blkKinds[BLK.BLOCKS[op96].kind] === undefined) { blkAllForms = false; }
+                      else { blkKinds[BLK.BLOCKS[op96].kind]++; }
+                    }
+                  }
+                  ok(blkAllForms && blkKinds.hat >= 2 && blkKinds.stack >= 20 && blkKinds.rep >= 6 && blkKinds.bool >= 8, 'T96 jeder Block traegt seine Form (Hut, Stapel, C, Pille, Sechseck)');
+                  ok(BLK.BLOCKS.flag.parts[0] === 'Wenn ▶ angeklickt wird', 'T96b der Start-Hut nennt den Play-Knopf statt der Fahne');
+
+                  /* T97: Migration von Version 1 auf Version 2 (#125) */
+                  ok(blkParsed.sprites[0].name === 'Figur 1' && blkParsed.sprites[0].id && blkParsed.stage.scripts.length === 0, 'T97 ein altes Programm der Version 1 laedt als Version 3 (Koordinaten umgerechnet) mit einer Figur und einer Buehne');
+                  var blkRound = BLK.parseProgram(JSON.stringify(BLK.serializeProgram(blkParsed)));
+                  ok(blkRound.v === 3 && blkRound.sprites.length === blkParsed.sprites.length && blkRound.sprites[0].scripts.length === blkParsed.sprites[0].scripts.length && blkRound.stage.scripts.length === 0, 'T97b speichern und laden ergibt denselben Stand (Round-trip, Version 3)');
+
+                  /* T98: mehrere Figuren, jede mit eigenen Skripten (#125) */
+                  var blkTwo = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('move_steps', { steps: '10' })) }] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: -60, y: 30, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's2', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('move_steps', { steps: '20' })) }] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt98 = BLK.newRuntime(blkTwo);
+                  rt98.flag(0);
+                  rt98.frame(0);
+                  ok(rt98.sprites[0].x === 250 && rt98.sprites[1].x === 200, 'T98b zwei Figuren laufen unabhaengig voneinander (hier: 10 und 20 Schritte, Startpositionen aus Version 2 migriert)');
+                  var rt98c = BLK.newRuntime(blkTwo);
+                  rt98c.flag(0);
+                  rt98c.stopAll();
+                  ok(rt98c.running() === false && rt98c.sprites[0].x === 240 && rt98c.sprites[1].x === 180, 'T98c stoppe alles haelt beide Figuren an (migrierte Positionen)');
+
+                  /* T99: die Buehne als eigenes Ziel (#126) */
+                  var blkStageProg = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: ['buehne'],
+                    sprites: [],
+                    stage: { scripts: [{ id: 'st1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('var_set', { name: 'buehne', value: '1' }, blkRaw('move_steps', { steps: '30' }))) }] }
+                  }));
+                  var rt99 = BLK.newRuntime(blkStageProg);
+                  rt99.flag(0);
+                  rt99.frame(0);
+                  ok(rt99.vars.buehne === 1 && rt99.errors.length === 0 && rt99.sprites.length === 0, 'T99 das Buehnen-Skript laeuft mit und Bewegung stoert die Buehne nicht');
+                  /* Figurenliste + Zielwechsel in der UI */
+                  ok(blkSpritesEl.children.length === 3, 'T98 die Figurenliste zeigt die Buehne, eine Figur und den Figuren-Knopf');
+                  var blkSpr2 = blkUi.addSprite('fish');
+                  ok(blkSpr2 !== null && blkUi.program.sprites.length === 2 && blkSpritesEl.children.length === 4, 'T98d eine neue Figur landet in der Liste und wird zum Ziel');
+                  blkUi.selectTarget(null);
+                  ok(blkUi.isStage() === true && blkCatsEl.children.length === 7, 'T99b die Buehne zeigt nur passende Kategorien (sieben statt neun im Lernmodus, inklusive Buehne und Meine Bloecke)');
+                  blkUi.addBlock('flag', 10, 10);
+                  ok(blkUi.program.stage.scripts.length === 1 && blkUi.program.sprites[0].scripts.length === blkUi.program.sprites[0].scripts.length, 'T99c ein Block auf der Buehne landet im Buehnen-Skript');
+                  blkUi.selectTarget(blkUi.program.sprites[0]);
+                  ok(blkUi.isStage() === false && blkCatsEl.children.length === 9, 'T99d zurueck auf der Figur sind im Lernmodus alle neun zulaessigen Kategorien da, die Buehne-Kategorie entfaellt (#139)');
+                  blkUi.deleteSprite(blkUi.program.sprites[1]);
+                  ok(blkUi.program.sprites.length === 1 && blkUi.target() === blkUi.program.sprites[0], 'T99e das Loeschen der zweiten Figur waehlt die erste zurueck');
+                  ok(blkUi.program.stage.scripts.length === 1, 'T99f das Buehnen-Skript bleibt beim Figuren-Wechsel erhalten');
+
+                  /* T100-T100e (#129): Block aus der Mitte/Unten eines Stapels
+                   * wegnehmen darf den Rest des Stapels nie verlieren. Vorher
+                   * meldete findBlockPos jeden Block der next-Kette mit
+                   * parentKind 'top' und der Editor raeumte das GESAMTE Skript
+                   * weg. Eigener FakeDoc mit vollstaendigen Rechtecken (auch
+                   * right/bottom, sonst ist dist() NaN) und Pointer-Events
+                   * wie im Browser; der Editor wird je Szenario frisch
+                   * geladen, damit keine Handler aelterer Instanzen am
+                   * selben Dokument haengen. */
+                  var blkDragDoc = new FakeDoc();
+                  (function () {
+                    var d = blkDragDoc;
+                    function reg2(id, tag) { var e = d.createElement(tag || 'div'); d.register(e, id); return e; }
+                    var pal2 = reg2('blk-pal');
+                    var wrap2 = reg2('blk-scriptwrap');
+                    var scr2 = reg2('blk-script');
+                    reg2('blk-ide'); reg2('blk-cats'); reg2('blk-help'); reg2('blk-sprites');
+                    reg2('blk-flag', 'button'); reg2('blk-stop', 'button'); reg2('blk-runinfo');
+                    reg2('blk-saveinfo'); reg2('blk-var-add', 'button');
+                    reg2('blk-pen', 'canvas'); reg2('blk-ctr', 'canvas');
+                    var f2 = reg2('blocks-save-form', 'form');
+                    f2.setAttribute('action', '/x');
+                    var cs2 = new FakeEl('input'); cs2.setAttribute('name', 'csrf'); cs2.value = 'tok'; f2.appendChild(cs2);
+                    var ti2 = new FakeEl('input'); ti2.setAttribute('name', 'title'); ti2.value = 'B'; f2.appendChild(ti2);
+                    var jt2 = new FakeEl('textarea'); d.register(jt2, 'blocks-json');
+                    pal2.getBoundingClientRect = function () { return { left: 8, top: 100, width: 160, height: 500, right: 168, bottom: 600 }; };
+                    wrap2.getBoundingClientRect = function () { return { left: 200, top: 100, width: 600, height: 500, right: 800, bottom: 600 }; };
+                    scr2.getBoundingClientRect = function () { return { left: 200, top: 100, width: 600, height: 500, right: 800, bottom: 600 }; };
+                    blkDragDoc.scriptEl = scr2;
+                    blkDragDoc.jsonEl = jt2;
+                  })();
+                  function blkDragFresh(jsonText) {
+                    blkDragDoc.jsonEl.value = jsonText || JSON.stringify({
+                      v: 2, vars: [], sprites: [{ id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true, scripts: [{
+                        id: 's1', x: 24, y: 16,
+                        top: { op: 'flag', id: 'b1', f: {}, sub: [],
+                          next: { op: 'say_for', id: 'b2', f: { msg: { v: 'Hallo!' }, secs: { v: '2' } }, sub: [],
+                            next: { op: 'move_steps', id: 'b3', f: { steps: { v: '50' } }, sub: [], next: null } } }
+                      }] }], stage: { scripts: [] }
+                    });
+                    var dSaved = global.document;
+                    /* Nur die frische Instanz darf am Dokument lauschen: Ohne
+                     * das Leeren wuerden Delegations-Handler aelterer
+                     * Instanzen (gleiche Element-IDs, getrennte Programme)
+                     * parallel mitziehen und dabei das gemeinsame DOM neu
+                     * rendern - der Browser kennt das nicht, er hat nur
+                     * eine Editor-Instanz pro Seite. */
+                    blkDragDoc._handlers = {};
+                    global.document = blkDragDoc;
+                    delete require.cache[require.resolve('../public/assets/js/block-editor.js')];
+                    var B2 = require('../public/assets/js/block-editor.js');
+                    blkDragDoc.setRects = function () {
+                      var y = 116;
+                      for (var c = 0; c < blkDragDoc.scriptEl.children.length; c++) {
+                        var kids = blkDragDoc.scriptEl.children[c].children;
+                        for (var k = 0; k < kids.length; k++) {
+                          (function (bb, yy) { bb.getBoundingClientRect = function () { return { left: 224, top: yy, width: 180, height: 34, right: 404, bottom: yy + 34 }; }; })(kids[k], y);
+                          y += 34;
+                        }
+                        y += 20;
+                      }
+                    };
+                    /* Wie setRects, aber inklusive der Bloecke in C-Block-Koerpern
+                     * und der Koerper-Container selbst (#148). */
+                    blkDragDoc.setRectsDeep = function () {
+                      var all = blkDragDoc.scriptEl.querySelectorAll('.blk');
+                      var y = 116;
+                      for (var i = 0; i < all.length; i++) {
+                        (function (bb, yy) { bb.getBoundingClientRect = function () { return { left: 224, top: yy, width: 180, height: 34, right: 404, bottom: yy + 34 }; }; })(all[i], y);
+                        y += 34;
+                      }
+                      var subs = blkDragDoc.scriptEl.querySelectorAll('.blk-sub');
+                      for (var s = 0; s < subs.length; s++) {
+                        (function (bb) { bb.getBoundingClientRect = function () { return { left: 224, top: 170, width: 180, height: 96, right: 404, bottom: 266 }; }; })(subs[s]);
+                      }
+                    };
+                    blkDragDoc.restoreDoc = function () { global.document = dSaved; };
+                    return B2.ui; /* Autoboot hat an blkDrag attached */
+                  }
+                  function blkDragOps(ui) {
+                    var out = [];
+                    var spr = ui.program.sprites[0];
+                    for (var i = 0; i < spr.scripts.length; i++) {
+                      var s = [], n = spr.scripts[i].top;
+                      while (n) { s.push(n.op); n = n.next; }
+                      out.push(s.join(','));
+                    }
+                    return out;
+                  }
+                  function blkDragPull(elIdx, sx, sy, moves, ex, ey) {
+                    var el = blkDragDoc.scriptEl.children[0].children[elIdx];
+                    el.dispatch('pointerdown', { clientX: sx, clientY: sy, pointerId: 1 });
+                    for (var i = 0; i < moves.length; i++) {
+                      blkDragDoc._fire('pointermove', { clientX: moves[i][0], clientY: moves[i][1], pointerId: 1 });
+                      blkDragDoc.setRects();
+                    }
+                    blkDragDoc._fire('pointerup', { clientX: ex, clientY: ey, pointerId: 1 });
+                  }
+
+                  var ui2 = blkDragFresh();
+                  blkDragPull(2, 250, 200, [[250, 212], [260, 260], [500, 400]], 500, 400);
+                  var opsA = blkDragOps(ui2);
+                  blkDragDoc.restoreDoc();
+                  ok(opsA.length === 2 && opsA[0] === 'flag,say_for' && opsA[1] === 'move_steps', 'T100 der unterste Block loest nur sich, der Rest des Stapels bleibt');
+
+                  var ui2 = blkDragFresh();
+                  blkDragPull(2, 250, 200, [[250, 212], [150, 300]], 80, 320);
+                  var opsB = blkDragOps(ui2);
+                  blkDragDoc.restoreDoc();
+                  ok(opsB.length === 1 && opsB[0] === 'flag,say_for', 'T100b Loeschen per Palette trifft nur den gezogenen Block, nicht den Stapel');
+
+                  var ui2 = blkDragFresh();
+                  var elC = blkDragDoc.scriptEl.children[0].children[2];
+                  elC.dispatch('pointerdown', { clientX: 250, clientY: 200, pointerId: 1 });
+                  blkDragDoc._fire('pointermove', { clientX: 250, clientY: 212, pointerId: 1 });
+                  blkDragDoc.setRects();
+                  blkDragDoc._fire('pointercancel', { clientX: 250, clientY: 212, pointerId: 1 });
+                  var opsC = blkDragOps(ui2);
+                  blkDragDoc.restoreDoc();
+                  ok(opsC.length === 1 && opsC[0] === 'flag,say_for,move_steps', 'T100c pointercancel nach dem Loesen stellt den Block an seinen alten Platz');
+
+                  var ui2 = blkDragFresh();
+                  var midRow = blkDragDoc.scriptEl.children[0].children[1].children[0];
+                  var midX = null;
+                  for (var qx = 0; qx < midRow.children.length; qx++) { if (midRow.children[qx].tagName === 'BUTTON') { midX = midRow.children[qx]; } }
+                  if (midX) { midX.dispatch('click', {}); }
+                  var opsD = blkDragOps(ui2);
+                  blkDragDoc.restoreDoc();
+                  ok(midX && opsD.length === 1 && opsD[0] === 'flag', 'T100d ✕ auf einen Mittelblock loescht nur ihn und seinen Teilbaum');
+
+                  var ui2 = blkDragFresh();
+                  blkDragPull(1, 250, 160, [[250, 172], [500, 400]], 500, 400);
+                  var opsE = blkDragOps(ui2);
+                  blkDragDoc.restoreDoc();
+                  ok(opsE.length === 2 && opsE[0] === 'flag' && opsE[1] === 'say_for,move_steps', 'T100e der Mittelblock nimmt nur seinen eigenen Teilbaum mit');
+
+                  /* T101-T108 (#130-#136, #140, #141): Klang, Nachrichten,
+                     Sensoren und Zeiger, Bewegung-Plus, Aussehen-Plus,
+                     Rechnen-Plus, Code-Ansicht Java/Python und Portierung. */
+
+                  /* Klang (#130) */
+                  ok(BLK.BLOCKS.play_note && BLK.BLOCKS.start_note && BLK.BLOCKS.stop_sounds && BLK.BLOCKS.set_volume && BLK.BLOCKS.volume.cat === 'sound', 'T101 die Klang-Kategorie hat spielen, starten, stoppen und Lautstaerke (#130)');
+                  var rt101 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('play_note', { tone: 'a4', secs: '0.5' }, blkRaw('change_y', { dy: '7' })))));
+                  rt101.flag(0);
+                  rt101.frame(0);
+                  ok(rt101.sounds.length === 1, 'T101b spiele Ton legt einen (im Test stummen) Ton an und haelt das Skript an (#130)');
+                  rt101.frame(600);
+                  ok(rt101.sounds.length === 0 && rt101.sprites[0].y === 187, 'T101c nach der Tonzeit laeuft das Skript weiter (#130)');
+                  var rt101b = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('start_note', { tone: 'c4' }, blkRaw('stop_sounds', {})))));
+                  rt101b.flag(0);
+                  rt101b.frame(0);
+                  ok(rt101b.sounds.length === 0 && rt101b.sprites[0].y === 180, 'T101d starte Ton wartet nicht, stoppe alle Toene raeumt ab (#130)');
+                  var rt101c = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('set_volume', { v: '40' }, blkRaw('var_set', { name: 'l', value: { b: blkRaw('volume') } })))));
+                  rt101c.flag(0);
+                  rt101c.frame(0);
+                  ok(rt101c.volume() === 40 && rt101c.vars.l === 40, 'T101e setze Lautstaerke und der Lautstaerke-Reporter folgt (#130)');
+
+                  /* Nachrichten (#131) */
+                  var progMsg = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('when_msg', { msg: 'nachricht1' }, blkRaw('var_set', { name: 'm', value: '1' })) }] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's2', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('broadcast', { msg: 'nachricht1' })) }] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt102 = BLK.newRuntime(progMsg);
+                  rt102.flag(0);
+                  rt102.frame(0);
+                  ok(rt102.vars.m === 1, 'T102 senden startet das Empfaenger-Skript der anderen Figur (#131)');
+                  var progWait = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('when_msg', { msg: 'nachricht2' }, blkRaw('wait', { secs: '1' }, blkRaw('var_set', { name: 'done', value: '1' }))) }] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's2', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('broadcast_wait', { msg: 'nachricht2' }, blkRaw('var_set', { name: 'nach', value: '1' }))) }] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt102b = BLK.newRuntime(progWait);
+                  rt102b.flag(0);
+                  rt102b.frame(0);
+                  ok(rt102b.vars.nach === undefined && rt102b.vars.done === undefined, 'T102b sende-und-warte blockiert, solange der Empfaenger laeuft (#131)');
+                  rt102b.frame(1100);
+                  ok(rt102b.vars.done === 1 && rt102b.vars.nach === undefined, 'T102c der Empfaenger wird erst fertig, dann kommt der Sender dran (#131)');
+                  rt102b.frame(1101);
+                  ok(rt102b.vars.nach === 1, 'T102d danach laeuft der Sender weiter (#131)');
+
+                  /* Sensoren und Zeiger (#133) */
+                  var rt103 = BLK.newRuntime(blkProgram(blkRaw('flag', {},
+                    blkRaw('var_set', { name: 'mx', value: { b: blkRaw('mouse_x') } },
+                      blkRaw('var_set', { name: 'my', value: { b: blkRaw('mouse_y') } },
+                        blkRaw('var_set', { name: 'md', value: { b: blkRaw('mouse_down') } }))))));
+                  rt103.setMouse(30, 20, true);
+                  rt103.flag(0);
+                  rt103.frame(0);
+                  ok(rt103.vars.mx === 30 && rt103.vars.my === 20 && rt103.vars.md === true, 'T103 Maus-x, Maus-y und gedrueckt folgen dem Zeiger (#133)');
+                  var progTouch = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {},
+                          blkRaw('var_set', { name: 'r', value: { b: blkRaw('touching_sprite', { name: 'sp2' }) } },
+                            blkRaw('var_set', { name: 'd', value: { b: blkRaw('distance_to', { name: 'sp2' }) } }))) }] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: 20, y: 0, dir: 90, size: 100, visible: true, scripts: [] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt103b = BLK.newRuntime(progTouch);
+                  rt103b.flag(0);
+                  rt103b.frame(0);
+                  ok(rt103b.vars.r === true && rt103b.vars.d === 20, 'T103b beruehren und Abstand zwischen zwei Figuren stimmen (#133)');
+                  var progClick = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('when_clicked', {}, blkRaw('var_set', { name: 'c', value: '1' })) }] }
+                    ],
+                    stage: { scripts: [{ id: 'st', x: 0, y: 0, top: blkRaw('when_clicked', {}, blkRaw('var_set', { name: 'b', value: '1' })) }] }
+                  }));
+                  var rt103c = BLK.newRuntime(progClick);
+                  rt103c.setMouse(240, 180, true);
+                  rt103c.click(0);
+                  rt103c.frame(0);
+                  ok(rt103c.vars.c === 1 && rt103c.vars.b === undefined, 'T103c Klick auf die Figur startet nur das Figuren-Skript (#133)');
+                  var rt103d = BLK.newRuntime(progClick);
+                  rt103d.setMouse(300, 180, true);
+                  rt103d.click(0);
+                  rt103d.frame(0);
+                  ok(rt103d.vars.b === 1 && rt103d.vars.c === undefined, 'T103d Klick neben die Figur startet das Buehnen-Skript (#133)');
+
+                  /* Bewegung-Plus (#134) */
+                  var rt104 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('glide', { secs: '1', x: '100', y: '0' }))));
+                  rt104.flag(0);
+                  rt104.frame(0);
+                  ok(rt104.sprites[0].x === 240, 'T104 gleiten startet an der alten Position (#134)');
+                  rt104.frame(500);
+                  ok(Math.round(rt104.sprites[0].x) === 170, 'T104b halbwegs auf der Strecke liegt die Figur in der Mitte (#134)');
+                  rt104.frame(1000);
+                  ok(rt104.sprites[0].x === 100, 'T104c am Ende steht die Figur am Ziel (#134)');
+                  var prog104 = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 240, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('bounce', {})) }] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: 100, y: 0, dir: 90, size: 100, visible: true, scripts: [] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt104b = BLK.newRuntime(prog104);
+                  rt104b.flag(0);
+                  rt104b.frame(0);
+                  ok(rt104b.sprites[0].dir === 270 && rt104b.sprites[0].x === 456, 'T104d am Rand prallt die Figur ab und rueckt ein (#144: rechter Rand bei x 480)');
+                  var prog104b = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 0, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('point_towards', { name: 'sp2' })) }] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: 100, y: 0, dir: 90, size: 100, visible: true, scripts: [] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt104d = BLK.newRuntime(prog104b);
+                  rt104d.flag(0);
+                  rt104d.frame(0);
+                  ok(Math.round(rt104d.sprites[0].dir) === 90, 'T104e drehe dich zu richtet die Figur nach rechts aus (#134)');
+
+                  /* Aussehen-Plus (#135) */
+                  var rt105 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('think', { msg: 'Hmm ...' }))));
+                  rt105.flag(0);
+                  rt105.frame(0);
+                  ok(rt105.sprites[0].bubble && rt105.sprites[0].bubble.think === true && rt105.sprites[0].bubble.text === 'Hmm ...', 'T105 denken zeigt eine Denkblase (#135)');
+                  var rt105b = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('next_costume', {}, blkRaw('change_effect', { d: '25' })))));
+                  rt105b.flag(0);
+                  rt105b.frame(0);
+                  ok(rt105b.sprites[0].costume === 'rocket' && rt105b.sprites[0].effect === 25, 'T105b naechstes Kostuem und Farbeffekt aendern die Figur (#135)');
+                  var rt105c = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('set_effect', { v: '100' }, blkRaw('clear_effects', {})))));
+                  rt105c.flag(0);
+                  rt105c.frame(0);
+                  ok(rt105c.sprites[0].effect === 0, 'T105c Farbeffekte aus stellt die Originalfarbe wieder her (#135)');
+                  var progLayer = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('go_front', {})) }] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: 0, y: 0, dir: 90, size: 100, visible: true, scripts: [] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt105d = BLK.newRuntime(progLayer);
+                  rt105d.flag(0);
+                  rt105d.frame(0);
+                  ok(rt105d.order[0] === 'sp2' && rt105d.order[1] === 'sp1', 'T105d zu vorderster Ebene schiebt die Figur nach vorn (#135)');
+                  var progLayerBack = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: [],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true, scripts: [] },
+                      { id: 'sp2', name: 'Figur 2', costume: 'fish', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's2', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('go_back', { n: '1' })) }] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var rt105e = BLK.newRuntime(progLayerBack);
+                  rt105e.flag(0);
+                  rt105e.frame(0);
+                  ok(rt105e.order[0] === 'sp2' && rt105e.order[1] === 'sp1', 'T105e n Ebenen nach hinten tauscht entsprechend (#135)');
+
+                  /* Rechnen-Plus (#136) */
+                  function blkCalc(raw) {
+                    return BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('var_set', { name: 'r', value: { b: raw } }))));
+                  }
+                  var rc1 = blkCalc(blkRaw('mod', { a: '7', b: '3' })); rc1.flag(0); rc1.frame(0);
+                  ok(rc1.vars.r === 1, 'T106 Rest von 7 durch 3 ist 1 (#136)');
+                  var rc2 = blkCalc(blkRaw('round', { a: '2.6' })); rc2.flag(0); rc2.frame(0);
+                  ok(rc2.vars.r === 3, 'T106b runde 2,6 ergibt 3 (#136)');
+                  var rc3 = blkCalc(blkRaw('sqrt', { a: '25' })); rc3.flag(0); rc3.frame(0);
+                  ok(rc3.vars.r === 5, 'T106c Wurzel aus 25 ist 5 (#136)');
+                  var rc4 = blkCalc(blkRaw('abs', { a: '-7' })); rc4.flag(0); rc4.frame(0);
+                  ok(rc4.vars.r === 7, 'T106d Betrag von -7 ist 7 (#136)');
+                  var rc5 = blkCalc(blkRaw('join', { a: 'Hallo', b: '!' })); rc5.flag(0); rc5.frame(0);
+                  ok(rc5.vars.r === 'Hallo!', 'T106e verbinde haengt Texte aneinander (#136)');
+                  var rc6 = blkCalc(blkRaw('letter_of', { n: '2', txt: 'Hallo' })); rc6.flag(0); rc6.frame(0);
+                  ok(rc6.vars.r === 'a', 'T106f Buchstabe 2 von Hallo ist a (#136)');
+                  var rc7 = blkCalc(blkRaw('length_of', { txt: 'Hallo' })); rc7.flag(0); rc7.frame(0);
+                  ok(rc7.vars.r === 5, 'T106g Laenge von Hallo ist 5 (#136)');
+
+                  /* Code-Ansicht (#140) */
+                  var genProg = BLK.parseProgram(JSON.stringify({
+                    v: 2, vars: ['punkte'],
+                    sprites: [
+                      { id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true,
+                        scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {},
+                          blkRaw('say_for', { msg: 'Hallo!', secs: '2' },
+                            blkRaw('repeat', { count: '3' }, null, [blkRaw('turn_right', { deg: '15' })]))) }] }
+                    ],
+                    stage: { scripts: [] }
+                  }));
+                  var jOut = BLK.programToJava(genProg, 'Block Demo');
+                  ok(jOut.indexOf('public class BlockDemo') !== -1 && jOut.indexOf('static class Figur1 extends Figur') !== -1 && jOut.indexOf('void wenn_flag_angeklickt()') !== -1 && jOut.indexOf('sage_fuer(\"Hallo!\", 2)') !== -1 && jOut.indexOf('for (int zaehler1') !== -1 && jOut.indexOf('void sage_fuer(Object p1, Object p2) { }') !== -1 && jOut.indexOf('new Thread(() -> figur1.wenn_flag_angeklickt()).start();') !== -1, 'T107 Java-Ansicht: Klasse, Vererbung, Methode, Aufruf, Schleife und Platzhalter (#140, #152)');
+                  var pOut = BLK.programToPython(genProg, 'Block Demo');
+                  ok(pOut.indexOf('class Figur1(Figur):') !== -1 && pOut.indexOf('def wenn_flag_angeklickt(self):') !== -1 && pOut.indexOf('self.sage_fuer(\'Hallo!\', 2)') !== -1 && pOut.indexOf('for zaehler1 in range(int(3)):') !== -1 && pOut.indexOf('# sage Hallo! für 2 Sekunden') !== -1 && pOut.indexOf('threading.Thread(target=figur1.wenn_flag_angeklickt).start()') !== -1, 'T107b Python-Ansicht: Klasse, Methode, Schleife und Blocktext-Kommentar (#140, #152)');
+                  genProg.sprites[0].scripts[0].top.next = { op: 'gibts_nicht', id: 'bx', f: {}, sub: [], next: null };
+                  var jOut2 = BLK.programToJava(genProg, 'Block Demo');
+                  ok(jOut2.indexOf('Block ohne Textfassung') !== -1, 'T107c ein Block ohne Uebersetzung bleibt als Kommentar sichtbar (#140)');
+
+                  /* Code-Dialog und Portierung (#140, #141) */
+                  var blkUiCode = blkUi;
+                  blkUiCode.openCodeDialog();
+                  var rootIde = blkDoc.getElementById('blk-ide');
+                  var dlgEl = null;
+                  var di;
+                  for (di = 0; di < rootIde.children.length; di++) {
+                    if (rootIde.children[di].getAttribute('id') === 'blk-code-dialog') { dlgEl = rootIde.children[di]; }
+                  }
+                  ok(dlgEl && !dlgEl.hasAttribute('hidden'), 'T108 der Code-Dialog oeffnet sich ueber der Werkstatt (#140)');
+                  var preEl = null;
+                  for (di = 0; di < dlgEl.children.length; di++) {
+                    if (dlgEl.children[di].getAttribute('id') === 'blk-code-view') { preEl = dlgEl.children[di]; }
+                  }
+                  ok(preEl && preEl.textContent.indexOf('public class') !== -1, 'T108b die Java-Ansicht zeigt das Programm als Klasse (#140)');
+                  var pyTab = null;
+                  var tabWrap = dlgEl.children[0].children[0];
+                  for (di = 0; di < tabWrap.children.length; di++) {
+                    if (tabWrap.children[di].textContent === 'Python') { pyTab = tabWrap.children[di]; }
+                  }
+                  if (pyTab) { pyTab.dispatch('click', {}); }
+                  ok(pyTab && preEl.textContent.indexOf('def wenn_flag_angeklickt(self):') !== -1, 'T108c der Python-Reiter zeigt dieselben Skripte als Funktionen (#140)');
+                  var portBtn = null;
+                  var actRow = dlgEl.children[2];
+                  for (di = 0; di < actRow.children.length; di++) {
+                    if (actRow.children[di].textContent === 'Als neues Projekt übernehmen') { portBtn = actRow.children[di]; }
+                  }
+                  if (portBtn) { portBtn.dispatch('click', {}); }
+                  var portForm = null;
+                  for (di = 0; di < dlgEl.children.length; di++) {
+                    if (dlgEl.children[di].tagName === 'FORM') { portForm = dlgEl.children[di]; }
+                  }
+                  ok(portForm && String(portForm.getAttribute('action')).indexOf('/werkstatt/code/blocks/port') !== -1, 'T108d die Portierung schickt an die Port-Route (#141)');
+                  var pf = {};
+                  if (portForm) {
+                    for (di = 0; di < portForm.children.length; di++) {
+                      pf[portForm.children[di].getAttribute('name')] = portForm.children[di].getAttribute('value');
+                    }
+                  }
+                  ok(pf.language === 'python' && String(pf.title).indexOf('(Python)') !== -1 && String(pf.code).indexOf('class Figur1(Figur):') !== -1 && pf.csrf === 'tok', 'T108e das Port-Formular traegt Sprache, Titel, Code und Sicherheitsfeld (#141)');
+
+                  /* T109-T112 (#144, #148, #150-#153): Lern-/Expertenmodus,
+                     bunte Kategorie-Knoepfe, Konsole, OOP-Klassenmodell im
+                     Code-Generator und sichtbares Ziehen mit Einfuege-Linie. */
+                  ok(blkUi.isExpert() === false, 'T109 der Editor startet im Lernmodus (#151)');
+                  ok(blkModeEl.getAttribute('data-active') === 'learn' && blkModeLearnEl.getAttribute('aria-pressed') === 'true' && blkModeLearnEl.classList.contains('active') === true && blkModeExpertEl.getAttribute('aria-pressed') === 'false' && blkModeExpertEl.classList.contains('active') === false, 'T109b der Schalter zeigt den Lernmodus als aktive Haelfte an (#161)');
+                  ok(blkCodeEl.hasAttribute('hidden') && blkConsoleBox.hasAttribute('hidden') && blkVarAddEl.hasAttribute('hidden'), 'T109d im Lernmodus bleiben Code-Knopf, Konsole und Variablen-Knopf verborgen (#151, #162)');
+                  var catColored = 0;
+                  var c9;
+                  for (c9 = 0; c9 < blkCatsEl.children.length; c9++) {
+                    if (blkCatsEl.children[c9].style && blkCatsEl.children[c9].style.background) { catColored++; }
+                  }
+                  ok(catColored === blkCatsEl.children.length && blkCatsEl.children.length === 9, 'T109c jeder Kategorie-Knopf traegt seine Kategoriefarbe, im Lernmodus neun Stueck (#150, #162)');
+                  var catLabels109 = [], btn109;
+                  for (btn109 = 0; btn109 < blkCatsEl.children.length; btn109++) { catLabels109.push(blkCatsEl.children[btn109].textContent); }
+                  ok(catLabels109.indexOf('Variablen') === -1, 'T109e im Lernmodus fehlt die Variablen-Kategorie (#162)');
+                  ok(blkPalEl.children.length === 4 && blkPalEl.querySelector('.blk[data-pal-op="broadcast_wait"]') === null && blkPalEl.querySelector('.blk[data-pal-op="when_msg"]') === null && blkPalEl.querySelector('.blk[data-pal-op="broadcast"]') === null, 'T109f die Ereignis-Kategorie zeigt im Lernmodus nur die vier Basis-Bloecke, Nachrichten bleiben Experten-Sache (#151, #162, #132)');
+                  blkFetchCalls.length = 0;
+                  blkModeExpertEl.dispatch('click');
+                  var blkModeCalls = blkFetchCalls.filter(function (mc) { return String(mc.url).indexOf('/einstellungen/werkstattmodus') !== -1; });
+                  ok(blkUi.isExpert() === true && !blkCodeEl.hasAttribute('hidden') && !blkConsoleBox.hasAttribute('hidden') && !blkVarAddEl.hasAttribute('hidden'), 'T109g ein Klick auf die Experten-Haelfte schaltet um und blendet Code, Konsole und Variablen ein (#161)');
+                  ok(blkModeCalls.length === 1 && blkModeCalls[0].body === 'csrf=tok&mode=expert', 'T109h der Wechsel in den Expertenmodus speichert die Wahl im Konto (POST mit mode=expert)');
+                  ok(blkCatsEl.children.length === 10 && blkPalEl.children.length === 7 && blkPalEl.querySelector('.blk[data-pal-op="broadcast_wait"]') !== null, 'T109i im Expertenmodus sind alle zehn Kategorien und alle sieben Ereignis-Bloecke da (#151, #162, #138)');
+                  blkModeExpertEl.dispatch('click');
+                  ok(blkFetchCalls.length === 1, 'T109j ein Klick auf die bereits aktive Haelfte loest keinen neuen Speichervorgang aus (#161)');
+                  blkUi.setMode(false);
+                  ok(blkUi.isExpert() === false && blkFetchCalls.length === 1 && blkCatsEl.children.length === 9, 'T109k die programmatische Moduswahl wirkt sofort, ohne die Konto-Route aufzurufen (#161)');
+                  blkUi.setMode(true);
+                  blkCatsEl.children[7].dispatch('click');
+                  ok(blkPalEl.querySelector('.blk[data-pal-op="var_set"]') !== null, 'T109l die Variablen-Kategorie zeigt im Expertenmodus ihre Bloecke (#162)');
+                  blkFetchCalls.length = 0;
+                  blkModeLearnEl.dispatch('click');
+                  blkModeCalls = blkFetchCalls.filter(function (mc2) { return String(mc2.url).indexOf('/einstellungen/werkstattmodus') !== -1; });
+                  ok(blkModeCalls.length === 1 && blkModeCalls[0].body === 'csrf=tok&mode=learn', 'T109m die Moduswahl wird je Konto gespeichert: der Ruecksprung in den Lernmodus geht als POST mit mode=learn (#161)');
+                  ok(blkUi.isExpert() === false && blkPalEl.children.length === 4 && blkPalEl.querySelector('.blk[data-pal-op="var_set"]') === null, 'T109n beim Rueckschalten springt die Palette von der Experten-Kategorie auf die Ereignisse zurueck (#162)');
+                  ok(blkModeLearnEl.getAttribute('aria-pressed') === 'true' && blkModeLearnEl.classList.contains('active') === true && blkModeExpertEl.getAttribute('aria-pressed') === 'false' && blkModeExpertEl.classList.contains('active') === false && blkModeEl.getAttribute('data-active') === 'learn', 'T109o der Schalter spiegelt den Lernmodus konsistent in aria-pressed und Aktvierung (#161)');
+                  blkModeLearnEl.dispatch('click');
+                  ok(blkFetchCalls.length === 1, 'T109p auch im Lernmodus bleibt ein Klick auf die aktive Haelfte ohne Speichervorgang (#161)');
+
+                  function blkLogText() {
+                    var t = '';
+                    var ch = blkConsoleLogEl.children;
+                    for (var li = 0; li < ch.length; li++) { t += ch[li].textContent + '\n'; }
+                    return t;
+                  }
+                  blkUi.setMode(true);
+                  blkUi.consoleRun('hilfe');
+                  ok(blkLogText().indexOf('Befehle:') !== -1, 'T110 hilfe listet die Konsolen-Befehle im Protokoll (#152)');
+                  blkUi.consoleRun('x 240');
+                  blkUi.consoleRun('gehe 50');
+                  blkUi.consoleRun('info');
+                  ok(blkLogText().indexOf('geht 50 Schritte') !== -1 && blkLogText().indexOf('x 290') !== -1, 'T110b gehe 50 bewegt die ausgewaehlte Figur bis x 290 (#144, #152)');
+                  blkUi.consoleRun('Figur 1.gehe 10');
+                  blkUi.consoleRun('info');
+                  ok(blkLogText().indexOf('x 300') !== -1, 'T110c mit dem Figurnamen steuert die Konsole gezielt diese Figur (#152)');
+                  var errBefore = blkConsoleLogEl.querySelectorAll('.blk-console-err').length;
+                  blkUi.consoleRun('huepfe 5');
+                  ok(blkConsoleLogEl.querySelectorAll('.blk-console-err').length === errBefore + 1, 'T110d ein unbekannter Befehl landet als Fehlerzeile im Protokoll (#152)');
+                  blkUi.consoleRun('x 100');
+                  blkUi.consoleRun('info');
+                  ok(blkLogText().indexOf('x 100') !== -1, 'T110e x 100 setzt die x-Position direkt (Ursprung oben links) (#144, #152)');
+
+                  /* Sichtbares Ziehen (#153): der Block bleibt beim Ziehen im DOM */
+                  var ui3 = blkDragFresh();
+                  var dragEl3 = blkDragDoc.scriptEl.children[0].children[2];
+                  dragEl3.dispatch('pointerdown', { clientX: 250, clientY: 200, pointerId: 1 });
+                  blkDragDoc._fire('pointermove', { clientX: 250, clientY: 212, pointerId: 1 });
+                  blkDragDoc.setRects();
+                  var midOps3 = blkDragOps(ui3);
+                  var midDrag3 = blkDragDoc.scriptEl.querySelectorAll('.blk-dragging').length;
+                  var midRows3 = blkDragDoc.scriptEl.children[0].children.length;
+                  blkDragDoc._fire('pointerup', { clientX: 500, clientY: 400, pointerId: 1 });
+                  blkDragDoc.restoreDoc();
+                  ok(midOps3.length === 1 && midOps3[0] === 'flag,say_for,move_steps' && midDrag3 === 1 && midRows3 === 3, 'T111 beim Ziehen bleiben alle Bloecke sichtbar, nur der gezogene ist markiert (#153)');
+
+                  /* Einfuege-Linie im Loop-Koerper (#148) */
+                  var loopJson = JSON.stringify({
+                    v: 2, vars: [], sprites: [{ id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true, scripts: [{
+                      id: 's1', x: 24, y: 16,
+                      top: { op: 'flag', id: 'b1', f: {}, sub: [],
+                        next: { op: 'repeat', id: 'b2', f: { count: { v: '3' } }, sub: [
+                          { op: 'move_steps', id: 'b3', f: { steps: { v: '10' } }, sub: [], next: { op: 'say_for', id: 'b4', f: { msg: { v: 'Hi' }, secs: { v: '1' } }, sub: [], next: null } }
+                        ], next: null } }
+                    }] }], stage: { scripts: [] }
+                  });
+                  var ui4 = blkDragFresh(loopJson);
+                  var all4 = blkDragDoc.scriptEl.querySelectorAll('.blk');
+                  blkDragDoc.setRectsDeep();
+                  all4[3].dispatch('pointerdown', { clientX: 250, clientY: 234, pointerId: 1 });
+                  blkDragDoc._fire('pointermove', { clientX: 250, clientY: 190, pointerId: 1 });
+                  blkDragDoc.setRectsDeep();
+                  blkDragDoc._fire('pointermove', { clientX: 250, clientY: 190, pointerId: 1 });
+                  var hints4 = blkDragDoc.getElementById('blk-scriptwrap').querySelectorAll('.blk-drop-hint');
+                  var hint4 = hints4.length > 0 ? hints4[hints4.length - 1] : null;
+                  var hintCls4 = hint4 ? hint4.className : '';
+                  var hintH4 = hint4 ? hint4.style.height : '';
+                  blkDragDoc._fire('pointerup', { clientX: 250, clientY: 190, pointerId: 1 });
+                  var sub4 = ui4.program.sprites[0].scripts[0].top.next.sub[0];
+                  blkDragDoc.restoreDoc();
+                  ok(hint4 !== null && hintCls4.indexOf('sub') !== -1 && hintH4 === '6px' && sub4.op === 'say_for', 'T111b die Einfuege-Linie zeigt im Koerper die genaue Stelle, hier den Anfang (#148)');
+
+                  var ui5 = blkDragFresh(loopJson);
+                  var all5 = blkDragDoc.scriptEl.querySelectorAll('.blk');
+                  blkDragDoc.setRectsDeep();
+                  all5[3].dispatch('pointerdown', { clientX: 250, clientY: 234, pointerId: 1 });
+                  blkDragDoc._fire('pointermove', { clientX: 250, clientY: 210, pointerId: 1 });
+                  blkDragDoc.setRectsDeep();
+                  blkDragDoc._fire('pointermove', { clientX: 250, clientY: 210, pointerId: 1 });
+                  blkDragDoc._fire('pointerup', { clientX: 250, clientY: 210, pointerId: 1 });
+                  var sub5 = ui5.program.sprites[0].scripts[0].top.next.sub[0];
+                  blkDragDoc.restoreDoc();
+                  ok(sub5.op === 'move_steps' && sub5.next && sub5.next.op === 'say_for', 'T111c ueber der unteren Blockhaelfte fuegt der Editor dahinter statt davor ein (#148)');
+
+                  /* OOP-Generator mit Buehne (#152) */
+                  var stageProg = BLK.parseProgram(JSON.stringify({
+                    v: 3, vars: [],
+                    sprites: [{ name: 'Robo', costume: 'robot', x: 240, y: 180, dir: 90, scripts: [{ top: blkRaw('flag', {}, blkRaw('broadcast', { msg: 'los' })) }] }],
+                    stage: { scripts: [{ top: blkRaw('flag', {}, blkRaw('broadcast', { msg: 'start' })) }] }
+                  }));
+                  var stageJava = BLK.programToJava(stageProg, 'Buehnen Demo');
+                  ok(stageJava.indexOf('static class Buehne extends Figur') !== -1 && stageJava.indexOf('Buehne buehne = new Buehne();') !== -1 && stageJava.indexOf('new Thread(() -> buehne.wenn_flag_angeklickt()).start();') !== -1, 'T112 die Buehne wird im Java-Code zur eigenen Klasse mit eigenem Objekt (#152)');
+                  var stagePy = BLK.programToPython(stageProg, 'Buehnen Demo');
+                  ok(stagePy.indexOf('class Buehne(Figur):') !== -1 && stagePy.indexOf('buehne = Buehne()') !== -1 && stagePy.indexOf('threading.Thread(target=buehne.wenn_flag_angeklickt).start()') !== -1, 'T112b die Buehne wird im Python-Code zur eigenen Klasse mit eigenem Objekt (#152)');
+                  var plainProg = BLK.parseProgram(JSON.stringify({
+                    v: 3, vars: [], sprites: [{ name: 'Robo', costume: 'robot', x: 240, y: 180, dir: 90, scripts: [] }], stage: { scripts: [] }
+                  }));
+                  var plainJava = BLK.programToJava(plainProg, 'Leer');
+                  var plainPy = BLK.programToPython(plainProg, 'Leer');
+                  ok(plainJava.indexOf('static class Robo extends Figur') !== -1 && plainJava.indexOf('Robo robo = new Robo();') !== -1 && plainPy.indexOf('class Robo(Figur):') !== -1 && plainPy.indexOf('robo = Robo()') !== -1 && plainJava.indexOf('class Buehne') === -1 && plainPy.indexOf('class Buehne') === -1, 'T112c jede Figur wird zum Objekt, auch ohne Skripte; ohne Buehnenskript entsteht keine Buehnen-Klasse (#152)');
+
+                  /* T113-T113c (Optimierungen): Zieh-Geist per transform,
+                     gedeckeltes Konsolenprotokoll, Blasenbreiten-Cache. */
+                  var uiO = blkDragFresh();
+                  var dragElO = blkDragDoc.scriptEl.children[0].children[2];
+                  dragElO.dispatch('pointerdown', { clientX: 250, clientY: 200, pointerId: 1 });
+                  blkDragDoc._fire('pointermove', { clientX: 250, clientY: 212, pointerId: 1 });
+                  blkDragDoc.setRects();
+                  blkDragDoc._fire('pointermove', { clientX: 300, clientY: 240, pointerId: 1 });
+                  blkDragDoc.setRects();
+                  var ghostO = blkDragDoc.body.querySelector('.blk-ghost');
+                  var ghostTransform = ghostO && ghostO.style && String(ghostO.style.transform || '');
+                  blkDragDoc._fire('pointerup', { clientX: 500, clientY: 400, pointerId: 1 });
+                  blkDragDoc.restoreDoc();
+                  ok(ghostO !== null && ghostTransform.indexOf('translate(') === 0 && ghostTransform.indexOf('px') !== -1 && !ghostO.style.left && !ghostO.style.top, 'T113 der gezogene Block folgt dem Zeiger per transform statt left/top, ohne Bildaufbau (Optimierung)');
+
+                  blkUi.setMode(true);
+                  var iLog;
+                  for (iLog = 0; iLog < 260; iLog++) { blkUi.consoleRun('x ' + (10 + iLog)); }
+                  ok(blkConsoleLogEl.children.length === 200, 'T113b das Konsolenprotokoll bleibt bei 200 Zeilen gedeckelt (Optimierung)');
+
+                  var mtCalls = 0;
+                  blkCtrEl.__ctx.measureText = function () { mtCalls++; return { width: 44 }; };
+                  blkUi.consoleRun('sage Messtext A!');
+                  var mtA = mtCalls;
+                  blkUi.consoleRun('sage Messtext A!');
+                  blkUi.consoleRun('info');
+                  var mtB = mtCalls;
+                  blkUi.consoleRun('sage Messtext B!');
+                  var mtC = mtCalls;
+                  ok(mtA >= 1 && mtB === mtA && mtC === mtA + 1, 'T113c die Blasenbreite wird pro Blasentext nur einmal gemessen (Optimierung)');
+
+                  /* T114-T114r (#163): Automaten-Werkstatt. Die Engine ist
+                   * DOM-frei, deshalb laesst sie sich direkt am Modul
+                   * pruefen. */
+                  var AMT = require('../public/assets/js/automaton.js');
+                  var amtEx = AMT.exampleAutomaton();
+                  ok(AMT !== null && amtEx.states.length === 3 && amtEx.transitions.length === 3, 'T114 die Automaten-Engine liefert den Beispiel-DEA');
+                  ok(AMT.simulateAutomaton(amtEx, 'aa').accepted === true, 'T114b das Wort aa ist im Beispiel-DEA akzeptiert');
+                  ok(AMT.simulateAutomaton(amtEx, 'abbba').accepted === true, 'T114c das Wort abbba ist im Beispiel-DEA akzeptiert');
+                  ok(AMT.simulateAutomaton(amtEx, '').accepted === false, 'T114d das leere Wort ist im Beispiel-DEA nicht akzeptiert');
+                  ok(AMT.simulateAutomaton(amtEx, 'ab').accepted === false, 'T114e das Wort ab endet nicht im Endzustand');
+                  var amtBa = AMT.simulateAutomaton(amtEx, 'ba');
+                  ok(amtBa.accepted === false && amtBa.stuck === 0 && amtBa.reason.indexOf('keinen Uebergang') !== -1, 'T114f bei ba bleibt der Automat schon vor dem ersten Zeichen stecken');
+                  var amtC = AMT.simulateAutomaton(amtEx, 'c');
+                  ok(amtC.accepted === false && amtC.reason.indexOf('nicht zum Eingabealphabet') !== -1, 'T114g ein Zeichen ausserhalb des Alphabets bleibt ohne Uebergang');
+                  var amtAn = AMT.analyseAutomaton(amtEx);
+                  ok(amtAn.missing === 3 && amtAn.nd.length === 0 && amtAn.sigma.join('') === 'ab', 'T114h die Analyse zaehlt drei fehlende Uebergaenge und erkennt Determinismus');
+                  var amtNorm = AMT.normalizeAutomaton(JSON.parse(JSON.stringify(amtEx)));
+                  ok(amtNorm !== null && amtNorm.states.length === 3 && amtNorm.transitions.length === 3 && AMT.normalizeAutomaton({ kaputt: 1 }) === null, 'T114i normalizeAutomaton laedt gueltige Automaten und lehnt ungueltige ab');
+                  var amtTrap = AMT.applyTrap(amtEx);
+                  ok(amtTrap.added === 3 && amtTrap.automaton.states.length === 4, 'T114j der Trap-Zustand ergaenzt die drei fehlenden Uebergaenge');
+                  var amtTrapState = amtTrap.automaton.states.filter(function (ts) { return ts.trap; })[0];
+                  var amtTrapLoop = false, at2;
+                  for (at2 = 0; at2 < amtTrap.automaton.transitions.length; at2++) {
+                    var tt2 = amtTrap.automaton.transitions[at2];
+                    if (tt2.from === amtTrapState.id && tt2.to === amtTrapState.id && tt2.symbols.length === 2) { amtTrapLoop = true; }
+                  }
+                  ok(AMT.analyseAutomaton(amtTrap.automaton).missing === 0 && amtTrapLoop, 'T114k nach dem Trap ist der Automat vollstaendig, mit eigener Schleife am Trap');
+                  var amtSer = AMT.serializeAutomaton(amtEx);
+                  ok(amtSer.format === 'endlicher-automat' && amtSer.version === 1, 'T114l das Speicherformat nennt Format und Version');
+                  var amtScene = AMT.sceneMarkup(amtEx, { interactive: true, P: AMT.EXPORT_PAL });
+                  ok(amtScene.indexOf('data-kind="state"') !== -1 && amtScene.indexOf('data-kind="trans"') !== -1, 'T114m die Zeichnung markiert Zustaende und Uebergaenge als Klickziele');
+                  ok((amtScene.match(/cx="480"/g) || []).length === 2, 'T114n der Endzustand erhaelt seinen Doppelkreis');
+                  var amtSvg = AMT.exportSvgString(amtEx);
+                  ok(amtSvg.str.indexOf('<svg xmlns') === 0 && amtSvg.w > 0 && amtSvg.h > 0, 'T114o der Bild-Export liefert ein fertiges SVG');
+                  ok(AMT.tupleText(amtEx).indexOf('F = {q2}') !== -1, 'T114p die formale Beschreibung nennt die Endzustandsmenge');
+                  ok(AMT.effectiveAlphabet(amtEx).join('') === 'ab' && AMT.missingPairs(amtEx, ['a', 'b']).length === 2, 'T114q effektives Alphabet und fehlende Uebergaenge stimmen ueberein');
+                  var amtLoop = AMT.edgeGeom(amtEx, { id: 'x', from: 's2', to: 's2', symbols: ['b'] });
+                  ok(amtLoop !== null && amtLoop.d.indexOf('C') !== -1, 'T114r die Schleifen-Geometrie zeichnet eine Kurve');
+
+                  /* T116-T116s (#132/#137/#138/#139/#142/#143): Klone,
+                   * Listen, eigene Baeusteine, Hintergruende, Vorlagen
+                   * und Vollbild. Erst Registry und Editor-Oberflaeche,
+                   * dann die DOM-freie Laufzeit. */
+                  ok(BLK.BLOCKS.when_clone && BLK.BLOCKS.clone_create && BLK.BLOCKS.clone_delete &&
+                     BLK.BLOCKS.list_add && BLK.BLOCKS.list_del && BLK.BLOCKS.list_set &&
+                     BLK.BLOCKS.list_get && BLK.BLOCKS.list_len && BLK.BLOCKS.list_has &&
+                     BLK.BLOCKS.proc_def && BLK.BLOCKS.proc_call &&
+                     BLK.BLOCKS.backdrop_switch && BLK.BLOCKS.backdrop_next, 'T116 die Registry kennt Klone, Listen, eigene Baeusteine und Hintergruende (#132, #137, #138, #139)');
+                  blkUi.setMode(false);
+                  ok(hidden(blkListAddEl) && !hidden(blkProcAddEl), 'T116b der Listen-Knopf fehlt im Lernmodus, der Baustein-Knopf bleibt (#137, #138)');
+                  ok(blkUi.addList('einkauf') === true && blkUi.program.lists.indexOf('einkauf') !== -1, 'T116c eine Liste laesst sich anlegen (#137)');
+                  ok(blkUi.addList('einkauf') === false && blkUi.addList('') === false, 'T116d doppelte und leere Namen bleiben draussen (#137)');
+                  ok(blkUi.addProc('Springen') === true && blkUi.target().procs.indexOf('Springen') !== -1, 'T116e ein Baustein laesst sich an der Figur anlegen (#138)');
+                  ok(blkUi.templateCount() === 4, 'T116f der Editor haelt vier Beispielprogramme bereit (#142)');
+                  function simFindById(rootEl, wantId) {
+                    if (!rootEl) { return null; }
+                    if (rootEl.getAttribute && rootEl.getAttribute('id') === wantId) { return rootEl; }
+                    for (var sf = 0; sf < rootEl.children.length; sf++) {
+                      var hitSf = simFindById(rootEl.children[sf], wantId);
+                      if (hitSf) { return hitSf; }
+                    }
+                    return null;
+                  }
+                  blkTemplatesBtn.dispatch('click');
+                  var blkTplBoxEl = simFindById(blkIdeEl, 'blk-templates-box');
+                  ok(blkTplBoxEl !== null && !blkTplBoxEl.hasAttribute('hidden'), 'T116g der Vorlagen-Knopf oeffnet die Auswahl (#142)');
+                  ok(blkTplBoxEl.querySelectorAll('.blk-templates-row').length === 4, 'T116h die Auswahl zeigt vier Vorlagen mit Laden-Knopf (#142)');
+                  var blkTplCloseEl = blkTplBoxEl.querySelector('.blk-x');
+                  if (blkTplCloseEl) { blkTplCloseEl.dispatch('click'); }
+                  ok(blkTplBoxEl.hasAttribute('hidden'), 'T116i der Schliessen-Knopf versteckt die Vorlagen (#142)');
+                  ok(blkUi.isFullscreen() === false, 'T116j die Werkstatt startet ohne Vollbild (#143)');
+                  ok(blkUi.fullscreenOn() === true && blkUi.isFullscreen() === true && simFindById(blkIdeEl, 'blk-fullbox') !== null, 'T116k der Vollbild-Knopf holt die Buehne in ein eigenes Lager (#143)');
+                  ok(blkUi.fullscreenOff() === true && blkUi.isFullscreen() === false && simFindById(blkIdeEl, 'blk-fullbox') === null, 'T116l Beenden loest das Vollbild wieder auf (#143)');
+
+                  /* Laufzeit der neuen Bloecke (DOM-frei, wie die Engine). */
+                  var uidB = 1000;
+                  function rawB(op, fields, next, subs) {
+                    return { op: op, id: op + '_' + (++uidB), f: fields || {}, sub: subs || [], next: next || null };
+                  }
+                  function chainB(items) {
+                    var node = null;
+                    for (var ibC = items.length - 1; ibC >= 0; ibC--) { node = rawB(items[ibC][0], items[ibC][1], node, items[ibC][2] || []); }
+                    return node;
+                  }
+                  function progB(scripts, extra) {
+                    extra = extra || {};
+                    return BLK.parseProgram(JSON.stringify({
+                      v: 3, vars: extra.vars || [], lists: extra.lists || [],
+                      sprites: extra.sprites || [{ id: 'sp1', name: 'F1', costume: 'robot', scripts: scripts, procs: extra.procs || [] }],
+                      stage: { scripts: extra.stageScripts || [], procs: extra.stageProcs || [], backdrop: extra.backdrop || 'paper' }
+                    }));
+                  }
+                  function scrB(top) { return { id: 'sc' + (++uidB), x: 0, y: 0, top: top }; }
+                  function frB(rt, n) { for (var fb = 0; fb < n; fb++) { rt.frame(100 * fb + 100); } }
+
+                  var rtL = BLK.newRuntime(progB([scrB(chainB([
+                    ['flag'], ['list_add', { list: { v: 'einkauf' }, value: { v: 'Milch' } }],
+                    ['list_add', { list: { v: 'einkauf' }, value: { v: 'Brot' } }],
+                    ['var_set', { name: { v: 'ergebnis' }, value: { b: rawB('list_get', { list: { v: 'einkauf' }, n: { v: '2' } }, null, []) } }]
+                  ]))], { vars: ['ergebnis'], lists: ['einkauf'] }));
+                  rtL.flag(100); frB(rtL, 3);
+                  ok(rtL.vars.ergebnis === 'Brot' && rtL.lists.einkauf.length === 2 && rtL.errors.length === 0, 'T116m Listen fuellen, lesen und zaehlen ohne Fehler (#137)');
+                  var rtL2 = BLK.newRuntime(progB([scrB(chainB([
+                    ['flag'], ['list_add', { list: { v: 'L' }, value: { v: 'x' } }],
+                    ['list_add', { list: { v: 'L' }, value: { v: 'y' } }],
+                    ['list_set', { list: { v: 'L' }, n: { v: '2' }, value: { v: 'z' } }],
+                    ['list_del', { list: { v: 'L' }, n: { v: '1' } }],
+                    ['var_set', { name: { v: 'laenge' }, value: { b: rawB('list_len', { list: { v: 'L' } }, null, []) } }],
+                    ['var_set', { name: { v: 'drin' }, value: { b: rawB('list_has', { list: { v: 'L' }, value: { v: 'z' } }, null, []) } }]
+                  ]))], { vars: ['laenge', 'drin'], lists: ['L'] }));
+                  rtL2.flag(100); frB(rtL2, 3);
+                  ok(JSON.stringify(rtL2.lists.L) === '["z"]' && rtL2.vars.laenge === 1 && rtL2.vars.drin === true, 'T116n Eintraege setzen, loeschen, laengen und suchen (#137)');
+                  var serB = BLK.serializeProgram(progB([], { lists: ['A'], procs: ['Springen'], stageProcs: ['Intro'], backdrop: 'sea' }));
+                  var parB = BLK.parseProgram(JSON.stringify(serB));
+                  ok(serB.lists.length === 2 || (serB.lists.length === 1 && serB.lists[0] === 'A'), 'T116o das Speicherformat nimmt Listen und Bausteine auf (#137, #138)');
+                  ok(parB.lists.indexOf('A') !== -1 && parB.sprites[0].procs.indexOf('Springen') !== -1 && parB.stage.procs.indexOf('Intro') !== -1 && parB.stage.backdrop === 'sea', 'T116p Laden ergibt Listen, Figuren- und Buehnen-Bausteine und Hintergrund zurueck (#137, #138, #139)');
+                  var rtP = BLK.newRuntime(progB([
+                    scrB(chainB([['flag'], ['proc_call', { name: { v: 'hoch' } }], ['proc_call', { name: { v: 'hoch' } }]])),
+                    scrB(chainB([['proc_def', { name: { v: 'hoch' } }], ['var_change', { name: { v: 'zaehler' }, d: { v: '5' } }]]))
+                  ], { vars: ['zaehler'] }));
+                  rtP.flag(100); frB(rtP, 3);
+                  ok(rtP.vars.zaehler === 10 && rtP.errors.length === 0, 'T116q ein Baustein springt zweimal zum Rueckpunkt zurueck (#138)');
+                  var rtP2 = BLK.newRuntime(progB([
+                    scrB(chainB([['flag'], ['repeat', { count: { v: '3' } }, [chainB([['proc_call', { name: { v: 'hoch' } }]])]]])),
+                    scrB(chainB([['proc_def', { name: { v: 'hoch' } }], ['var_change', { name: { v: 'zaehler' }, d: { v: '5' } }]]))
+                  ], { vars: ['zaehler'] }));
+                  rtP2.flag(100); frB(rtP2, 6);
+                  ok(rtP2.vars.zaehler === 15 && rtP2.errors.length === 0, 'T116r der Baustein-Aufruf in einer Wiederholung springt jedes Mal zurueck (#138)');
+                  var rtP3 = BLK.newRuntime(progB([
+                    scrB(chainB([['flag'], ['proc_call', { name: { v: 'A' } }]])),
+                    scrB(chainB([['proc_def', { name: { v: 'A' } }], ['proc_call', { name: { v: 'B' } }], ['var_change', { name: { v: 'z' }, d: { v: '1' } }]])),
+                    scrB(chainB([['proc_def', { name: { v: 'B' } }], ['var_change', { name: { v: 'z' }, d: { v: '10' } }]]))
+                  ], { vars: ['z'] }));
+                  rtP3.flag(100); frB(rtP3, 4);
+                  ok(rtP3.vars.z === 11 && rtP3.errors.length === 0, 'T116s verschachtelte Bausteine kehren auf allen Ebenen zurueck (#138)');
+
+                  /* T116t-T116z (#132/#139): Klone und Hintergruende. */
+                  var rtK = BLK.newRuntime(progB([
+                    scrB(chainB([['flag'], ['clone_create', { name: { v: '' } }]])),
+                    scrB(chainB([['when_clone'], ['clone_delete']]))
+                  ]));
+                  rtK.flag(100); frB(rtK, 3);
+                  ok(rtK.sprites.length === 1 && rtK.errors.length === 0, 'T116t ein Klon startet sein Skript und loescht sich selbst (#132)');
+                  var rtK2 = BLK.newRuntime(progB([], { sprites: [
+                    { id: 'sp1', name: 'Robot', costume: 'robot', scripts: [scrB(chainB([['flag'], ['clone_create', { name: { v: 'sp2' } }]]))] },
+                    { id: 'sp2', name: 'Fisch', costume: 'fish', scripts: [scrB(chainB([['when_clone'], ['change_x', { dx: { v: '40' } }]]))] }
+                  ] }));
+                  rtK2.flag(100); frB(rtK2, 3);
+                  ok(rtK2.sprites.length === 3 && rtK2.sprites[2].isClone === true && rtK2.sprites[2].x === 280 && rtK2.sprites[1].x === 240, 'T116u der Klon einer anderen Figur laeuft deren Skript, das Original bleibt unberuehrt (#132)');
+                  var rtK3 = BLK.newRuntime(progB([scrB(chainB([['flag'], ['repeat', { count: { v: '350' } }, [chainB([['clone_create', { name: { v: '' } }]])]]]))]));
+                  rtK3.flag(100); frB(rtK3, 400);
+                  ok(rtK3.sprites.length === 301 && rtK3.errors.length === 1 && /Klon-Grenze/.test(rtK3.errors[0]), 'T116v bei 300 Klonen stoppt die Werkstatt mit einer klaren Meldung (#132)');
+                  var rtD = BLK.newRuntime(progB([scrB(chainB([['flag'], ['backdrop_switch', { name: { v: 'sea' } }], ['backdrop_next']]))]));
+                  ok(rtD.backdrop() === 'paper', 'T116w die Buehne startet auf Papier (#139)');
+                  rtD.flag(100); frB(rtD, 2);
+                  ok(rtD.backdrop() === 'meadow', 'T116x Hintergrund wechseln und weiterblättern (#139)');
+                  var codeB = progB([scrB(chainB([['flag'], ['proc_call', { name: { v: 'Los' } }], ['clone_create', { name: { v: '' } }], ['list_add', { list: { v: 'L' }, value: { v: '1' } }]]))], { lists: ['L'] });
+                  ok(/rufe_baustein/.test(BLK.programToJava(codeB)) && /erzeuge_klon_von/.test(BLK.programToJava(codeB)) && /fuege_hinzu/.test(BLK.programToJava(codeB)), 'T116y die Java-Ansicht uebersetzt Baustein, Klon und Liste (#132, #137, #138)');
+                  ok(/rufe_baustein/.test(BLK.programToPython(codeB)), 'T116z die Python-Ansicht uebersetzt den Baustein-Aufruf (#138)');
+
+                  /* T117-T117o (#164): Kellerautomat. Engine ist DOM-frei. */
+                  var IC_PDA = require('../public/assets/js/pda.js');
+                  var pdaEx = IC_PDA.examplePDA();
+                  ok(pdaEx.alphabet.length === 2 && pdaEx.stack0 === 'Z' && pdaEx.accept === 'state' && pdaEx.states.length === 3, 'T117 der Kellerautomat liefert das Beispiel a hoch n b hoch n (#164)');
+                  ok(IC_PDA.pdaRun(pdaEx, 'aabb').accepted === true, 'T117b aabb ist mit Keller akzeptiert (#164)');
+                  ok(IC_PDA.pdaRun(pdaEx, 'aaabbb').accepted === true, 'T117c aaabbb ist mit Keller akzeptiert (#164)');
+                  ok(IC_PDA.pdaRun(pdaEx, 'aab').accepted === false && IC_PDA.pdaRun(pdaEx, 'abba').accepted === false && IC_PDA.pdaRun(pdaEx, 'aabbbb').accepted === false, 'T117d zu kurze, falsche und zu lange Woerter werden abgelehnt (#164)');
+                  ok(IC_PDA.pdaRun(pdaEx, 'ε').accepted === true, 'T117e das leere Wort fuehrt per epsilon in den Endzustand (#164)');
+                  var pdaSteps = IC_PDA.pdaRun(pdaEx, 'aabb').steps;
+                  ok(pdaSteps.length === 6 && pdaSteps[0].stack === 'Z' && pdaSteps[5].state === 'q2', 'T117f die Schritteliste zeigt Zustand und Keller (#164)');
+                  var pdaAn = IC_PDA.analysePDA(pdaEx);
+                  ok(pdaAn.sigma.join('') === 'ab' && pdaAn.finals.length === 1 && pdaAn.epsMoves === 2, 'T117g die Analyse nennt Alphabet, Endzustaende und epsilon-Uebergaenge (#164)');
+                  ok(IC_PDA.normalizePDA({ states: pdaEx.states, transitions: pdaEx.transitions, stack0: 'Z', accept: 'stack' }).accept === 'stack', 'T117h die Akzeptanz laesst sich auf leeren Keller umstellen (#164)');
+                  ok(IC_PDA.normalizePDA({ states: pdaEx.states, transitions: [{ from: 'qX', to: 'q0', read: 'a', push: 'A' }].concat(pdaEx.transitions), stack0: 'Z' }).transitions.length === pdaEx.transitions.length, 'T117i kaputte Referenzen fallen beim Normalisieren raus (#164)');
+                  var pdaSvg = IC_PDA.exportSvgString(pdaEx);
+                  ok(pdaSvg.str.indexOf('<svg') === 0 && pdaSvg.str.indexOf('a, ε → A') !== -1, 'T117j der Bild-Export zeichnet die Keller-Beschriftung (#164)');
+                  var pdaParsed = IC_PDA.parsePDA(JSON.stringify(IC_PDA.serializePDA(pdaEx)));
+                  ok(pdaParsed.accept === 'state' && pdaParsed.transitions.length === 5, 'T117k Speichern und Laden ergibt denselben Automaten (#164)');
+
+                  /* T117l-T117o: Boot am Fake-Geruest wie auf der Seite. */
+                  var pdaDoc = new FakeDoc();
+                  function simReg(doc, id, tag) {
+                    var e = doc.createElement(tag || 'div');
+                    doc.register(e, id);
+                    return e;
+                  }
+                  var pdaRootEl = simReg(pdaDoc, 'pda-ide');
+                  var pdaCanvasEl = simReg(pdaDoc, 'pda-canvas');
+                  var pdaHintEl = simReg(pdaDoc, 'pda-hint');
+                  var pdaSelEl = simReg(pdaDoc, 'pda-sel');
+                  var pdaOutEl = simReg(pdaDoc, 'pda-out');
+                  var pdaWordEl = simReg(pdaDoc, 'pda-word', 'input');
+                  var pdaRunBtn = simReg(pdaDoc, 'pda-run', 'button');
+                  var pdaStack0El = simReg(pdaDoc, 'pda-stack0', 'input');
+                  var pdaJsonEl = simReg(pdaDoc, 'pda-json', 'textarea');
+                  pdaJsonEl.value = JSON.stringify(IC_PDA.serializePDA(pdaEx));
+                  var pdaUi = IC_PDA.attach(pdaDoc);
+                  ok(pdaUi !== null && String(pdaCanvasEl.innerHTML).indexOf('q0') !== -1, 'T117l die Werkstatt zeichnet den geladenen Automaten (#164)');
+                  ok(pdaStack0El.value === 'Z', 'T117m das Bodenzeichen steht im Feld (#164)');
+                  pdaWordEl.value = 'aabb';
+                  pdaRunBtn.dispatch('click');
+                  ok(String(pdaOutEl.textContent).indexOf('akzeptiert') !== -1 && String(pdaOutEl.textContent).indexOf('Keller') !== -1, 'T117n der Pruef-Knopf zeigt Urteil und Kellerschritte (#164)');
+                  pdaWordEl.value = 'aab';
+                  pdaRunBtn.dispatch('click');
+                  ok(String(pdaOutEl.textContent).indexOf('✗') !== -1, 'T117o ein abgelehntes Wort zeigt das Kreuz (#164)');
+
+                  /* T118-T118l (#165): Turingmaschine. */
+                  var IC_TM = require('../public/assets/js/turing.js');
+                  var tmEx = IC_TM.exampleTM();
+                  ok(tmEx.rules.length === 6 && tmEx.states.length === 3 && tmEx.blank === '_', 'T118 die Turingmaschine liefert das Inkrement-Beispiel (#165)');
+                  var tmR1 = IC_TM.tmRun(tmEx, '1011');
+                  var tmTape1 = '';
+                  var tmPos1, tmMax1 = -99, tmMin1 = 99;
+                  for (tmPos1 in tmR1.tape) { if (tmR1.tape[tmPos1] !== '_') { tmMax1 = Math.max(tmMax1, parseInt(tmPos1, 10)); tmMin1 = Math.min(tmMin1, parseInt(tmPos1, 10)); } }
+                  for (tmPos1 = tmMin1; tmPos1 <= tmMax1; tmPos1++) { tmTape1 += (tmR1.tape[tmPos1] != null ? tmR1.tape[tmPos1] : '_'); }
+                  ok(tmR1.accepted === true && tmTape1 === '1100', 'T118b 1011 wird zu 1100 inkrementiert (#165)');
+                  var tmR2 = IC_TM.tmRun(tmEx, '111');
+                  var tmTape2 = '';
+                  var tmPos2, tmMax2 = -99, tmMin2 = 99;
+                  for (tmPos2 in tmR2.tape) { if (tmR2.tape[tmPos2] !== '_') { tmMax2 = Math.max(tmMax2, parseInt(tmPos2, 10)); tmMin2 = Math.min(tmMin2, parseInt(tmPos2, 10)); } }
+                  for (tmPos2 = tmMin2; tmPos2 <= tmMax2; tmPos2++) { tmTape2 += (tmR2.tape[tmPos2] != null ? tmR2.tape[tmPos2] : '_'); }
+                  ok(tmR2.accepted === true && tmTape2 === '1000', 'T118c der Uebertrag laeuft ins neue Feld: 111 wird 1000 (#165)');
+                  ok(IC_TM.tmRun(tmEx, 'ε').accepted === true && IC_TM.tmRun(tmEx, '1011').steps.length === 9, 'T118d das leere Wort laeuft mit, die Schrittliste zaehlt neun (#165)');
+                  var tmAn = IC_TM.analyseTM(tmEx);
+                  ok(tmAn.finals[0] === 'qf' && tmAn.nd.length === 0, 'T118e die Analyse erkennt den Endzustand und Determinismus (#165)');
+                  var tmNd = IC_TM.normalizeTM({ states: tmEx.states, rules: tmEx.rules.concat([{ from: 'q0', to: 'qf', read: '0', write: '0', move: 'R' }]) });
+                  ok(IC_TM.analyseTM(tmNd).nd.length === 1, 'T118f zwei Regeln fuer dasselbe Zeichen werden als Konflikt gemeldet (#165)');
+                  var tmSvg = IC_TM.exportSvgString(tmEx);
+                  ok(tmSvg.str.indexOf('<svg') === 0 && tmSvg.str.indexOf('0 / 0, R') !== -1, 'T118g der Bild-Export zeichnet die Regel-Beschriftung (#165)');
+                  var tmParsed = IC_TM.parseTM(JSON.stringify(IC_TM.serializeTM(tmEx)));
+                  ok(tmParsed.rules.length === 6 && tmParsed.blank === '_', 'T118h Speichern und Laden ergibt dieselbe Maschine (#165)');
+                  var tmDoc = new FakeDoc();
+                  var tmRootEl2 = simReg(tmDoc, 'tm-ide');
+                  var tmCanvasEl = simReg(tmDoc, 'tm-canvas');
+                  var tmOutEl = simReg(tmDoc, 'tm-out');
+                  var tmWordEl = simReg(tmDoc, 'tm-word', 'input');
+                  var tmRunBtn = simReg(tmDoc, 'tm-run', 'button');
+                  var tmStepBtn = simReg(tmDoc, 'tm-step', 'button');
+                  var tmJsonEl = simReg(tmDoc, 'tm-json', 'textarea');
+                  tmJsonEl.value = JSON.stringify(IC_TM.serializeTM(tmEx));
+                  var tmUi = IC_TM.attach(tmDoc);
+                  ok(tmUi !== null && String(tmCanvasEl.innerHTML).indexOf('q0') !== -1, 'T118i die Werkstatt zeichnet die geladene Maschine (#165)');
+                  tmWordEl.value = '1011';
+                  tmRunBtn.dispatch('click');
+                  ok(String(tmOutEl.textContent).indexOf('akzeptiert') !== -1 && String(tmOutEl.textContent).indexOf('9') !== -1, 'T118j der Lauf-Knopf zeigt Urteil und Schrittzahl (#165)');
+                  tmStepBtn.dispatch('click');
+                  ok(String(tmOutEl.textContent).indexOf('Zustand') !== -1 && String(tmOutEl.textContent).indexOf('‣') !== -1, 'T118k der Schritt-Knopf zeigt Bandfenster und Kopf (#165)');
+
+                  /* T119-T119n (#166): Schaltwerk. */
+                  var IC_LOGIC = require('../public/assets/js/logic.js');
+                  var lcEx = IC_LOGIC.exampleCircuit();
+                  var lcEv0 = IC_LOGIC.evalCircuit(JSON.parse(JSON.stringify(lcEx)));
+                  ok(lcEv0.stable === true && lcEv0.lamps.length === 2 && lcEv0.values.lS === 0 && lcEv0.values.lC === 0, 'T119 der Halbaddierer bewertet 0 plus 0 zu S=0, C=0 (#166)');
+                  function lcWith(a, b) {
+                    var c = JSON.parse(JSON.stringify(lcEx));
+                    c.comps[0].state = a; c.comps[1].state = b;
+                    return IC_LOGIC.evalCircuit(c);
+                  }
+                  ok(lcWith(1, 0).values.lS === 1 && lcWith(1, 0).values.lC === 0, 'T119b 1 plus 0 ergibt Summe ohne Uebertrag (#166)');
+                  ok(lcWith(1, 1).values.lS === 0 && lcWith(1, 1).values.lC === 1, 'T119c 1 plus 1 ergibt den Uebertrag (#166)');
+                  ok(lcWith(0, 1).values.lS === 1, 'T119d 0 plus 1 ergibt die Summe (#166)');
+                  var lcNand = IC_LOGIC.parseCircuit(JSON.stringify({
+                    comps: [
+                      { id: 'a', kind: 'switch', x: 60, y: 60, state: 1 },
+                      { id: 'n', kind: 'not', x: 200, y: 60 },
+                      { id: 'b', kind: 'switch', x: 60, y: 160, state: 0 },
+                      { id: 'd', kind: 'nand', x: 340, y: 60 },
+                      { id: 'l', kind: 'lamp', x: 480, y: 60, label: 'X' }
+                    ],
+                    wires: [
+                      { id: 'w1', from: 'a', to: 'n' }, { id: 'w2', from: 'n', to: 'd' },
+                      { id: 'w3', from: 'b', to: 'd' }, { id: 'w4', from: 'd', to: 'l' }
+                    ]
+                  }));
+                  var lcNandEv = IC_LOGIC.evalCircuit(lcNand);
+                  ok(lcNandEv.values.n === 0 && lcNandEv.values.d === 1 && lcNandEv.values.l === 1, 'T119e NICHT und NAND verketten ueber Drähte (#166)');
+                  var lcDff = IC_LOGIC.parseCircuit(JSON.stringify({
+                    comps: [
+                      { id: 'd', kind: 'switch', x: 60, y: 60, state: 1 },
+                      { id: 'f', kind: 'dff', x: 220, y: 60 },
+                      { id: 'l', kind: 'lamp', x: 400, y: 60 }
+                    ],
+                    wires: [ { id: 'w1', from: 'd', to: 'f' }, { id: 'w2', from: 'f', to: 'l' } ]
+                  }));
+                  var lcTick1 = IC_LOGIC.tickCircuit(lcDff);
+                  ok(IC_LOGIC.evalCircuit(lcTick1).values.f === 1 && IC_LOGIC.evalCircuit(lcTick1).values.l === 1, 'T119f das D-Flipflop uebernimmt D beim Takt (#166)');
+                  lcTick1.comps[0].state = 0;
+                  ok(IC_LOGIC.evalCircuit(lcTick1).values.f === 1, 'T119g zwischen den Takten haelt das Flipflop seinen Zustand (#166)');
+                  var lcTick2 = IC_LOGIC.tickCircuit(lcTick1);
+                  ok(IC_LOGIC.evalCircuit(lcTick2).values.f === 0, 'T119h beim naechsten Takt folgt das Flipflop dem neuen D (#166)');
+                  var lcClk = IC_LOGIC.parseCircuit(JSON.stringify({
+                    comps: [ { id: 'c', kind: 'clock', state: 0 }, { id: 'l', kind: 'lamp' } ],
+                    wires: [ { id: 'w', from: 'c', to: 'l' } ]
+                  }));
+                  var lcRun = IC_LOGIC.runCircuit(lcClk, 4);
+                  ok(lcRun.states.length === 4 && lcRun.states[0].values.l === 0 && lcRun.states[1].values.l === 1 && lcRun.states[2].values.l === 0, 'T119i der Taktgeber blinkt die Lampe (#166)');
+                  var lcAn = IC_LOGIC.analyseCircuit(lcEx);
+                  ok(lcAn.counts.switch === 2 && lcAn.wires === 6, 'T119j die Analyse zaehlt Bausteine und Drähte (#166)');
+                  var lcSvg = IC_LOGIC.exportSvgString(lcEx);
+                  ok(lcSvg.str.indexOf('<svg') === 0 && lcSvg.str.indexOf('XOR') !== -1, 'T119k der Bild-Export zeichnet die Gatter (#166)');
+                  var lcParsed = IC_LOGIC.parseCircuit(JSON.stringify(IC_LOGIC.serializeCircuit(lcEx)));
+                  ok(lcParsed.comps.length === 6 && lcParsed.wires.length === 6, 'T119l Speichern und Laden ergibt dieselbe Schaltung (#166)');
+                  ok(IC_LOGIC.normalizeCircuit({ comps: [{ id: 'x', kind: 'quantum', x: 0, y: 0 }], wires: [] }).comps.length === 0, 'T119m unbekannte Baustein-Arten fallen beim Normalisieren raus (#166)');
+                  var lcDoc = new FakeDoc();
+                  var lcRootEl = simReg(lcDoc, 'lc-ide');
+                  var lcCanvasEl = simReg(lcDoc, 'lc-canvas');
+                  var lcSelEl = simReg(lcDoc, 'lc-sel');
+                  var lcOutEl = simReg(lcDoc, 'lc-out');
+                  var lcEvalBtn = simReg(lcDoc, 'lc-eval', 'button');
+                  var lcJsonEl = simReg(lcDoc, 'lc-json', 'textarea');
+                  lcJsonEl.value = JSON.stringify(IC_LOGIC.serializeCircuit(lcEx));
+                  var lcClkBtn = simReg(lcDoc, 'lc-clock', 'button');
+                  var lcUi = IC_LOGIC.attach(lcDoc);
+                  ok(lcUi !== null && String(lcCanvasEl.innerHTML).indexOf('A') !== -1, 'T119n die Werkstatt zeichnet die geladene Schaltung und wertet sie aus (#166)');
+                  ok(String(lcOutEl.textContent).indexOf('Netz stabil') !== -1, 'T119o die Auswertung meldet das stabile Netz (#166)');
+                  lcClkBtn.dispatch('click');
+                  lcClkBtn.dispatch('click');
+                  ok(lcClkBtn.textContent === '▶ Takt', 'T119p der Takt-Knopf startet und stoppt den Takt (#166)');
+
+                  /* T120 (#173): Gemeinsamer Werkzeugkasten fuer die
+                   * Automaten-Werkstaetten: Historie, Ansicht, PNG, Takt,
+                   * Tabelle - einmal umgesetzt, modular eingesetzt. */
+                  var IC_TOOLS = require('../public/assets/js/amt-tools.js');
+                  ok(typeof IC_TOOLS.makeHistory === 'function' && typeof IC_TOOLS.makeView === 'function' && typeof IC_TOOLS.exportPng === 'function' && typeof IC_TOOLS.makePlayer === 'function' && typeof IC_TOOLS.deltaTable === 'function', 'T120 der Werkzeugkasten stellt Historie, Ansicht, PNG, Takt und Tabelle bereit (#173)');
+                  var histCur = { n: 1 };
+                  var histLog = [];
+                  var hist120 = IC_TOOLS.makeHistory({
+                    snapshot: function () { return JSON.stringify(histCur); },
+                    restore: function (snap) { histCur = JSON.parse(snap); histLog.push('r' + histCur.n); }
+                  });
+                  ok(hist120.canUndo() === false, 'T120a ohne Aenderung gibt es nichts Zurueckzunehmen (#173)');
+                  hist120.commit();
+                  histCur.n = 2;
+                  hist120.commit();
+                  histCur.n = 3;
+                  hist120.commit();
+                  ok(hist120.canUndo() === true, 'T120b Aenderungen landen auf der Historie (#173)');
+                  hist120.undo();
+                  ok(histCur.n === 2, 'T120c Undo stellt den vorherigen Stand wieder her (#173)');
+                  hist120.undo();
+                  ok(histCur.n === 1 && hist120.canUndo() === false, 'T120d Undo stoppt am Ausgangszustand (#173)');
+                  hist120.redo();
+                  ok(histCur.n === 2, 'T120e Redo nimmt die Aenderung wieder auf (#173)');
+                  var svg120 = new FakeEl('svg');
+                  var view120 = IC_TOOLS.makeView(svg120, { x: 0, y: 0, w: 900, h: 560 });
+                  ok(svg120.getAttribute('viewBox') === '0 0 900 560', 'T120f die Ansicht schreibt den Anfangsrahmen in die Zeichenflaeche (#173)');
+                  view120.zoom(1.25);
+                  ok(svg120.getAttribute('viewBox').indexOf('720') !== -1, 'T120g Zoom vergroessert den Rahmen (720 statt 900) (#173)');
+                  view120.fit({ x0: 100, y0: 80, x1: 500, y1: 380 }, 50);
+                  var vb120 = svg120.getAttribute('viewBox').split(' ');
+                  ok(parseFloat(vb120[0]) === 50 && parseFloat(vb120[2]) === 500, 'T120h Einpassen legt den Rahmen um die Zeichnung (#173)');
+                  view120.panBy(10, 20);
+                  ok(svg120.getAttribute('viewBox').split(' ')[0] === '60', 'T120i Schieben verschiebt den Rahmen (#173)');
+                  var tbl120 = IC_TOOLS.deltaTable(pdaDoc, ['von', 'nach'], [['q0', 'q1']]);
+                  ok(tbl120.children[0].children[0].children.length === 2 && tbl120.children[1].children[0].children[1].textContent === 'q1', 'T120j die Tabelle baut Kopf und Zeilen der Uebergangsfunktion (#173)');
+                  IC_TOOLS.exportPng(new FakeDoc(), { str: '<svg></svg>', w: 10, h: 10 }, 'x.png');
+                  ok(true, 'T120k der PNG-Export verlaesst sich still auf den Browser und wirft nie (#173)');
+
+                  /* T120l-T120r (#173): Funktionsparitaet des Kellerautomaten:
+                   * Undo/Redo, Zoom/Einpassen, Abspielen, formale Beschreibung. */
+                  var pdaDoc2 = new FakeDoc();
+                  var pdaReg2 = function (id, tag) { var e = pdaDoc2.createElement(tag || 'div'); pdaDoc2.register(e, id); return e; };
+                  var pdaRoot2 = pdaReg2('pda-ide');
+                  var pdaCanvas2 = pdaReg2('pda-canvas', 'svg');
+                  var pdaHint2 = pdaReg2('pda-hint');
+                  var pdaSel2 = pdaReg2('pda-sel');
+                  var pdaOut2 = pdaReg2('pda-out');
+                  var pdaWord2 = pdaReg2('pda-word', 'input');
+                  var pdaRun2 = pdaReg2('pda-run', 'button');
+                  var pdaPlay2 = pdaReg2('pda-play', 'button');
+                  var pdaUndo2 = pdaReg2('pda-undo', 'button');
+                  var pdaRedo2 = pdaReg2('pda-redo', 'button');
+                  var pdaZoomIn2 = pdaReg2('pda-zoom-in', 'button');
+                  var pdaZoomOut2 = pdaReg2('pda-zoom-out', 'button');
+                  var pdaFit2 = pdaReg2('pda-fit', 'button');
+                  var pdaPng2 = pdaReg2('pda-png', 'button');
+                  var pdaTuple2 = pdaReg2('pda-tuple');
+                  var pdaDelta2 = pdaReg2('pda-delta');
+                  var pdaJson2 = pdaReg2('pda-json', 'textarea');
+                  pdaJson2.value = JSON.stringify(IC_PDA.serializePDA(pdaEx));
+                  var pdaUi2 = IC_PDA.attach(pdaDoc2);
+                  ok(String(pdaTuple2.textContent).indexOf('P = (Q') !== -1 && String(pdaTuple2.textContent).indexOf('q0') !== -1, 'T120l die formale Beschreibung nennt das 7-Tupel des Kellerautomaten (#173)');
+                  ok(pdaDelta2.children.length === 1 && pdaDelta2.children[0].children[1].children.length === pdaEx.transitions.length, 'T120m die Uebergangstabelle zaehlt alle Uebergaenge (#173)');
+                  ok(pdaUi2.addState(300, 200) !== null && pdaUi2.pda().states.length === 4, 'T120n ein zugefuegter Zustand zaehlt mit (#173)');
+                  pdaUndo2.dispatch('click');
+                  ok(pdaUi2.pda().states.length === 3, 'T120o der Zurueck-Knopf nimmt den Zustand zurueck (#173)');
+                  pdaRedo2.dispatch('click');
+                  ok(pdaUi2.pda().states.length === 4, 'T120p der Wiederherstellen-Knopf legt ihn erneut an (#173)');
+                  pdaFit2.dispatch('click');
+                  pdaZoomIn2.dispatch('click');
+                  ok(pdaCanvas2.getAttribute('viewBox') !== null && parseFloat(pdaCanvas2.getAttribute('viewBox').split(' ')[2]) < 900, 'T120q Einpassen und Zoom aendern den Rahmen der Kellerautomat-Ansicht (#173)');
+                  pdaWord2.value = 'aabb';
+                  pdaPlay2.dispatch('click');
+                  ok(String(pdaOut2.textContent).indexOf('Start') !== -1, 'T120r der Abspiel-Knopf zeigt den ersten Schritt sofort (#173)');
+                  pdaPng2.dispatch('click');
+                  ok(String(pdaHint2.textContent).indexOf('PNG') !== -1, 'T120s der Bild-Knopf meldet den PNG-Download (#173)');
+
+                  /* T120t-T120z (#173): Funktionsparitaet der Turingmaschine:
+                   * Undo/Redo, Zoom, mehrere Woerter, Abspielen, 7-Tupel. */
+                  var tmDoc2 = new FakeDoc();
+                  var tmReg2 = function (id, tag) { var e = tmDoc2.createElement(tag || 'div'); tmDoc2.register(e, id); return e; };
+                  var tmRoot2 = tmReg2('tm-ide');
+                  var tmCanvas2 = tmReg2('tm-canvas', 'svg');
+                  var tmHint2 = tmReg2('tm-hint');
+                  var tmOut2 = tmReg2('tm-out');
+                  var tmWord2 = tmReg2('tm-word', 'input');
+                  var tmRun2 = tmReg2('tm-run', 'button');
+                  var tmPlay2 = tmReg2('tm-play', 'button');
+                  var tmUndo2 = tmReg2('tm-undo', 'button');
+                  var tmRedo2 = tmReg2('tm-redo', 'button');
+                  var tmFit2 = tmReg2('tm-fit', 'button');
+                  var tmTuple2 = tmReg2('tm-tuple');
+                  var tmDelta2 = tmReg2('tm-delta');
+                  var tmBatchIn2 = tmReg2('tm-batch-in', 'textarea');
+                  var tmBatchBtn2 = tmReg2('tm-batch-btn', 'button');
+                  var tmBatchOut2 = tmReg2('tm-batch-out');
+                  var tmJson2 = tmReg2('tm-json', 'textarea');
+                  tmJson2.value = JSON.stringify(IC_TM.serializeTM(tmEx));
+                  var tmUi2 = IC_TM.attach(tmDoc2);
+                  ok(String(tmTuple2.textContent).indexOf('M = (Q') !== -1 && String(tmTuple2.textContent).indexOf('deterministisch') !== -1, 'T120t die formale Beschreibung nennt das 7-Tupel der Turingmaschine (#173)');
+                  ok(tmDelta2.children.length === 1 && tmDelta2.children[0].children[1].children.length === tmEx.rules.length, 'T120u die Delta-Tabelle listet alle Regeln (#173)');
+                  tmUi2.addState(300, 200);
+                  tmUndo2.dispatch('click');
+                  ok(tmUi2.tm().states.length === 3, 'T120v der Zurueck-Knopf nimmt den Zustand zurueck (#173)');
+                  tmRedo2.dispatch('click');
+                  ok(tmUi2.tm().states.length === 4, 'T120w der Wiederherstellen-Knopf legt ihn erneut an (#173)');
+                  tmBatchIn2.value = '1011' + NL41 + '111';
+                  tmBatchBtn2.dispatch('click');
+                  ok(tmBatchOut2.children.length === 2 && tmBatchOut2.children[0].textContent.indexOf('✓') !== -1, 'T120x der Alle-testen-Knopf prueft mehrere Woerter auf einmal (#173)');
+                  tmWord2.value = '1011';
+                  tmPlay2.dispatch('click');
+                  ok(String(tmOut2.textContent).indexOf('▶ Schritt') !== -1, 'T120y der Abspiel-Knopf zeigt Bandfenster und Kopf sofort (#173)');
+                  tmFit2.dispatch('click');
+                  ok(tmCanvas2.getAttribute('viewBox') !== null, 'T120z der Einpassen-Knopf setzt den Ansichtsrahmen (#173)');
+
+                  /* T121 (#174): HTML-Baustein im InfoBook: dritter Kasten
+                   * neben Java- und SQL-Fenster, Quelltext laeuft nur in
+                   * einer abgeschotteten Sandbox ohne same-origin. */
+                  var appPath121 = require.resolve('../public/assets/js/app.js');
+                  delete require.cache[appPath121];
+                  global.window = {};
+                  var ibDoc121 = new FakeDoc();
+                  var ibEditor121 = new FakeEl('div');
+                  ibEditor121.setAttribute('data-codeclasses', JSON.stringify([]));
+                  ibEditor121.setAttribute('data-blocks', '[]');
+                  ibDoc121.register(ibEditor121, 'ibook-editor');
+                  ibDoc121.register(new FakeEl('input'), 'ibook-blocks-json');
+                  var ibSaveForm121 = new FakeEl('form');
+                  ibSaveForm121.setAttribute('action', '/infobuecher/7/seite/9');
+                  ibDoc121.register(ibSaveForm121, 'ibook-saveform');
+                  global.document = ibDoc121;
+                  global.fetch = function () { return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ ok: true, id: 5, name: 'x.png' }); } }); };
+                  require('../public/assets/js/app.js');
+                  var ibBar121 = ibDoc121.body.querySelector('.icv-toolbar');
+                  var htmlBtn121 = null;
+                  var ibBidx;
+                  for (ibBidx = 0; ibBar121 && ibBidx < ibBar121.children.length; ibBidx++) {
+                    if (ibBar121.children[ibBidx].textContent === '🌐') { htmlBtn121 = ibBar121.children[ibBidx]; break; }
+                  }
+                  ok(htmlBtn121 !== null, 'T121 der InfoBook-Editor hat einen Knopf fuer den HTML-Baustein (#174)');
+                  htmlBtn121.dispatch('click');
+                  var ibCollect121 = function () { return JSON.parse(ibDoc121.getElementById('ibook-blocks-json').value)[0].items || []; };
+                  ok(ibCollect121().length === 1 && ibCollect121()[0].kind === 'html', 'T121b der HTML-Baustein serialisiert als eigener Kasten (#174)');
+                  var hTa121 = ibDoc121.body.querySelector('.icv-html-ta');
+                  var hPrev121 = ibDoc121.body.querySelector('.icv-html-prev');
+                  ok(hTa121 !== null && hPrev121 !== null, 'T121c der Baustein zeigt Quelltextfeld und Vorschau (#174)');
+                  hTa121.value = '<h1>Anmeldung</h1>';
+                  hTa121.dispatch('input');
+                  ok(ibCollect121()[0].html === '<h1>Anmeldung</h1>', 'T121d der getippte Quelltext wird mit der Seite gesichert (#174)');
+                  ok(hPrev121.children.length === 1 && hPrev121.children[0].tagName === 'IFRAME', 'T121e die Vorschau laeuft in einem eigenen Fenster (#174)');
+                  ok(hPrev121.children[0].getAttribute('sandbox') === 'allow-scripts allow-forms', 'T121f die Sandbox erlaubt Skripte und Formulare, aber keinen Zugriff auf die Plattform (#174)');
+                  var roBox121 = new FakeEl('div');
+                  global.window.IC_HTML_RENDER(roBox121, '<p>Lesemodus</p>');
+                  ok(roBox121.children.length === 1 && roBox121.children[0].getAttribute('srcdoc') === '<p>Lesemodus</p>', 'T121g der Lesemodus rendert den gespeicherten Quelltext im abgeschotteten Fenster (#174)');
+                  /* Boot im Lesemodus: fertige Rahmen einmalig bestuecken. */
+                  var appPath121b = require.resolve('../public/assets/js/app.js');
+                  delete require.cache[appPath121b];
+                  var bootDoc121 = new FakeDoc();
+                  var bootFrame121 = new FakeEl('div');
+                  bootFrame121.className = 'icv-html-frame';
+                  var bootItemWrap121 = new FakeEl('div');
+                  bootItemWrap121.appendChild(bootFrame121);
+                  var bootSrc121 = new FakeEl('pre');
+                  bootSrc121.className = 'icv-html-src';
+                  bootSrc121.textContent = '<b>Maskenfeld</b>';
+                  bootItemWrap121.appendChild(bootSrc121);
+                  bootDoc121.register(bootItemWrap121, 'boot-wrap-121');
+                  global.document = bootDoc121;
+                  require('../public/assets/js/app.js');
+                  ok(bootFrame121.children.length === 1 && bootFrame121.children[0].getAttribute('srcdoc') === '<b>Maskenfeld</b>', 'T121h der Boot im Lesemodus liest den versteckten Quelltext und baut das Fenster (#174)');
+                  delete global.window;
+
+                  /* T122 (#174): Die Automaten-Werkstatt liest ihre Farben
+                   * aus CSS-Variablen. Frueher fiel die Ersatzsuche auf
+                   * falsche Schluessel und ergab undefined: Der Browser
+                   * zeichnete Zustandskreise dann solide schwarz. Diese
+                   * Tests simulieren den Browser mit getComputedStyle. */
+                  var fs122 = require('fs');
+                  ok(fs122.readFileSync(require.resolve('../public/assets/css/style.css'), 'utf8').indexOf('--paper:') !== -1,
+                    'T122 das Stylesheet definiert die Farbwerte der Werkstatt zentral (#174)');
+                  var autoPath122 = require.resolve('../public/assets/js/automaton.js');
+                  var stubVals122 = {};
+                  global.getComputedStyle = function () {
+                    return { getPropertyValue: function (n) { return stubVals122[n] || ''; } };
+                  };
+                  var amtBoot122 = function () {
+                    delete require.cache[autoPath122];
+                    var doc122 = new FakeDoc();
+                    doc122.documentElement = new FakeEl('html');
+                    var svg122 = new FakeEl('svg');
+                    doc122.register(new FakeEl('div'), 'amt-ide');
+                    doc122.register(svg122, 'amt-canvas');
+                    doc122.register(new FakeEl('section'), 'amt-stage');
+                    doc122.register(new FakeEl('form'), 'automaton-save-form');
+                    ['amt-sel', 'amt-word', 'amt-run', 'amt-step', 'amt-play', 'amt-reset',
+                     'amt-out', 'amt-sigma', 'amt-chips', 'amt-tuple', 'amt-delta',
+                     'amt-hint', 'amt-undo', 'amt-redo', 'amt-trap', 'amt-new',
+                     'amt-zoom-in', 'amt-zoom-out', 'amt-fit', 'amt-png',
+                     'amt-pop', 'amt-pop-in', 'amt-pop-ok', 'amt-pop-lbl', 'amt-pop-hint',
+                     'amt-batch-in', 'amt-batch-btn', 'amt-batch-out', 'amt-saveinfo'
+                    ].forEach(function (id122) { doc122.register(new FakeEl('div'), id122); });
+                    global.document = doc122;
+                    require('../public/assets/js/automaton.js');
+                    return svg122;
+                  };
+                  var svg122a = amtBoot122();
+                  ok(svg122a.innerHTML.indexOf('fill="#ffffff"') !== -1,
+                    'T122b ohne Farbangaben behalten die Zustandskreise ihre weisse Fuellung (#174)');
+                  ok(svg122a.innerHTML.indexOf('undefined') === -1,
+                    'T122c die Zeichnung enthaelt keine ungueltigen Farbwerte mehr (#174)');
+                  stubVals122['--paper'] = '#fafaff';
+                  var svg122b = amtBoot122();
+                  ok(svg122b.innerHTML.indexOf('fill="#fafaff"') !== -1,
+                    'T122d eigene Farbwerte aus dem Stylesheet fließen in die Zeichnung ein (#174)');
+                  delete global.getComputedStyle;
+
+                  /* T123 (#177): Präsentationsmodus im InfoBook. Navigation,
+                   * Autoplay mit Zeitsteuerung und Fortschrittsbalken laufen
+                   * als IC_PRESENT-Modul in app.js, nicht mehr als
+                   * Inline-Script auf der Folgenseite. */
+                  global.window = {};
+                  var presPath123 = require.resolve('../public/assets/js/app.js');
+                  delete require.cache[presPath123];
+                  global.document = new FakeDoc();
+                  require('../public/assets/js/app.js');
+                  ok(global.window.IC_PRESENT && typeof global.window.IC_PRESENT.parseInterval === 'function',
+                    'T123 der Präsentationsmodus stellt seine Helfer bereit (#177)');
+                  ok(global.window.IC_PRESENT.parseInterval('10') === 10
+                    && global.window.IC_PRESENT.parseInterval('abc', 10) === 10
+                    && global.window.IC_PRESENT.parseInterval('1', 10) === 2
+                    && global.window.IC_PRESENT.parseInterval('9999', 10) === 600,
+                    'T123b die Foliendauer akzeptiert nur vernuenftige Sekunden (#177)');
+                  ok(global.window.IC_PRESENT.progressPct(5000, 10000) === 50
+                    && global.window.IC_PRESENT.progressPct(-5, 10000) === 0
+                    && global.window.IC_PRESENT.progressPct(99999, 10000) === 100,
+                    'T123c der Fortschrittsbalken bleibt zwischen 0 und 100 Prozent (#177)');
+                  ok(global.window.IC_PRESENT.nextIndex(1, 3, true) === 2
+                    && global.window.IC_PRESENT.nextIndex(2, 3, true) === 0
+                    && global.window.IC_PRESENT.nextIndex(2, 3, false) === 2,
+                    'T123d der Autoplay springt am Ende zurueck zum Anfang (#177)');
+                  /* Folgenseite mit drei Folien nachbauen, Boot laeuft beim
+                   * Einbinden von app.js, weil das Fake-DOM nie "loading" ist. */
+                  delete require.cache[presPath123];
+                  var presDoc123 = new FakeDoc();
+                  var stage123 = new FakeEl('div');
+                  stage123.setAttribute('data-ibook', '41');
+                  ['Alpha', 'Beta', 'Gamma'].forEach(function (t123s, idx123) {
+                    var sl123 = new FakeEl('section');
+                    sl123.className = 'slide' + (idx123 === 0 ? ' slide-active' : '');
+                    sl123.textContent = t123s;
+                    stage123.appendChild(sl123);
+                  });
+                  presDoc123.register(stage123, 'slide-stage');
+                  var pCounter123 = new FakeEl('span'); presDoc123.register(pCounter123, 'slide-counter');
+                  var pPrev123 = new FakeEl('button'); presDoc123.register(pPrev123, 'slide-prev');
+                  var pNext123 = new FakeEl('button'); presDoc123.register(pNext123, 'slide-next');
+                  var pFull123 = new FakeEl('button'); presDoc123.register(pFull123, 'slide-full');
+                  var pPlay123 = new FakeEl('button'); pPlay123.textContent = '▶'; presDoc123.register(pPlay123, 'slide-play');
+                  var pInt123 = new FakeEl('select'); pInt123.value = '10'; presDoc123.register(pInt123, 'slide-interval');
+                  var pFill123 = new FakeEl('div'); pFill123.style.width = '0%'; presDoc123.register(pFill123, 'slide-progress-fill');
+                  global.document = presDoc123;
+                  require('../public/assets/js/app.js');
+                  ok(stage123.querySelectorAll('.slide')[0].classList.contains('slide-active')
+                    && pCounter123.textContent === '1 / 3',
+                    'T123e der Boot zeigt die erste Folie und zaehlt sie (#177)');
+                  pNext123.dispatch('click');
+                  ok(stage123.querySelectorAll('.slide')[1].classList.contains('slide-active')
+                    && pCounter123.textContent === '2 / 3',
+                    'T123f der Weiter-Knopf springt auf die zweite Folie (#177)');
+                  /* Tastatur: Pfeiltaste rechts und P fuer Autoplay. */
+                  var savedInterval123 = global.setInterval;
+                  var savedClear123 = global.clearInterval;
+                  var tickFn123 = null;
+                  global.setInterval = function (fn, ms) { tickFn123 = fn; return 7; };
+                  global.clearInterval = function () {};
+                  presDoc123._fire('keydown', { key: 'ArrowRight', preventDefault: function () {} });
+                  ok(stage123.querySelectorAll('.slide')[2].classList.contains('slide-active')
+                    && pCounter123.textContent === '3 / 3',
+                    'T123g die Pfeiltaste rechts blaettert weiter (#177)');
+                  presDoc123._fire('keydown', { key: 'p', preventDefault: function () {} });
+                  ok(tickFn123 !== null && pPlay123.textContent === '⏸',
+                    'T123h die Taste P startet den Automatikmodus (#177)');
+                  /* 39 Ticks a 250 ms: der Balken laeuft auf 98 Prozent, ohne
+                   * dass die Folie schon wechselt. */
+                  var fill123 = '';
+                  for (var tk123 = 0; tk123 < 39; tk123++) { tickFn123(); fill123 = pFill123.style.width; }
+                  ok(fill123 === '98%' && stage123.querySelectorAll('.slide')[2].classList.contains('slide-active'),
+                    'T123i der Fortschrittsbalken fuellt sich mit der Zeit (#177)');
+                  /* Der 40. Tick schliesst die 10 Sekunden ab: die Folie
+                   * springt wegen Autoplay zurueck zum Anfang. */
+                  tickFn123();
+                  ok(stage123.querySelectorAll('.slide')[0].classList.contains('slide-active')
+                    && pCounter123.textContent === '1 / 3',
+                    'T123j nach Ablauf der Zeit springt die Folie weiter (#177)');
+                  presDoc123._fire('keydown', { key: 'p', preventDefault: function () {} });
+                  ok(pPlay123.textContent === '▶' && pFill123.style.width === '0%',
+                    'T123k ein zweites P haelt den Automatikmodus an (#177)');
+                  global.setInterval = savedInterval123;
+                  global.clearInterval = savedClear123;
+                  var presTpl123 = require('fs').readFileSync(require.resolve('../templates/ibook_present.php'), 'utf8');
+                  ok(presTpl123.indexOf('slide-progress') !== -1 && presTpl123.indexOf('slide-play') !== -1
+                    && presTpl123.indexOf('slide-interval') !== -1 && presTpl123.indexOf('IC_PRESENT') !== -1,
+                    'T123l die Folgenseite liefert Balken, Startknopf und Zeitauswahl (#177)');
+
+                  /* T124 (#184): Die linke Seitennavigation zeigt nur die
+                   * Seiten des aktiven Abschnitts; genau ein "Neue Seite"-
+                   * Feld statt einem je Abschnitt, das Abschnitt-Formular
+                   * klappt auf. Alles reine Datei-Pruefung wie bei T123l. */
+                  var navTpl124 = require('fs').readFileSync(require.resolve('../templates/ibook_page.php'), 'utf8');
+                  var navCss124 = require('fs').readFileSync(require.resolve('../public/assets/css/style.css'), 'utf8');
+                  var navPhp124 = require('fs').readFileSync(require.resolve('../src/Controllers/InfoBookController.php'), 'utf8');
+                  ok(navTpl124.indexOf('ibook-pagenav-pages') !== -1 && navCss124.indexOf('.ibook-pagenav-pages') !== -1,
+                    'T124 die Navigation fasst die Seiten des aktiven Abschnitts in einen eigenen Block (#184)');
+                  ok(navTpl124.indexOf('ibook-pagenav-section-active') !== -1 && navCss124.indexOf('.ibook-pagenav-section-active') !== -1,
+                    'T124b der aktive Abschnitt ist ein Label statt eines Links auf sich selbst (#184)');
+                  ok(navTpl124.indexOf('ibook-pagenav-pages') < navTpl124.indexOf('ibook-navnew'),
+                    'T124c das einzige Neue-Seite-Feld steht unter den Seiten des aktiven Abschnitts (#184)');
+                  ok(navTpl124.indexOf('ibook-navnewsec-details') !== -1 && navCss124.indexOf('.ibook-navnewsec-details') !== -1,
+                    'T124d Neuer Abschnitt klappt auf, statt als Dauerformular Platz zu verbrauchen (#184)');
+                  ok(navPhp124.indexOf('navSectionsFor') !== -1 && navPhp124.indexOf('visibleSectionForStudent') !== -1,
+                    'T124e Schuelerinnen und Schueler sehen nur die fuer sie sichtbaren Abschnitte (#184)');
+                  ok(navPhp124.split('self::navSectionsFor').length - 1 === 3,
+                    'T124f Buchansicht, Seitennavigation und Praesentation laden die Abschnitte gemeinsam (#184)');
+                  ok(navTpl124.indexOf('navLesen') !== -1 && navTpl124.indexOf('?lesen=1') !== -1,
+                    'T124g im Lesemodus behalten alle Seiten-Links das lesen-Suffix (#184)');
+
+                  global.document = blkDocSaved;
+                  global.fetch = blkFetchSaved;
+
+                  console.log('');
+                  if (failures.length === 0) { console.log('Alle ' + passed + ' UI-Tests bestanden.'); process.exit(0); }
+                  else { console.log(failures.length + ' UI-Tests fehlgeschlagen.'); process.exit(1); }
+                }, 1200);
+              }, 700);
+
+            }, 700);
+          }, 700);
+        }, 700);
+      }, 200);
+    }, 900);
+  }, 700);
+}, 700);
