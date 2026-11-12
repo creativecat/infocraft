@@ -4,7 +4,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.18.0
+ * @version 0.19.0
  */
 /* InfoCraft UI-Tests: Sind alle Buttons der Java-IDE klickbar und funktionieren sie?
  *
@@ -3847,6 +3847,94 @@ setTimeout(function () {
                   ok(svg122b.innerHTML.indexOf('fill="#fafaff"') !== -1,
                     'T122d eigene Farbwerte aus dem Stylesheet fließen in die Zeichnung ein (#174)');
                   delete global.getComputedStyle;
+
+                  /* T123 (#177): Präsentationsmodus im InfoBook. Navigation,
+                   * Autoplay mit Zeitsteuerung und Fortschrittsbalken laufen
+                   * als IC_PRESENT-Modul in app.js, nicht mehr als
+                   * Inline-Script auf der Folgenseite. */
+                  global.window = {};
+                  var presPath123 = require.resolve('../public/assets/js/app.js');
+                  delete require.cache[presPath123];
+                  global.document = new FakeDoc();
+                  require('../public/assets/js/app.js');
+                  ok(global.window.IC_PRESENT && typeof global.window.IC_PRESENT.parseInterval === 'function',
+                    'T123 der Präsentationsmodus stellt seine Helfer bereit (#177)');
+                  ok(global.window.IC_PRESENT.parseInterval('10') === 10
+                    && global.window.IC_PRESENT.parseInterval('abc', 10) === 10
+                    && global.window.IC_PRESENT.parseInterval('1', 10) === 2
+                    && global.window.IC_PRESENT.parseInterval('9999', 10) === 600,
+                    'T123b die Foliendauer akzeptiert nur vernuenftige Sekunden (#177)');
+                  ok(global.window.IC_PRESENT.progressPct(5000, 10000) === 50
+                    && global.window.IC_PRESENT.progressPct(-5, 10000) === 0
+                    && global.window.IC_PRESENT.progressPct(99999, 10000) === 100,
+                    'T123c der Fortschrittsbalken bleibt zwischen 0 und 100 Prozent (#177)');
+                  ok(global.window.IC_PRESENT.nextIndex(1, 3, true) === 2
+                    && global.window.IC_PRESENT.nextIndex(2, 3, true) === 0
+                    && global.window.IC_PRESENT.nextIndex(2, 3, false) === 2,
+                    'T123d der Autoplay springt am Ende zurueck zum Anfang (#177)');
+                  /* Folgenseite mit drei Folien nachbauen, Boot laeuft beim
+                   * Einbinden von app.js, weil das Fake-DOM nie "loading" ist. */
+                  delete require.cache[presPath123];
+                  var presDoc123 = new FakeDoc();
+                  var stage123 = new FakeEl('div');
+                  stage123.setAttribute('data-ibook', '41');
+                  ['Alpha', 'Beta', 'Gamma'].forEach(function (t123s, idx123) {
+                    var sl123 = new FakeEl('section');
+                    sl123.className = 'slide' + (idx123 === 0 ? ' slide-active' : '');
+                    sl123.textContent = t123s;
+                    stage123.appendChild(sl123);
+                  });
+                  presDoc123.register(stage123, 'slide-stage');
+                  var pCounter123 = new FakeEl('span'); presDoc123.register(pCounter123, 'slide-counter');
+                  var pPrev123 = new FakeEl('button'); presDoc123.register(pPrev123, 'slide-prev');
+                  var pNext123 = new FakeEl('button'); presDoc123.register(pNext123, 'slide-next');
+                  var pFull123 = new FakeEl('button'); presDoc123.register(pFull123, 'slide-full');
+                  var pPlay123 = new FakeEl('button'); pPlay123.textContent = '▶'; presDoc123.register(pPlay123, 'slide-play');
+                  var pInt123 = new FakeEl('select'); pInt123.value = '10'; presDoc123.register(pInt123, 'slide-interval');
+                  var pFill123 = new FakeEl('div'); pFill123.style.width = '0%'; presDoc123.register(pFill123, 'slide-progress-fill');
+                  global.document = presDoc123;
+                  require('../public/assets/js/app.js');
+                  ok(stage123.querySelectorAll('.slide')[0].classList.contains('slide-active')
+                    && pCounter123.textContent === '1 / 3',
+                    'T123e der Boot zeigt die erste Folie und zaehlt sie (#177)');
+                  pNext123.dispatch('click');
+                  ok(stage123.querySelectorAll('.slide')[1].classList.contains('slide-active')
+                    && pCounter123.textContent === '2 / 3',
+                    'T123f der Weiter-Knopf springt auf die zweite Folie (#177)');
+                  /* Tastatur: Pfeiltaste rechts und P fuer Autoplay. */
+                  var savedInterval123 = global.setInterval;
+                  var savedClear123 = global.clearInterval;
+                  var tickFn123 = null;
+                  global.setInterval = function (fn, ms) { tickFn123 = fn; return 7; };
+                  global.clearInterval = function () {};
+                  presDoc123._fire('keydown', { key: 'ArrowRight', preventDefault: function () {} });
+                  ok(stage123.querySelectorAll('.slide')[2].classList.contains('slide-active')
+                    && pCounter123.textContent === '3 / 3',
+                    'T123g die Pfeiltaste rechts blaettert weiter (#177)');
+                  presDoc123._fire('keydown', { key: 'p', preventDefault: function () {} });
+                  ok(tickFn123 !== null && pPlay123.textContent === '⏸',
+                    'T123h die Taste P startet den Automatikmodus (#177)');
+                  /* 39 Ticks a 250 ms: der Balken laeuft auf 98 Prozent, ohne
+                   * dass die Folie schon wechselt. */
+                  var fill123 = '';
+                  for (var tk123 = 0; tk123 < 39; tk123++) { tickFn123(); fill123 = pFill123.style.width; }
+                  ok(fill123 === '98%' && stage123.querySelectorAll('.slide')[2].classList.contains('slide-active'),
+                    'T123i der Fortschrittsbalken fuellt sich mit der Zeit (#177)');
+                  /* Der 40. Tick schliesst die 10 Sekunden ab: die Folie
+                   * springt wegen Autoplay zurueck zum Anfang. */
+                  tickFn123();
+                  ok(stage123.querySelectorAll('.slide')[0].classList.contains('slide-active')
+                    && pCounter123.textContent === '1 / 3',
+                    'T123j nach Ablauf der Zeit springt die Folie weiter (#177)');
+                  presDoc123._fire('keydown', { key: 'p', preventDefault: function () {} });
+                  ok(pPlay123.textContent === '▶' && pFill123.style.width === '0%',
+                    'T123k ein zweites P haelt den Automatikmodus an (#177)');
+                  global.setInterval = savedInterval123;
+                  global.clearInterval = savedClear123;
+                  var presTpl123 = require('fs').readFileSync(require.resolve('../templates/ibook_present.php'), 'utf8');
+                  ok(presTpl123.indexOf('slide-progress') !== -1 && presTpl123.indexOf('slide-play') !== -1
+                    && presTpl123.indexOf('slide-interval') !== -1 && presTpl123.indexOf('IC_PRESENT') !== -1,
+                    'T123l die Folgenseite liefert Balken, Startknopf und Zeitauswahl (#177)');
 
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;
