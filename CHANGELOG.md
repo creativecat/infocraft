@@ -5,6 +5,16 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.22.0] - 2026-11-12
+
+### InfoBook: Navigation, Präsentation und Klassenkarte verfeinert (#186-#190)
+
+- Die Abschnitte in der Seitennavigation sind aufklappbar: Jeder Abschnitt steht als eigener Eintrag, der seine Seiten direkt in der Navigation zeigt (#186). Der aktive Abschnitt ist offen markiert, der Aufklappzustand bleibt je Abschnitt im Browser gespeichert. Das Feld „Neue Seite" bleibt allein am aktiven Abschnitt, egal wie viele Abschnitte offen sind.
+- „Buchpaket importieren" hat einen festen Platz: unten in der Navigation, immer am selben Ort, aufklappbar (nur Verwalter) (#187). Ein leerer Abschnitt zeigt dasselbe Karten-Raster wie ein gefüllter, mit einer Platzhalter-Karte statt einer fremd aussehenden Hinweisbox.
+- Der Präsentationsmodus blendet die Elemente einer Folie einzeln per Klick (oder Leertaste bzw. Pfeiltaste rechts) ein, Pfeil links blendet rückwärts wieder aus (#188). Autoplay mit Zeitsteuerung, Fortschrittsbalken und die Zeitauswahl entfallen; eine kleine Anzeige nennt das nächste Element.
+- Die Vorschau (Lesemodus) einer Seite öffnet im gleichen Fenster statt in einem neuen Tab; der Knopf „Bearbeiten" führt zurück (#189).
+- Die Klassenkarte im Code-Modul ist ein echter UML-Klassenkasten: Klassenname oben, darunter die Abteilungen Attribute und Methoden (#190). Editor und Lesemodus teilen sich denselben Baustein.
+
 ## [0.21.0] - 2026-11-13
 
 ### InfoBook: Buch- und Seitenansicht vereinheitlicht (#185)

@@ -2,14 +2,17 @@
    Datei: InfoBook: Buchansicht (Abschnittsansicht)
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.21.0 */ ?>
+   Version: 0.22.0 */ ?>
 <?php /* #185: Die Buchansicht ist zur Abschnittsansicht geworden und
  * sieht aus wie die Seitenansicht: gleiche Kopfzeile (Icon-Knopf,
  * Breadcrumb, Knopfreihe rechts), gleiche Navigation (Partial
  * ibook_nav.php), im Hauptbereich die Seiten des Abschnitts als Karten.
  * Der Buch-Start selbst leitet auf die zuletzt besuchte Seite weiter
  * (#185), diese Ansicht bleibt ueber die Breadcrumb und den
- * abschnitt-Parameter erreichbar. */ ?>
+ * abschnitt-Parameter erreichbar.
+ * #187: Ein leerer Abschnitt zeigt das Karten-Grid mit einer Platzhalter-
+ * Karte statt einer fremd aussehenden Hinweisbox; der Buchpaket-Import
+ * sitzt als fester Eintrag unten in der Navigation (Partial). */ ?>
 <?php $preview = false; ?>
 <?php $areaNames = ['lernbereich' => 'Lernbereich', 'gemeinsam' => 'Zusammenarbeit', 'eigen' => 'Mein Bereich'];
 $areaIcons = ['lernbereich' => '📖', 'gemeinsam' => '🤝', 'eigen' => '🔒']; ?>
@@ -31,7 +34,7 @@ $areaIcons = ['lernbereich' => '📖', 'gemeinsam' => '🤝', 'eigen' => '🔒']
         </div>
         <div class="ibook-topnav-right">
             <?php if ($activeSection !== null): ?>
-            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation?abschnitt=' . (int) $activeSection['id']) ?>" title="Alle Seiten dieses Abschnitts als Präsentation anzeigen: Folienwechsel mit Animation und Zeitsteuerung">🎬 Präsentation</a>
+            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation?abschnitt=' . (int) $activeSection['id']) ?>" title="Alle Seiten dieses Abschnitts als Präsentation anzeigen: Elemente erscheinen einzeln per Klick">🎬 Präsentation</a>
             <?php endif; ?>
         </div>
     </div>
@@ -50,10 +53,23 @@ $areaIcons = ['lernbereich' => '📖', 'gemeinsam' => '🤝', 'eigen' => '🔒']
         <h2><?= e((string) $activeSection['title']) ?></h2>
         <span class="pill"><?= $areaIcons[(string) $activeSection['area']] ?? '📄' ?> <?= e($areaNames[(string) $activeSection['area']] ?? (string) $activeSection['area']) ?></span>
     </div>
+    <?php /* #187: Der leere Abschnitt zeigt dasselbe Karten-Grid wie ein
+     * gefuellter: eine Platzhalter-Karte mit Hinweis, statt einer fremd
+     * aussehenden Hinweisbox. Mit Schreibrecht fuehrt die Karte zur
+     * Seite-anlegen-Leiste, ohne bleibt es ein Hinweis. */ ?>
     <?php if ($pages === []): ?>
-    <div class="notice">
-        <strong>Noch keine Seiten</strong>
-        <p>Hier stehen die Seiten dieses Abschnitts als Karten.<?= $canWriteSection ? ' Lege die erste Seite an: Text, Bilder, Audio, Videos, Einbettungen und Zeichnungen gehören auf eine InfoBook-Seite.' : ' Die Lehrkraft legt die Seiten an.' ?></p>
+    <div class="ibook-secview-cards">
+        <?php if ($canWriteSection): ?>
+        <a class="ibook-page-card ibook-page-card-empty" href="#ibook-newpage" title="Zur Seite-anlegen-Leiste springen">
+            <span class="ibook-page-title">➕ Erste Seite anlegen</span>
+            <span class="ibook-page-card-hint" aria-hidden="true">Formular unten ↓</span>
+        </a>
+        <?php else: ?>
+        <div class="ibook-page-card ibook-page-card-empty">
+            <span class="ibook-page-title">📄 Noch keine Seiten</span>
+            <span class="ibook-page-card-hint">Die Lehrkraft legt die Seiten an.</span>
+        </div>
+        <?php endif; ?>
     </div>
     <?php else: ?>
     <div class="ibook-secview-cards">
@@ -66,7 +82,7 @@ $areaIcons = ['lernbereich' => '📖', 'gemeinsam' => '🤝', 'eigen' => '🔒']
     </div>
     <?php endif; ?>
     <?php if ($canWriteSection): ?>
-    <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/seite') ?>" class="form ibook-newpage">
+    <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/seite') ?>" class="form ibook-newpage" id="ibook-newpage">
         <?= csrf_field() ?>
         <input type="hidden" name="section_id" value="<?= (int) $activeSection['id'] ?>">
         <div class="form-row form">
@@ -75,21 +91,11 @@ $areaIcons = ['lernbereich' => '📖', 'gemeinsam' => '🤝', 'eigen' => '🔒']
         <div class="btn-row"><button class="btn btn-primary" type="submit" title="Seite anlegen (öffnet sich danach direkt)">➕ Seite anlegen</button></div>
     </form>
     <?php endif; ?>
-    <?php /* #185: Verwaltung des Buchs sitzt im Hauptbereich der
-     * Abschnittsansicht statt in der Navigation. */ ?>
+    <?php /* #185/#187: Abschnitts-Verwaltung im Hauptbereich; der
+     * Buchpaket-Import sitzt als fester Eintrag unten in der Navigation
+     * (Partial ibook_nav.php), auf jeder Ansicht am selben Ort. */ ?>
     <?php if ($canManage): ?>
     <div class="ibook-secview-admin">
-        <details class="ibook-import-details">
-            <summary class="btn btn-ghost">📥 Buchpaket importieren</summary>
-            <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/import') ?>" class="form ibook-import-panel">
-                <?= csrf_field() ?>
-                <label class="field"><span>JSON-Paket (Abschnitte + Seiten)</span>
-                    <textarea name="paket" rows="6" placeholder='{"sections":[{"title":"SQL","area":"lernbereich","pages":[{"title":"SELECT","blocks":[{"type":"canvas","w":1600,"h":1000,"items":[]}]}]}]}'></textarea>
-                </label>
-                <p class="muted">Fügt Abschnitte mit Seiten ans Ende des Buchs an. Texte, DB-Abfrage-Fenster, Code, Diagramme und Einbettungen (YouTube, LearningApps, H5P) kommen mit; Bilder, Audio und Video müssen danach neu hochgeladen werden.</p>
-                <div class="btn-row"><button class="btn btn-primary" type="submit" title="Abschnitte und Seiten aus dem JSON anlegen">📥 Importieren</button></div>
-            </form>
-        </details>
         <?php if ((string) $activeSection['area'] !== 'eigen'): ?>
         <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/abschnitt/' . (int) $activeSection['id'] . '/loeschen') ?>" class="inline-form" data-confirm="Abschnitt mit allen Seiten löschen?">
             <?= csrf_field() ?>

@@ -30,7 +30,7 @@ function url(string $path = ''): string
  * Zeitstempel erhalten (rsync --times, Docker-Layer): Browser laden dann garantiert
  * die neue Datei statt einer alten Version aus dem Cache.
  */
-const ASSET_VERSION = '77';
+const ASSET_VERSION = '78';
 
 /**
  * Programmversion nach Semantic Versioning (#145): MAJOR.MINOR.PATCH.
@@ -38,7 +38,7 @@ const ASSET_VERSION = '77';
  * bleibt fuer inkompatible Umstiege reserviert. Die Entwicklungshistorie
  * steht in CHANGELOG.md im Wurzelverzeichnis.
  */
-const APP_VERSION = '0.21.0';
+const APP_VERSION = '0.22.0';
 
 /**
  * Projekt-Icon (#169): passendes Emoji je Projektart. Frueher stand die

@@ -2,14 +2,17 @@
    Datei: InfoBook: Seite
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.21.0 */ ?>
+   Version: 0.22.0 */ ?>
 <?php /* InfoBook: Seite bearbeiten/ansehen (#62). Bloecke: Text, Bild, Audio, Video, Einbettung, Zeichnung (Apple Pencil). */ ?>
 <?php /* #67: Autospeichern statt Speichern-Button, rechts Vorschau/Lesemodus
  * und kleines aufklappbares Verteilen. */ ?>
 <?php /* #185: Gleiche Kopfzeile und gleiche Navigation wie die Abschnitts-
  * ansicht: Icon-Knopf fuer die Navigation, Breadcrumb Buch > Abschnitt >
  * Seite zeigt immer den Standort, das gemeinsame Partial ibook_nav.php
- * zeichnet die Seitenleiste. */ ?>
+ * zeichnet die Seitenleiste.
+ * #189: Die Vorschau (Lesemodus) oeffnet im gleichen Fenster, der Knopf
+ * "Bearbeiten" fuehrt zurueck. #188: Der Praesentations-Link besagt,
+ * dass Elemente einzeln per Klick erscheinen. */ ?>
 <?php $preview = (bool) ($preview ?? false); ?>
 <section class="hero ibook-hero-compact">
     <div class="btn-row ibook-topnav">
@@ -31,9 +34,9 @@
             <p class="muted" id="ibook-page-meta"><?= e($section['title']) ?> · Letzte Änderung: <?= e((string) ($page['updated_at'] ?? 'gerade eben')) ?></p>
         </div>
         <div class="ibook-topnav-right">
-            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation?abschnitt=' . (int) $section['id']) ?>" title="Alle Seiten dieses Abschnitts als Präsentation anzeigen: Folienwechsel mit Animation und Zeitsteuerung">🎬 Präsentation</a>
+            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation?abschnitt=' . (int) $section['id']) ?>" title="Alle Seiten dieses Abschnitts als Präsentation anzeigen: Elemente erscheinen einzeln per Klick">🎬 Präsentation</a>
             <?php if ($canWrite): ?>
-            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id'] . '?lesen=1') ?>" target="_blank" rel="noopener" title="Seite im Lesemodus in einem neuen Tab öffnen">👀 Vorschau (Lesemodus)</a>
+            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id'] . '?lesen=1') ?>" title="Seite im Lesemodus anzeigen">👀 Vorschau (Lesemodus)</a>
             <?php endif; ?>
             <?php if ($preview): ?>
             <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id']) ?>" title="Zurück zur Bearbeitung">✏️ Bearbeiten</a>

@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.21.0
+ * @version 0.22.0
  */
 declare(strict_types=1);
 
@@ -493,6 +493,7 @@ final class InfoBookController
             'blocks' => $blocks,
             'media' => $media,
             'canWrite' => $canWrite,
+            'canManage' => self::canManage($book, $user),
             'preview' => $preview,
             'nav' => $nav,
             'navPages' => $navPages,
