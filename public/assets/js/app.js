@@ -4452,3 +4452,131 @@
     window.IC_RENDER_DIAGRAM(prev, String(node.value || ''));
   });
 })();
+
+
+/* InfoBook Präsentationsmodus (#177): Folien-Navigation, Autoplay mit
+ * Zeitsteuerung und Fortschrittsbalken. Die Logik lief frueher als
+ * Inline-Script in der Präsentationsseite; jetzt laeuft sie hier als
+ * IC_PRESENT-Modul, genau wie die anderen InfoBook-Werkzeuge. Reine
+ * Helfer (parseInterval, progressPct, nextIndex) haengen an window,
+ * damit die UI-Tests sie direkt pruefen koennen. */
+(function () {
+  'use strict';
+  if (typeof window === 'undefined') { return; }
+  function clampInt(n, fallback) {
+    if (isNaN(n)) { return fallback; }
+    if (n < 2) { return 2; }
+    if (n > 600) { return 600; }
+    return n;
+  }
+  function parseInterval(value, fallback) {
+    return clampInt(parseInt(String(value), 10), clampInt(fallback, 10));
+  }
+  function intervalMs(sec) { return parseInterval(sec, 10) * 1000; }
+  function progressPct(elapsedMs, ms) {
+    if (!ms || ms <= 0) { return 0; }
+    var pct = Math.round((elapsedMs / ms) * 100);
+    if (pct < 0) { pct = 0; }
+    if (pct > 100) { pct = 100; }
+    return pct;
+  }
+  function nextIndex(i, count, loop) {
+    if (count <= 0) { return 0; }
+    var n = i + 1;
+    if (n >= count) { return loop ? 0 : count - 1; }
+    return n;
+  }
+  window.IC_PRESENT = {
+    parseInterval: parseInterval,
+    intervalMs: intervalMs,
+    progressPct: progressPct,
+    nextIndex: nextIndex
+  };
+  if (typeof document === 'undefined' || !document.addEventListener) { return; }
+
+  var stage = null, slides = [], counter = null, prevBtn = null, nextBtn = null,
+      fullBtn = null, playBtn = null, intervalSel = null, progressFill = null,
+      timer = null, elapsed = 0, current = 0, storeKey = '';
+
+  function intervalValue() {
+    return intervalSel ? intervalMs(intervalSel.value) : 10000;
+  }
+  function show(n) {
+    if (slides.length === 0) { return; }
+    if (n < 0) { n = 0; }
+    if (n >= slides.length) { n = slides.length - 1; }
+    if (slides[current] && slides[current].classList) { slides[current].classList.remove('slide-active'); }
+    current = n;
+    if (slides[current] && slides[current].classList) { slides[current].classList.add('slide-active'); }
+    if (counter) { counter.textContent = (current + 1) + ' / ' + slides.length; }
+    elapsed = 0;
+    if (progressFill && progressFill.style) { progressFill.style.width = '0%'; }
+    try { localStorage.setItem(storeKey, String(current)); } catch (e) { /* privater Modus: egal */ }
+  }
+  function tick() {
+    elapsed += 250;
+    var ms = intervalValue();
+    var pct = progressPct(elapsed, ms);
+    if (progressFill && progressFill.style) { progressFill.style.width = pct + '%'; }
+    if (elapsed >= ms) { show(nextIndex(current, slides.length, true)); }
+  }
+  function start() {
+    if (timer !== null) { return; }
+    timer = setInterval(tick, 250);
+    if (playBtn) { playBtn.textContent = '⏸'; }
+  }
+  function stop() {
+    if (timer === null) { return; }
+    clearInterval(timer);
+    timer = null;
+    elapsed = 0;
+    if (progressFill && progressFill.style) { progressFill.style.width = '0%'; }
+    if (playBtn) { playBtn.textContent = '▶'; }
+  }
+  function togglePlay() {
+    if (timer === null) { start(); } else { stop(); }
+  }
+  function attach(doc) {
+    if (!doc || !doc.getElementById) { return; }
+    stage = doc.getElementById('slide-stage');
+    if (!stage) { return; }
+    slides = stage.querySelectorAll('.slide') || [];
+    counter = doc.getElementById('slide-counter');
+    prevBtn = doc.getElementById('slide-prev');
+    nextBtn = doc.getElementById('slide-next');
+    fullBtn = doc.getElementById('slide-full');
+    playBtn = doc.getElementById('slide-play');
+    intervalSel = doc.getElementById('slide-interval');
+    progressFill = doc.getElementById('slide-progress-fill');
+    storeKey = 'ibook-slide-' + (stage.getAttribute('data-ibook') || '0');
+    if (prevBtn) { prevBtn.addEventListener('click', function () { show(current - 1); }); }
+    if (nextBtn) { nextBtn.addEventListener('click', function () { show(current + 1); }); }
+    if (fullBtn) {
+      fullBtn.addEventListener('click', function () {
+        try {
+          if (doc.fullscreenElement) { doc.exitFullscreen(); }
+          else if (stage.requestFullscreen) { stage.requestFullscreen(); }
+        } catch (e) { /* aeltere Browser: egal */ }
+      });
+    }
+    if (playBtn) { playBtn.addEventListener('click', togglePlay); }
+    if (intervalSel) { intervalSel.addEventListener('change', function () { elapsed = 0; }); }
+    doc.addEventListener('keydown', function (ev) {
+      if (ev.key === 'ArrowRight' || ev.key === ' ' || ev.key === 'PageDown') { ev.preventDefault(); show(current + 1); }
+      else if (ev.key === 'ArrowLeft' || ev.key === 'PageUp') { ev.preventDefault(); show(current - 1); }
+      else if (ev.key === 'p' || ev.key === 'P') { togglePlay(); }
+      else if (ev.key === 'f' || ev.key === 'F') { if (fullBtn) { fullBtn.click(); } }
+    });
+    var startAt = 0;
+    try { startAt = parseInt(localStorage.getItem(storeKey) || '0', 10) || 0; } catch (e) { /* egal */ }
+    if (startAt > 0 && startAt < slides.length) { show(startAt); }
+    else { show(0); }
+  }
+  window.IC_PRESENT.attach = attach;
+  function boot() { attach(document); }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();

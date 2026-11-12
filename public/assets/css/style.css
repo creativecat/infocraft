@@ -2419,3 +2419,64 @@ table.delta { border-collapse: collapse; font-family: var(--font-mono, monospace
 .code-ov { display: flex; flex-direction: column; gap: 20px; }
 .ov-boxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
 @media (max-width: 980px) { .ov-boxes { grid-template-columns: 1fr; } }
+
+
+/* -------------------------------------------------- */
+/* Runde 19: Werkstatt-Verteilen oben, Ordner-UX,    */
+/* Präsentationsmodus im InfoBook, Impressum (#175-#183) */
+/* -------------------------------------------------- */
+/* #175: Code-Werkstatt: "Projekt verteilen" als aufklappbarer Button
+ * oben rechts in der Leiste ueber den Kisten. Das Panel hängt absolut
+ * unter dem summary-Button, die Basis-Optik kommt von
+ * .ibook-distribute-details weiter oben. */
+.ov-topbar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.ov-distribute summary.btn { display: inline-flex; align-items: center; gap: 6px; }
+.ov-distribute[open] .ov-distribute-panel {
+    position: absolute; right: 0; top: calc(100% + 8px); z-index: 40;
+    width: min(560px, 92vw); background: var(--panel, #ffffff);
+    border: 1px solid var(--border, #d7dce5); border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18); padding: 12px; text-align: left;
+}
+.ov-distribute .ov-distribute-panel form .three-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+
+/* #176: Neuer Ordner direkt im Ordner-Panel, wahlweise auf der
+ * Hauptebene oder in einem bestehenden Ordner. Der Unterordner-Knopf
+ * ist jetzt ein kleiner gestrichelter Pill-Button. */
+.folder-new summary.btn { display: inline-flex; align-items: center; gap: 6px; }
+.folder-new[open] .folder-new-form { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; align-items: flex-end; }
+.folder-new .folder-new-form .field { flex: 1 1 200px; }
+.folder-add {
+    display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+    font-size: 0.78rem; padding: 3px 10px; border-radius: 999px;
+    border: 1px dashed var(--border); background: transparent; color: var(--muted, #64748b);
+    transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+.folder-add:hover { border-color: var(--primary); color: var(--primary); background: var(--surface); }
+
+/* #177: Präsentationsmodus im InfoBook: Autoplay mit Zeitsteuerung,
+ * Fortschrittsbalken unter der Werkzeugleiste und ein weiches,
+ * gestaffeltes Einblenden der Bausteine je Folie. */
+.slide-progress { height: 4px; background: #e2e7ef; border-radius: 4px; overflow: hidden; margin-bottom: 16px; }
+.slide-progress-fill { height: 100%; width: 0%; background: var(--primary, #1f4fc9); transition: width 250ms linear; border-radius: 4px; }
+.slide-interval-label { display: inline-flex; align-items: center; gap: 4px; }
+.slide-interval-label .input { width: auto; padding: 4px 8px; font-size: 0.85rem; }
+@keyframes slide-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes slide-block-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.slide.slide-active .ibook-slide-blocks > * { animation: slide-block-in 320ms ease-out backwards; }
+.slide.slide-active .ibook-slide-blocks > *:nth-child(2) { animation-delay: 90ms; }
+.slide.slide-active .ibook-slide-blocks > *:nth-child(3) { animation-delay: 180ms; }
+.slide.slide-active .ibook-slide-blocks > *:nth-child(4) { animation-delay: 270ms; }
+.slide.slide-active .ibook-slide-blocks > *:nth-child(5) { animation-delay: 360ms; }
+.slide.slide-active .ibook-slide-blocks > *:nth-child(6) { animation-delay: 450ms; }
+.slide.slide-active .ibook-slide-blocks > *:nth-child(7) { animation-delay: 540ms; }
+.slide.slide-active .ibook-slide-blocks > *:nth-child(8) { animation-delay: 630ms; }
+@media (prefers-reduced-motion: reduce) {
+    .slide.slide-active .ibook-slide-blocks > * { animation: none; }
+    .slide-progress-fill { transition: none; }
+}
+
+/* #181: Impressum als klare Angabentabelle statt loser Absaetze. */
+.kv-legal { border-collapse: collapse; width: 100%; font-size: 0.95rem; margin-top: 6px; }
+.kv-legal th { text-align: left; padding: 8px 16px 8px 0; color: var(--muted); font-weight: 600; width: 220px; vertical-align: top; white-space: nowrap; }
+.kv-legal td { padding: 8px 0; vertical-align: top; }
+.kv-legal tr + tr th, .kv-legal tr + tr td { border-top: 1px solid var(--border); }

@@ -5,6 +5,33 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.19.0] - 2026-11-12
+
+### Übersicht (#175 bis #183)
+
+- Rückmeldungs-Runde: neun Verbesserungen aus dem Testbetrieb, von der Code-Werkstatt über die Admin-Einstellungen bis zur Startseite.
+
+### Code-Werkstatt (#175, #176)
+
+- „Projekt verteilen“ zieht als aufklappbarer Button nach oben rechts über die Kästen; das Formular öffnet sich direkt darunter.
+- Neuer Ordner liegt jetzt unten direkt bei den Ordnern und Projekten, wahlweise auf der Hauptebene oder als Unterordner eines bestehenden Ordners; der Unterordner-Knopf ist als kleiner Pill-Button hervorgehoben.
+
+### Präsentationsmodus im InfoBook (#177)
+
+- Das eigenständige Präsentations-Modul entfällt aus der Navigation: InfoBook-Seiten zeigen sich jetzt mit Folien, gestaffelt einblendenden Bausteinen, Autoplay mit wählbarer Foliendauer (5 bis 30 Sekunden), Fortschrittsbalken und Tastatursteuerung (Pfeiltasten, Leertaste, P für Autoplay, F für Vollbild). Alte Präsentationen bleiben über ihre Direktlinks erreichbar.
+
+### Rechte und Verwaltung (#178, #179, #182, #183)
+
+- Der CSV-Import steht nur noch der Administration offen.
+- Lehrkräfte sehen in der Nutzerverwaltung nur noch die Konten ihrer eigenen Klassen.
+- Demo-Modus in den Admin-Einstellungen umschaltbar (Fallback bleibt die Konfigurationsdatei).
+- Neue Admin-Funktionen: Ankündigung auf der Startseite und Kontenliste als CSV-Export.
+- Jahrgangsstufen-Hinweise und Systemstatus auf der Startseite sehen nur noch Administratoren.
+
+### Impressum (#181)
+
+- Klarere Optik mit strukturiert Angabentabelle; Issue-Nummern sind aus den Beschriftungen entfernt.
+
 ## [0.18.0] - 2026-11-12
 
 ### Übersicht (#168, #169, #170)
