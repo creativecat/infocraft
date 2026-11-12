@@ -87,7 +87,7 @@ final class CodeController
         $type = ($_POST['type'] ?? 'code') === 'html' ? 'html' : 'code';
         $language = match ($type) {
             'html' => 'html',
-            default => in_array($_POST['language'] ?? '', ['python', 'java', 'asm', 'blocks', 'automaton'], true) ? (string) $_POST['language'] : SiteSetting::defaultLanguage(),
+            default => in_array($_POST['language'] ?? '', ['python', 'java', 'asm', 'blocks', 'automaton', 'pda', 'turing', 'logic'], true) ? (string) $_POST['language'] : SiteSetting::defaultLanguage(),
         };
         if ($language === 'python' && !self::pythonAllowed($user)) {
             flash('error', 'Python ist für deine Klasse (noch) nicht freigegeben.');
@@ -968,6 +968,82 @@ final class CodeController
                 ],
             ];
             return json_encode($starterAutomaton, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        if ($language === 'pda') {
+            /* Startautomat (#164): Kellerautomat fuer a^n b^n. Jedes a legt
+             * ein A auf den Keller, jedes b holt eines zurueck, epsilon-
+             * Uebergaenge fuehren in den Endzustand, wenn nur das Boden-
+             * zeichen uebrig ist. Gleiches JSON-Format wie die Werkstatt. */
+            $starterPda = [
+                'format' => 'keller-automat',
+                'version' => 1,
+                'alphabet' => ['a', 'b'],
+                'stack0' => 'Z',
+                'accept' => 'state',
+                'states' => [
+                    ['id' => 'q0', 'name' => 'q0', 'x' => 140, 'y' => 200, 'start' => true, 'accept' => false],
+                    ['id' => 'q1', 'name' => 'q1', 'x' => 330, 'y' => 200, 'start' => false, 'accept' => false],
+                    ['id' => 'q2', 'name' => 'q2', 'x' => 520, 'y' => 200, 'start' => false, 'accept' => true],
+                ],
+                'transitions' => [
+                    ['id' => 't1', 'from' => 'q0', 'to' => 'q0', 'read' => 'a', 'pop' => '', 'push' => 'A'],
+                    ['id' => 't2', 'from' => 'q0', 'to' => 'q1', 'read' => 'b', 'pop' => 'A', 'push' => ''],
+                    ['id' => 't3', 'from' => 'q1', 'to' => 'q1', 'read' => 'b', 'pop' => 'A', 'push' => ''],
+                    ['id' => 't4', 'from' => 'q1', 'to' => 'q2', 'read' => '', 'pop' => 'Z', 'push' => ''],
+                    ['id' => 't5', 'from' => 'q0', 'to' => 'q2', 'read' => '', 'pop' => 'Z', 'push' => ''],
+                ],
+            ];
+            return json_encode($starterPda, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        if ($language === 'turing') {
+            /* Startmaschine (#165): Binaerzahl um eins erhoehen, z. B.
+             * 1011 wird zu 1100. Erst an den rechten Rand laufen, dann
+             * von rechts die Einsen uebertragen. */
+            $starterTm = [
+                'format' => 'turingmaschine',
+                'version' => 1,
+                'alphabet' => ['0', '1'],
+                'blank' => '_',
+                'states' => [
+                    ['id' => 'q0', 'name' => 'q0', 'x' => 140, 'y' => 200, 'start' => true, 'accept' => false],
+                    ['id' => 'q1', 'name' => 'q1', 'x' => 330, 'y' => 200, 'start' => false, 'accept' => false],
+                    ['id' => 'qf', 'name' => 'qf', 'x' => 520, 'y' => 200, 'start' => false, 'accept' => true],
+                ],
+                'rules' => [
+                    ['id' => 'r1', 'from' => 'q0', 'to' => 'q0', 'read' => '0', 'write' => '0', 'move' => 'R'],
+                    ['id' => 'r2', 'from' => 'q0', 'to' => 'q0', 'read' => '1', 'write' => '1', 'move' => 'R'],
+                    ['id' => 'r3', 'from' => 'q0', 'to' => 'q1', 'read' => '_', 'write' => '_', 'move' => 'L'],
+                    ['id' => 'r4', 'from' => 'q1', 'to' => 'q1', 'read' => '1', 'write' => '0', 'move' => 'L'],
+                    ['id' => 'r5', 'from' => 'q1', 'to' => 'qf', 'read' => '0', 'write' => '1', 'move' => 'R'],
+                    ['id' => 'r6', 'from' => 'q1', 'to' => 'qf', 'read' => '_', 'write' => '1', 'move' => 'R'],
+                ],
+            ];
+            return json_encode($starterTm, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        if ($language === 'logic') {
+            /* Startschaltung (#166): Halbaddierer. A XOR B ergibt die
+             * Summe, A UND B den Uebertrag. */
+            $starterLogic = [
+                'format' => 'schaltwerk',
+                'version' => 1,
+                'comps' => [
+                    ['id' => 'swA', 'kind' => 'switch', 'x' => 60, 'y' => 80, 'state' => 0, 'label' => 'A'],
+                    ['id' => 'swB', 'kind' => 'switch', 'x' => 60, 'y' => 220, 'state' => 0, 'label' => 'B'],
+                    ['id' => 'xS', 'kind' => 'xor', 'x' => 260, 'y' => 140, 'state' => 0],
+                    ['id' => 'aC', 'kind' => 'and', 'x' => 260, 'y' => 260, 'state' => 0],
+                    ['id' => 'lS', 'kind' => 'lamp', 'x' => 460, 'y' => 140, 'state' => 0, 'label' => 'S'],
+                    ['id' => 'lC', 'kind' => 'lamp', 'x' => 460, 'y' => 260, 'state' => 0, 'label' => 'C'],
+                ],
+                'wires' => [
+                    ['id' => 'w1', 'from' => 'swA', 'to' => 'xS'],
+                    ['id' => 'w2', 'from' => 'swB', 'to' => 'xS'],
+                    ['id' => 'w3', 'from' => 'swA', 'to' => 'aC'],
+                    ['id' => 'w4', 'from' => 'swB', 'to' => 'aC'],
+                    ['id' => 'w5', 'from' => 'xS', 'to' => 'lS'],
+                    ['id' => 'w6', 'from' => 'aC', 'to' => 'lC'],
+                ],
+            ];
+            return json_encode($starterLogic, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
         return "# " . $title . "\nprint(\"Hallo InfoCraft!\")\n";
     }

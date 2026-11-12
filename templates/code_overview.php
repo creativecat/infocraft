@@ -26,6 +26,9 @@ foreach ($folderRows as $row) { if (($row['folder']->parentId ?? 0) > 0) { $fold
                     <option value="asm"<?= (($defaultLanguage ?? 'java') === 'asm') ? ' selected' : '' ?>>⚙️ Assembler</option>
                     <option value="blocks"<?= (($defaultLanguage ?? 'java') === 'blocks') ? ' selected' : '' ?>>🧩 Blöcke</option>
                     <option value="automaton">🤖 Automat (endliche Automaten)</option>
+                    <option value="pda">🥞 Kellerautomat</option>
+                    <option value="turing">🧾 Turingmaschine</option>
+                    <option value="logic">🔌 Schaltwerk</option>
                 </select>
             </label>
             <label class="field"><span>Art</span>
@@ -127,7 +130,7 @@ foreach ($folderRows as $row) { if (($row['folder']->parentId ?? 0) > 0) { $fold
                     <div class="proj-row project-card" draggable="true" data-id="<?= (int) $project->id ?>" title="Zum Verschieben in einen Ordner ziehen">
                         <span class="proj-icon"><?= $project->type === 'html' ? '🌐' : ($project->language === 'java' ? '☕' : ($project->language === 'asm' ? '⚙️' : ($project->language === 'blocks' ? '🧩' : '🐍'))) ?></span>
                         <a class="proj-title" href="<?= url('werkstatt/code/' . (int) $project->id) ?>"><?= e($project->title) ?></a>
-                        <span class="pill proj-kind"><?= $project->type === 'html' ? 'HTML' : ($project->language === 'java' ? 'Java' : ($project->language === 'asm' ? 'Assembler' : ($project->language === 'blocks' ? 'Blöcke' : ($project->language === 'automaton' ? 'Automat' : 'Python')))) ?></span>
+                        <span class="pill proj-kind"><?= $project->type === 'html' ? 'HTML' : ($project->language === 'java' ? 'Java' : ($project->language === 'asm' ? 'Assembler' : ($project->language === 'blocks' ? 'Blöcke' : ($project->language === 'automaton' ? 'Automat' : ($project->language === 'pda' ? 'Kellerautomat' : ($project->language === 'turing' ? 'Turingmaschine' : ($project->language === 'logic' ? 'Schaltwerk' : 'Python'))))))) ?></span>
                         <a class="btn btn-primary proj-open" href="<?= url('werkstatt/code/' . (int) $project->id) ?>">Öffnen</a>
                         <form method="post" action="<?= url('werkstatt/code/loeschen') ?>" class="form-inline" onsubmit="return confirm('Projekt wirklich löschen?');">
                             <?= csrf_field() ?>
@@ -159,7 +162,7 @@ foreach ($folderRows as $row) { if (($row['folder']->parentId ?? 0) > 0) { $fold
                     <div class="proj-row project-card" draggable="true" data-id="<?= (int) $project->id ?>" title="Zum Verschieben in einen Ordner ziehen">
                         <span class="proj-icon"><?= $project->type === 'html' ? '🌐' : ($project->language === 'java' ? '☕' : ($project->language === 'asm' ? '⚙️' : ($project->language === 'blocks' ? '🧩' : '🐍'))) ?></span>
                         <a class="proj-title" href="<?= url('werkstatt/code/' . (int) $project->id) ?>"><?= e($project->title) ?></a>
-                        <span class="pill proj-kind"><?= $project->type === 'html' ? 'HTML' : ($project->language === 'java' ? 'Java' : ($project->language === 'asm' ? 'Assembler' : ($project->language === 'blocks' ? 'Blöcke' : ($project->language === 'automaton' ? 'Automat' : 'Python')))) ?></span>
+                        <span class="pill proj-kind"><?= $project->type === 'html' ? 'HTML' : ($project->language === 'java' ? 'Java' : ($project->language === 'asm' ? 'Assembler' : ($project->language === 'blocks' ? 'Blöcke' : ($project->language === 'automaton' ? 'Automat' : ($project->language === 'pda' ? 'Kellerautomat' : ($project->language === 'turing' ? 'Turingmaschine' : ($project->language === 'logic' ? 'Schaltwerk' : 'Python'))))))) ?></span>
                         <a class="btn btn-primary proj-open" href="<?= url('werkstatt/code/' . (int) $project->id) ?>">Öffnen</a>
                         <form method="post" action="<?= url('werkstatt/code/loeschen') ?>" class="form-inline" onsubmit="return confirm('Projekt wirklich löschen?');">
                             <?= csrf_field() ?>
