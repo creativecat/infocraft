@@ -4,7 +4,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.15.0
+ * @version 0.17.0
  */
 /* InfoCraft UI-Tests: Sind alle Buttons der Java-IDE klickbar und funktionieren sie?
  *
@@ -1878,27 +1878,37 @@ setTimeout(function () {
                   ibCodeBox65.querySelector('.icv-code-run').dispatch('click');
                   ok(ibCodeBox65.querySelector('.icv-code-out').textContent.indexOf('Auto faehrt los') !== -1, 'T66c die Ausgabe der Java-VM landet in der Konsole');
                   delete global.window.InfoCraftJavaVM;
-                  /* T67 (#87): Autovervollstaendigung: Klassennamen beim Tippen,
-                   * nach dem Punkt Attribute und Methoden, Tab/Enter fuegt ein. */
-                  var ibAc67 = ibCodeBox65.querySelector('.icv-code-ac');
+                  /* T67 (#87/#95): Autovervollstaendigung an der GEMEINSAMEN
+                   * Vorschlags-Engine wie im Lesemodus: Klassennamen beim
+                   * Tippen, nach dem Punkt Attribute und Methoden, Tab
+                   * uebernimmt, Klick fuegt ein. */
+                  var ibAc67 = ibCodeBox65.querySelector('.ac-drop');
                   ibCodeTa65.value = 'Au';
                   ibCodeTa65.selectionStart = 2;
                   ibCodeTa65.selectionEnd = 2;
                   ibCodeTa65.dispatch('input');
-                  ok(ibAc67.classList.contains('icv-code-ac-open') === true && ibAc67.children.length === 1 && ibAc67.children[0].textOf() === 'Auto', 'T67 tippen oeffnet die Vorschlaege mit dem Klassennamen');
+                  var acOpen67 = ibAc67 && ibAc67.style.display !== 'none';
+                  var acText67 = '';
+                  if (ibAc67) {
+                    for (var ai0 = 0; ai0 < ibAc67.children.length; ai0++) { acText67 += ibAc67.children[ai0].textOf() + '|'; }
+                  }
+                  ok(acOpen67 === true && acText67.indexOf('Auto') !== -1, 'T67 tippen oeffnet die Vorschlaege mit dem Klassennamen');
                   ibCodeTa65.dispatch('keydown', { key: 'Tab' });
                   ok(ibCodeTa65.value === 'Auto', 'T67b Tab uebernimmt den Vorschlag ins Code-Feld');
-                  ok(ibAc67.classList.contains('icv-code-ac-open') === false, 'T67c nach der Uebernahme schliessen die Vorschlaege');
+                  ok(ibAc67.style.display === 'none', 'T67c nach der Uebernahme schliessen die Vorschlaege');
                   ibCodeTa65.value = 'Auto.fa';
-                  ibCodeTa65.selectionStart = 8;
-                  ibCodeTa65.selectionEnd = 8;
+                  ibCodeTa65.selectionStart = 7;
+                  ibCodeTa65.selectionEnd = 7;
                   ibCodeTa65.dispatch('input');
                   var acLabels67 = [];
                   for (var ai67 = 0; ai67 < ibAc67.children.length; ai67++) { acLabels67.push(ibAc67.children[ai67].textOf()); }
-                  ok(ibAc67.classList.contains('icv-code-ac-open') === true && acLabels67.join('|').indexOf('fahren()') !== -1, 'T67d nach dem Punkt schlagen Attribute und Methoden vor');
-                  ibCodeTa65.dispatch('keydown', { key: 'ArrowDown' });
-                  ibCodeTa65.dispatch('keydown', { key: 'Enter' });
-                  ok(ibCodeTa65.value === 'Auto.fahren(', 'T67e Enter fuegt die gewaehlte Methode ein');
+                  ok(acLabels67.join('|').indexOf('fahren()') !== -1, 'T67d nach dem Punkt schlagen Attribute und Methoden vor');
+                  var acPick67 = null;
+                  for (var ai2 = 0; ai2 < ibAc67.children.length; ai2++) {
+                    if (ibAc67.children[ai2].textOf() === 'fahren()') { acPick67 = ibAc67.children[ai2]; }
+                  }
+                  acPick67.dispatch('click');
+                  ok(ibCodeTa65.value === 'Auto.fahren(', 'T67e ein Klick auf den Vorschlag fuegt die Methode ein');
                   var cv67 = ibCollect();
                   var t67 = cv67 && cv67.items ? cv67.items.filter(function (it) { return it.kind === 'code'; })[cv67.items.filter(function (it) { return it.kind === 'code'; }).length - 1] : null;
                   ok(t67 && t67.code === 'Auto.fahren(', 'T67f der ergaenzte Quelltext wird serialisiert');
@@ -1933,6 +1943,13 @@ setTimeout(function () {
                   ibCodeTa65.selectionEnd = 12;
                   ibCodeTa65.dispatch('keydown', { key: ')' });
                   ok(ibCodeTa65.value === 'Auto.fahren()' && ibCodeTa65.selectionStart === 13, 'T69f ein getipptes ) ueberspringt das vorhandene statt es zu verdoppeln');
+                  /* #94: Enter direkt nach einer oeffnenden Klammer legt
+                   * zwei eingerueckte Zeilen an, darunter die schliessende. */
+                  ibCodeTa65.value = '{}';
+                  ibCodeTa65.selectionStart = 1;
+                  ibCodeTa65.selectionEnd = 1;
+                  ibCodeTa65.dispatch('keydown', { key: 'Enter' });
+                  ok(ibCodeTa65.value === '{' + NLt + '  ' + NLt + '}' && ibCodeTa65.selectionStart === 4, 'T115 Enter nach einer oeffnenden Klammer legt zwei eingerueckte Zeilen an (#94)');
                 }
 
                 /* T71 (#93): Mermaid-Vorschlaege am Diagramm-Quelltext im
@@ -1968,6 +1985,15 @@ setTimeout(function () {
                   ibDiagTa71.selectionEnd = 16;
                   ibDiagTa71.dispatch('keydown', { key: '{' });
                   ok(ibDiagTa71.value === 'graph TD' + NLt + 'A --> B{}', 'T71f die Klammer-Automatik schliesst { auch am Diagramm-Quelltext');
+                  /* #96: ganze Mermaid-Snippets stehen in der Vervoll-
+                   * staendigung, hier subgraph aus dem erDiagram. */
+                  ibDiagTa71.value = 'sub';
+                  ibDiagTa71.selectionStart = 3;
+                  ibDiagTa71.selectionEnd = 3;
+                  ibDiagTa71.dispatch('input');
+                  var ibAc96Labels = [];
+                  for (var ai96 = 0; ai96 < ibAcDrop71.children.length; ai96++) { ibAc96Labels.push(ibAcDrop71.children[ai96].textOf()); }
+                  ok(ibAc96Labels.join('|').indexOf('subgraph Titel') !== -1, 'T115b die Mermaid-Vervollstaendigung schlaegt ganze Snippets vor (#96)');
                 }
 
                 /* T72/T73 (#92/#93): Lesemodus-Paritaet. Der Server rendert das
@@ -2447,6 +2473,13 @@ setTimeout(function () {
                   var blkRuninfoEl = blkReg('blk-runinfo');
                   var blkSaveinfoEl = blkReg('blk-saveinfo');
                   var blkVarAddEl = blkReg('blk-var-add', 'button');
+                  var blkListAddEl = blkReg('blk-list-add', 'button');
+                  var blkProcAddEl = blkReg('blk-proc-add', 'button');
+                  var blkTemplatesBtn = blkReg('blk-templates', 'button');
+                  var blkFullBtn = blkReg('blk-full', 'button');
+                  var blkStageEl = blkReg('blk-stage');
+                  var blkBgEl = blkDoc.createElement('canvas');
+                  blkDoc.register(blkBgEl, 'blk-bg');
                   var blkModeEl = blkReg('blk-mode', 'div');
                   var blkModeLearnEl = blkReg('blk-mode-learn', 'button');
                   var blkModeExpertEl = blkReg('blk-mode-expert', 'button');
@@ -2624,8 +2657,8 @@ setTimeout(function () {
                   /* T93: Editor-UI am eigenen FakeDoc */
                   var blkUi = BLK.ui;
                   ok(blkUi !== null && typeof blkUi === 'object', 'T93 der Editor initialisiert sich auf der Blöcke-Seite von selbst');
-                  ok(blkCatsEl.children.length === 8, 'T93b die Palette listet im Lernmodus acht Kategorien, die Variablen-Kategorie bleibt dem Expertenmodus vorbehalten (#162)');
-                  ok(blkPalEl.children.length === 3, 'T93c die Ereignis-Kategorie zeigt im Lernmodus die drei Basis-Bloecke (#162)');
+                  ok(blkCatsEl.children.length === 9, 'T93b die Palette listet im Lernmodus neun Kategorien (inklusive Meine Bloecke), die Variablen-Kategorie bleibt dem Expertenmodus vorbehalten (#162, #138)');
+                  ok(blkPalEl.children.length === 4, 'T93c die Ereignis-Kategorie zeigt im Lernmodus die vier Basis-Bloecke inklusive Klon-Start (#162, #132)');
                   blkCatsEl.children[1].dispatch('click');
                   ok(blkPalEl.querySelector('.blk[data-pal-op="move_steps"]') !== null, 'T93d der Kategorie-Wechsel zeigt die Bewegungs-Bloecke');
                   ok(blkHelpEl.querySelectorAll('.blk-help-row').length === Object.keys(BLK.BLOCKS).length, 'T93e die Befehlsuebersicht erklaert jeden Block der Registry');
@@ -2712,11 +2745,11 @@ setTimeout(function () {
                   var blkSpr2 = blkUi.addSprite('fish');
                   ok(blkSpr2 !== null && blkUi.program.sprites.length === 2 && blkSpritesEl.children.length === 4, 'T98d eine neue Figur landet in der Liste und wird zum Ziel');
                   blkUi.selectTarget(null);
-                  ok(blkUi.isStage() === true && blkCatsEl.children.length === 5, 'T99b die Buehne zeigt nur passende Kategorien (fuenf statt acht im Lernmodus)');
+                  ok(blkUi.isStage() === true && blkCatsEl.children.length === 7, 'T99b die Buehne zeigt nur passende Kategorien (sieben statt neun im Lernmodus, inklusive Buehne und Meine Bloecke)');
                   blkUi.addBlock('flag', 10, 10);
                   ok(blkUi.program.stage.scripts.length === 1 && blkUi.program.sprites[0].scripts.length === blkUi.program.sprites[0].scripts.length, 'T99c ein Block auf der Buehne landet im Buehnen-Skript');
                   blkUi.selectTarget(blkUi.program.sprites[0]);
-                  ok(blkUi.isStage() === false && blkCatsEl.children.length === 8, 'T99d zurueck auf der Figur sind im Lernmodus alle acht zulaessigen Kategorien da');
+                  ok(blkUi.isStage() === false && blkCatsEl.children.length === 9, 'T99d zurueck auf der Figur sind im Lernmodus alle neun zulaessigen Kategorien da, die Buehne-Kategorie entfaellt (#139)');
                   blkUi.deleteSprite(blkUi.program.sprites[1]);
                   ok(blkUi.program.sprites.length === 1 && blkUi.target() === blkUi.program.sprites[0], 'T99e das Loeschen der zweiten Figur waehlt die erste zurueck');
                   ok(blkUi.program.stage.scripts.length === 1, 'T99f das Buehnen-Skript bleibt beim Figuren-Wechsel erhalten');
@@ -3121,21 +3154,21 @@ setTimeout(function () {
                   for (c9 = 0; c9 < blkCatsEl.children.length; c9++) {
                     if (blkCatsEl.children[c9].style && blkCatsEl.children[c9].style.background) { catColored++; }
                   }
-                  ok(catColored === blkCatsEl.children.length && blkCatsEl.children.length === 8, 'T109c jeder Kategorie-Knopf traegt seine Kategoriefarbe, im Lernmodus acht Stueck (#150, #162)');
+                  ok(catColored === blkCatsEl.children.length && blkCatsEl.children.length === 9, 'T109c jeder Kategorie-Knopf traegt seine Kategoriefarbe, im Lernmodus neun Stueck (#150, #162)');
                   var catLabels109 = [], btn109;
                   for (btn109 = 0; btn109 < blkCatsEl.children.length; btn109++) { catLabels109.push(blkCatsEl.children[btn109].textContent); }
                   ok(catLabels109.indexOf('Variablen') === -1, 'T109e im Lernmodus fehlt die Variablen-Kategorie (#162)');
-                  ok(blkPalEl.children.length === 3 && blkPalEl.querySelector('.blk[data-pal-op="broadcast_wait"]') === null && blkPalEl.querySelector('.blk[data-pal-op="when_msg"]') === null && blkPalEl.querySelector('.blk[data-pal-op="broadcast"]') === null, 'T109f die Ereignis-Kategorie zeigt im Lernmodus nur die drei Basis-Bloecke (#151, #162)');
+                  ok(blkPalEl.children.length === 4 && blkPalEl.querySelector('.blk[data-pal-op="broadcast_wait"]') === null && blkPalEl.querySelector('.blk[data-pal-op="when_msg"]') === null && blkPalEl.querySelector('.blk[data-pal-op="broadcast"]') === null, 'T109f die Ereignis-Kategorie zeigt im Lernmodus nur die vier Basis-Bloecke, Nachrichten bleiben Experten-Sache (#151, #162, #132)');
                   blkFetchCalls.length = 0;
                   blkModeExpertEl.dispatch('click');
                   var blkModeCalls = blkFetchCalls.filter(function (mc) { return String(mc.url).indexOf('/einstellungen/werkstattmodus') !== -1; });
                   ok(blkUi.isExpert() === true && !blkCodeEl.hasAttribute('hidden') && !blkConsoleBox.hasAttribute('hidden') && !blkVarAddEl.hasAttribute('hidden'), 'T109g ein Klick auf die Experten-Haelfte schaltet um und blendet Code, Konsole und Variablen ein (#161)');
                   ok(blkModeCalls.length === 1 && blkModeCalls[0].body === 'csrf=tok&mode=expert', 'T109h der Wechsel in den Expertenmodus speichert die Wahl im Konto (POST mit mode=expert)');
-                  ok(blkCatsEl.children.length === 9 && blkPalEl.children.length === 6 && blkPalEl.querySelector('.blk[data-pal-op="broadcast_wait"]') !== null, 'T109i im Expertenmodus sind alle neun Kategorien und alle sechs Ereignis-Bloecke da (#151, #162)');
+                  ok(blkCatsEl.children.length === 10 && blkPalEl.children.length === 7 && blkPalEl.querySelector('.blk[data-pal-op="broadcast_wait"]') !== null, 'T109i im Expertenmodus sind alle zehn Kategorien und alle sieben Ereignis-Bloecke da (#151, #162, #138)');
                   blkModeExpertEl.dispatch('click');
                   ok(blkFetchCalls.length === 1, 'T109j ein Klick auf die bereits aktive Haelfte loest keinen neuen Speichervorgang aus (#161)');
                   blkUi.setMode(false);
-                  ok(blkUi.isExpert() === false && blkFetchCalls.length === 1 && blkCatsEl.children.length === 8, 'T109k die programmatische Moduswahl wirkt sofort, ohne die Konto-Route aufzurufen (#161)');
+                  ok(blkUi.isExpert() === false && blkFetchCalls.length === 1 && blkCatsEl.children.length === 9, 'T109k die programmatische Moduswahl wirkt sofort, ohne die Konto-Route aufzurufen (#161)');
                   blkUi.setMode(true);
                   blkCatsEl.children[7].dispatch('click');
                   ok(blkPalEl.querySelector('.blk[data-pal-op="var_set"]') !== null, 'T109l die Variablen-Kategorie zeigt im Expertenmodus ihre Bloecke (#162)');
@@ -3143,7 +3176,7 @@ setTimeout(function () {
                   blkModeLearnEl.dispatch('click');
                   blkModeCalls = blkFetchCalls.filter(function (mc2) { return String(mc2.url).indexOf('/einstellungen/werkstattmodus') !== -1; });
                   ok(blkModeCalls.length === 1 && blkModeCalls[0].body === 'csrf=tok&mode=learn', 'T109m die Moduswahl wird je Konto gespeichert: der Ruecksprung in den Lernmodus geht als POST mit mode=learn (#161)');
-                  ok(blkUi.isExpert() === false && blkPalEl.children.length === 3 && blkPalEl.querySelector('.blk[data-pal-op="var_set"]') === null, 'T109n beim Rueckschalten springt die Palette von der Experten-Kategorie auf die Ereignisse zurueck (#162)');
+                  ok(blkUi.isExpert() === false && blkPalEl.children.length === 4 && blkPalEl.querySelector('.blk[data-pal-op="var_set"]') === null, 'T109n beim Rueckschalten springt die Palette von der Experten-Kategorie auf die Ereignisse zurueck (#162)');
                   ok(blkModeLearnEl.getAttribute('aria-pressed') === 'true' && blkModeLearnEl.classList.contains('active') === true && blkModeExpertEl.getAttribute('aria-pressed') === 'false' && blkModeExpertEl.classList.contains('active') === false && blkModeEl.getAttribute('data-active') === 'learn', 'T109o der Schalter spiegelt den Lernmodus konsistent in aria-pressed und Aktvierung (#161)');
                   blkModeLearnEl.dispatch('click');
                   ok(blkFetchCalls.length === 1, 'T109p auch im Lernmodus bleibt ein Klick auf die aktive Haelfte ohne Speichervorgang (#161)');
@@ -3308,6 +3341,286 @@ setTimeout(function () {
                   ok(AMT.effectiveAlphabet(amtEx).join('') === 'ab' && AMT.missingPairs(amtEx, ['a', 'b']).length === 2, 'T114q effektives Alphabet und fehlende Uebergaenge stimmen ueberein');
                   var amtLoop = AMT.edgeGeom(amtEx, { id: 'x', from: 's2', to: 's2', symbols: ['b'] });
                   ok(amtLoop !== null && amtLoop.d.indexOf('C') !== -1, 'T114r die Schleifen-Geometrie zeichnet eine Kurve');
+
+                  /* T116-T116s (#132/#137/#138/#139/#142/#143): Klone,
+                   * Listen, eigene Baeusteine, Hintergruende, Vorlagen
+                   * und Vollbild. Erst Registry und Editor-Oberflaeche,
+                   * dann die DOM-freie Laufzeit. */
+                  ok(BLK.BLOCKS.when_clone && BLK.BLOCKS.clone_create && BLK.BLOCKS.clone_delete &&
+                     BLK.BLOCKS.list_add && BLK.BLOCKS.list_del && BLK.BLOCKS.list_set &&
+                     BLK.BLOCKS.list_get && BLK.BLOCKS.list_len && BLK.BLOCKS.list_has &&
+                     BLK.BLOCKS.proc_def && BLK.BLOCKS.proc_call &&
+                     BLK.BLOCKS.backdrop_switch && BLK.BLOCKS.backdrop_next, 'T116 die Registry kennt Klone, Listen, eigene Baeusteine und Hintergruende (#132, #137, #138, #139)');
+                  blkUi.setMode(false);
+                  ok(hidden(blkListAddEl) && !hidden(blkProcAddEl), 'T116b der Listen-Knopf fehlt im Lernmodus, der Baustein-Knopf bleibt (#137, #138)');
+                  ok(blkUi.addList('einkauf') === true && blkUi.program.lists.indexOf('einkauf') !== -1, 'T116c eine Liste laesst sich anlegen (#137)');
+                  ok(blkUi.addList('einkauf') === false && blkUi.addList('') === false, 'T116d doppelte und leere Namen bleiben draussen (#137)');
+                  ok(blkUi.addProc('Springen') === true && blkUi.target().procs.indexOf('Springen') !== -1, 'T116e ein Baustein laesst sich an der Figur anlegen (#138)');
+                  ok(blkUi.templateCount() === 4, 'T116f der Editor haelt vier Beispielprogramme bereit (#142)');
+                  function simFindById(rootEl, wantId) {
+                    if (!rootEl) { return null; }
+                    if (rootEl.getAttribute && rootEl.getAttribute('id') === wantId) { return rootEl; }
+                    for (var sf = 0; sf < rootEl.children.length; sf++) {
+                      var hitSf = simFindById(rootEl.children[sf], wantId);
+                      if (hitSf) { return hitSf; }
+                    }
+                    return null;
+                  }
+                  blkTemplatesBtn.dispatch('click');
+                  var blkTplBoxEl = simFindById(blkIdeEl, 'blk-templates-box');
+                  ok(blkTplBoxEl !== null && !blkTplBoxEl.hasAttribute('hidden'), 'T116g der Vorlagen-Knopf oeffnet die Auswahl (#142)');
+                  ok(blkTplBoxEl.querySelectorAll('.blk-templates-row').length === 4, 'T116h die Auswahl zeigt vier Vorlagen mit Laden-Knopf (#142)');
+                  var blkTplCloseEl = blkTplBoxEl.querySelector('.blk-x');
+                  if (blkTplCloseEl) { blkTplCloseEl.dispatch('click'); }
+                  ok(blkTplBoxEl.hasAttribute('hidden'), 'T116i der Schliessen-Knopf versteckt die Vorlagen (#142)');
+                  ok(blkUi.isFullscreen() === false, 'T116j die Werkstatt startet ohne Vollbild (#143)');
+                  ok(blkUi.fullscreenOn() === true && blkUi.isFullscreen() === true && simFindById(blkIdeEl, 'blk-fullbox') !== null, 'T116k der Vollbild-Knopf holt die Buehne in ein eigenes Lager (#143)');
+                  ok(blkUi.fullscreenOff() === true && blkUi.isFullscreen() === false && simFindById(blkIdeEl, 'blk-fullbox') === null, 'T116l Beenden loest das Vollbild wieder auf (#143)');
+
+                  /* Laufzeit der neuen Bloecke (DOM-frei, wie die Engine). */
+                  var uidB = 1000;
+                  function rawB(op, fields, next, subs) {
+                    return { op: op, id: op + '_' + (++uidB), f: fields || {}, sub: subs || [], next: next || null };
+                  }
+                  function chainB(items) {
+                    var node = null;
+                    for (var ibC = items.length - 1; ibC >= 0; ibC--) { node = rawB(items[ibC][0], items[ibC][1], node, items[ibC][2] || []); }
+                    return node;
+                  }
+                  function progB(scripts, extra) {
+                    extra = extra || {};
+                    return BLK.parseProgram(JSON.stringify({
+                      v: 3, vars: extra.vars || [], lists: extra.lists || [],
+                      sprites: extra.sprites || [{ id: 'sp1', name: 'F1', costume: 'robot', scripts: scripts, procs: extra.procs || [] }],
+                      stage: { scripts: extra.stageScripts || [], procs: extra.stageProcs || [], backdrop: extra.backdrop || 'paper' }
+                    }));
+                  }
+                  function scrB(top) { return { id: 'sc' + (++uidB), x: 0, y: 0, top: top }; }
+                  function frB(rt, n) { for (var fb = 0; fb < n; fb++) { rt.frame(100 * fb + 100); } }
+
+                  var rtL = BLK.newRuntime(progB([scrB(chainB([
+                    ['flag'], ['list_add', { list: { v: 'einkauf' }, value: { v: 'Milch' } }],
+                    ['list_add', { list: { v: 'einkauf' }, value: { v: 'Brot' } }],
+                    ['var_set', { name: { v: 'ergebnis' }, value: { b: rawB('list_get', { list: { v: 'einkauf' }, n: { v: '2' } }, null, []) } }]
+                  ]))], { vars: ['ergebnis'], lists: ['einkauf'] }));
+                  rtL.flag(100); frB(rtL, 3);
+                  ok(rtL.vars.ergebnis === 'Brot' && rtL.lists.einkauf.length === 2 && rtL.errors.length === 0, 'T116m Listen fuellen, lesen und zaehlen ohne Fehler (#137)');
+                  var rtL2 = BLK.newRuntime(progB([scrB(chainB([
+                    ['flag'], ['list_add', { list: { v: 'L' }, value: { v: 'x' } }],
+                    ['list_add', { list: { v: 'L' }, value: { v: 'y' } }],
+                    ['list_set', { list: { v: 'L' }, n: { v: '2' }, value: { v: 'z' } }],
+                    ['list_del', { list: { v: 'L' }, n: { v: '1' } }],
+                    ['var_set', { name: { v: 'laenge' }, value: { b: rawB('list_len', { list: { v: 'L' } }, null, []) } }],
+                    ['var_set', { name: { v: 'drin' }, value: { b: rawB('list_has', { list: { v: 'L' }, value: { v: 'z' } }, null, []) } }]
+                  ]))], { vars: ['laenge', 'drin'], lists: ['L'] }));
+                  rtL2.flag(100); frB(rtL2, 3);
+                  ok(JSON.stringify(rtL2.lists.L) === '["z"]' && rtL2.vars.laenge === 1 && rtL2.vars.drin === true, 'T116n Eintraege setzen, loeschen, laengen und suchen (#137)');
+                  var serB = BLK.serializeProgram(progB([], { lists: ['A'], procs: ['Springen'], stageProcs: ['Intro'], backdrop: 'sea' }));
+                  var parB = BLK.parseProgram(JSON.stringify(serB));
+                  ok(serB.lists.length === 2 || (serB.lists.length === 1 && serB.lists[0] === 'A'), 'T116o das Speicherformat nimmt Listen und Bausteine auf (#137, #138)');
+                  ok(parB.lists.indexOf('A') !== -1 && parB.sprites[0].procs.indexOf('Springen') !== -1 && parB.stage.procs.indexOf('Intro') !== -1 && parB.stage.backdrop === 'sea', 'T116p Laden ergibt Listen, Figuren- und Buehnen-Bausteine und Hintergrund zurueck (#137, #138, #139)');
+                  var rtP = BLK.newRuntime(progB([
+                    scrB(chainB([['flag'], ['proc_call', { name: { v: 'hoch' } }], ['proc_call', { name: { v: 'hoch' } }]])),
+                    scrB(chainB([['proc_def', { name: { v: 'hoch' } }], ['var_change', { name: { v: 'zaehler' }, d: { v: '5' } }]]))
+                  ], { vars: ['zaehler'] }));
+                  rtP.flag(100); frB(rtP, 3);
+                  ok(rtP.vars.zaehler === 10 && rtP.errors.length === 0, 'T116q ein Baustein springt zweimal zum Rueckpunkt zurueck (#138)');
+                  var rtP2 = BLK.newRuntime(progB([
+                    scrB(chainB([['flag'], ['repeat', { count: { v: '3' } }, [chainB([['proc_call', { name: { v: 'hoch' } }]])]]])),
+                    scrB(chainB([['proc_def', { name: { v: 'hoch' } }], ['var_change', { name: { v: 'zaehler' }, d: { v: '5' } }]]))
+                  ], { vars: ['zaehler'] }));
+                  rtP2.flag(100); frB(rtP2, 6);
+                  ok(rtP2.vars.zaehler === 15 && rtP2.errors.length === 0, 'T116r der Baustein-Aufruf in einer Wiederholung springt jedes Mal zurueck (#138)');
+                  var rtP3 = BLK.newRuntime(progB([
+                    scrB(chainB([['flag'], ['proc_call', { name: { v: 'A' } }]])),
+                    scrB(chainB([['proc_def', { name: { v: 'A' } }], ['proc_call', { name: { v: 'B' } }], ['var_change', { name: { v: 'z' }, d: { v: '1' } }]])),
+                    scrB(chainB([['proc_def', { name: { v: 'B' } }], ['var_change', { name: { v: 'z' }, d: { v: '10' } }]]))
+                  ], { vars: ['z'] }));
+                  rtP3.flag(100); frB(rtP3, 4);
+                  ok(rtP3.vars.z === 11 && rtP3.errors.length === 0, 'T116s verschachtelte Bausteine kehren auf allen Ebenen zurueck (#138)');
+
+                  /* T116t-T116z (#132/#139): Klone und Hintergruende. */
+                  var rtK = BLK.newRuntime(progB([
+                    scrB(chainB([['flag'], ['clone_create', { name: { v: '' } }]])),
+                    scrB(chainB([['when_clone'], ['clone_delete']]))
+                  ]));
+                  rtK.flag(100); frB(rtK, 3);
+                  ok(rtK.sprites.length === 1 && rtK.errors.length === 0, 'T116t ein Klon startet sein Skript und loescht sich selbst (#132)');
+                  var rtK2 = BLK.newRuntime(progB([], { sprites: [
+                    { id: 'sp1', name: 'Robot', costume: 'robot', scripts: [scrB(chainB([['flag'], ['clone_create', { name: { v: 'sp2' } }]]))] },
+                    { id: 'sp2', name: 'Fisch', costume: 'fish', scripts: [scrB(chainB([['when_clone'], ['change_x', { dx: { v: '40' } }]]))] }
+                  ] }));
+                  rtK2.flag(100); frB(rtK2, 3);
+                  ok(rtK2.sprites.length === 3 && rtK2.sprites[2].isClone === true && rtK2.sprites[2].x === 280 && rtK2.sprites[1].x === 240, 'T116u der Klon einer anderen Figur laeuft deren Skript, das Original bleibt unberuehrt (#132)');
+                  var rtK3 = BLK.newRuntime(progB([scrB(chainB([['flag'], ['repeat', { count: { v: '350' } }, [chainB([['clone_create', { name: { v: '' } }]])]]]))]));
+                  rtK3.flag(100); frB(rtK3, 400);
+                  ok(rtK3.sprites.length === 301 && rtK3.errors.length === 1 && /Klon-Grenze/.test(rtK3.errors[0]), 'T116v bei 300 Klonen stoppt die Werkstatt mit einer klaren Meldung (#132)');
+                  var rtD = BLK.newRuntime(progB([scrB(chainB([['flag'], ['backdrop_switch', { name: { v: 'sea' } }], ['backdrop_next']]))]));
+                  ok(rtD.backdrop() === 'paper', 'T116w die Buehne startet auf Papier (#139)');
+                  rtD.flag(100); frB(rtD, 2);
+                  ok(rtD.backdrop() === 'meadow', 'T116x Hintergrund wechseln und weiterblättern (#139)');
+                  var codeB = progB([scrB(chainB([['flag'], ['proc_call', { name: { v: 'Los' } }], ['clone_create', { name: { v: '' } }], ['list_add', { list: { v: 'L' }, value: { v: '1' } }]]))], { lists: ['L'] });
+                  ok(/rufe_baustein/.test(BLK.programToJava(codeB)) && /erzeuge_klon_von/.test(BLK.programToJava(codeB)) && /fuege_hinzu/.test(BLK.programToJava(codeB)), 'T116y die Java-Ansicht uebersetzt Baustein, Klon und Liste (#132, #137, #138)');
+                  ok(/rufe_baustein/.test(BLK.programToPython(codeB)), 'T116z die Python-Ansicht uebersetzt den Baustein-Aufruf (#138)');
+
+                  /* T117-T117o (#164): Kellerautomat. Engine ist DOM-frei. */
+                  var IC_PDA = require('../public/assets/js/pda.js');
+                  var pdaEx = IC_PDA.examplePDA();
+                  ok(pdaEx.alphabet.length === 2 && pdaEx.stack0 === 'Z' && pdaEx.accept === 'state' && pdaEx.states.length === 3, 'T117 der Kellerautomat liefert das Beispiel a hoch n b hoch n (#164)');
+                  ok(IC_PDA.pdaRun(pdaEx, 'aabb').accepted === true, 'T117b aabb ist mit Keller akzeptiert (#164)');
+                  ok(IC_PDA.pdaRun(pdaEx, 'aaabbb').accepted === true, 'T117c aaabbb ist mit Keller akzeptiert (#164)');
+                  ok(IC_PDA.pdaRun(pdaEx, 'aab').accepted === false && IC_PDA.pdaRun(pdaEx, 'abba').accepted === false && IC_PDA.pdaRun(pdaEx, 'aabbbb').accepted === false, 'T117d zu kurze, falsche und zu lange Woerter werden abgelehnt (#164)');
+                  ok(IC_PDA.pdaRun(pdaEx, 'ε').accepted === true, 'T117e das leere Wort fuehrt per epsilon in den Endzustand (#164)');
+                  var pdaSteps = IC_PDA.pdaRun(pdaEx, 'aabb').steps;
+                  ok(pdaSteps.length === 6 && pdaSteps[0].stack === 'Z' && pdaSteps[5].state === 'q2', 'T117f die Schritteliste zeigt Zustand und Keller (#164)');
+                  var pdaAn = IC_PDA.analysePDA(pdaEx);
+                  ok(pdaAn.sigma.join('') === 'ab' && pdaAn.finals.length === 1 && pdaAn.epsMoves === 2, 'T117g die Analyse nennt Alphabet, Endzustaende und epsilon-Uebergaenge (#164)');
+                  ok(IC_PDA.normalizePDA({ states: pdaEx.states, transitions: pdaEx.transitions, stack0: 'Z', accept: 'stack' }).accept === 'stack', 'T117h die Akzeptanz laesst sich auf leeren Keller umstellen (#164)');
+                  ok(IC_PDA.normalizePDA({ states: pdaEx.states, transitions: [{ from: 'qX', to: 'q0', read: 'a', push: 'A' }].concat(pdaEx.transitions), stack0: 'Z' }).transitions.length === pdaEx.transitions.length, 'T117i kaputte Referenzen fallen beim Normalisieren raus (#164)');
+                  var pdaSvg = IC_PDA.exportSvgString(pdaEx);
+                  ok(pdaSvg.str.indexOf('<svg') === 0 && pdaSvg.str.indexOf('a, ε → A') !== -1, 'T117j der Bild-Export zeichnet die Keller-Beschriftung (#164)');
+                  var pdaParsed = IC_PDA.parsePDA(JSON.stringify(IC_PDA.serializePDA(pdaEx)));
+                  ok(pdaParsed.accept === 'state' && pdaParsed.transitions.length === 5, 'T117k Speichern und Laden ergibt denselben Automaten (#164)');
+
+                  /* T117l-T117o: Boot am Fake-Geruest wie auf der Seite. */
+                  var pdaDoc = new FakeDoc();
+                  function simReg(doc, id, tag) {
+                    var e = doc.createElement(tag || 'div');
+                    doc.register(e, id);
+                    return e;
+                  }
+                  var pdaRootEl = simReg(pdaDoc, 'pda-ide');
+                  var pdaCanvasEl = simReg(pdaDoc, 'pda-canvas');
+                  var pdaHintEl = simReg(pdaDoc, 'pda-hint');
+                  var pdaSelEl = simReg(pdaDoc, 'pda-sel');
+                  var pdaOutEl = simReg(pdaDoc, 'pda-out');
+                  var pdaWordEl = simReg(pdaDoc, 'pda-word', 'input');
+                  var pdaRunBtn = simReg(pdaDoc, 'pda-run', 'button');
+                  var pdaStack0El = simReg(pdaDoc, 'pda-stack0', 'input');
+                  var pdaJsonEl = simReg(pdaDoc, 'pda-json', 'textarea');
+                  pdaJsonEl.value = JSON.stringify(IC_PDA.serializePDA(pdaEx));
+                  var pdaUi = IC_PDA.attach(pdaDoc);
+                  ok(pdaUi !== null && String(pdaCanvasEl.innerHTML).indexOf('q0') !== -1, 'T117l die Werkstatt zeichnet den geladenen Automaten (#164)');
+                  ok(pdaStack0El.value === 'Z', 'T117m das Bodenzeichen steht im Feld (#164)');
+                  pdaWordEl.value = 'aabb';
+                  pdaRunBtn.dispatch('click');
+                  ok(String(pdaOutEl.textContent).indexOf('akzeptiert') !== -1 && String(pdaOutEl.textContent).indexOf('Keller') !== -1, 'T117n der Pruef-Knopf zeigt Urteil und Kellerschritte (#164)');
+                  pdaWordEl.value = 'aab';
+                  pdaRunBtn.dispatch('click');
+                  ok(String(pdaOutEl.textContent).indexOf('✗') !== -1, 'T117o ein abgelehntes Wort zeigt das Kreuz (#164)');
+
+                  /* T118-T118l (#165): Turingmaschine. */
+                  var IC_TM = require('../public/assets/js/turing.js');
+                  var tmEx = IC_TM.exampleTM();
+                  ok(tmEx.rules.length === 6 && tmEx.states.length === 3 && tmEx.blank === '_', 'T118 die Turingmaschine liefert das Inkrement-Beispiel (#165)');
+                  var tmR1 = IC_TM.tmRun(tmEx, '1011');
+                  var tmTape1 = '';
+                  var tmPos1, tmMax1 = -99, tmMin1 = 99;
+                  for (tmPos1 in tmR1.tape) { if (tmR1.tape[tmPos1] !== '_') { tmMax1 = Math.max(tmMax1, parseInt(tmPos1, 10)); tmMin1 = Math.min(tmMin1, parseInt(tmPos1, 10)); } }
+                  for (tmPos1 = tmMin1; tmPos1 <= tmMax1; tmPos1++) { tmTape1 += (tmR1.tape[tmPos1] != null ? tmR1.tape[tmPos1] : '_'); }
+                  ok(tmR1.accepted === true && tmTape1 === '1100', 'T118b 1011 wird zu 1100 inkrementiert (#165)');
+                  var tmR2 = IC_TM.tmRun(tmEx, '111');
+                  var tmTape2 = '';
+                  var tmPos2, tmMax2 = -99, tmMin2 = 99;
+                  for (tmPos2 in tmR2.tape) { if (tmR2.tape[tmPos2] !== '_') { tmMax2 = Math.max(tmMax2, parseInt(tmPos2, 10)); tmMin2 = Math.min(tmMin2, parseInt(tmPos2, 10)); } }
+                  for (tmPos2 = tmMin2; tmPos2 <= tmMax2; tmPos2++) { tmTape2 += (tmR2.tape[tmPos2] != null ? tmR2.tape[tmPos2] : '_'); }
+                  ok(tmR2.accepted === true && tmTape2 === '1000', 'T118c der Uebertrag laeuft ins neue Feld: 111 wird 1000 (#165)');
+                  ok(IC_TM.tmRun(tmEx, 'ε').accepted === true && IC_TM.tmRun(tmEx, '1011').steps.length === 9, 'T118d das leere Wort laeuft mit, die Schrittliste zaehlt neun (#165)');
+                  var tmAn = IC_TM.analyseTM(tmEx);
+                  ok(tmAn.finals[0] === 'qf' && tmAn.nd.length === 0, 'T118e die Analyse erkennt den Endzustand und Determinismus (#165)');
+                  var tmNd = IC_TM.normalizeTM({ states: tmEx.states, rules: tmEx.rules.concat([{ from: 'q0', to: 'qf', read: '0', write: '0', move: 'R' }]) });
+                  ok(IC_TM.analyseTM(tmNd).nd.length === 1, 'T118f zwei Regeln fuer dasselbe Zeichen werden als Konflikt gemeldet (#165)');
+                  var tmSvg = IC_TM.exportSvgString(tmEx);
+                  ok(tmSvg.str.indexOf('<svg') === 0 && tmSvg.str.indexOf('0 / 0, R') !== -1, 'T118g der Bild-Export zeichnet die Regel-Beschriftung (#165)');
+                  var tmParsed = IC_TM.parseTM(JSON.stringify(IC_TM.serializeTM(tmEx)));
+                  ok(tmParsed.rules.length === 6 && tmParsed.blank === '_', 'T118h Speichern und Laden ergibt dieselbe Maschine (#165)');
+                  var tmDoc = new FakeDoc();
+                  var tmRootEl2 = simReg(tmDoc, 'tm-ide');
+                  var tmCanvasEl = simReg(tmDoc, 'tm-canvas');
+                  var tmOutEl = simReg(tmDoc, 'tm-out');
+                  var tmWordEl = simReg(tmDoc, 'tm-word', 'input');
+                  var tmRunBtn = simReg(tmDoc, 'tm-run', 'button');
+                  var tmStepBtn = simReg(tmDoc, 'tm-step', 'button');
+                  var tmJsonEl = simReg(tmDoc, 'tm-json', 'textarea');
+                  tmJsonEl.value = JSON.stringify(IC_TM.serializeTM(tmEx));
+                  var tmUi = IC_TM.attach(tmDoc);
+                  ok(tmUi !== null && String(tmCanvasEl.innerHTML).indexOf('q0') !== -1, 'T118i die Werkstatt zeichnet die geladene Maschine (#165)');
+                  tmWordEl.value = '1011';
+                  tmRunBtn.dispatch('click');
+                  ok(String(tmOutEl.textContent).indexOf('akzeptiert') !== -1 && String(tmOutEl.textContent).indexOf('9') !== -1, 'T118j der Lauf-Knopf zeigt Urteil und Schrittzahl (#165)');
+                  tmStepBtn.dispatch('click');
+                  ok(String(tmOutEl.textContent).indexOf('Zustand') !== -1 && String(tmOutEl.textContent).indexOf('‣') !== -1, 'T118k der Schritt-Knopf zeigt Bandfenster und Kopf (#165)');
+
+                  /* T119-T119n (#166): Schaltwerk. */
+                  var IC_LOGIC = require('../public/assets/js/logic.js');
+                  var lcEx = IC_LOGIC.exampleCircuit();
+                  var lcEv0 = IC_LOGIC.evalCircuit(JSON.parse(JSON.stringify(lcEx)));
+                  ok(lcEv0.stable === true && lcEv0.lamps.length === 2 && lcEv0.values.lS === 0 && lcEv0.values.lC === 0, 'T119 der Halbaddierer bewertet 0 plus 0 zu S=0, C=0 (#166)');
+                  function lcWith(a, b) {
+                    var c = JSON.parse(JSON.stringify(lcEx));
+                    c.comps[0].state = a; c.comps[1].state = b;
+                    return IC_LOGIC.evalCircuit(c);
+                  }
+                  ok(lcWith(1, 0).values.lS === 1 && lcWith(1, 0).values.lC === 0, 'T119b 1 plus 0 ergibt Summe ohne Uebertrag (#166)');
+                  ok(lcWith(1, 1).values.lS === 0 && lcWith(1, 1).values.lC === 1, 'T119c 1 plus 1 ergibt den Uebertrag (#166)');
+                  ok(lcWith(0, 1).values.lS === 1, 'T119d 0 plus 1 ergibt die Summe (#166)');
+                  var lcNand = IC_LOGIC.parseCircuit(JSON.stringify({
+                    comps: [
+                      { id: 'a', kind: 'switch', x: 60, y: 60, state: 1 },
+                      { id: 'n', kind: 'not', x: 200, y: 60 },
+                      { id: 'b', kind: 'switch', x: 60, y: 160, state: 0 },
+                      { id: 'd', kind: 'nand', x: 340, y: 60 },
+                      { id: 'l', kind: 'lamp', x: 480, y: 60, label: 'X' }
+                    ],
+                    wires: [
+                      { id: 'w1', from: 'a', to: 'n' }, { id: 'w2', from: 'n', to: 'd' },
+                      { id: 'w3', from: 'b', to: 'd' }, { id: 'w4', from: 'd', to: 'l' }
+                    ]
+                  }));
+                  var lcNandEv = IC_LOGIC.evalCircuit(lcNand);
+                  ok(lcNandEv.values.n === 0 && lcNandEv.values.d === 1 && lcNandEv.values.l === 1, 'T119e NICHT und NAND verketten ueber Drähte (#166)');
+                  var lcDff = IC_LOGIC.parseCircuit(JSON.stringify({
+                    comps: [
+                      { id: 'd', kind: 'switch', x: 60, y: 60, state: 1 },
+                      { id: 'f', kind: 'dff', x: 220, y: 60 },
+                      { id: 'l', kind: 'lamp', x: 400, y: 60 }
+                    ],
+                    wires: [ { id: 'w1', from: 'd', to: 'f' }, { id: 'w2', from: 'f', to: 'l' } ]
+                  }));
+                  var lcTick1 = IC_LOGIC.tickCircuit(lcDff);
+                  ok(IC_LOGIC.evalCircuit(lcTick1).values.f === 1 && IC_LOGIC.evalCircuit(lcTick1).values.l === 1, 'T119f das D-Flipflop uebernimmt D beim Takt (#166)');
+                  lcTick1.comps[0].state = 0;
+                  ok(IC_LOGIC.evalCircuit(lcTick1).values.f === 1, 'T119g zwischen den Takten haelt das Flipflop seinen Zustand (#166)');
+                  var lcTick2 = IC_LOGIC.tickCircuit(lcTick1);
+                  ok(IC_LOGIC.evalCircuit(lcTick2).values.f === 0, 'T119h beim naechsten Takt folgt das Flipflop dem neuen D (#166)');
+                  var lcClk = IC_LOGIC.parseCircuit(JSON.stringify({
+                    comps: [ { id: 'c', kind: 'clock', state: 0 }, { id: 'l', kind: 'lamp' } ],
+                    wires: [ { id: 'w', from: 'c', to: 'l' } ]
+                  }));
+                  var lcRun = IC_LOGIC.runCircuit(lcClk, 4);
+                  ok(lcRun.states.length === 4 && lcRun.states[0].values.l === 0 && lcRun.states[1].values.l === 1 && lcRun.states[2].values.l === 0, 'T119i der Taktgeber blinkt die Lampe (#166)');
+                  var lcAn = IC_LOGIC.analyseCircuit(lcEx);
+                  ok(lcAn.counts.switch === 2 && lcAn.wires === 6, 'T119j die Analyse zaehlt Bausteine und Drähte (#166)');
+                  var lcSvg = IC_LOGIC.exportSvgString(lcEx);
+                  ok(lcSvg.str.indexOf('<svg') === 0 && lcSvg.str.indexOf('XOR') !== -1, 'T119k der Bild-Export zeichnet die Gatter (#166)');
+                  var lcParsed = IC_LOGIC.parseCircuit(JSON.stringify(IC_LOGIC.serializeCircuit(lcEx)));
+                  ok(lcParsed.comps.length === 6 && lcParsed.wires.length === 6, 'T119l Speichern und Laden ergibt dieselbe Schaltung (#166)');
+                  ok(IC_LOGIC.normalizeCircuit({ comps: [{ id: 'x', kind: 'quantum', x: 0, y: 0 }], wires: [] }).comps.length === 0, 'T119m unbekannte Baustein-Arten fallen beim Normalisieren raus (#166)');
+                  var lcDoc = new FakeDoc();
+                  var lcRootEl = simReg(lcDoc, 'lc-ide');
+                  var lcCanvasEl = simReg(lcDoc, 'lc-canvas');
+                  var lcSelEl = simReg(lcDoc, 'lc-sel');
+                  var lcOutEl = simReg(lcDoc, 'lc-out');
+                  var lcEvalBtn = simReg(lcDoc, 'lc-eval', 'button');
+                  var lcJsonEl = simReg(lcDoc, 'lc-json', 'textarea');
+                  lcJsonEl.value = JSON.stringify(IC_LOGIC.serializeCircuit(lcEx));
+                  var lcClkBtn = simReg(lcDoc, 'lc-clock', 'button');
+                  var lcUi = IC_LOGIC.attach(lcDoc);
+                  ok(lcUi !== null && String(lcCanvasEl.innerHTML).indexOf('A') !== -1, 'T119n die Werkstatt zeichnet die geladene Schaltung und wertet sie aus (#166)');
+                  ok(String(lcOutEl.textContent).indexOf('Netz stabil') !== -1, 'T119o die Auswertung meldet das stabile Netz (#166)');
+                  lcClkBtn.dispatch('click');
+                  lcClkBtn.dispatch('click');
+                  ok(lcClkBtn.textContent === '▶ Takt', 'T119p der Takt-Knopf startet und stoppt den Takt (#166)');
 
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;
