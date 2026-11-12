@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.16.0
+ * @version 0.18.0
  */
 /** @var string $defaultLanguage @var array<string, string> $legal @var \Infocraft\Models\User $user */
 ?>
@@ -34,7 +34,7 @@
 
 <section class="panel">
     <h3>🏛️ Impressum und Datenschutz</h3>
-    <p class="muted">Angaben für die öffentlichen Seiten Impressum und Datenschutz. Was hier hinterlegt ist, erscheint im Fuß der Plattform als Link. Leere Felder bleiben einfach aus.</p>
+    <p class="muted">Angaben für die öffentlichen Seiten Impressum und Datenschutz. Was hier hinterlegt ist, erscheint im Fuß der Plattform als Link. Die Mustervorlage (#172) füllt die Textfelder vor: Wer nichts Eigenes speichert, übernimmt den Vorgabetext; ein eigenes Feld ersetzt ihn dauerhaft.</p>
     <form method="post" action="<?= url('admin/einstellungen/rechtliches') ?>" class="form">
         <?= csrf_field() ?>
         <fieldset class="field legal-kind">

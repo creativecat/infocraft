@@ -2,7 +2,7 @@
    Datei: Code-Werkstatt: Projektansicht mit IDE, Blöcken und Assembler
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.16.0 */ ?>
+   Version: 0.18.0 */ ?>
 <section class="panel">
     <div class="panel-head">
         <a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück">←</a>
@@ -790,6 +790,12 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
                 <button class="btn" data-pda-mode="state" type="button" aria-pressed="false" title="Zustand anlegen">⭕</button>
                 <button class="btn" data-pda-mode="trans" type="button" aria-pressed="false" title="Uebergang anlegen">➡️</button>
                 <button class="btn" data-pda-mode="delete" type="button" aria-pressed="false" title="Loeschen">🗑️</button>
+                <button class="btn" id="pda-undo" type="button" title="Zurueck (Undo)">↶</button>
+                <button class="btn" id="pda-redo" type="button" title="Wiederherstellen (Redo)">↷</button>
+                <button class="btn" id="pda-zoom-out" type="button" title="Verkleinern">−</button>
+                <button class="btn" id="pda-fit" type="button" title="Einpassen">⛶</button>
+                <button class="btn" id="pda-zoom-in" type="button" title="Vergroessern">＋</button>
+                <button class="btn" id="pda-png" type="button" title="Als PNG laden">🖼️</button>
             </div>
             <div class="pop pda-pop" id="pda-pop" hidden>
                 <label for="pda-pop-in" id="pda-pop-lbl">Uebergang</label>
@@ -804,6 +810,7 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
                 <input class="inp mono" id="pda-word" placeholder="z. B. aabb oder ε" autocomplete="off" spellcheck="false">
                 <div class="btn-row">
                     <button class="btn btn-primary" id="pda-run" type="button">Prüfen</button>
+                    <button class="btn" id="pda-play" type="button" title="Schrittweise abspielen">▶ Abspielen</button>
                     <button class="btn" id="pda-reset" type="button" title="Ausgabe zuruecksetzen">↺</button>
                 </div>
                 <div id="pda-out"></div>
@@ -816,6 +823,11 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
                     <label class="chip"><input type="radio" name="pda-accept" value="state"> am Endzustand</label>
                     <label class="chip"><input type="radio" name="pda-accept" value="stack"> bei leerem Keller</label>
                 </div>
+            </section>
+            <section class="panel">
+                <h3>Formale Beschreibung</h3>
+                <p class="mono amt-tuple" id="pda-tuple"></p>
+                <div class="tablewrap" id="pda-delta"></div>
             </section>
             <section class="panel">
                 <details>
@@ -848,6 +860,12 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
                 <button class="btn" data-tm-mode="state" type="button" aria-pressed="false" title="Zustand anlegen">⭕</button>
                 <button class="btn" data-tm-mode="rule" type="button" aria-pressed="false" title="Regel anlegen">➡️</button>
                 <button class="btn" data-tm-mode="delete" type="button" aria-pressed="false" title="Loeschen">🗑️</button>
+                <button class="btn" id="tm-undo" type="button" title="Zurueck (Undo)">↶</button>
+                <button class="btn" id="tm-redo" type="button" title="Wiederherstellen (Redo)">↷</button>
+                <button class="btn" id="tm-zoom-out" type="button" title="Verkleinern">−</button>
+                <button class="btn" id="tm-fit" type="button" title="Einpassen">⛶</button>
+                <button class="btn" id="tm-zoom-in" type="button" title="Vergroessern">＋</button>
+                <button class="btn" id="tm-png" type="button" title="Als PNG laden">🖼️</button>
             </div>
             <div class="pop tm-pop" id="tm-pop" hidden>
                 <label for="tm-pop-in" id="tm-pop-lbl">Regel</label>
@@ -862,10 +880,25 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
                 <input class="inp mono" id="tm-word" placeholder="z. B. 1011" autocomplete="off" spellcheck="false">
                 <div class="btn-row">
                     <button class="btn btn-primary" id="tm-run" type="button">Laufen lassen</button>
+                    <button class="btn" id="tm-play" type="button" title="Schrittweise abspielen">▶ Abspielen</button>
                     <button class="btn" id="tm-step" type="button" title="Einzelne Schritte ansehen">Schritt ▸</button>
                     <button class="btn" id="tm-reset" type="button" title="Ausgabe zuruecksetzen">↺</button>
                 </div>
                 <div id="tm-out"></div>
+            </section>
+            <section class="panel">
+                <details>
+                    <summary>Mehrere Wörter testen</summary>
+                    <label class="field"><span>Ein Wort pro Zeile (ε für das leere Wort)</span>
+                        <textarea class="inp mono" id="tm-batch-in" rows="4" spellcheck="false" placeholder="1011&#10;110&#10;10"></textarea></label>
+                    <div class="btn-row"><button class="btn" id="tm-batch-btn" type="button">Alle testen</button></div>
+                    <ul class="amt-batch" id="tm-batch-out"></ul>
+                </details>
+            </section>
+            <section class="panel">
+                <h3>Formale Beschreibung</h3>
+                <p class="mono amt-tuple" id="tm-tuple"></p>
+                <div class="tablewrap" id="tm-delta"></div>
             </section>
         </aside>
     </div>
@@ -1022,8 +1055,10 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
 <?php elseif ($project->type === 'code' && $project->language === 'automaton'): ?>
 <script src="<?= asset_url('assets/js/automaton.js') ?>"></script>
 <?php elseif ($project->type === 'code' && $project->language === 'pda'): ?>
+<script src="<?= asset_url('assets/js/amt-tools.js') ?>"></script>
 <script src="<?= asset_url('assets/js/pda.js') ?>"></script>
 <?php elseif ($project->type === 'code' && $project->language === 'turing'): ?>
+<script src="<?= asset_url('assets/js/amt-tools.js') ?>"></script>
 <script src="<?= asset_url('assets/js/turing.js') ?>"></script>
 <?php elseif ($project->type === 'code' && $project->language === 'logic'): ?>
 <script src="<?= asset_url('assets/js/logic.js') ?>"></script>

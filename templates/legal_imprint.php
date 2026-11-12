@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.16.0
+ * @version 0.18.0
  */
 /** @var array<string, string> $legal */
 $isPrivate = ($legal['kind'] ?? 'school') === 'private';
@@ -17,7 +17,9 @@ $hasOwner = $legal['operator'] !== '' || $legal['email'] !== '' || $legal['perso
     <p>Angaben gemäß § 5 DDG. Diese Seite füllt sich aus den Feldern der Admin-Einstellungen.</p>
 </section>
 
-<?php if (!$hasOwner && $legal['extra'] === ''): ?>
+<?php /* Namens- und Adressfelder bleiben ohne Muster (#172): Sie sind immer
+     * instanzspezifisch. Der Hinweis erscheint nur, wenn sie fehlen. */ ?>
+<?php if (!$hasOwner): ?>
 <section class="panel">
     <h3>Hinweis</h3>
     <p class="muted">Die Verwaltung hat hier noch keine Angaben hinterlegt. Ein Administrator trägt sie unter „Admin-Einstellungen → Impressum und Datenschutz“ ein.</p>

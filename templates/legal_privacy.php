@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.16.0
+ * @version 0.18.0
  */
 /** @var array<string, string> $legal */
 $hasPrivacy = $legal['dsb'] !== '' || $legal['hosting'] !== '' || $legal['data'] !== '' || $legal['text'] !== '';
