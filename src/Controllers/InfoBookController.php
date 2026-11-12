@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.15.0
+ * @version 0.18.0
  */
 declare(strict_types=1);
 
@@ -852,6 +852,10 @@ final class InfoBookController
                                 $body[] = '📎 Bild: *' . (string) ($item['name'] ?? 'Bild') . '* (im InfoBook auf der Freien Fläche)';
                             } elseif ($kind === 'audio' || $kind === 'video') {
                                 $body[] = '📎 ' . ($kind === 'audio' ? 'Audio' : 'Video') . ': *' . (string) ($item['name'] ?? 'Medium') . '* (im InfoBook abspielbar)';
+                            } elseif ($kind === 'html') {
+                                /* HTML-Baustein (#174): Quelltext bewusst NICHT
+                                 * auf die Folie, nur der Hinweis. */
+                                $body[] = '🌐 HTML-Seite: *Eingabemaske (im InfoBook nutzbar)*';
                             }
                         }
                         if ((int) ($block['ink'] ?? 0) > 0) {
@@ -1123,6 +1127,18 @@ final class InfoBookController
                     . '<button type="button" class="icv-db-run">▶ Abfrage ausführen</button>'
                     . '<div class="icv-db-out mono" aria-live="polite"></div>'
                     . '<pre class="icv-db-seed-src" hidden>' . e($seed) . '</pre></div>';
+            } elseif ($kind === 'html') {
+                /* HTML-Baustein (#174): Eigene HTML-Seite (z. B. Eingabe-
+                 * maske) als dritter Kasten neben Java- und SQL-Fenster.
+                 * Der Server gibt nur Text weiter; ausgefuehrt wird der
+                 * Quelltext im Browser ausschliesslich in einem abge-
+                 * schotteten iframe (Sandbox ohne same-origin, app.js),
+                 * der weder Cookies noch die Plattform erreichen kann. */
+                $src = (string) ($item['html'] ?? '');
+                $inner .= $pre . '<div class="icv-item icv-html" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 440, $w) . '%">'
+                    . '<div class="icv-html-head">🌐 HTML-Seite (Eingabemaske)</div>'
+                    . '<div class="icv-html-frame" aria-label="HTML-Seite"></div>'
+                    . '<pre class="icv-html-src" hidden>' . e($src) . '</pre></div>';
             } elseif ($kind === 'diagram') {
                 /* Diagramm-Element (#77/#79): pur (Standard) zeigt im
                  * Lesemodus nur das Diagramm, geteilt zeigt Code und

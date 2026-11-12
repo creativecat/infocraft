@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.16.0
+ * @version 0.18.0
  */
 declare(strict_types=1);
 
@@ -89,6 +89,21 @@ final class CodeController
             'html' => 'html',
             default => in_array($_POST['language'] ?? '', ['python', 'java', 'asm', 'blocks', 'automaton', 'pda', 'turing', 'logic'], true) ? (string) $_POST['language'] : SiteSetting::defaultLanguage(),
         };
+        /* Projektart als EIN Feld (#171): Das neue Formular schickt nur noch
+         * 'kind' und deckt beide alten Felder ab - 'html' ist die HTML-Seite,
+         * alles andere eine Programmier- oder Werkstatt-Art. Die alten Felder
+         * type/language bleiben ausserdem lesbar, damit Lesezeichen, Skripte
+         * und geteilte Links unveraendert weiterlaufen. */
+        $kind = trim((string) ($_POST['kind'] ?? ''));
+        if ($kind !== '') {
+            if ($kind === 'html') {
+                $type = 'html';
+                $language = 'html';
+            } elseif (in_array($kind, ['python', 'java', 'asm', 'blocks', 'automaton', 'pda', 'turing', 'logic'], true)) {
+                $type = 'code';
+                $language = $kind;
+            }
+        }
         if ($language === 'python' && !self::pythonAllowed($user)) {
             flash('error', 'Python ist für deine Klasse (noch) nicht freigegeben.');
             redirect('/werkstatt/code');

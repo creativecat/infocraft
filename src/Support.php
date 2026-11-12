@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.16.0
+ * @version 0.18.0
  */
 declare(strict_types=1);
 
@@ -30,7 +30,7 @@ function url(string $path = ''): string
  * Zeitstempel erhalten (rsync --times, Docker-Layer): Browser laden dann garantiert
  * die neue Datei statt einer alten Version aus dem Cache.
  */
-const ASSET_VERSION = '73';
+const ASSET_VERSION = '74';
 
 /**
  * Programmversion nach Semantic Versioning (#145): MAJOR.MINOR.PATCH.
@@ -38,7 +38,99 @@ const ASSET_VERSION = '73';
  * bleibt fuer inkompatible Umstiege reserviert. Die Entwicklungshistorie
  * steht in CHANGELOG.md im Wurzelverzeichnis.
  */
-const APP_VERSION = '0.17.0';
+const APP_VERSION = '0.18.0';
+
+/**
+ * Projekt-Icon (#169): passendes Emoji je Projektart. Frueher stand die
+ * Kette in den Templates, Neuzugaenge (Kellerautomat, Turingmaschine,
+ * Schaltwerk) fielen dabei auf das Python-Icon zurueck. Zentral hier
+ * gibt es genau eine Stelle, die alle Arten kennt.
+ */
+function ic_proj_icon(string $type, string $language): string
+{
+    if ($type === 'html') {
+        return '🌐';
+    }
+    return match ($language) {
+        'java' => '☕',
+        'python' => '🐍',
+        'asm' => '⚙️',
+        'blocks' => '🧩',
+        'automaton' => '🤖',
+        'pda' => '🥞',
+        'turing' => '🧾',
+        'logic' => '🔌',
+        default => '📄',
+    };
+}
+
+/**
+ * Projekt-Bezeichnung (#171): kurzer Text fuer die Pill am Projekt.
+ * Wie ic_proj_icon() zentral gepflegt, damit Uebersicht und Karten
+ * ueberall dieselben Namen zeigen.
+ */
+function ic_proj_kind(string $type, string $language): string
+{
+    if ($type === 'html') {
+        return 'HTML-Seite';
+    }
+    return match ($language) {
+        'java' => 'Java',
+        'python' => 'Python',
+        'asm' => 'Assembler',
+        'blocks' => 'Blöcke',
+        'automaton' => 'Automat',
+        'pda' => 'Kellerautomat',
+        'turing' => 'Turingmaschine',
+        'logic' => 'Schaltwerk',
+        default => 'Projekt',
+    };
+}
+
+/**
+ * Mustervorlage fuer Impressum und Datenschutz (#172): Vorgabetexte, die
+ * sofort gelten, wenn die Verwaltung nichts Eigenes hinterlegt hat. Sie
+ * sind auf eine schulische Lernplattform mit zwei Werkstatt-Rollen
+ * (Schule/Institution oder Privatperson) zugeschnitten und erfuellen
+ * Art. 13 DSGVO (Informationspflichten). Adress- und Namensfelder bleiben
+ * bewusst ohne Muster: Sie sind immer instanzspezifisch. Wer eigene Texte
+ * in den Admin-Einstellungen speichert, ueberschreibt das Muster.
+ *
+ * @return array<string, string>
+ */
+function ic_legal_defaults(): array
+{
+    return [
+        /* Ergaenzende Angaben im Impressum: redaktionelle Verantwortung. */
+        'extra' => "Inhaltliche Verantwortung gemäß § 18 Abs. 2 MStV: die Schulleitung bzw. die betreibende Person.",
+        /* Verarbeitete Daten: Datenlage der Plattform (Konten, Unterrichtsdaten,
+         * nur technisch notwendiges Session-Cookie, kein Tracking). */
+        'data' => "Für die Nutzung dieser Lernplattform werden folgende personenbezogene Daten verarbeitet:\n"
+            . "• Vorname, Nachname, Benutzername und ein verschlüsseltes Passwort (Unterrichtskonto),\n"
+            . "• die Zuordnung zu einer Klasse oder Lerngruppe,\n"
+            . "• von Nutzerinnen und Nutzern angelegte Projekte, Aufgabenbearbeitungen, Abgaben, Rückmeldungen, Bewertungen und Quiz-Ergebnisse (pädagogische Dokumentation des Lernstands),\n"
+            . "• selbst hochgeladene Bilder und Dateien im eigenen Arbeitsbereich.\n"
+            . "Technisch notwendig ist ausschließlich ein Session-Cookie für die Anmeldung. Die Plattform setzt keine Werbe- oder Analyse-Cookies, gibt keine Daten zu Marketingzwecken weiter und bindet keine Tracking-Dienste ein.",
+        /* Ergänzende Hinweise: Rechtsgrundlagen, Speicherdauer, Rechte, Beschwerderecht. */
+        'text' => "Rechtsgrundlagen: Bei schulischer Nutzung erfolgen die Verarbeitung auf Grundlage der Erfüllung rechtlicher Pflichten und der im öffentlichen Interesse liegenden Bildungsaufgaben (Art. 6 Abs. 1 lit. c und e DSGVO); das schulische Verhältnis begründet zudem die Verarbeitung zur Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO). Bei einem Angebot einer Privatperson stützt sich die Verarbeitung auf Einwilligung und berechtigtes Interesse (Art. 6 Abs. 1 lit. a und f DSGVO).\n"
+            . "Speicherdauer: Die Daten werden für die Dauer der Teilnahme am Unterricht und danach entsprechend den gesetzlichen Aufbewahrungs- und Dokumentationspflichten vorgehalten; anschließend werden sie gelöscht.\n"
+            . "Ihre Rechte: Sie haben das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21). Widerspruch und Auskunft nehmen Sie bitte per E-Mail an die im Impressum genannte Adresse.\n"
+            . "Beschwerderecht: Sie können sich bei einer Datenschutz-Aufsichtsbehörde beschweren (Art. 77 DSGVO); in Bayern ist das Bayerische Landesamt für Datenschutzaufsicht (BayLDA) zuständig.",
+    ];
+}
+
+/**
+ * Rechtstext eines Feldes (#172): Eigene Angabe der Verwaltung gewinnt,
+ * sonst gilt die Mustervorlage aus ic_legal_defaults().
+ */
+function ic_legal_field(string $key, string $value): string
+{
+    if ($value !== '') {
+        return $value;
+    }
+    $defaults = ic_legal_defaults();
+    return $defaults[$key] ?? '';
+}
 
 /**
  * Dateisystem-Pfad eines Assets unter public/. __DIR__ ist hier src/, der

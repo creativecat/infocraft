@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.16.0
+ * @version 0.18.0
  */
 declare(strict_types=1);
 
@@ -68,7 +68,8 @@ final class HomeController
     {
         $fields = [];
         foreach (['operator', 'person', 'street', 'zip', 'city', 'phone', 'email', 'extra', 'dsb', 'hosting', 'data', 'text'] as $key) {
-            $fields[$key] = SiteSetting::get('legal_' . $key, '');
+            /* Mustervorlage (#172): Ohne eigene Angabe gilt der Vorgabetext. */
+            $fields[$key] = ic_legal_field($key, SiteSetting::get('legal_' . $key, ''));
         }
         return $fields;
     }

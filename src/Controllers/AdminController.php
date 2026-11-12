@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.16.0
+ * @version 0.18.0
  */
 declare(strict_types=1);
 
@@ -124,7 +124,9 @@ final class AdminController
     {
         $values = [];
         foreach (self::legalKeys() as $key) {
-            $values[$key] = SiteSetting::get('legal_' . $key, '');
+            /* Mustervorlage (#172): Das Formular zeigt den Vorgabetext als
+             * vorbelegten Text; speichern ueberschreibt ihn dauerhaft. */
+            $values[$key] = ic_legal_field($key, SiteSetting::get('legal_' . $key, ''));
         }
         return $values;
     }
