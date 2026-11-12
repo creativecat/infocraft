@@ -5,20 +5,19 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.18.0
+ * @version 0.19.0
  */
 /** @var array<string, string> $legal */
 $isPrivate = ($legal['kind'] ?? 'school') === 'private';
 $hasOwner = $legal['operator'] !== '' || $legal['email'] !== '' || $legal['person'] !== '';
+$address = trim($legal['street'] . ($legal['street'] !== '' && ($legal['zip'] !== '' || $legal['city'] !== '') ? ', ' : '') . $legal['zip'] . ($legal['zip'] !== '' && $legal['city'] !== '' ? ' ' : '') . $legal['city']);
 ?>
 <section class="hero">
     <div class="hero-emoji">🏛️</div>
     <h1>Impressum</h1>
-    <p>Angaben gemäß § 5 DDG. Diese Seite füllt sich aus den Feldern der Admin-Einstellungen.</p>
+    <p>Angaben gemäß § 5 DDG.</p>
 </section>
 
-<?php /* Namens- und Adressfelder bleiben ohne Muster (#172): Sie sind immer
-     * instanzspezifisch. Der Hinweis erscheint nur, wenn sie fehlen. */ ?>
 <?php if (!$hasOwner): ?>
 <section class="panel">
     <h3>Hinweis</h3>
@@ -28,13 +27,29 @@ $hasOwner = $legal['operator'] !== '' || $legal['email'] !== '' || $legal['perso
 <section class="panel">
     <?php if ($legal['operator'] !== ''): ?><h3><?= e($legal['operator']) ?></h3><?php endif; ?>
     <?php if ($isPrivate && $legal['operator'] === '' && $legal['person'] !== ''): ?><h3><?= e($legal['person']) ?></h3><?php endif; ?>
-    <?php if (!$isPrivate && $legal['person'] !== ''): ?><p><strong>Vertreten durch:</strong> <?= e($legal['person']) ?></p><?php endif; ?>
     <?php if ($isPrivate): ?><p class="muted">Angebot einer Privatperson.</p><?php endif; ?>
-    <?php if ($legal['street'] !== '' || $legal['zip'] !== '' || $legal['city'] !== ''): ?>
-    <p><?= e(trim($legal['street'] . ($legal['street'] !== '' && ($legal['zip'] !== '' || $legal['city'] !== '') ? ', ' : '') . $legal['zip'] . ($legal['zip'] !== '' && $legal['city'] !== '' ? ' ' : '') . $legal['city'])) ?></p>
-    <?php endif; ?>
-    <?php if ($legal['phone'] !== ''): ?><p><strong>Telefon:</strong> <?= e($legal['phone']) ?></p><?php endif; ?>
-    <?php if ($legal['email'] !== ''): ?><p><strong>E-Mail:</strong> <?= e($legal['email']) ?></p><?php endif; ?>
+    <table class="kv-legal">
+        <tbody>
+        <?php if (!$isPrivate && $legal['operator'] !== ''): ?>
+        <tr><th>Anbieter</th><td><?= e($legal['operator']) ?></td></tr>
+        <?php endif; ?>
+        <?php if (!$isPrivate && $legal['person'] !== ''): ?>
+        <tr><th>Vertreten durch</th><td><?= e($legal['person']) ?></td></tr>
+        <?php endif; ?>
+        <?php if ($isPrivate && $legal['operator'] !== ''): ?>
+        <tr><th>Anbieter</th><td><?= e($legal['operator']) ?></td></tr>
+        <?php endif; ?>
+        <?php if ($address !== ''): ?>
+        <tr><th>Anschrift</th><td><?= e($address) ?></td></tr>
+        <?php endif; ?>
+        <?php if ($legal['phone'] !== ''): ?>
+        <tr><th>Telefon</th><td><?= e($legal['phone']) ?></td></tr>
+        <?php endif; ?>
+        <?php if ($legal['email'] !== ''): ?>
+        <tr><th>E-Mail</th><td><a href="mailto:<?= e($legal['email']) ?>"><?= e($legal['email']) ?></a></td></tr>
+        <?php endif; ?>
+        </tbody>
+    </table>
 </section>
 <?php endif; ?>
 

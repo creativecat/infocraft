@@ -51,7 +51,7 @@ final class AuthController
 
     public static function demoLogin(): void
     {
-        if (!Config::get('app.demo_mode')) {
+        if (!ic_demo_mode()) {
             http_response_code(404);
             exit('Der Demo-Modus ist deaktiviert.');
         }
@@ -179,7 +179,7 @@ final class AuthController
     /** @return list<array{user: User, class: ?string}> */
     private static function demoUsers(): array
     {
-        if (!Config::get('app.demo_mode')) {
+        if (!ic_demo_mode()) {
             return [];
         }
         return User::allWithClass(12, true);

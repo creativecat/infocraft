@@ -5,14 +5,13 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.18.0
+ * @version 0.19.0
  */
 declare(strict_types=1);
 
 namespace Infocraft\Controllers;
 
 use Infocraft\Auth;
-use Infocraft\Config;
 use Infocraft\Database;
 use Infocraft\Models\SiteSetting;
 use Infocraft\SsoM365;
@@ -29,9 +28,14 @@ final class HomeController
             'title' => 'Start',
             'active' => 'home',
             'modules' => ModuleController::visible($user),
+            /* Ankündigung der Administration (#183): kurzer Hinweis, der
+             * auf der Startseite für alle Konten prominent erscheint. */
+            'announcement' => SiteSetting::get('announcement', ''),
             'system' => [
                 'driver' => Database::driver(),
-                'demo' => (bool) Config::get('app.demo_mode'),
+                /* Demo-Modus (#180): Seiteneinstellung gewinnt, Fallback ist
+                 * die Konfigurationsdatei. */
+                'demo' => ic_demo_mode(),
                 'sso' => SsoM365::enabled(),
             ],
         ]);

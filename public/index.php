@@ -225,15 +225,17 @@ $router->post('/infobuecher/{id}/zeichnung', [InfoBookController::class, 'saveDr
 $router->post('/infobuecher/{id}/verteilen', [InfoBookController::class, 'distribute']);
 $router->post('/infobuecher/{id}/import', [InfoBookController::class, 'import']);
 $router->get('/infobuecher/{id}/praesentation', [InfoBookController::class, 'present']);
-$router->post('/infobuecher/{id}/als-praesentation', [InfoBookController::class, 'createPresentation']);
 
 // Verwaltung
 $router->get('/admin/users', [AdminController::class, 'users']);
+$router->get('/admin/users/csv', [AdminController::class, 'usersCsv']);
 $router->get('/admin/import', [AdminController::class, 'importForm']);
 $router->post('/admin/import', [AdminController::class, 'import']);
 $router->get('/admin/einstellungen', [AdminController::class, 'settings']);
 $router->post('/admin/einstellungen', [AdminController::class, 'settingsSave']);
 $router->post('/admin/einstellungen/rechtliches', [AdminController::class, 'legalSave']);
+$router->post('/admin/einstellungen/demo', [AdminController::class, 'demoSave']);
+$router->post('/admin/einstellungen/ankuendigung', [AdminController::class, 'announcementSave']);
 
 // Persönliche Ansichten (je Nutzerkonto gespeichert)
 $router->post('/einstellungen/navigation', [AuthController::class, 'saveNavView']);

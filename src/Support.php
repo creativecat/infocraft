@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.18.0
+ * @version 0.19.0
  */
 declare(strict_types=1);
 
@@ -30,7 +30,7 @@ function url(string $path = ''): string
  * Zeitstempel erhalten (rsync --times, Docker-Layer): Browser laden dann garantiert
  * die neue Datei statt einer alten Version aus dem Cache.
  */
-const ASSET_VERSION = '74';
+const ASSET_VERSION = '75';
 
 /**
  * Programmversion nach Semantic Versioning (#145): MAJOR.MINOR.PATCH.
@@ -38,7 +38,7 @@ const ASSET_VERSION = '74';
  * bleibt fuer inkompatible Umstiege reserviert. Die Entwicklungshistorie
  * steht in CHANGELOG.md im Wurzelverzeichnis.
  */
-const APP_VERSION = '0.18.0';
+const APP_VERSION = '0.19.0';
 
 /**
  * Projekt-Icon (#169): passendes Emoji je Projektart. Frueher stand die
@@ -130,6 +130,21 @@ function ic_legal_field(string $key, string $value): string
     }
     $defaults = ic_legal_defaults();
     return $defaults[$key] ?? '';
+}
+
+/**
+ * Demo-Modus der Instanz (#180): Die Seiteneinstellung 'demo_mode'
+ * ('1'/'0') aus den Admin-Einstellungen gewinnt, ohne Eintrag gilt der
+ * Wert aus der Konfigurationsdatei (app.demo_mode). Alle Stellen, die
+ * Demo-Konten und Schnellanmeldung steuern, fragen diesen Helfer.
+ */
+function ic_demo_mode(): bool
+{
+    $setting = \Infocraft\Models\SiteSetting::get('demo_mode', '');
+    if ($setting !== '') {
+        return $setting === '1';
+    }
+    return (bool) \Infocraft\Config::get('app.demo_mode');
 }
 
 /**

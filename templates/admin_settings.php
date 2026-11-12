@@ -5,9 +5,9 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.18.0
+ * @version 0.19.0
  */
-/** @var string $defaultLanguage @var array<string, string> $legal @var \Infocraft\Models\User $user */
+/** @var string $defaultLanguage @var array<string, string> $legal @var bool $demo @var string $announcement @var \Infocraft\Models\User $user */
 ?>
 <section class="hero">
     <div class="hero-emoji">⚙️</div>
@@ -33,12 +33,35 @@
 </section>
 
 <section class="panel">
+    <h3>🧪 Demo-Modus</h3>
+    <p class="muted">Der Demo-Modus zeigt auf der Login-Seite fertige Demo-Konten mit Schnellanmeldung (Passwort demo1234). Für den Produktivbetrieb ausschalten: Die Anmeldung läuft dann nur mit echten Konten oder über Microsoft-SSO. Ohne Auswahl hier gilt der Wert aus der Konfigurationsdatei.</p>
+    <form method="post" action="<?= url('admin/einstellungen/demo') ?>" class="form">
+        <?= csrf_field() ?>
+        <div class="two-col">
+            <label class="inline"><input type="checkbox" name="demo_mode" value="1"<?= $demo ? ' checked' : '' ?>> Demo-Modus aktiv</label>
+            <div class="btn-row" style="align-items:flex-end;"><button class="btn btn-primary" type="submit" title="Speichern">💾 Demo-Modus speichern</button></div>
+        </div>
+    </form>
+</section>
+
+<section class="panel">
+    <h3>📣 Ankündigung auf der Startseite</h3>
+    <p class="muted">Eine kurze Nachricht für alle Konten, prominent über den Arbeitsbereichen der Startseite. Leer lassen oder leeren, um die Ankündigung zu entfernen.</p>
+    <form method="post" action="<?= url('admin/einstellungen/ankuendigung') ?>" class="form">
+        <?= csrf_field() ?>
+        <label class="field"><span>Text der Ankündigung</span>
+            <textarea name="announcement" rows="3" placeholder="z. B. Morgen fällt der Unterricht der 9. Klassen aus."><?= e($announcement) ?></textarea></label>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾 Ankündigung speichern</button></div>
+    </form>
+</section>
+
+<section class="panel">
     <h3>🏛️ Impressum und Datenschutz</h3>
-    <p class="muted">Angaben für die öffentlichen Seiten Impressum und Datenschutz. Was hier hinterlegt ist, erscheint im Fuß der Plattform als Link. Die Mustervorlage (#172) füllt die Textfelder vor: Wer nichts Eigenes speichert, übernimmt den Vorgabetext; ein eigenes Feld ersetzt ihn dauerhaft.</p>
+    <p class="muted">Angaben für die öffentlichen Seiten Impressum und Datenschutz. Was hier hinterlegt ist, erscheint im Fuß der Plattform als Link. Die Mustervorlage füllt die Textfelder vor: Wer nichts Eigenes speichert, übernimmt den Vorgabetext; ein eigenes Feld ersetzt ihn dauerhaft.</p>
     <form method="post" action="<?= url('admin/einstellungen/rechtliches') ?>" class="form">
         <?= csrf_field() ?>
         <fieldset class="field legal-kind">
-            <legend>Betreiber-Art (#167)</legend>
+            <legend>Betreiber-Art</legend>
             <label class="inline"><input type="radio" name="legal_kind" value="school"<?= ($legal['kind'] ?? 'school') !== 'private' ? ' checked' : '' ?>> Schule / Institution</label>
             <label class="inline"><input type="radio" name="legal_kind" value="private"<?= ($legal['kind'] ?? '') === 'private' ? ' checked' : '' ?>> Privatperson</label>
             <p class="muted">Bei „Privatperson“ entfällt „Vertreten durch“, das Impressum nennt die Person selbst als Anbieterin oder Anbieter.</p>

@@ -74,8 +74,8 @@ $navView = $user !== null ? \Infocraft\Models\UserPref::navView($user->id) : 'fu
             <a href="<?= url('unterricht/klassen') ?>" class="nav-item<?= $active === 'unterricht' ? ' active' : '' ?>" title="Meine Klassen"><span class="nav-icon">🏫</span><span class="nav-label">Meine Klassen</span></a>
             <a href="<?= url('aufgaben') ?>" class="nav-item<?= $active === 'tasks' ? ' active' : '' ?>" title="Aufgabenpool"><span class="nav-icon">📝</span><span class="nav-label">Aufgabenpool</span></a>
             <a href="<?= url('admin/users') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="Nutzer"><span class="nav-icon">👥</span><span class="nav-label">Nutzer</span></a>
-            <a href="<?= url('admin/import') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="CSV-Import"><span class="nav-icon">📥</span><span class="nav-label">CSV-Import</span></a>
             <?php if ($isAdmin): ?>
+            <a href="<?= url('admin/import') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="CSV-Import (nur Administration)"><span class="nav-icon">📥</span><span class="nav-label">CSV-Import</span></a>
             <a href="<?= url('admin/einstellungen') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="Admin-Einstellungen (Standard-Programmiersprache)"><span class="nav-icon">⚙️</span><span class="nav-label">Einstellungen</span></a>
             <?php endif; ?>
             <?php endif; ?>

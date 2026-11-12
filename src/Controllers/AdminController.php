@@ -5,14 +5,13 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.18.0
+ * @version 0.19.0
  */
 declare(strict_types=1);
 
 namespace Infocraft\Controllers;
 
 use Infocraft\Auth;
-use Infocraft\Config;
 use Infocraft\CsvImporter;
 use Infocraft\Models\SchoolClass;
 use Infocraft\Models\SiteSetting;
@@ -22,24 +21,82 @@ final class AdminController
 {
     public static function users(): void
     {
-        if (!Auth::isTeacher()) {
+        $user = Auth::user();
+        if ($user === null || !Auth::isTeacher()) {
             flash('error', 'Dieser Bereich ist nur für Lehrkräfte zugänglich.');
             redirect('/');
+        }
+        /* #179: Lehrkräfte sehen nur die Konten ihrer eigenen Klassen,
+         * Admins alle. Die eigene Person bleibt sichtbar. */
+        $isAdmin = Auth::isAdmin();
+        $classes = $isAdmin ? SchoolClass::all() : SchoolClass::forTeacher($user->id, false);
+        $entries = User::allWithClass(500);
+        $stats = ['student' => 0, 'teacher' => 0, 'admin' => 0];
+        if (!$isAdmin) {
+            $classIds = [];
+            foreach ($classes as $class) {
+                $classIds[] = (int) $class->id;
+            }
+            $filtered = [];
+            foreach ($entries as $entry) {
+                $inOwnClass = $entry['user']->classId !== null && in_array((int) $entry['user']->classId, $classIds, true);
+                if ($inOwnClass || $entry['user']->id === $user->id) {
+                    $filtered[] = $entry;
+                }
+            }
+            $entries = $filtered;
+        }
+        foreach ($entries as $entry) {
+            $role = $entry['user']->role;
+            if (isset($stats[$role])) {
+                $stats[$role]++;
+            }
         }
         render('admin_users', [
             'title' => 'Nutzerverwaltung',
             'active' => 'admin',
-            'users' => User::allWithClass(),
-            'stats' => User::countByRole(),
-            'classes' => SchoolClass::all(),
-            'demo' => (bool) Config::get('app.demo_mode'),
+            'users' => $entries,
+            'stats' => $stats,
+            'classes' => $classes,
+            'isAdminView' => $isAdmin,
+            'demo' => ic_demo_mode(),
         ]);
+    }
+
+    /**
+     * Nutzerliste als CSV (#183): Export der Konten für die Administration,
+     * Semikolon-getrennt, direkt öffnenbar in Tabellenkalkulationen.
+     */
+    public static function usersCsv(): void
+    {
+        $user = Auth::user();
+        if ($user === null || !Auth::isAdmin()) {
+            flash('error', 'Der Export ist nur für die Administration zugänglich.');
+            redirect('/admin/users');
+        }
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="nutzerliste.csv"');
+        $out = fopen('php://output', 'w');
+        fputcsv($out, ['Vorname', 'Nachname', 'Anmeldename', 'Rolle', 'Klasse'], ';');
+        foreach (User::allWithClass(2000) as $entry) {
+            fputcsv($out, [
+                $entry['user']->firstName,
+                $entry['user']->lastName,
+                $entry['user']->loginName ?? '-',
+                $entry['user']->role,
+                $entry['class'] ?? '-',
+            ], ';');
+        }
+        fclose($out);
+        exit;
     }
 
     public static function importForm(): void
     {
-        if (!Auth::isTeacher()) {
-            flash('error', 'Dieser Bereich ist nur für Lehrkräfte zugänglich.');
+        /* #178: Der CSV-Import ist bewusst eine Admin-Aufgabe (ganze Schule),
+         * Lehrkräfte pflegen ihre Klassen über ihre Klassen-Seiten. */
+        if (!Auth::isAdmin()) {
+            flash('error', 'Der CSV-Import ist nur für die Administration zugänglich.');
             redirect('/');
         }
         render('admin_import', [
@@ -50,8 +107,8 @@ final class AdminController
 
     public static function import(): void
     {
-        if (!Auth::isTeacher()) {
-            flash('error', 'Dieser Bereich ist nur für Lehrkräfte zugänglich.');
+        if (!Auth::isAdmin()) {
+            flash('error', 'Der CSV-Import ist nur für die Administration zugänglich.');
             redirect('/');
         }
         csrf_validate();
@@ -91,6 +148,8 @@ final class AdminController
             'active' => 'admin',
             'defaultLanguage' => SiteSetting::defaultLanguage(),
             'legal' => self::legalValues(),
+            'demo' => ic_demo_mode(),
+            'announcement' => SiteSetting::get('announcement', ''),
             'user' => $user,
         ]);
     }
@@ -106,6 +165,43 @@ final class AdminController
         $language = (string) ($_POST['default_language'] ?? 'java');
         SiteSetting::set('default_language', $language === 'python' ? 'python' : 'java');
         flash('success', 'Einstellungen gespeichert. Die Standard-Programmiersprache ist jetzt ' . ($language === 'python' ? 'Python' : 'Java') . '.');
+        redirect('/admin/einstellungen');
+    }
+
+    /**
+     * Demo-Modus umschalten (#180): Seiteneinstellung 'demo_mode' ('1'/'0'),
+     * uebersteuert den Wert aus der Konfigurationsdatei. Aus schaltet die
+     * Demo-Konten auf der Login-Seite ab.
+     */
+    public static function demoSave(): void
+    {
+        $user = Auth::user();
+        if ($user === null || !Auth::isAdmin()) {
+            flash('error', 'Dieser Bereich ist nur für Admins zugänglich.');
+            redirect('/');
+        }
+        csrf_validate();
+        $on = ($_POST['demo_mode'] ?? '') === '1';
+        SiteSetting::set('demo_mode', $on ? '1' : '0');
+        flash('success', 'Demo-Modus ' . ($on ? 'aktiviert. Die Demo-Konten stehen wieder bereit.' : 'deaktiviert. Die Schnellanmeldung ist aus.'));
+        redirect('/admin/einstellungen');
+    }
+
+    /**
+     * Ankuendigung auf der Startseite (#183): kurzer Hinweis fuer alle
+     * Konten; ein leerer Text loescht die Ankuendigung.
+     */
+    public static function announcementSave(): void
+    {
+        $user = Auth::user();
+        if ($user === null || !Auth::isAdmin()) {
+            flash('error', 'Dieser Bereich ist nur für Admins zugänglich.');
+            redirect('/');
+        }
+        csrf_validate();
+        $text = trim((string) ($_POST['announcement'] ?? ''));
+        SiteSetting::set('announcement', $text);
+        flash('success', $text === '' ? 'Ankündigung entfernt.' : 'Ankündigung gespeichert. Sie erscheint jetzt auf der Startseite.');
         redirect('/admin/einstellungen');
     }
 

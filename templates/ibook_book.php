@@ -15,21 +15,7 @@ $areaIcons = ['lernbereich' => '📖', 'gemeinsam' => '🤝', 'eigen' => '🔒']
 
 <div class="btn-row ibook-topnav">
     <a class="btn btn-ghost" href="<?= url('infobuecher') ?>">← Alle InfoBooks</a>
-    <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation' . ($activeSection !== null ? '?abschnitt=' . (int) $activeSection['id'] : '')) ?>" title="Alle Seiten als Präsentation anzeigen (ohne Kopie)">🎬 Als Präsentation anzeigen</a>
-    <?php if (\Infocraft\Auth::isTeacher()): ?>
-    <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/als-praesentation') ?>" class="inline-form">
-        <?= csrf_field() ?>
-        <?php if ($activeSection !== null): ?><input type="hidden" name="section_id" value="<?= (int) $activeSection['id'] ?>"><?php endif; ?>
-        <label class="ibook-inline-label"><span class="muted">Ab Jgst.</span>
-            <select name="level">
-                <?php foreach (valid_levels() as $i): ?>
-                <option value="<?= $i ?>"<?= $i === 9 ? ' selected' : '' ?>><?= $i ?></option>
-                <?php endforeach; ?>
-            </select>
-        </label>
-        <button class="btn btn-primary" type="submit" title="Erstellt eine echte Präsentation unter Präsentationen: eine Folie je Seite, dort weiterbearbeitbar">🎬 → Präsentation erstellen</button>
-    </form>
-    <?php endif; ?>
+    <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation' . ($activeSection !== null ? '?abschnitt=' . (int) $activeSection['id'] : '')) ?>" title="Alle Seiten als Präsentation anzeigen: Folienwechsel mit Animation und Zeitsteuerung">🎬 Als Präsentation anzeigen</a>
 </div>
 
 <div class="ibook-layout">

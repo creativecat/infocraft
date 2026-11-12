@@ -2,17 +2,20 @@
    Datei: Verwaltung: Konten
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.15.0 */ ?>
+   Version: 0.19.0 */ ?>
 <section class="hero">
     <div class="hero-emoji">👥</div>
     <h1>Nutzerverwaltung</h1>
-    <p>Alle Konten im Überblick. Für Schülerinnen und Schüler kannst du direkt ein neues Einmalpasswort (OTP) erzeugen.</p>
+    <p><?= $isAdminView ? 'Alle Konten im Überblick. Für Schülerinnen und Schüler kannst du direkt ein neues Einmalpasswort (OTP) erzeugen.' : 'Die Konten deiner eigenen Klassen im Überblick. Für Schülerinnen und Schüler kannst du direkt ein neues Einmalpasswort (OTP) erzeugen.' ?></p>
 </section>
 
 <div class="stat-row">
     <div class="stat"><span class="stat-num"><?= (int) ($stats['student'] ?? 0) ?></span>Schülerinnen und Schüler</div>
     <div class="stat"><span class="stat-num"><?= (int) ($stats['teacher'] ?? 0) ?></span>Lehrkräfte</div>
     <div class="stat"><span class="stat-num"><?= (int) ($stats['admin'] ?? 0) ?></span>Administration</div>
+    <?php if (! $isAdminView): ?>
+    <div class="stat"><span class="stat-num"><?= count($users) ?></span>Konten deiner Klassen</div>
+    <?php endif; ?>
 </div>
 
 <div class="notice">
@@ -22,7 +25,8 @@
 
 <section class="panel">
     <div class="panel-head">
-        <h3>📋 Konten</h3>
+        <h3>📋 Konten<?= $isAdminView ? '' : ' deiner Klassen' ?></h3>
+        <?php if ($isAdminView): ?><a class="btn btn-ghost" href="<?= url('admin/users/csv') ?>" title="Konten als CSV-Datei exportieren">⬇️ CSV-Export</a><?php endif; ?>
         <input type="search" id="user-filter" class="input" placeholder="Filtern nach Name, Klasse oder Rolle ...">
     </div>
     <table class="table" id="user-table">

@@ -14,7 +14,6 @@ namespace Infocraft\Controllers;
 use Infocraft\Auth;
 use Infocraft\Models\ClassDiagram;
 use Infocraft\Models\InfoBook;
-use Infocraft\Models\Presentation;
 use Infocraft\Models\Project;
 use Infocraft\Models\ProjectFile;
 use Infocraft\Models\SchoolClass;
@@ -791,90 +790,6 @@ final class InfoBookController
             'slides' => $slides,
             'user' => $user,
         ]);
-    }
-
-    /**
-     * Buch als ECHTE Präsentation uebernehmen: eine Folie je Seite. Text wird
-     * zu Markdown, Medien erscheinen als Hinweiszeile. Danach landschaftlich
-     * im Modul Präsentationen bearbeitbar und praesentierbar.
-     */
-    public static function createPresentation(array $params): void
-    {
-        $user = Auth::user();
-        if ($user === null) {
-            redirect('/login');
-        }
-        if (!Auth::isTeacher()) {
-            flash('error', 'Nur Lehrkräfte können aus einem InfoBook eine Präsentation erstellen.');
-            redirect('/infobuecher');
-        }
-        csrf_validate();
-        $book = InfoBook::find((int) ($params['id'] ?? 0));
-        if ($book === null || !self::canRead($book, $user)) {
-            flash('error', 'Für dieses InfoBook hast du keinen Zugriff.');
-            redirect('/infobuecher');
-        }
-        $sections = InfoBook::sections($book->id);
-        $wanted = (int) ($_POST['section_id'] ?? 0);
-        $level = (int) ($_POST['level'] ?? 6);
-        if ($level < 6 || $level > 13) {
-            $level = 6;
-        }
-        $slides = [];
-        foreach ($sections as $section) {
-            if ($wanted > 0 && (int) $section['id'] !== $wanted) {
-                continue;
-            }
-            foreach (InfoBook::pages((int) $section['id']) as $page) {
-                $body = [];
-                foreach (InfoBook::pageBlocks($page) as $block) {
-                    $type = (string) ($block['type'] ?? 'text');
-                    if ($type === 'text') {
-                        $body[] = (string) ($block['body'] ?? '');
-                    } elseif ($type === 'canvas') {
-                        /* Freie Flaeche (#63/#64): Texte wandern als Markdown auf
-                         * die Folie, alles andere bleibt als Hinweiszeile. */
-                        foreach (($block['items'] ?? []) as $item) {
-                            if (!is_array($item)) {
-                                continue;
-                            }
-                            $kind = (string) ($item['kind'] ?? '');
-                            if ($kind === 'text') {
-                                $body[] = (string) ($item['body'] ?? '');
-                            } elseif ($kind === 'ink') {
-                                $body[] = '✏️ Freihandzeichnung (im InfoBook sichtbar)';
-                            } elseif ($kind === 'embed') {
-                                $url = InfoBook::cleanEmbedUrl((string) ($item['url'] ?? ''));
-                                if ($url !== '') {
-                                    $body[] = '🔗 [' . ((string) ($item['title'] ?? '') !== '' ? (string) ($item['title'] ?? 'Einbettung') : 'Einbettung') . '](' . $url . ')';
-                                }
-                            } elseif ($kind === 'image') {
-                                $body[] = '📎 Bild: *' . (string) ($item['name'] ?? 'Bild') . '* (im InfoBook auf der Freien Fläche)';
-                            } elseif ($kind === 'audio' || $kind === 'video') {
-                                $body[] = '📎 ' . ($kind === 'audio' ? 'Audio' : 'Video') . ': *' . (string) ($item['name'] ?? 'Medium') . '* (im InfoBook abspielbar)';
-                            } elseif ($kind === 'html') {
-                                /* HTML-Baustein (#174): Quelltext bewusst NICHT
-                                 * auf die Folie, nur der Hinweis. */
-                                $body[] = '🌐 HTML-Seite: *Eingabemaske (im InfoBook nutzbar)*';
-                            }
-                        }
-                        if ((int) ($block['ink'] ?? 0) > 0) {
-                            $body[] = '✏️ Freihandzeichnung (im InfoBook über der Fläche sichtbar)';
-                        }
-                    } elseif ($type === 'embed') {
-                        $body[] = '🔗 [' . ((string) ($block['title'] ?? 'Einbettung') !== '' ? (string) ($block['title'] ?? 'Einbettung') : 'Einbettung') . '](' . (string) ($block['url'] ?? '') . ')';
-                    } else {
-                        $label = ['image' => 'Bild', 'audio' => 'Audio', 'video' => 'Video', 'zeichnen' => 'Zeichnung'][$type] ?? 'Medium';
-                        $body[] = '📎 ' . $label . ': *' . (string) ($block['name'] ?? 'Medium') . '* (im InfoBook abspielbar)';
-                    }
-                }
-                $slides[] = ['type' => 'text', 'title' => (string) $page['title'], 'body' => implode("\n\n", $body)];
-            }
-        }
-        $presentation = Presentation::create($user->id, $book->title . ' (aus InfoBook)', $level);
-        $presentation->setSlides($slides);
-        flash('success', 'Präsentation erstellt: eine Folie je InfoBook-Seite. Sie liegt jetzt unter Präsentationen und lässt sich dort weiterbearbeiten.');
-        redirect('/praesentationen/' . $presentation->id);
     }
 
     // ---------------- Rechte ----------------
