@@ -718,7 +718,7 @@ final class InfoBook
      */
     public static function importContent(int $bookId, array $data): array
     {
-        $stats = ['sections' => 0, 'pages' => 0];
+        $stats = ['sections' => 0, 'pages' => 0, 'first_section_id' => 0];
         $sections = is_array($data['sections'] ?? null) ? array_values($data['sections']) : [];
         foreach (array_slice($sections, 0, 20) as $section) {
             if (!is_array($section)) {
@@ -732,6 +732,11 @@ final class InfoBook
             $area = in_array($area, ['lernbereich', 'gemeinsam'], true) ? $area : 'lernbereich';
             $sectionId = self::createSection($bookId, $area, null, mb_substr($title, 0, 160));
             $stats['sections']++;
+            if ($stats['first_section_id'] === 0) {
+                /* #185: Erster importierter Abschnitt, damit der Import
+                 * direkt in dessen Abschnittsansicht zurueckspringt. */
+                $stats['first_section_id'] = $sectionId;
+            }
             $pages = is_array($section['pages'] ?? null) ? array_values($section['pages']) : [];
             foreach (array_slice($pages, 0, 100) as $page) {
                 if (!is_array($page)) {

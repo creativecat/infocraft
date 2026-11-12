@@ -2,34 +2,36 @@
    Datei: InfoBook: Seite
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.20.0 */ ?>
-<?php /* InfoBook: Seite bearbeiten/ansehen (#62). Bloecke: Text, Bild, Audio, Video, Einbettung, Zeichnung (Apple Pencil). */
-?>
-<?php /* #67: Zurueck ganz links, rechts Vorschau/Lesemodus und kleines aufklappbares Verteilen, Autospeichern statt Speichern-Button. */ ?>
-<?php /* #68: Links steht immer die Navigation des InfoBooks (Abschnitte und
- * Seiten), rechts daneben Titelzeile, Editor bzw. Lesemodus. */ ?>
+   Version: 0.21.0 */ ?>
+<?php /* InfoBook: Seite bearbeiten/ansehen (#62). Bloecke: Text, Bild, Audio, Video, Einbettung, Zeichnung (Apple Pencil). */ ?>
+<?php /* #67: Autospeichern statt Speichern-Button, rechts Vorschau/Lesemodus
+ * und kleines aufklappbares Verteilen. */ ?>
+<?php /* #185: Gleiche Kopfzeile und gleiche Navigation wie die Abschnitts-
+ * ansicht: Icon-Knopf fuer die Navigation, Breadcrumb Buch > Abschnitt >
+ * Seite zeigt immer den Standort, das gemeinsame Partial ibook_nav.php
+ * zeichnet die Seitenleiste. */ ?>
 <?php $preview = (bool) ($preview ?? false); ?>
-<?php $navAreas = ['lernbereich' => ['📖', 'Lernbereich'], 'gemeinsam' => ['🤝', 'Zusammenarbeit'], 'eigen' => ['🔒', 'Mein Bereich']]; ?>
-<?php /* #70: Im Lesemodus (?lesen=1) bleibt die linke Navigation im Lesemodus:
- * Seiten-Links haengen das Suffix an, Abschnitts-Links fuehren auf die erste
- * Seite des Abschnitts, wenn der Abschnitt Seiten hat. */ ?>
-<?php $navLesen = $preview ? '?lesen=1' : ''; ?>
-<?php /* #100: Kopfzeile ueber die volle Breite: Inhalt-Knopf (#100) direkt
- * neben dem Zurueck-Button, darunter Seitenleiste neben dem Hauptbereich,
- * damit die Seitenuebersicht direkt neben dem "Freie Flaeche"-Fenster sitzt. */ ?>
 <section class="hero ibook-hero-compact">
     <div class="btn-row ibook-topnav">
-        <?php /* #82/#100: Knopf klappt die Seitenleiste ein und aus, Zustand
-         * bleibt im Browser gespeichert (app.js). Beschriftung "Inhalt". */ ?>
-        <button type="button" class="btn btn-ghost ibook-pagenav-fold" id="ibook-pagenav-fold" aria-expanded="true" title="Seitenübersicht einklappen">Inhalt ◂</button>
-        <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '?abschnitt=' . (int) $section['id']) ?>">← <?= e($book->title) ?></a>
-        <?php /* #83: Titel und Meta rutschen in die Kopfzeile zu den Buttons,
-         * die Seite verliert vertikalen Platz. IDs bleiben (Autospeichern). */ ?>
+        <?php /* #82/#100/#185: Schmaler Icon-Knopf klappt die Seitenleiste
+         * ein und aus, Zustand bleibt im Browser gespeichert (app.js). */ ?>
+        <button type="button" class="ibook-navtoggle" id="ibook-pagenav-fold" aria-expanded="true" aria-label="Inhaltsnavigation ein- und ausklappen" title="Inhaltsnavigation einklappen"></button>
+        <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht aller InfoBooks">← Alle InfoBooks</a>
+        <?php /* #185: Breadcrumb als Standort-Anzeige: Buch startet auf der
+         * zuletzt besuchten Seite, der Abschnitt fuehrt in die Abschnitts-
+         * ansicht, die Seite ist das aktuelle Element (aria-current). */ ?>
         <div class="ibook-topnav-title">
-            <h1>📄 <span id="ibook-page-title"><?= e((string) $page['title']) ?></span></h1>
+            <nav class="ibook-crumbs" aria-label="Position in diesem InfoBook">
+                <a class="ibook-crumb ibook-crumb-book" href="<?= url('infobuecher/' . (int) $book->id) ?>" title="Buch-Start: zuletzt besuchte Seite">📓 <?= e($book->title) ?></a>
+                <span class="ibook-crumb-sep" aria-hidden="true">›</span>
+                <a class="ibook-crumb" href="<?= url('infobuecher/' . (int) $book->id . '?abschnitt=' . (int) $section['id']) ?>" title="Abschnitt mit allen Seiten anzeigen"><?= e($section['title']) ?></a>
+                <span class="ibook-crumb-sep" aria-hidden="true">›</span>
+                <span class="ibook-crumb ibook-crumb-here" aria-current="page">📄 <span id="ibook-page-title"><?= e((string) $page['title']) ?></span></span>
+            </nav>
             <p class="muted" id="ibook-page-meta"><?= e($section['title']) ?> · Letzte Änderung: <?= e((string) ($page['updated_at'] ?? 'gerade eben')) ?></p>
         </div>
         <div class="ibook-topnav-right">
+            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation?abschnitt=' . (int) $section['id']) ?>" title="Alle Seiten dieses Abschnitts als Präsentation anzeigen: Folienwechsel mit Animation und Zeitsteuerung">🎬 Präsentation</a>
             <?php if ($canWrite): ?>
             <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id'] . '?lesen=1') ?>" target="_blank" rel="noopener" title="Seite im Lesemodus in einem neuen Tab öffnen">👀 Vorschau (Lesemodus)</a>
             <?php endif; ?>
@@ -66,83 +68,8 @@
     </div>
 </section>
 <div class="ibook-page-layout">
-<aside class="ibook-pagenav" id="ibook-pagenav" aria-label="Navigation dieses InfoBooks">
-    <?php /* #71: Die Navigation klappt auf und zu: Kopfzeile antippen. Ohne
-     * Javascript nutzbar (details/summary), Standardzustand offen. */ ?>
-    <details class="ibook-pagenav-box" open>
-    <summary class="ibook-pagenav-head" title="Navigation ein- und ausklappen">📓 <?= e($book->title) ?></summary>
-    <?php
-    $navArea = null;
-    foreach ($nav as $navEntry):
-        $navSec = $navEntry['section'];
-        $navAreaKey = (string) $navSec['area'];
-        if ($navAreaKey !== $navArea):
-            $navArea = $navAreaKey;
-            $navIcon = $navAreas[$navAreaKey][0] ?? '📄';
-            $navName = $navAreas[$navAreaKey][1] ?? $navAreaKey;
-    ?>
-    <div class="ibook-pagenav-area"><?= $navIcon ?> <?= e($navName) ?></div>
-    <?php endif; ?>
-    <?php /* #184: Andere Abschnitte stehen nur als Titel-Zeile in der Liste,
-     * aufgeklappt werden allein die Seiten des aktiven Abschnitts. Der
-     * aktive Abschnitt ist ein Label (kein Link auf sich selbst), die
-     * anderen fuehren wie bisher in die Buchansicht bzw. im Lesemodus
-     * auf die erste Seite des Abschnitts (#70). */ ?>
-    <?php $navIsActive = (int) $section['id'] === (int) $navSec['id']; ?>
-    <?php if ($navIsActive): ?>
-    <span class="ibook-pagenav-section ibook-pagenav-section-active" aria-current="true"><?= e($navSec['title']) ?></span>
-    <?php else: ?>
-    <?php $navSecHref = ($preview && !empty($navEntry['pages'])) ? url('infobuecher/' . (int) $book->id . '/seite/' . (int) $navEntry['pages'][0]['id'] . '?lesen=1') : url('infobuecher/' . (int) $book->id . '?abschnitt=' . (int) $navSec['id']); ?>
-    <a class="ibook-pagenav-section" href="<?= $navSecHref ?>" title="Abschnitt im Buch öffnen"><?= e($navSec['title']) ?></a>
-    <?php endif; ?>
-    <?php if ($navIsActive): ?>
-    <?php /* #101/#184: Seiten des aktiven Abschnitts; mit Schreibrecht per
-     * Drag&Drop sortierbar, app.js schickt die neue Reihenfolge an
-     * /seiten-reihenfolge. */ ?>
-    <div class="ibook-pagenav-pages">
-        <?php foreach ($navEntry['pages'] as $navPage): ?>
-        <?php $navDrag = $canWrite ? ' draggable="true" data-page-id="' . (int) $navPage['id'] . '"' : ''; ?>
-        <a class="ibook-pagenav-page<?= (int) $navPage['id'] === (int) $page['id'] ? ' active' : '' ?><?= $canWrite ? ' ibook-pagenav-drag' : '' ?>" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $navPage['id'] . $navLesen) ?>"<?= $navDrag ?> title="Seite öffnen"><?= e((string) $navPage['title']) ?></a>
-        <?php endforeach; ?>
-        <?php /* #72/#184: Genau ein "Neue Seite"-Formular, unter den Seiten
-         * des aktiven Abschnitts statt einem je Abschnitt. Nach dem Anlegen
-         * oeffnet sich die neue Seite. */ ?>
-        <?php if ($canWrite): ?>
-        <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/seite') ?>" class="ibook-navnew">
-            <?= csrf_field() ?>
-            <input type="hidden" name="section_id" value="<?= (int) $navSec['id'] ?>">
-            <input type="text" name="title" maxlength="160" placeholder="Neue Seite" aria-label="Neue Seite in diesem Abschnitt anlegen">
-            <button class="btn btn-ghost" type="submit" title="Neue Seite in diesem Abschnitt anlegen (öffnet sich danach direkt)">➕</button>
-        </form>
-        <?php endif; ?>
-    </div>
-    <?php endif; ?>
-    <?php endforeach; ?>
-    <?php /* #72/#184: Neuer Abschnitt unten aufklappbar statt als
-     * Dauerformular; Lehrkraefte waehlen den Bereich. */ ?>
-    <?php if ($canWrite): ?>
-    <details class="ibook-navnewsec-details">
-        <summary class="btn btn-ghost" title="Abschnitt anlegen">＋ Neuer Abschnitt</summary>
-        <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/abschnitt') ?>" class="form ibook-navnewsec">
-            <?= csrf_field() ?>
-            <label class="field"><span>Neuer Abschnitt</span>
-                <input type="text" name="title" maxlength="160" placeholder="z. B. Schleifen">
-                <?php if (\Infocraft\Auth::isTeacher()): ?>
-                <select name="area">
-                    <option value="lernbereich">📖 Lernbereich</option>
-                    <option value="gemeinsam">🤝 Zusammenarbeit</option>
-                    <option value="eigen">🔒 Mein Bereich</option>
-                </select>
-                <?php else: ?>
-                <input type="hidden" name="area" value="gemeinsam">
-                <?php endif; ?>
-            </label>
-            <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Abschnitt anlegen">➕ Abschnitt anlegen</button></div>
-        </form>
-    </details>
-    <?php endif; ?>
-    </details>
-</aside>
+<?php /* #185: Gemeinsame Navigation mit der Abschnittsansicht. */ ?>
+<?php include __DIR__ . '/ibook_nav.php'; ?>
 <div class="ibook-pagemain">
 
 

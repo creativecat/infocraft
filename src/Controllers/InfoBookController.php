@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.20.0
+ * @version 0.21.0
  */
 declare(strict_types=1);
 
@@ -181,6 +181,14 @@ final class InfoBookController
             redirect('/infobuecher');
         }
         $sections = self::navSectionsFor($book, $user);
+        /* #185: Navigation wie auf der Seitenseite aufbauen: Abschnitte mit
+         * ihren Seiten, damit die Abschnittsansicht dieselbe Seitenleiste
+         * zeichnet (Partial ibook_nav.php) und Abschnitte mit Seiten ohne
+         * Umweg auf ihre erste Seite verlinken. */
+        $nav = [];
+        foreach ($sections as $navSection) {
+            $nav[] = ['section' => $navSection, 'pages' => InfoBook::pages((int) $navSection['id']), 'canWrite' => self::canWriteSection($navSection, $user)];
+        }
         $activeId = (int) ($_GET['abschnitt'] ?? 0);
         $active = null;
         foreach ($sections as $section) {
@@ -191,18 +199,46 @@ final class InfoBookController
         if ($active === null && count($sections) > 0) {
             $active = $sections[0];
         }
-        $pages = $active !== null ? InfoBook::pages((int) $active['id']) : [];
-        $myClasses = Auth::isTeacher() ? SchoolClass::forTeacher($user->id, $user->role === 'admin') : [];
+        if ($activeId === 0) {
+            /* #185: Ohne gewaehlten Abschnitt startet das Buch direkt auf
+             * einer Seite: zuerst die zuletzt besuchte (Cookie je Buch und
+             * Browser), sonst die erste Seite des ersten Abschnitts mit
+             * Seiten. Die Abschnittsansicht bleibt ueber die Breadcrumb und
+             * den abschnitt-Parameter erreichbar. */
+            $lastPageId = self::lastVisitedPage($book, $sections);
+            if ($lastPageId !== null) {
+                redirect('/infobuecher/' . $book->id . '/seite/' . $lastPageId);
+            }
+            foreach ($nav as $navEntry) {
+                if (!empty($navEntry['pages'])) {
+                    redirect('/infobuecher/' . $book->id . '/seite/' . (int) $navEntry['pages'][0]['id']);
+                }
+            }
+        }
+        /* Seiten des aktiven Abschnitts aus der Navigation (statt doppelt
+         * zu laden) und den Renderer fuettern. */
+        $pages = [];
+        if ($active !== null) {
+            foreach ($nav as $navEntry) {
+                if ((int) $navEntry['section']['id'] === (int) $active['id']) {
+                    $pages = $navEntry['pages'];
+                }
+            }
+        }
         render('ibook_book', [
             'title' => $book->title,
             'active' => 'module-infobuecher',
             'book' => $book,
+            'nav' => $nav,
+            'activeSectionId' => (int) ($active['id'] ?? 0),
+            'activePageId' => 0,
             'sections' => $sections,
             'activeSection' => $active,
             'pages' => $pages,
-            'myClasses' => $myClasses,
             'canManage' => self::canManage($book, $user),
             'canWriteSection' => $active !== null && self::canWriteSection($active, $user),
+            'canWrite' => $active !== null && self::canWriteSection($active, $user),
+            'navNewSection' => self::canManage($book, $user) || self::bookWritableBy($book, $user),
             'user' => $user,
         ]);
     }
@@ -367,6 +403,15 @@ final class InfoBookController
         if ($preview) {
             $canWrite = false;
         }
+        /* #185: Letzte besuchte Seite je Buch im Browser merken: Der
+         * Buch-Start (und der Buch-Link in der Breadcrumb) oeffnet genau
+         * diese Seite wieder. Cookie nur mit Lesezugriff auf genau diese
+         * Seite, sie ist oben geprueft. */
+        setcookie('ic_ibook_last[' . (int) $book->id . ']', (string) (int) $page['id'], [
+            'expires' => time() + 15552000,
+            'path' => '/',
+            'samesite' => 'Lax',
+        ]);
         /* Linke Navigation (#68): Abschnitte und Seiten des Buchs, damit man
          * auf der Seitenseite zwischen den Seiten springen kann. #184: Fuer
          * Schuelerinnen und Schueler nur die sichtbaren Abschnitte (der eigene
@@ -451,6 +496,9 @@ final class InfoBookController
             'preview' => $preview,
             'nav' => $nav,
             'navPages' => $navPages,
+            'activeSectionId' => (int) $section['id'],
+            'activePageId' => (int) $page['id'],
+            'navNewSection' => false,
             'diagrams' => $diagrams,
             'dbTemplates' => $dbTemplates,
             'codeClasses' => $codeClasses,
@@ -721,7 +769,10 @@ final class InfoBookController
             redirect('/infobuecher/' . $book->id);
         }
         flash('success', 'Import fertig: ' . (int) $stats['sections'] . ' Abschnitt(e) und ' . (int) $stats['pages'] . ' Seite(n) angelegt.');
-        redirect('/infobuecher/' . $book->id);
+        /* #185: Nach dem Import direkt in die Abschnittsansicht des ersten
+         * importierten Abschnitts: Dort stehen die neuen Seiten als Karten
+         * und das Import-Formular bleibt in Reichweite. */
+        redirect('/infobuecher/' . $book->id . '?abschnitt=' . (int) ($stats['first_section_id'] ?? 0));
     }
 
     /** Seiten als Präsentation ANZEIGEN (live, ohne Kopie): Titel + Bloecke als Folien. */
@@ -882,6 +933,35 @@ final class InfoBookController
         return array_values(array_filter($sections, static function (array $s) use ($user): bool {
             return self::visibleSectionForStudent($s, $user);
         }));
+    }
+
+    /**
+     * #185: Zuletzt besuchte Seite dieses Buchs aus dem Browser-Cookie
+     * (ic_ibook_last[buchId], gesetzt beim Oeffnen einer Seite). Nur wenn
+     * es die Seite noch gibt und ihr Abschnitt fuer dieses Konto sichtbar
+     * ist, wird sie als Startseite zurueckgegeben.
+     * @param list<array<string, mixed>> $sections
+     */
+    private static function lastVisitedPage(InfoBook $book, array $sections): ?int
+    {
+        $raw = $_COOKIE['ic_ibook_last'] ?? null;
+        if (!is_array($raw)) {
+            return null;
+        }
+        $pageId = (int) ($raw[(string) $book->id] ?? 0);
+        if ($pageId <= 0) {
+            return null;
+        }
+        $page = InfoBook::findPage($pageId);
+        if ($page === null) {
+            return null;
+        }
+        foreach ($sections as $section) {
+            if ((int) $section['id'] === (int) $page['section_id']) {
+                return $pageId;
+            }
+        }
+        return null;
     }
 
     /** Prozentwert (0 bis 100) ohne unnötige Nullen, fuer die Positionen der Freien Flaeche. */

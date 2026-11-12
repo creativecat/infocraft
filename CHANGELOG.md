@@ -5,6 +5,17 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.21.0] - 2026-11-13
+
+### InfoBook: Buch- und Seitenansicht vereinheitlicht (#185)
+
+- Die Buchansicht ist zur Abschnittsansicht geworden und sieht aus wie die Seitenansicht: gleiche Kopfzeile, gleiche Seitennavigation (gemeinsames Template-Partial), im Hauptbereich die Seiten des Abschnitts als Karten. Ein großer Hero-Kopf und eine zweite, anders aufgebaute Navigation entfallen.
+- Breadcrumb in der Kopfzeile beider Ansichten: 📓 Buch › Abschnitt › Seite zeigt immer, wo man im InfoBook steht. Der Buch-Eintrag startet die zuletzt besuchte Seite, der Abschnitt führt in die Abschnittsansicht.
+- Der Buch-Link startet direkt auf einer Seite: zuerst die zuletzt besuchte Seite (je Buch im Browser gemerkt), sonst die erste Seite des ersten Abschnitts mit Seiten. Die Abschnittsansicht bleibt über die Breadcrumb und den Abschnitts-Parameter erreichbar.
+- Der Ein-/Ausklapp-Knopf der Navigation ist ein schmaler Icon-Knopf (☰/▸) im Stil der Kopfzeilen-Buttons, in beiden Ansichten gleich.
+- Abschnitte in der Navigation führen direkt auf ihre erste Seite (vorher: Umweg über die Buchansicht); Abschnitte ohne Seiten führen in die Abschnittsansicht mit dem Neue-Seite-Formular.
+- Verwaltungsaufgaben (Buchpaket importieren, Abschnitt löschen) sitzen im Hauptbereich der Abschnittsansicht statt in der Navigation; nach einem Import landet man direkt in der neuen Abschnittsansicht.
+
 ## [0.20.0] - 2026-11-12
 
 ### InfoBook: Seitennavigation (#184)
