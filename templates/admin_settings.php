@@ -37,10 +37,16 @@
     <p class="muted">Angaben für die öffentlichen Seiten Impressum und Datenschutz. Was hier hinterlegt ist, erscheint im Fuß der Plattform als Link. Leere Felder bleiben einfach aus.</p>
     <form method="post" action="<?= url('admin/einstellungen/rechtliches') ?>" class="form">
         <?= csrf_field() ?>
+        <fieldset class="field legal-kind">
+            <legend>Betreiber-Art (#167)</legend>
+            <label class="inline"><input type="radio" name="legal_kind" value="school"<?= ($legal['kind'] ?? 'school') !== 'private' ? ' checked' : '' ?>> Schule / Institution</label>
+            <label class="inline"><input type="radio" name="legal_kind" value="private"<?= ($legal['kind'] ?? '') === 'private' ? ' checked' : '' ?>> Privatperson</label>
+            <p class="muted">Bei „Privatperson“ entfällt „Vertreten durch“, das Impressum nennt die Person selbst als Anbieterin oder Anbieter.</p>
+        </fieldset>
         <div class="two-col">
-            <label class="field"><span>Name des Anbieters (Schule/Institution)</span>
+            <label class="field"><span>Name des Anbieters (Schule/Institution oder Name der Privatperson)</span>
                 <input type="text" name="legal_operator" value="<?= e($legal['operator']) ?>" placeholder="z. B. Gymnasium Musterstadt"></label>
-            <label class="field"><span>Vertreten durch</span>
+            <label class="field"><span>Vertreten durch (nur bei Schule/Institution)</span>
                 <input type="text" name="legal_person" value="<?= e($legal['person']) ?>" placeholder="z. B. Oberschulrätin"></label>
         </div>
         <div class="three-col">

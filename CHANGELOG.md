@@ -5,6 +5,33 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.17.0] - 2026-11-12
+
+### Rechtliches (#167)
+
+- Impressum und Datenschutz unterscheiden den Betreiber: Schule oder Privatperson. In den Admin-Einstellungen wählt die Betreiberin die Art, die Seite zeigt nur die passenden Felder.
+
+### InfoBook (#94, #95, #96)
+
+- Die Eingabe rückt nach einer öffnenden Klammer automatisch ein.
+- Code-Vervollständigung mit Klassenfeldern und Methoden: nach einem Punkt erscheinen die Vorschläge, aufzuklappende Klassenkarten entfallen.
+- Mermaid-Diagramme lassen sich in Code-Zellen per Vervollständigung einfügen.
+
+### Block-Werkstatt (#132, #137, #138, #139, #142, #143)
+
+- Klone: Blöcke „Wenn ich als Klon gestartet werde“, „erzeuge Klon von“, „lösche diesen Klon“; Obergrenze 300 Klone.
+- Listen: anlegen, Eintrag anhängen, löschen, setzen, lesen, Länge, enthält; nur im Expertenmodus.
+- Eigene Bausteine: Kategorie „Meine Blöcke“ mit Baustein-Definition und Aufruf, Rücksprung bei Verschachtelung bis 64 Ebenen.
+- Bühnen-Hintergründe: vier Vorlagen (Papier, Sonnenaufgang, Meer, Wiese) über die Bühnen-Skripte.
+- Vorlagen-Knopf mit vier Beispielprogrammen (Begrüßung, Labyrinth, Verfolger-Spiel, Rhythmus).
+- Vollbild-Knopf für die Bühne mit Start, Stopp und Beenden, Beenden auch mit Esc.
+
+### Neue Werkstätten (#164, #165, #166)
+
+- Kellerautomat: Zustände und Übergänge zeichnen, Wörter mit Keller prüfen, Akzeptanz am Endzustand oder bei leerem Keller, Wortlisten, Bild-Export.
+- Turingmaschine: Regeln im Format „lesen / schreiben, Richtung“, Band mit Lese-/Schreibkopf, Schrittliste, Determinismus-Warnung.
+- Schaltwerk: Schalter, Lampen, UND, ODER, NICHT, NAND, XOR, Taktgeber und D-Flipflop, Drähte ziehen, Auswertung, laufender Takt.
+
 ## [0.16.0] - 2026-11-12
 
 ### Rechtliches (#160)

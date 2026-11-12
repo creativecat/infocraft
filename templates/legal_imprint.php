@@ -8,6 +8,7 @@
  * @version 0.16.0
  */
 /** @var array<string, string> $legal */
+$isPrivate = ($legal['kind'] ?? 'school') === 'private';
 $hasOwner = $legal['operator'] !== '' || $legal['email'] !== '' || $legal['person'] !== '';
 ?>
 <section class="hero">
@@ -24,7 +25,9 @@ $hasOwner = $legal['operator'] !== '' || $legal['email'] !== '' || $legal['perso
 <?php else: ?>
 <section class="panel">
     <?php if ($legal['operator'] !== ''): ?><h3><?= e($legal['operator']) ?></h3><?php endif; ?>
-    <?php if ($legal['person'] !== ''): ?><p><strong>Vertreten durch:</strong> <?= e($legal['person']) ?></p><?php endif; ?>
+    <?php if ($isPrivate && $legal['operator'] === '' && $legal['person'] !== ''): ?><h3><?= e($legal['person']) ?></h3><?php endif; ?>
+    <?php if (!$isPrivate && $legal['person'] !== ''): ?><p><strong>Vertreten durch:</strong> <?= e($legal['person']) ?></p><?php endif; ?>
+    <?php if ($isPrivate): ?><p class="muted">Angebot einer Privatperson.</p><?php endif; ?>
     <?php if ($legal['street'] !== '' || $legal['zip'] !== '' || $legal['city'] !== ''): ?>
     <p><?= e(trim($legal['street'] . ($legal['street'] !== '' && ($legal['zip'] !== '' || $legal['city'] !== '') ? ', ' : '') . $legal['zip'] . ($legal['zip'] !== '' && $legal['city'] !== '' ? ' ' : '') . $legal['city'])) ?></p>
     <?php endif; ?>

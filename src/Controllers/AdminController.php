@@ -116,7 +116,7 @@ final class AdminController
      */
     private static function legalKeys(): array
     {
-        return ['operator', 'person', 'street', 'zip', 'city', 'phone', 'email', 'extra', 'dsb', 'hosting', 'data', 'text'];
+        return ['kind', 'operator', 'person', 'street', 'zip', 'city', 'phone', 'email', 'extra', 'dsb', 'hosting', 'data', 'text'];
     }
 
     /** @return array<string, string> */
@@ -139,6 +139,11 @@ final class AdminController
         csrf_validate();
         foreach (self::legalKeys() as $key) {
             $value = isset($_POST['legal_' . $key]) ? trim((string) $_POST['legal_' . $key]) : '';
+            /* Betreiber-Art (#167): Schule/Institution oder Privatperson.
+             * Ungueltige Werte fallen auf den Schulfall zurueck. */
+            if ($key === 'kind') {
+                $value = $value === 'private' ? 'private' : 'school';
+            }
             SiteSetting::set('legal_' . $key, $value);
         }
         flash('success', 'Impressum und Datenschutz gespeichert. Die Seiten im Fuß der Plattform zeigen die Angaben sofort.');
