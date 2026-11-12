@@ -5,6 +5,31 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.18.0] - 2026-11-12
+
+### Übersicht (#168, #169, #170)
+
+- Drei eigene Kästen oben: Neues Projekt, Neuer Ordner, Verteilen; darunter die Liste der Ordner und Projekte in voller Breite.
+- Beim Anlegen fragt InfoCraft nur noch eine „Projektart" ab (Java-Programm, Python-Programm, Assembler, HTML-Seite, Blöcke, Automat, Kellerautomat, Turingmaschine, Schaltwerk); die doppelte Abfrage aus Sprache und Art entfällt.
+- Jede Projektart zeigt ihr eigenes Symbol in der Liste, auch die neuen Werkstätten (🤖, 🥞, 🧾, 🔌) statt des Python-Symbols.
+
+### Rechtliches (#171)
+
+- Impressum und Datenschutzerklärung starten mit einer gut recherchierten Mustervorlage: Informationen nach § 18 Abs. 2 MStV (Schule oder Privatperson), Katalog der verarbeiteten Daten, Rechtsgrundlagen der DSGVO (Art. 6), Speicherdauer, Betroffenenrechte (Art. 15 bis 21) und Beschwerderecht beim BayLDA. Eigene Angaben überschreiben die Musterfelder.
+
+### Automaten-Werkstätten (#172)
+
+- Kellerautomat und Turingmaschine erhalten dieselben Funktionen wie der endliche Automat: Rückgängig, Wiederherstellen, Vergrößern, Verkleinern, Einpassen, Bild-Export und Abspielen. Ein gemeinsamer Werkzeugkasten stellt die Bausteine dafür bereit.
+- Beide Werkstätten zeigen die formale Beschreibung als Tupel mit Übergangstabelle; die Turingmaschine prüft zusätzlich mehrere Wörter auf einmal und warnt bei Nichtdeterminismus.
+
+### InfoBook (#173)
+
+- Neuer Baustein „HTML-Seite": eigene Eingabemasken laufen in einer abgeschotteten Vorschau (Sandbox ohne Zugriff auf die Plattform) und lassen sich mit Java- und SQL-Fenstern auf einer Seite kombinieren, etwa Maske, Verarbeitung und Datenausgabe.
+
+### Fehlerbehebung (#174)
+
+- Endlicher Automat: Die Zustandskreise erschienen im Browser als schwarze Fläche. Ursache waren Farbwerte, die die Werkstatt aus nicht vorhandenen Stilvariablen las; SVG füllte die Kreise daraufhin schwarz. Die Werkstatt fällt jetzt auf ihre Standardfarben zurück und das Stylesheet definiert die Farbwerte zentral.
+
 ## [0.17.0] - 2026-11-12
 
 ### Rechtliches (#167)
