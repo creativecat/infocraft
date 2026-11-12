@@ -2,7 +2,7 @@
    Datei: InfoBook: Seite
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.22.0 */ ?>
+   Version: 0.23.0 */ ?>
 <?php /* InfoBook: Seite bearbeiten/ansehen (#62). Bloecke: Text, Bild, Audio, Video, Einbettung, Zeichnung (Apple Pencil). */ ?>
 <?php /* #67: Autospeichern statt Speichern-Button, rechts Vorschau/Lesemodus
  * und kleines aufklappbares Verteilen. */ ?>
@@ -12,7 +12,9 @@
  * zeichnet die Seitenleiste.
  * #189: Die Vorschau (Lesemodus) oeffnet im gleichen Fenster, der Knopf
  * "Bearbeiten" fuehrt zurueck. #188: Der Praesentations-Link besagt,
- * dass Elemente einzeln per Klick erscheinen. */ ?>
+ * dass Elemente einzeln per Klick erscheinen.
+ * #193: Die Ueberschrift "Freie Flaeche" ist entfallen, die Flaeche
+ * selbst spricht durch ihre Werkzeuge. */ ?>
 <?php $preview = (bool) ($preview ?? false); ?>
 <section class="hero ibook-hero-compact">
     <div class="btn-row ibook-topnav">
@@ -34,7 +36,7 @@
             <p class="muted" id="ibook-page-meta"><?= e($section['title']) ?> · Letzte Änderung: <?= e((string) ($page['updated_at'] ?? 'gerade eben')) ?></p>
         </div>
         <div class="ibook-topnav-right">
-            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation?abschnitt=' . (int) $section['id']) ?>" title="Alle Seiten dieses Abschnitts als Präsentation anzeigen: Elemente erscheinen einzeln per Klick">🎬 Präsentation</a>
+            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation?abschnitt=' . (int) $section['id']) ?>" title="Alle Seiten dieses Abschnitts als Präsentation anzeigen: Schritte erscheinen einzeln per Klick, Reihenfolge im Editor festlegen">🎬 Präsentation</a>
             <?php if ($canWrite): ?>
             <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id'] . '?lesen=1') ?>" title="Seite im Lesemodus anzeigen">👀 Vorschau (Lesemodus)</a>
             <?php endif; ?>
@@ -95,7 +97,6 @@
         <h3>Titel</h3>
         <label class="field"><input type="text" name="title" id="ibook-title" maxlength="160" value="<?= e((string) $page['title']) ?>" placeholder="Titel der Seite"></label>
 
-        <h3>Freie Fläche</h3>
         <div id="ibook-editor" data-book-id="<?= (int) $book->id ?>" data-page-id="<?= (int) $page['id'] ?>" data-nav="<?= e(json_encode($navPages, JSON_UNESCAPED_UNICODE)) ?>" data-diagrams="<?= e(json_encode($diagrams, JSON_UNESCAPED_UNICODE)) ?>" data-dbtemplates="<?= e(json_encode($dbTemplates, JSON_UNESCAPED_UNICODE)) ?>" data-codeclasses="<?= e(json_encode($codeClasses, JSON_UNESCAPED_UNICODE)) ?>" data-blocks="<?= e(json_encode($blocks, JSON_UNESCAPED_UNICODE)) ?>"></div>
         <p class="muted ibook-hint">Alles auf einer Fläche: Bilder per Drag &amp; Drop ablegen, mit dem Stift überall zeichnen (auch über Bildern), Textfelder frei platzieren. Oben in der Symbolleiste wechselst du zwischen Auswahl, Stift und Radierer und fügst Text, Bild, Audio, Video und Einbettungen hinzu. Änderungen speichern sich automatisch, ein Speichern-Button ist nicht nötig.</p>
 

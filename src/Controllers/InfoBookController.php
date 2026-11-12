@@ -808,7 +808,7 @@ final class InfoBookController
         foreach ($slides as $i => $slide) {
             $html = '';
             foreach ($slide['blocks'] as $block) {
-                $html .= self::renderBlock($block, (int) $book->id, $linkPages);
+                $html .= self::renderBlock($block, (int) $book->id, $linkPages, 'present');
             }
             $slides[$i]['html'] = $html;
         }
@@ -982,9 +982,13 @@ final class InfoBookController
      * (als SVG), Einbettungen und Audio/Video absolut positioniert in Prozent,
      * dadurch skaliert die Flaeche in jeder Breite mit (Lesen und
      * Präsentationsmodus ohne JavaScript).
+     * #191: Elemente mit Praesentations-Schritt tragen data-step (gleiche
+     * Nummern erscheinen zusammen) und data-anim (Einblend-Animation), im
+     * Präsentationsmodus ($context 'present') passt die Flaeche zusaetzlich
+     * per max-width in den Bildschirm, statt zu ueberlaufen.
      * @param array<string, mixed> $block
      */
-    private static function renderCanvas(array $block, int $bookId = 0, array $linkPages = []): string
+    private static function renderCanvas(array $block, int $bookId = 0, array $linkPages = [], string $context = 'read'): string
     {
         $w = max(50.0, (float) ($block['w'] ?? 1600));
         $h = max(50.0, (float) ($block['h'] ?? 1000));
@@ -1002,6 +1006,12 @@ final class InfoBookController
             if ($bookId > 0 && isset($item['link']) && isset($linkPages[(int) $item['link']])) {
                 $itemLink = (int) $item['link'];
             }
+            /* Praesentations-Schritt (#191): data-step steuert die Reihen-
+             * folge der Einblendung (gleiche Nummern zusammen), data-anim
+             * die Animation. Ohne Schritt bleibt das Element sofort da. */
+            $itemStep = (int) ($item['step'] ?? 0);
+            $stepAttr = $itemStep > 0 ? ' data-step="' . $itemStep . '"' : '';
+            $animAttr = in_array((string) ($item['anim'] ?? ''), ['fade', 'up', 'left', 'zoom'], true) ? ' data-anim="' . e((string) $item['anim']) . '"' : '';
             $pre = $itemLink > 0 ? '<a class="icv-item-link" href="' . e(url('infobuecher/' . $bookId . '/seite/' . $itemLink)) . '">' : '';
             $lenBefore = strlen($inner);
             if ($kind === 'text') {
@@ -1016,7 +1026,7 @@ final class InfoBookController
                 } elseif ($bg !== '') {
                     $bgStyle = ';background:' . $bg;
                 }
-                $inner .= $pre . '<div class="icv-item icv-text" style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%' . $bgStyle
+                $inner .= $pre . '<div class="icv-item icv-text"' . $stepAttr . $animAttr . ' style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%' . $bgStyle
                     . ';text-align:' . ($align !== '' ? $align : 'left') . '">'
                     . PresentationController::renderSlideBody((string) ($item['body'] ?? '')) . '</div>';
             } elseif ($kind === 'image') {
@@ -1028,7 +1038,7 @@ final class InfoBookController
                 $height = self::pct($item['h'] ?? 120, $h);
                 $alt = (string) ($item['alt'] ?? '');
                 $name = (string) ($item['name'] ?? '');
-                $inner .= $pre . '<div class="icv-item icv-image" style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%;height:' . $height . '%">'
+                $inner .= $pre . '<div class="icv-item icv-image"' . $stepAttr . $animAttr . ' style="left:' . $left . '%;top:' . $top . '%;width:' . $width . '%;height:' . $height . '%">'
                     . '<img src="' . e(url('/infobuecher/medium/' . $mediaId)) . '" alt="' . e($alt !== '' ? $alt : ($name !== '' ? $name : 'Bild')) . '"></div>';
             } elseif ($kind === 'ink') {
                 /* Stift-Strich als SVG-Pfad (#64): Punkte sind relativ zum
@@ -1043,7 +1053,7 @@ final class InfoBookController
                 for ($i = 0; $i + 1 < count($points); $i += 2) {
                     $d .= ($i === 0 ? 'M ' : 'L ') . self::svgNum($points[$i]) . ' ' . self::svgNum($points[$i + 1]) . ' ';
                 }
-                $inner .= $pre . '<div class="icv-item icv-stroke" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($iw, $w) . '%;height:' . self::pct($ih, $h) . '%">'
+                $inner .= $pre . '<div class="icv-item icv-stroke"' . $stepAttr . $animAttr . ' style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($iw, $w) . '%;height:' . self::pct($ih, $h) . '%">'
                     . '<svg class="icv-ink-svg" viewBox="0 0 ' . self::svgNum($iw) . ' ' . self::svgNum($ih) . '" preserveAspectRatio="none" aria-hidden="true">'
                     . '<path d="' . $d . '" fill="none" stroke="' . e((string) ($item['c'] ?? '#1f2937')) . '" stroke-width="' . self::svgNum($item['sw'] ?? 4)
                     . '" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
@@ -1053,21 +1063,21 @@ final class InfoBookController
                     continue;
                 }
                 $title = (string) ($item['title'] ?? '');
-                $inner .= $pre . '<div class="icv-item icv-embed" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%">'
+                $inner .= $pre . '<div class="icv-item icv-embed"' . $stepAttr . $animAttr . ' style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%">'
                     . '<div class="embed-frame"><iframe src="' . e($url) . '" title="' . e($title !== '' ? $title : 'Eingebetteter Inhalt') . '" loading="lazy" allowfullscreen referrerpolicy="no-referrer"></iframe></div></div>';
             } elseif ($kind === 'audio') {
                 $mediaId = (int) ($item['media'] ?? 0);
                 if ($mediaId <= 0) {
                     continue;
                 }
-                $inner .= $pre . '<div class="icv-item icv-audio" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 360, $w) . '%">'
+                $inner .= $pre . '<div class="icv-item icv-audio"' . $stepAttr . $animAttr . ' style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 360, $w) . '%">'
                     . '<audio controls preload="metadata" src="' . e(url('/infobuecher/medium/' . $mediaId)) . '"></audio></div>';
             } elseif ($kind === 'video') {
                 $mediaId = (int) ($item['media'] ?? 0);
                 if ($mediaId <= 0) {
                     continue;
                 }
-                $inner .= $pre . '<div class="icv-item icv-video" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%;height:' . self::pct($item['h'] ?? 270, $h) . '%">'
+                $inner .= $pre . '<div class="icv-item icv-video"' . $stepAttr . $animAttr . ' style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%;height:' . self::pct($item['h'] ?? 270, $h) . '%">'
                     . '<video controls preload="metadata" src="' . e(url('/infobuecher/medium/' . $mediaId)) . '"></video></div>';
             } elseif ($kind === 'code') {
                 /* Code-Fenster mit Konsole (#75/#81): Der Quelltext wird unveraendert
@@ -1100,7 +1110,7 @@ final class InfoBookController
                     }
                     $clsChips .= '</div>';
                 }
-                $inner .= $pre . '<div class="icv-item icv-code" data-lang="' . e($codeLang) . '" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 520, $w) . '%">'
+                $inner .= $pre . '<div class="icv-item icv-code" data-lang="' . e($codeLang) . '"' . $stepAttr . $animAttr . ' style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 520, $w) . '%">'
                     . '<div class="icv-code-head"><span class="icv-code-langtag">' . e($codeLangLabel) . '</span></div>'
                     . $clsChips
                     /* Code editierbar im Lesemodus (#92): wie beim geteilten
@@ -1115,7 +1125,7 @@ final class InfoBookController
                  * clientseitig (IC_DB_RUN in app.js), der Server bleibt raus. */
                 $seed = (string) ($item['dbseed'] ?? '');
                 $query = (string) ($item['dbq'] ?? '');
-                $inner .= $pre . '<div class="icv-item icv-db" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 420, $w) . '%">'
+                $inner .= $pre . '<div class="icv-item icv-db"' . $stepAttr . $animAttr . ' style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 420, $w) . '%">'
                     . '<div class="icv-db-head">🗄️ Datenbank-Schema</div>'
                     . '<pre class="icv-db-schema">' . e(self::dbSchemaText($seed)) . '</pre>'
                     . '<textarea class="icv-db-in mono" rows="2" spellcheck="false">' . e($query) . '</textarea>'
@@ -1130,7 +1140,7 @@ final class InfoBookController
                  * schotteten iframe (Sandbox ohne same-origin, app.js),
                  * der weder Cookies noch die Plattform erreichen kann. */
                 $src = (string) ($item['html'] ?? '');
-                $inner .= $pre . '<div class="icv-item icv-html" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 440, $w) . '%">'
+                $inner .= $pre . '<div class="icv-item icv-html"' . $stepAttr . $animAttr . ' style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 440, $w) . '%">'
                     . '<div class="icv-html-head">🌐 HTML-Seite (Eingabemaske)</div>'
                     . '<div class="icv-html-frame" aria-label="HTML-Seite"></div>'
                     . '<pre class="icv-html-src" hidden>' . e($src) . '</pre></div>';
@@ -1144,13 +1154,13 @@ final class InfoBookController
                      * bearbeitbar, um live zu präsentieren; app.js zeichnet
                      * das Diagramm bei jeder Aenderung neu. Gespeichert wird
                      * nur in der Bearbeitung. */
-                    $inner .= $pre . '<div class="icv-item icv-diagram icv-diagram-split-ro" data-src="' . e($src) . '" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%">'
+                    $inner .= $pre . '<div class="icv-item icv-diagram icv-diagram-split-ro" data-src="' . e($src) . '"' . $stepAttr . $animAttr . ' style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%">'
                         . '<div class="icv-diagram-split"><textarea class="mono icv-diagram-code" spellcheck="false" aria-label="Mermaid-Quelltext">' . e($src) . '</textarea>'
                         . '<div class="icv-diagram-split-bar" title="Ziehen: Fenstergröße anpassen"></div>'
                         . '<div class="icv-diagram-prev" aria-live="polite"></div></div>'
                     . '</div>';
                 } else {
-                    $inner .= $pre . '<div class="icv-item icv-diagram icv-diagram-ro" data-src="' . e($src) . '" style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%">'
+                    $inner .= $pre . '<div class="icv-item icv-diagram icv-diagram-ro" data-src="' . e($src) . '"' . $stepAttr . $animAttr . ' style="left:' . $left . '%;top:' . $top . '%;width:' . self::pct($item['w'] ?? 480, $w) . '%">'
                         . '<div class="icv-diagram-prev" aria-live="polite"></div></div>';
                 }
             }
@@ -1167,7 +1177,14 @@ final class InfoBookController
         if ($inner === '') {
             $inner = '<div class="icv-empty muted">Noch keine Inhalte auf dieser Fläche.</div>';
         }
-        return '<div class="icv-stage icv-readonly" style="aspect-ratio:' . $w . '/' . $h . '">' . $inner . '</div>';
+        /* #191: Im Präsentationsmodus begrenzt die Hoehe die Flaeche: Die
+         * Breite folgt aus dem Verhaeltnis, die Folie laeuft dann weder aus
+         * dem Bildschirm noch wird sie abgeschnitten. */
+        $fitStyle = '';
+        if ($context === 'present') {
+            $fitStyle = ';max-width:min(100%, calc(66vh * ' . rtrim(rtrim(number_format($w / max(1.0, $h), 4, '.', ''), '0'), '.') . '))';
+        }
+        return '<div class="icv-stage icv-readonly" style="aspect-ratio:' . $w . '/' . $h . $fitStyle . '">' . $inner . '</div>';
     }
 
     /** Zahl fuer SVG-Attribute: kompakt, ohne exponentiale Schreibweise. */
@@ -1204,14 +1221,14 @@ final class InfoBookController
 
     /** Einen Block als HTML rendern (fuer Seitenansicht und Präsentationsmodus).
      * $bookId/$linkPages (#73): erlaubte Link-Ziele, nur sie werden verlinkt. @param array<string, mixed> $block */
-    public static function renderBlock(array $block, int $bookId = 0, array $linkPages = []): string
+    public static function renderBlock(array $block, int $bookId = 0, array $linkPages = [], string $context = 'read'): string
     {
         $type = (string) ($block['type'] ?? 'text');
         if ($type === 'text') {
             return '<div class="iblock-text">' . PresentationController::renderSlideBody((string) ($block['body'] ?? '')) . '</div>';
         }
         if ($type === 'canvas') {
-            return self::renderCanvas($block, $bookId, $linkPages);
+            return self::renderCanvas($block, $bookId, $linkPages, $context);
         }
         if ($type === 'embed') {
             $url = InfoBook::cleanEmbedUrl((string) ($block['url'] ?? ''));

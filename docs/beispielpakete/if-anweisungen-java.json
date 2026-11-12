@@ -1,0 +1,448 @@
+{
+ "sections": [
+  {
+   "title": "if-Anweisungen in Java",
+   "area": "lernbereich",
+   "pages": [
+    {
+     "title": "if-Anweisungen in Java",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "text",
+         "body": ":::titel\n# if-Anweisungen in Java\nKlasse 9 · Dein Programm lernt entscheiden\n:::ende",
+         "x": 60,
+         "y": 70,
+         "w": 880,
+         "bg": "none",
+         "align": "center"
+        },
+        {
+         "kind": "text",
+         "body": ":::hinweis\nHeute lernst du, wie ein Programm selbst entscheidet: **Wenn** eine Bedingung stimmt, **dann** passiert etwas.\n:::ende",
+         "x": 180,
+         "y": 430,
+         "w": 640,
+         "bg": "none",
+         "align": "center",
+         "step": 1,
+         "anim": "up"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Dein Tag steckt voller Entscheidungen",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "text",
+         "body": ":::karten\n- **Wenn** es regnet → Regenschirm mitnehmen\n- **Wenn** die Ampel rot ist → stehen bleiben\n- **Wenn** die Hausaufgaben fertig sind → Spielen ist erlaubt\n- **Wenn** Punkte mindestens 1000 sind → der Rang steigt\n:::ende",
+         "x": 50,
+         "y": 30,
+         "w": 900,
+         "bg": "none",
+         "align": "left"
+        },
+        {
+         "kind": "text",
+         "body": ":::merksatz\nProgramme treffen genau solche Entscheidungen: erst die Bedingung prüfen, dann handeln.\n:::ende",
+         "x": 140,
+         "y": 430,
+         "w": 720,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "up"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Die einfachste if-Anweisung",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "text",
+         "body": "### Syntax der if-Anweisung",
+         "x": 40,
+         "y": 20,
+         "w": 500,
+         "bg": "none",
+         "align": "left"
+        },
+        {
+         "kind": "code",
+         "code": "if (punkte >= 1000) {\n    System.out.println(\"Legende!\");\n}",
+         "lang": "java",
+         "x": 40,
+         "y": 80,
+         "w": 500,
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::merksatz\n`if (Bedingung) { Anweisungen }` – der Block läuft nur, wenn die Bedingung **wahr** ist.\n:::ende",
+         "x": 40,
+         "y": 300,
+         "w": 500,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "left"
+        },
+        {
+         "kind": "text",
+         "body": ":::hinweis\nDie runden Klammern um die Bedingung gehören immer dazu.\n:::ende",
+         "x": 620,
+         "y": 80,
+         "w": 340,
+         "bg": "none",
+         "align": "left",
+         "step": 3,
+         "anim": "up"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Das Struktogramm macht die Entscheidung sichtbar",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "text",
+         "body": "### So liest man das Struktogramm\n- Oben steht die **Bedingung** im Dreieck\n- Links darunter der **wahr**-Zweig mit der Anweisung\n- Rechts der **falsch**-Zweig, hier bleibt er leer\n",
+         "x": 40,
+         "y": 20,
+         "w": 460,
+         "bg": "none",
+         "align": "left",
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": "```\n        if (punkte >= 1000)\n  ________________________________\n |   wahr      |    falsch       |\n |-------------|-----------------|\n | println(\"Legende!\") |  nichts |\n |________________________________|\n```",
+         "x": 520,
+         "y": 20,
+         "w": 440,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "left"
+        },
+        {
+         "kind": "text",
+         "body": ":::merksatz\nDas Struktogramm zeigt die Entscheidung ohne Pfeile: Bedingung oben, Zweige darunter.\n:::ende",
+         "x": 100,
+         "y": 420,
+         "w": 800,
+         "bg": "none",
+         "align": "left",
+         "step": 3,
+         "anim": "up"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Unsere Beispiel-Klasse: Spielcharakter",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "code",
+         "code": "public class Spielcharakter {\n    // Attribute\n    private String name;\n    private int leben;\n    private int punkte;\n\n    // Konstruktor\n    public Spielcharakter(String nameStart, int lebenStart, int punkteStart) {\n        name = nameStart;\n        leben = lebenStart;\n        punkte = punkteStart;\n    }\n\n    // eigene Methode\n    public void trefferErleiden() {\n        leben = leben - 1;\n        System.out.println(name + \" hat noch \" + leben + \" Leben\");\n    }\n}",
+         "lang": "java",
+         "x": 40,
+         "y": 20,
+         "w": 560,
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::uebung\n**Übung:** Ergänze eine Methode `levelAufsteigen()`: Wenn `punkte` mindestens 1000 sind, soll `Level geschafft!` ausgegeben werden.\n:::ende",
+         "x": 640,
+         "y": 40,
+         "w": 320,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "left"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Welche Bedingungen kannst du stellen?",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "text",
+         "body": ":::vergleich\n**Vergleiche**\n- `==` gleich\n- `!=` ungleich\n- `<` `<=` `>` `>=`\n:::|\n**Logik**\n- `&&` und\n- `||` oder\n- `!` nicht\n:::ende",
+         "x": 40,
+         "y": 20,
+         "w": 920,
+         "bg": "none",
+         "align": "left",
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::merksatz\n`=` ist eine Zuweisung, `==` ist der Vergleich. In einer Bedingung steht immer `==`.\n:::ende",
+         "x": 60,
+         "y": 330,
+         "w": 880,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "zoom"
+        },
+        {
+         "kind": "text",
+         "body": ":::hinweis\nAchtung: Texte vergleicht man mit `text1.equals(text2)` statt mit `==`.\n:::ende",
+         "x": 60,
+         "y": 460,
+         "w": 880,
+         "bg": "none",
+         "align": "left",
+         "step": 3,
+         "anim": "up"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "if – else: Zwei Wege",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "code",
+         "code": "public void trefferErleiden() {\n    leben = leben - 1;\n    if (leben <= 0) {\n        sterben();\n    } else {\n        System.out.println(name + \" wehrt sich!\");\n    }\n}",
+         "lang": "java",
+         "x": 40,
+         "y": 20,
+         "w": 560,
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::merksatz\n**else** läuft genau dann, wenn die Bedingung falsch ist. Einer der beiden Wege läuft immer.\n:::ende",
+         "x": 640,
+         "y": 40,
+         "w": 320,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "left"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "else if: Mehrere Fälle",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "code",
+         "code": "if (punkte >= 1500) {\n    System.out.println(\"Rang: Legende\");\n} else if (punkte >= 700) {\n    System.out.println(\"Rang: Gold\");\n} else if (punkte >= 350) {\n    System.out.println(\"Rang: Silber\");\n} else {\n    System.out.println(\"Rang: Bronze\");\n}",
+         "lang": "java",
+         "x": 40,
+         "y": 20,
+         "w": 560,
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::statistik\n- 1500 Punkte → Legende\n- 700 Punkte → Gold\n- 350 Punkte → Silber\n- 40 Punkte → Bronze\n:::ende",
+         "x": 640,
+         "y": 20,
+         "w": 320,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "left"
+        },
+        {
+         "kind": "text",
+         "body": ":::hinweis\n`else if` prüft von oben nach unten: Der **erste** passende Zweig gewinnt, alles darunter wird übersprungen.\n:::ende",
+         "x": 60,
+         "y": 460,
+         "w": 880,
+         "bg": "none",
+         "align": "left",
+         "step": 3,
+         "anim": "up"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Vier Klassiker-Fehler",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "text",
+         "body": ":::karten\n- **`=` statt `==`** – eine Zuweisung vergleicht nichts\n- **Semikolon-Falle** – `if (...);` führt den Block immer aus\n:::ende",
+         "x": 50,
+         "y": 30,
+         "w": 900,
+         "bg": "none",
+         "align": "left",
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::karten\n- **Texte mit `==`** – immer `equals` benutzen\n- **Vergessene geschweifte Klammer** – der Block gehört zur Bedingung\n:::ende",
+         "x": 50,
+         "y": 330,
+         "w": 900,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "up"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Check dein Können",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "text",
+         "body": ":::uebung\n**Übung:** Schreibe eine Methode `hatGewonnen()` für die Klasse `Spielcharakter`: Sie gibt `true` zurück, wenn `leben` größer als 0 **und** `punkte` mindestens 1000 sind.\n:::ende",
+         "x": 40,
+         "y": 20,
+         "w": 920,
+         "bg": "none",
+         "align": "left"
+        },
+        {
+         "kind": "code",
+         "code": "public boolean hatGewonnen() {\n    return leben > 0 && punkte >= 1000;\n}",
+         "lang": "java",
+         "x": 40,
+         "y": 220,
+         "w": 560,
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::loesung\n**Musterlösung:** `&&` verknüpft beide Bedingungen, `return` gibt das Ergebnis direkt zurück.\n:::ende",
+         "x": 640,
+         "y": 240,
+         "w": 320,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "left"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Das nimmst du mit",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "text",
+         "body": ":::merksatz\n**if** prüft, **else** hält die Alternative bereit, **else if** sortiert mehrere Fälle hintereinander.\n:::ende",
+         "x": 60,
+         "y": 40,
+         "w": 880,
+         "bg": "none",
+         "align": "left",
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::hinweis\nVergleiche mit `==`, verknüpfen mit `&&`, `||`, `!` – und Texte immer mit `equals`.\n:::ende",
+         "x": 60,
+         "y": 230,
+         "w": 880,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "up"
+        },
+        {
+         "kind": "text",
+         "body": ":::zitat\nEntscheidungen machen Programme erst lebendig.\n:::ende",
+         "x": 60,
+         "y": 420,
+         "w": 880,
+         "bg": "none",
+         "align": "left",
+         "step": 3,
+         "anim": "zoom"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

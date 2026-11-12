@@ -1,0 +1,368 @@
+{
+ "sections": [
+  {
+   "title": "Vererbung in Java",
+   "area": "lernbereich",
+   "pages": [
+    {
+     "title": "Vererbung in Java",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "text",
+         "body": ":::titel\n# Vererbung in Java\nWillkommen im Tierheim „Arche Nürnberg“\n:::ende",
+         "x": 60,
+         "y": 70,
+         "w": 880,
+         "bg": "none",
+         "align": "center"
+        },
+        {
+         "kind": "text",
+         "body": ":::hinweis\nHund und Katze haben viel gemeinsam – und genau das heben wir heute in eine gemeinsame Klasse.\n:::ende",
+         "x": 160,
+         "y": 430,
+         "w": 680,
+         "bg": "none",
+         "align": "center",
+         "step": 1,
+         "anim": "up"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Schritt 1: Zwei Klassen modellieren",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "code",
+         "code": "public class Hund {\n    // Attribute\n    private String name;\n    private int alter;\n\n    // Konstruktor\n    public Hund(String nameStart, int alterStart) {\n        name = nameStart;\n        alter = alterStart;\n    }\n\n    // eigene Methode\n    public void bellen() {\n        System.out.println(name + \": Wuff!\");\n    }\n}",
+         "lang": "java",
+         "x": 30,
+         "y": 20,
+         "w": 470,
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "code",
+         "code": "public class Katze {\n    // Attribute\n    private String name;\n    private int alter;\n\n    // Konstruktor\n    public Katze(String nameStart, int alterStart) {\n        name = nameStart;\n        alter = alterStart;\n    }\n\n    // eigene Methode\n    public void miauen() {\n        System.out.println(name + \": Miau!\");\n    }\n}",
+         "lang": "java",
+         "x": 500,
+         "y": 20,
+         "w": 470,
+         "step": 2,
+         "anim": "left"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Schritt 2: Das Entdeckermuster",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "text",
+         "body": ":::hinweis\nSieh dir beide Klassen nebeneinander an: Die **Attribute** `name` und `alter` und der **Konstruktor** sind identisch.\n:::ende",
+         "x": 60,
+         "y": 60,
+         "w": 880,
+         "bg": "none",
+         "align": "left",
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::merksatz\nDoppelter Code ist fehleranfällig: Jede Änderung muss an zwei Stellen passieren – das kostet Zeit und schafft Fehlerquellen.\n:::ende",
+         "x": 60,
+         "y": 260,
+         "w": 880,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "up"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Schritt 3: Die Lösung – eine Superklasse!",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "text",
+         "body": "### Gemeinsames nach oben: das Klassenbild",
+         "x": 40,
+         "y": 20,
+         "w": 920,
+         "bg": "none",
+         "align": "left"
+        },
+        {
+         "kind": "diagram",
+         "src": "classDiagram\nclass Tier {\n    -String name\n    -int alter\n    +fressen()\n}\nclass Hund {\n    +bellen()\n}\nclass Katze {\n    +miauen()\n}\nTier <|-- Hund\nTier <|-- Katze",
+         "x": 150,
+         "y": 60,
+         "w": 700,
+         "step": 1,
+         "anim": "zoom"
+        },
+        {
+         "kind": "text",
+         "body": ":::merksatz\n**Generalisierung:** Alles, was Hund und Katze gemeinsam haben, wandert in die Superklasse `Tier`.\n:::ende",
+         "x": 100,
+         "y": 460,
+         "w": 800,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "up"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Schritt 4: Die Superklasse programmieren",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "code",
+         "code": "public class Tier {\n    // Attribute\n    private String name;\n    private int alter;\n\n    // Konstruktor\n    public Tier(String nameStart, int alterStart) {\n        name = nameStart;\n        alter = alterStart;\n    }\n\n    // eigene Methode\n    public void fressen() {\n        System.out.println(name + \" frisst.\");\n    }\n}",
+         "lang": "java",
+         "x": 40,
+         "y": 20,
+         "w": 560,
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::hinweis\nDie Superklasse bekommt nur das, was **alle** Tiere gemeinsam haben – nichts Spezielles.\n:::ende",
+         "x": 640,
+         "y": 40,
+         "w": 320,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "left"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Die Subklasse: Hund IST EIN Tier",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "code",
+         "code": "public class Hund extends Tier {\n    // Konstruktor\n    public Hund(String nameStart, int alterStart) {\n        super(nameStart, alterStart);\n    }\n\n    // eigene Methode\n    public void bellen() {\n        System.out.println(\"Wuff!\");\n    }\n}",
+         "lang": "java",
+         "x": 40,
+         "y": 20,
+         "w": 560,
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::merksatz\n`extends` macht `Hund` zum Kind von `Tier`. `super(...)` reicht die Werte an den Konstruktor der Superklasse weiter.\n:::ende",
+         "x": 640,
+         "y": 40,
+         "w": 320,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "left"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Der erste Test",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "code",
+         "code": "public class Tierheim {\n    public static void main(String[] args) {\n        Hund bello = new Hund(\"Bello\", 3);\n        Katze mimi = new Katze(\"Mimi\", 2);\n        bello.fressen();\n        bello.bellen();\n        mimi.fressen();\n        mimi.miauen();\n    }\n}",
+         "lang": "java",
+         "x": 40,
+         "y": 20,
+         "w": 560,
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::loesung\n**Ausgabe:** Bello frisst. · Wuff! · Mimi frisst. · Miau!\n\nDie Subklassen nutzen `fressen()` aus der Superklasse ganz ohne eigenen Code.\n:::ende",
+         "x": 640,
+         "y": 40,
+         "w": 320,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "up"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Bonus: Methoden überschreiben",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "code",
+         "code": "public class Hund extends Tier {\n    // Konstruktor\n    public Hund(String nameStart, int alterStart) {\n        super(nameStart, alterStart);\n    }\n\n    // Methode überschreiben\n    @Override\n    public void fressen() {\n        System.out.println(\"Bello schlingt sein Futter.\");\n    }\n}",
+         "lang": "java",
+         "x": 40,
+         "y": 20,
+         "w": 560,
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::merksatz\nMit `@Override` ersetzt die Subklasse die geerbte Methode durch ihre eigene Version.\n:::ende",
+         "x": 640,
+         "y": 40,
+         "w": 320,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "left"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Check dein Können",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "text",
+         "body": ":::uebung\n**Übung:** Schreibe eine Klasse `Katze extends Tier`: Konstruktor mit `super(nameStart, alterStart)`, eine eigene Methode `miauen()` und überschreibe `fressen()` mit `@Override`.\n:::ende",
+         "x": 40,
+         "y": 20,
+         "w": 920,
+         "bg": "none",
+         "align": "left"
+        },
+        {
+         "kind": "code",
+         "code": "public class Katze extends Tier {\n    // Konstruktor\n    public Katze(String nameStart, int alterStart) {\n        super(nameStart, alterStart);\n    }\n\n    // eigene Methode\n    public void miauen() {\n        System.out.println(\"Miau!\");\n    }\n\n    // Methode überschreiben\n    @Override\n    public void fressen() {\n        System.out.println(\"Mimi schlemmt.\");\n    }\n}",
+         "lang": "java",
+         "x": 40,
+         "y": 240,
+         "w": 560,
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::loesung\n**Musterlösung:** `extends` + `super(...)` vererben, `@Override` passt an – mehr braucht eine Subklasse nicht.\n:::ende",
+         "x": 640,
+         "y": 260,
+         "w": 320,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "left"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Du hast es geschafft!",
+     "blocks": [
+      {
+       "type": "canvas",
+       "w": 1000,
+       "h": 625,
+       "items": [
+        {
+         "kind": "text",
+         "body": ":::merksatz\n**Vererbung** mit `extends`: Gemeinsames wohnt in der Superklasse, Besonderheiten in den Subklassen.\n:::ende",
+         "x": 60,
+         "y": 40,
+         "w": 880,
+         "bg": "none",
+         "align": "left",
+         "step": 1,
+         "anim": "fade"
+        },
+        {
+         "kind": "text",
+         "body": ":::hinweis\nDer Merksatz fürs Leben: Hund **ist ein** Tier – genau so liest man eine Vererbung.\n:::ende",
+         "x": 60,
+         "y": 230,
+         "w": 880,
+         "bg": "none",
+         "align": "left",
+         "step": 2,
+         "anim": "up"
+        },
+        {
+         "kind": "text",
+         "body": ":::zitat\nGute Klassen sind wie gute Tierpfleger: Sie kümmern sich nur um das, was wirklich ihres ist.\n:::ende",
+         "x": 60,
+         "y": 420,
+         "w": 880,
+         "bg": "none",
+         "align": "left",
+         "step": 3,
+         "anim": "zoom"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

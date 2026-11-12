@@ -245,6 +245,15 @@ final class InfoBook
             if ($link > 0 && !isset($bookPageIds[$link])) {
                 $link = 0;
             }
+            /* Praesentations-Schritt (#191): Elemente erscheinen in der
+             * Praesentation Schritt fuer Schritt, gleiche Nummern zusammen;
+             * 0 oder fehlend = sofort mit der Folie. anim ist die Art der
+             * Einblend-Animation aus einer festen Liste. */
+            $step = (int) ($item['step'] ?? 0);
+            if ($step < 0 || $step > 99) {
+                $step = $step < 0 ? 0 : 99;
+            }
+            $anim = in_array((string) ($item['anim'] ?? ''), ['fade', 'up', 'left', 'zoom'], true) ? (string) ($item['anim'] ?? '') : '';
             if ($kind === 'text') {
                 $it = [
                     'kind' => 'text',
@@ -259,6 +268,8 @@ final class InfoBook
                     $it['g'] = $grp;
                 }
                 if ($link > 0) { $it['link'] = $link; }
+                if ($step > 0) { $it['step'] = $step; }
+                if ($anim !== '') { $it['anim'] = $anim; }
                 $clean[] = $it;
             } elseif ($kind === 'image') {
                 $media = (int) ($item['media'] ?? 0);
@@ -281,6 +292,8 @@ final class InfoBook
                     $it['g'] = $grp;
                 }
                 if ($link > 0) { $it['link'] = $link; }
+                if ($step > 0) { $it['step'] = $step; }
+                if ($anim !== '') { $it['anim'] = $anim; }
                 $clean[] = $it;
             } elseif ($kind === 'ink') {
                 /* Stift-Strich als echtes Objekt (#64): Punkte relativ zum
@@ -313,6 +326,8 @@ final class InfoBook
                         $it['g'] = $grp;
                     }
                     if ($link > 0) { $it['link'] = $link; }
+                    if ($step > 0) { $it['step'] = $step; }
+                    if ($anim !== '') { $it['anim'] = $anim; }
                     $clean[] = $it;
                 }
             } elseif ($kind === 'embed') {
@@ -332,6 +347,8 @@ final class InfoBook
                     $it['g'] = $grp;
                 }
                 if ($link > 0) { $it['link'] = $link; }
+                if ($step > 0) { $it['step'] = $step; }
+                if ($anim !== '') { $it['anim'] = $anim; }
                 $clean[] = $it;
             } elseif ($kind === 'code') {
                 /* Code-Fenster mit Konsole (#75/#81): Quelltext wird im Editor und
@@ -372,6 +389,8 @@ final class InfoBook
                     $it['g'] = $grp;
                 }
                 if ($link > 0) { $it['link'] = $link; }
+                if ($step > 0) { $it['step'] = $step; }
+                if ($anim !== '') { $it['anim'] = $anim; }
                 $clean[] = $it;
             } elseif ($kind === 'diagram') {
                 /* Diagramm-Element (#77/#79): Mermaid-Code, gerendert wird im
@@ -391,6 +410,8 @@ final class InfoBook
                     $it['g'] = $grp;
                 }
                 if ($link > 0) { $it['link'] = $link; }
+                if ($step > 0) { $it['step'] = $step; }
+                if ($anim !== '') { $it['anim'] = $anim; }
                 $clean[] = $it;
             } elseif ($kind === 'db') {
                 /* Datenbank-Element (#76): Schema/Seed als SQL-Text, Abfrage
@@ -407,6 +428,8 @@ final class InfoBook
                     $it['g'] = $grp;
                 }
                 if ($link > 0) { $it['link'] = $link; }
+                if ($step > 0) { $it['step'] = $step; }
+                if ($anim !== '') { $it['anim'] = $anim; }
                 $clean[] = $it;
             } elseif ($kind === 'audio' || $kind === 'video') {
                 $media = (int) ($item['media'] ?? 0);
@@ -428,6 +451,8 @@ final class InfoBook
                     $it['g'] = $grp;
                 }
                 if ($link > 0) { $it['link'] = $link; }
+                if ($step > 0) { $it['step'] = $step; }
+                if ($anim !== '') { $it['anim'] = $anim; }
                 $clean[] = $it;
             }
         }

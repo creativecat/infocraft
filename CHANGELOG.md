@@ -5,6 +5,15 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.23.0] - 2026-11-13
+
+### InfoBook: Präsentation mit Einblend-Schritten, Beispiel-Buchpakete (#191-#194)
+
+- Die Präsentation bekommt ein echtes Regie-System (#191): Im Bearbeitungsmodus legt der Kontextbereich für jedes Element fest, in welchem **Schritt** es erscheint (0 = sofort mit der Folie, gleiche Nummern erscheinen gemeinsam) und mit welcher Animation es einblendet (weich, von unten, von links oder als Zoom). Ein kleines Badge am ausgewählten Element zeigt die Schrittnummer, die Anzeige „Schritt X / Y" nennt den Fortschritt. Die Folie passt sich dabei in den Bildschirm, statt zu übergroß zu scrollen.
+- Das Ein-/Ausklapp-Icon der InfoBook-Navigation ist kein Hamburger mehr: „«" klappt die Navigation zu, „»" wieder auf (#192). Das Icon der Hauptnavigation darüber bleibt unberührt.
+- Die Überschrift „Freie Fläche" ist aus dem Editor entfernt (#193). Der Hintergrund braucht keine Benennung; ein Klick auf die Fläche wählt weiterhin nichts aus.
+- Zwei importierbare Beispiel-Buchpakete für Informatik 9 liegen unter docs/beispielpakete: „if-Anweisungen in Java" (11 Seiten) und „Vererbung in Java" (10 Seiten), nachgebaut aus den Website-Präsentationen (#194). Beide nutzen die neuen Schritte und Animationen; eine README beschreibt den Import über die InfoBook-Navigation.
+
 ## [0.22.0] - 2026-11-12
 
 ### InfoBook: Navigation, Präsentation und Klassenkarte verfeinert (#186-#190)
