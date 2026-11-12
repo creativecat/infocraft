@@ -12,7 +12,11 @@
  *
  * Node-Tests: module.exports; Browser: window.IC_TM.
  *
- * @version 0.17.0
+ * Undo/Redo, Zoom, PNG-Export und Abspielen kommen aus dem gemeinsamen
+ * Werkzeugkasten amt-tools.js (#173): gleiche Funktionen einmal umgesetzt,
+ * modular in beiden Automaten-Werkstaetten eingesetzt.
+ *
+ * @version 0.18.0
  * @license MIT (InfoCraft)
  */
 (function () {
@@ -24,6 +28,13 @@
     paper: '#ffffff', ink: '#1e293b', accent: '#0f766e', accentSoft: '#ccfbf1',
     hl: '#fde68a', font: 'system-ui, sans-serif'
   };
+
+  /* Gemeinsamer Werkzeugkasten (#173): im Browser vor turing.js geladen,
+   * in den Node-Tests ueber require. Ohne Kasten laeuft die Werkstatt
+   * einfach ohne die zusaetzlichen Knoepfe weiter. */
+  var TOOLS = (typeof window !== 'undefined' && window.IC_AMT_TOOLS)
+    ? window.IC_AMT_TOOLS
+    : ((typeof require === 'function') ? require('./amt-tools.js') : null);
 
   /* ---------- Hilfsfunktionen (DOM-frei) ---------- */
 
@@ -319,6 +330,18 @@
       step: doc.getElementById('tm-step'),
       reset: doc.getElementById('tm-reset'),
       out: doc.getElementById('tm-out'),
+      undo: doc.getElementById('tm-undo'),
+      redo: doc.getElementById('tm-redo'),
+      zoomIn: doc.getElementById('tm-zoom-in'),
+      zoomOut: doc.getElementById('tm-zoom-out'),
+      fit: doc.getElementById('tm-fit'),
+      png: doc.getElementById('tm-png'),
+      play: doc.getElementById('tm-play'),
+      batchIn: doc.getElementById('tm-batch-in'),
+      batchBtn: doc.getElementById('tm-batch-btn'),
+      batchOut: doc.getElementById('tm-batch-out'),
+      tuple: doc.getElementById('tm-tuple'),
+      delta: doc.getElementById('tm-delta'),
       form: doc.getElementById('tm-save-form'),
       json: doc.getElementById('tm-json'),
       saveInfo: doc.getElementById('tm-saveinfo')
@@ -331,6 +354,23 @@
     var saveTimer = null;
     var lastRun = null;
     var runPos = 0;
+    /* Ansicht (Zoom/Einpassen/Schieben) und Historie (Undo/Redo) aus dem
+     * gemeinsamen Werkzeugkasten (#173). */
+    var view = (TOOLS && els.canvas) ? TOOLS.makeView(els.canvas, { x: 0, y: 0, w: 900, h: 560 }) : null;
+    var hist = (TOOLS && els.json) ? TOOLS.makeHistory({
+      snapshot: function () { return JSON.stringify(serializeTM(T)); },
+      restore: function (snap) {
+        T = parseTM(snap);
+        sel = null;
+        stateSeq = T.states.length;
+        render();
+        renderSel();
+        if (els.json) { els.json.value = snap; }
+        pushSave();
+      }
+    }) : null;
+    var player = null;
+    if (hist) { hist.commit(); }
 
     function hint(text) { if (els.hint) { els.hint.textContent = text || ''; } }
 
@@ -340,11 +380,56 @@
         interactive: true, sel: sel,
         pending: pending && pending.kind === 'state' ? pending.id : null
       });
+      renderDesc();
     }
 
-    function autosave() {
-      if (!els.json) { return; }
-      els.json.value = JSON.stringify(serializeTM(T));
+    /* Formale Beschreibung (#173): 7-Tupel der Turingmaschine und die
+     * Delta-Tabelle aus dem aktuellen Bandmodell. */
+    function renderDesc() {
+      if (!els.tuple && !els.delta) { return; }
+      var an = analyseTM(T);
+      var names = [];
+      var i;
+      for (i = 0; i < T.states.length; i++) { names.push(T.states[i].name); }
+      var gamma = [];
+      for (i = 0; i < an.sigma.length; i++) { if (gamma.indexOf(an.sigma[i]) < 0) { gamma.push(an.sigma[i]); } }
+      if (gamma.indexOf(T.blank || BLANK) < 0) { gamma.push(T.blank || BLANK); }
+      var start = '';
+      for (i = 0; i < T.states.length; i++) { if (T.states[i].start) { start = T.states[i].name; break; } }
+      if (els.tuple) {
+        els.tuple.textContent = 'M = (Q, Σ, Γ, δ, q0, _, E) mit'
+          + '  Q = {' + names.join(', ') + '}'
+          + '  Σ = {' + an.sigma.join(', ') + '}'
+          + '  Γ = {' + gamma.join(', ') + '}'
+          + '  q0 = ' + (start || '–')
+          + '  _ = ' + (T.blank || BLANK)
+          + '  E = {' + an.finals.join(', ') + '}'
+          + (an.nd.length ? '  Achtung: nicht deterministisch bei ' + an.nd.join(', ') : '  deterministisch');
+      }
+      if (els.delta) {
+        while (els.delta.firstChild) { els.delta.removeChild(els.delta.firstChild); }
+        if (TOOLS && TOOLS.deltaTable) {
+          var rows = [];
+          for (i = 0; i < T.rules.length; i++) {
+            var r = T.rules[i];
+            var fromName = stateById(T, r.from);
+            var toName = stateById(T, r.to);
+            rows.push([
+              fromName ? fromName.name : r.from,
+              r.read === (T.blank || BLANK) ? '_' : r.read,
+              r.write === (T.blank || BLANK) ? '_' : r.write,
+              r.move,
+              toName ? toName.name : r.to
+            ]);
+          }
+          els.delta.appendChild(TOOLS.deltaTable(doc, ['von', 'liest', 'schreibt', 'geht', 'nach'], rows));
+        }
+      }
+    }
+
+    /* Autospeichern: Jede Modell-Aenderung geht in die Historie (Undo/Redo,
+     * #173) und nach kurzer Ruhe auf den Server. */
+    function pushSave() {
       if (saveTimer) { clearTimeout(saveTimer); }
       saveTimer = setTimeout(function () {
         saveTimer = null;
@@ -360,6 +445,13 @@
             .catch(function () { if (els.saveInfo) { els.saveInfo.textContent = '⚠ Speichern fehlgeschlagen'; els.saveInfo.hidden = false; } });
         }
       }, 900);
+    }
+
+    function autosave() {
+      if (!els.json) { return; }
+      if (hist) { hist.commit(); }
+      els.json.value = JSON.stringify(serializeTM(T));
+      pushSave();
     }
 
     function addState(x, y) {
@@ -475,9 +567,16 @@
     }
 
     if (els.canvas) {
+      /* Schieben der Flaeche im Auswahlmodus (#173). */
+      var panFrom = null;
       els.canvas.addEventListener('pointerdown', function (ev) {
         var hit = hitTarget(ev);
-        if (mode === 'state') { addState(Number(ev.clientX) || null, Number(ev.clientY) || null); hint('Zustand angelegt.'); return; }
+        if (mode === 'state') {
+          var pt = view ? view.toWorld(Number(ev.clientX) || 0, Number(ev.clientY) || 0) : { x: Number(ev.clientX) || null, y: Number(ev.clientY) || null };
+          addState(pt.x, pt.y);
+          hint('Zustand angelegt.');
+          return;
+        }
         if (mode === 'delete') { if (hit) { if (hit.kind === 'state') { delState(hit.id); } else { delRule(hit.id); } } return; }
         if (mode === 'rule') {
           if (hit && hit.kind === 'state') {
@@ -498,6 +597,47 @@
           return;
         }
         if (hit) { sel = { kind: hit.kind, id: hit.id }; renderSel(); render(); }
+        else if (view) { panFrom = { x: Number(ev.clientX) || 0, y: Number(ev.clientY) || 0 }; }
+      });
+      if (view) {
+        els.canvas.addEventListener('pointermove', function (ev) {
+          if (!panFrom) { return; }
+          var rect = els.canvas.getBoundingClientRect ? els.canvas.getBoundingClientRect() : null;
+          var cur = view.cur();
+          var dx = (Number(ev.clientX) - panFrom.x) * (rect && rect.width ? cur.w / rect.width : 1);
+          var dy = (Number(ev.clientY) - panFrom.y) * (rect && rect.height ? cur.h / rect.height : 1);
+          view.panBy(-dx, -dy);
+          panFrom = { x: Number(ev.clientX) || 0, y: Number(ev.clientY) || 0 };
+        });
+        els.canvas.addEventListener('pointerup', function () { panFrom = null; });
+        els.canvas.addEventListener('pointerleave', function () { panFrom = null; });
+      }
+    }
+
+    /* Zoom, Einpassen, Undo/Redo, PNG (#173) aus dem Werkzeugkasten. */
+    if (view) {
+      if (els.zoomIn) { els.zoomIn.addEventListener('click', function () { view.zoom(1.25); }); }
+      if (els.zoomOut) { els.zoomOut.addEventListener('click', function () { view.zoom(0.8); }); }
+      if (els.fit) { els.fit.addEventListener('click', function () { view.fit(bbox(T), 50); }); }
+    }
+    if (hist) {
+      if (els.undo) {
+        els.undo.addEventListener('click', function () {
+          hist.undo();
+          hint('↶ zurück');
+        });
+      }
+      if (els.redo) {
+        els.redo.addEventListener('click', function () {
+          hist.redo();
+          hint('↷ wiederhergestellt');
+        });
+      }
+    }
+    if (TOOLS && els.png) {
+      els.png.addEventListener('click', function () {
+        TOOLS.exportPng(doc, exportSvgString(T), 'turingmaschine.png');
+        hint('Bild wird als PNG geladen.');
       });
     }
 
@@ -529,6 +669,7 @@
     }
 
     function runAll() {
+      stopPlay();
       lastRun = tmRun(T, els.word ? els.word.value : '');
       runPos = 0;
       if (els.out) {
@@ -538,16 +679,76 @@
       return lastRun;
     }
 
+    /* Zustands-ID zum Namen suchen: fuer das Abspielen wird der laufende
+     * Zustand in der Zeichnung hervorgehoben. */
+    function stateIdByName(name) {
+      var i;
+      for (i = 0; i < T.states.length; i++) {
+        if (T.states[i].name === name) { return T.states[i].id; }
+      }
+      return null;
+    }
+
+    /* Abspielen (#173): Die Schrittfolge laeuft mit festem Takt, Band und
+     * Zustand stehen je Schritt im Ausgabefeld, der Zustand ist markiert. */
+    function stopPlay() {
+      if (player) { player.stop(); player = null; }
+    }
+
+    function playWord() {
+      stopPlay();
+      if (!TOOLS || !TOOLS.makePlayer) { return; }
+      lastRun = tmRun(T, els.word ? els.word.value : '');
+      runPos = 0;
+      player = TOOLS.makePlayer({
+        steps: lastRun.steps,
+        show: function (idx, s) {
+          var cells = '';
+          var i;
+          for (i = 0; i < s.cells.length; i++) {
+            cells += s.cells[i].ch + (s.cells[i].head ? '‣' : '') + ' ';
+          }
+          sel = { kind: 'state', id: stateIdByName(s.state) };
+          render();
+          if (els.out) { els.out.textContent = '▶ Schritt ' + idx + '  Zustand: ' + s.state + '\nBand: ' + cells; }
+        },
+        done: function () {
+          if (els.out) {
+            els.out.textContent = (lastRun.accepted ? '✓ akzeptiert' : '✗ ' + lastRun.reason) +
+              '\nSchritte: ' + lastRun.steps.length;
+          }
+          player = null;
+        }
+      });
+      player.play();
+    }
+
+    /* Mehrere Wörter testen (#173): ein Wort pro Zeile, je Zeile ein Ergebnis. */
+    function runBatch() {
+      if (!els.batchOut) { return; }
+      els.batchOut.textContent = '';
+      var words = String(els.batchIn ? els.batchIn.value : '').split(/\n+/).map(function (w) { return w.trim(); }).filter(Boolean);
+      words.forEach(function (w) {
+        var res = tmRun(T, w);
+        var li = doc.createElement('li');
+        li.textContent = w + ': ' + (res.accepted ? '✓' : '✗') + (res.accepted ? '' : ' (' + (res.reason || 'abgelehnt') + ')');
+        els.batchOut.appendChild(li);
+      });
+    }
+
     if (els.run) { els.run.addEventListener('click', runAll); }
+    if (els.play) { els.play.addEventListener('click', playWord); }
+    if (els.batchBtn) { els.batchBtn.addEventListener('click', runBatch); }
     if (els.step) {
       els.step.addEventListener('click', function () {
         if (!lastRun) { runAll(); }
+        stopPlay();
         showStep(runPos);
         runPos += 1;
         if (runPos >= lastRun.steps.length) { runPos = 0; }
       });
     }
-    if (els.reset) { els.reset.addEventListener('click', function () { lastRun = null; runPos = 0; if (els.out) { els.out.textContent = ''; } }); }
+    if (els.reset) { els.reset.addEventListener('click', function () { stopPlay(); lastRun = null; runPos = 0; if (els.out) { els.out.textContent = ''; } }); }
     if (els.form) {
       els.form.addEventListener('submit', function () {
         if (els.json) { els.json.value = JSON.stringify(serializeTM(T)); }
@@ -567,7 +768,17 @@
       render: render,
       serialize: function () { return JSON.stringify(serializeTM(T)); },
       exportSvg: function () { return exportSvgString(T); },
-      setMode: function (m) { mode = m; }
+      setMode: function (m) { mode = m; },
+      /* Werkzeugkasten-Zugriff fuer die Tests (#173) */
+      undo: function () { return hist ? hist.undo() : null; },
+      redo: function () { return hist ? hist.redo() : null; },
+      canUndo: function () { return hist ? hist.canUndo() : false; },
+      fitView: function () { if (view) { view.fit(bbox(T), 50); } },
+      zoomBy: function (f) { if (view) { view.zoom(f); } },
+      viewBox: function () { return view ? view.cur() : null; },
+      exportPng: function () { return TOOLS ? TOOLS.exportPng(doc, exportSvgString(T), 'turingmaschine.png') : false; },
+      playWord: playWord,
+      runBatch: runBatch
     };
   }
 

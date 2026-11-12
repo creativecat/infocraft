@@ -8,7 +8,7 @@
  *
  * Node-Tests: module.exports; Browser: window.IC_AUTOMAT.
  *
- * @version 0.16.0
+ * @version 0.18.0
  * @license MIT (InfoCraft)
  */
 (function () {
@@ -506,11 +506,21 @@
     }
 
     /* --- Ansicht --- */
+    /* Ansicht (#174): Die Farbwerte kommen aus den CSS-Variablen der
+     * Plattform (:root in style.css). Fehlt eine Variable, greift der
+     * Wert aus DEFAULT_PAL. Frueher lief die Suche mit '--paper' auf ein
+     * Objekt ohne Bindestrich-Schluessel und ergab undefined: Der Browser
+     * zeichnete dann alle Zustandskreise solide schwarz, weil SVG bei
+     * ungueltigem fill automatisch schwarz fuellt. Nur die Node-Tests
+     * liefen gruen, weil es dort kein getComputedStyle gibt. */
     function palette() {
       var cs = (typeof getComputedStyle === 'function' && doc.documentElement)
         ? getComputedStyle(doc.documentElement) : null;
       if (!cs || !cs.getPropertyValue) { return DEFAULT_PAL; }
-      var g = function (n) { return (cs.getPropertyValue(n) || '').trim() || DEFAULT_PAL[n]; };
+      var g = function (n) {
+        var k = n.replace(/^--/, '').replace(/-([a-z])/g, function (m, c) { return c.toUpperCase(); });
+        return (cs.getPropertyValue(n) || '').trim() || DEFAULT_PAL[k];
+      };
       return {
         paper: g('--paper'), ink: g('--ink'), muted: g('--muted'), grid: g('--grid'),
         accent: g('--accent'), accentSoft: g('--accent-soft'), hl: g('--hl'),

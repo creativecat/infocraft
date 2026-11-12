@@ -12,7 +12,11 @@
  *
  * Node-Tests: module.exports; Browser: window.IC_PDA.
  *
- * @version 0.17.0
+ * Undo/Redo, Zoom, PNG-Export und Abspielen kommen aus dem gemeinsamen
+ * Werkzeugkasten amt-tools.js (#173): gleiche Funktionen einmal umgesetzt,
+ * modular in beiden Automaten-Werkstaetten eingesetzt.
+ *
+ * @version 0.18.0
  * @license MIT (InfoCraft)
  */
 (function () {
@@ -23,6 +27,13 @@
     paper: '#ffffff', ink: '#1e293b', accent: '#0f766e', accentSoft: '#ccfbf1',
     hl: '#fde68a', hlInk: '#7c2d12', hlLine: '#b45309', font: 'system-ui, sans-serif'
   };
+
+  /* Gemeinsamer Werkzeugkasten (#173): im Browser vor pda.js geladen,
+   * in den Node-Tests ueber require. Ohne Kasten laeuft die Werkstatt
+   * einfach ohne die zusaetzlichen Knoepfe weiter. */
+  var TOOLS = (typeof window !== 'undefined' && window.IC_AMT_TOOLS)
+    ? window.IC_AMT_TOOLS
+    : ((typeof require === 'function') ? require('./amt-tools.js') : null);
 
   /* ---------- Hilfsfunktionen (DOM-frei) ---------- */
 
@@ -354,6 +365,15 @@
       batchIn: doc.getElementById('pda-batch-in'),
       batchBtn: doc.getElementById('pda-batch-btn'),
       batchOut: doc.getElementById('pda-batch-out'),
+      undo: doc.getElementById('pda-undo'),
+      redo: doc.getElementById('pda-redo'),
+      zoomIn: doc.getElementById('pda-zoom-in'),
+      zoomOut: doc.getElementById('pda-zoom-out'),
+      fit: doc.getElementById('pda-fit'),
+      png: doc.getElementById('pda-png'),
+      play: doc.getElementById('pda-play'),
+      tuple: doc.getElementById('pda-tuple'),
+      delta: doc.getElementById('pda-delta'),
       form: doc.getElementById('pda-save-form'),
       json: doc.getElementById('pda-json'),
       saveInfo: doc.getElementById('pda-saveinfo')
@@ -364,6 +384,23 @@
     var pending = null;
     var stateSeq = P.states.length;
     var saveTimer = null;
+    /* Ansicht (Zoom/Einpassen/Schieben) und Historie (Undo/Redo) aus dem
+     * gemeinsamen Werkzeugkasten (#173). */
+    var view = (TOOLS && els.canvas) ? TOOLS.makeView(els.canvas, { x: 0, y: 0, w: 900, h: 560 }) : null;
+    var hist = (TOOLS && els.json) ? TOOLS.makeHistory({
+      snapshot: function () { return JSON.stringify(serializePDA(currentPDA())); },
+      restore: function (snap) {
+        P = parsePDA(snap);
+        sel = null;
+        stateSeq = P.states.length;
+        render();
+        renderSel();
+        if (els.json) { els.json.value = snap; }
+        pushSave();
+      }
+    }) : null;
+    var player = null;
+    if (hist) { hist.commit(); }
 
     function hint(text) { if (els.hint) { els.hint.textContent = text || ''; } }
 
@@ -372,11 +409,62 @@
       els.canvas.innerHTML = defsMarkup(DEFAULT_PAL) + sceneMarkup(P, {
         interactive: true, sel: sel, pending: pending && pending.kind === 'state' ? pending.id : null
       });
+      renderDesc();
     }
 
-    function autosave() {
-      if (!els.json) { return; }
-      els.json.value = JSON.stringify(serializePDA(P));
+    /* Formale Beschreibung (#173): 7-Tupel und Uebergangstabelle aus dem
+     * aktuellen Automaten, ohne eigene Eingabefelder. */
+    function renderDesc() {
+      if (!els.tuple && !els.delta) { return; }
+      var an = analysePDA(P);
+      var names = [];
+      var i;
+      for (i = 0; i < P.states.length; i++) { names.push(P.states[i].name); }
+      var gamma = [P.stack0 || 'Z'];
+      var pushChars = [];
+      for (i = 0; i < P.transitions.length; i++) {
+        var pushes = String(P.transitions[i].push || '');
+        for (var j = 0; j < pushes.length; j++) { pushChars.push(pushes[j]); }
+      }
+      for (i = 0; i < pushChars.length; i++) {
+        if (pushChars[i] !== '' && gamma.indexOf(pushChars[i]) < 0) { gamma.push(pushChars[i]); }
+      }
+      var start = '';
+      for (i = 0; i < P.states.length; i++) { if (P.states[i].start) { start = P.states[i].name; break; } }
+      if (els.tuple) {
+        els.tuple.textContent = 'P = (Q, Σ, Γ, Δ, q0, Z0, E) mit'
+          + '  Q = {' + names.join(', ') + '}'
+          + '  Σ = {' + an.sigma.join(', ') + '}'
+          + '  Γ = {' + gamma.join(', ') + '}'
+          + '  q0 = ' + (start || '–')
+          + '  Z0 = ' + (P.stack0 || 'Z')
+          + '  E = {' + an.finals.join(', ') + '}'
+          + (an.acceptMode === 'stack' ? '  Akzeptanz: leerer Keller' : '  Akzeptanz: Endzustand');
+      }
+      if (els.delta) {
+        while (els.delta.firstChild) { els.delta.removeChild(els.delta.firstChild); }
+        if (TOOLS && TOOLS.deltaTable) {
+          var rows = [];
+          for (i = 0; i < P.transitions.length; i++) {
+            var tr = P.transitions[i];
+            var fromName = stateById(P, tr.from);
+            var toName = stateById(P, tr.to);
+            rows.push([
+              fromName ? fromName.name : tr.from,
+              eps(tr.read),
+              eps(tr.pop),
+              eps(tr.push),
+              toName ? toName.name : tr.to
+            ]);
+          }
+          els.delta.appendChild(TOOLS.deltaTable(doc, ['von', 'liest', 'Keller', 'legt ab', 'nach'], rows));
+        }
+      }
+    }
+
+    /* Autospeichern: Jede Modell-Aenderung geht in die Historie (Undo/Redo,
+     * #173) und nach kurzer Ruhe auf den Server. */
+    function pushSave() {
       if (saveTimer) { clearTimeout(saveTimer); }
       saveTimer = setTimeout(function () {
         saveTimer = null;
@@ -392,6 +480,13 @@
             .catch(function () { if (els.saveInfo) { els.saveInfo.textContent = '⚠ Speichern fehlgeschlagen'; els.saveInfo.hidden = false; } });
         }
       }, 900);
+    }
+
+    function autosave() {
+      if (!els.json) { return; }
+      if (hist) { hist.commit(); }
+      els.json.value = JSON.stringify(serializePDA(currentPDA()));
+      pushSave();
     }
 
     function addState(x, y) {
@@ -509,10 +604,14 @@
     }
 
     if (els.canvas) {
+      /* Schieben der Flaeche im Auswahlmodus (#173): Leere Stelle anfassen
+       * und ziehen; beim Loslassen ist nichts ausgewaehlt. */
+      var panFrom = null;
       els.canvas.addEventListener('pointerdown', function (ev) {
         var hit = hitTarget(ev);
         if (mode === 'state') {
-          addState(Number(ev.clientX) || null, Number(ev.clientY) || null);
+          var pt = view ? view.toWorld(Number(ev.clientX) || 0, Number(ev.clientY) || 0) : { x: Number(ev.clientX) || null, y: Number(ev.clientY) || null };
+          addState(pt.x, pt.y);
           hint('Zustand angelegt. Klicke es an, um Start oder Ende zu setzen.');
           return;
         }
@@ -539,6 +638,47 @@
           return;
         }
         if (hit) { sel = { kind: hit.kind, id: hit.id }; renderSel(); render(); }
+        else if (view) { panFrom = { x: Number(ev.clientX) || 0, y: Number(ev.clientY) || 0 }; }
+      });
+      if (view) {
+        els.canvas.addEventListener('pointermove', function (ev) {
+          if (!panFrom) { return; }
+          var rect = els.canvas.getBoundingClientRect ? els.canvas.getBoundingClientRect() : null;
+          var cur = view.cur();
+          var dx = (Number(ev.clientX) - panFrom.x) * (rect && rect.width ? cur.w / rect.width : 1);
+          var dy = (Number(ev.clientY) - panFrom.y) * (rect && rect.height ? cur.h / rect.height : 1);
+          view.panBy(-dx, -dy);
+          panFrom = { x: Number(ev.clientX) || 0, y: Number(ev.clientY) || 0 };
+        });
+        els.canvas.addEventListener('pointerup', function () { panFrom = null; });
+        els.canvas.addEventListener('pointerleave', function () { panFrom = null; });
+      }
+    }
+
+    /* Zoom, Einpassen, Undo/Redo, PNG (#173) aus dem Werkzeugkasten. */
+    if (view) {
+      if (els.zoomIn) { els.zoomIn.addEventListener('click', function () { view.zoom(1.25); }); }
+      if (els.zoomOut) { els.zoomOut.addEventListener('click', function () { view.zoom(0.8); }); }
+      if (els.fit) { els.fit.addEventListener('click', function () { view.fit(bbox(P), 50); }); }
+    }
+    if (hist) {
+      if (els.undo) {
+        els.undo.addEventListener('click', function () {
+          hist.undo();
+          hint('↶ zurück');
+        });
+      }
+      if (els.redo) {
+        els.redo.addEventListener('click', function () {
+          hist.redo();
+          hint('↷ wiederhergestellt');
+        });
+      }
+    }
+    if (TOOLS && els.png) {
+      els.png.addEventListener('click', function () {
+        TOOLS.exportPng(doc, exportSvgString(currentPDA()), 'kellerautomat.png');
+        hint('Bild wird als PNG geladen.');
       });
     }
 
@@ -586,8 +726,46 @@
       return res;
     }
 
-    if (els.run) { els.run.addEventListener('click', function () { runWord(els.word ? els.word.value : '', els.out); }); }
-    if (els.reset) { els.reset.addEventListener('click', function () { if (els.out) { els.out.textContent = ''; } }); }
+    /* Zustands-ID zum Namen suchen: fuer das Abspielen wird der laufende
+     * Zustand in der Zeichnung hervorgehoben. */
+    function stateIdByName(name) {
+      var i;
+      for (i = 0; i < P.states.length; i++) {
+        if (P.states[i].name === name) { return P.states[i].id; }
+      }
+      return null;
+    }
+
+    /* Abspielen (#173): Die Schrittfolge laeuft mit festem Takt durch,
+     * der jeweilige Zustand ist in der Zeichnung markiert. */
+    function stopPlay() {
+      if (player) { player.stop(); player = null; }
+    }
+
+    function playWord() {
+      stopPlay();
+      if (!TOOLS || !TOOLS.makePlayer) { return; }
+      var res = pdaRun(currentPDA(), els.word ? els.word.value : '');
+      var lines = [];
+      player = TOOLS.makePlayer({
+        steps: res.steps,
+        show: function (idx, s) {
+          sel = { kind: 'state', id: stateIdByName(s.state) };
+          render();
+          lines.push((idx === 0 ? 'Start' : 'Schritt ' + idx) + ': ' + s.state + (s.read ? ' (liest ' + s.read + ')' : '') + ' Keller: ' + (s.stack === '—' ? 'leer' : s.stack.split('').join(' ')));
+          if (els.out) { els.out.textContent = lines.join('\n'); }
+        },
+        done: function () {
+          if (els.out) { els.out.textContent = (res.accepted ? '✓ akzeptiert' : '✗ ' + (res.reason || 'abgelehnt')) + '\n' + lines.join('\n'); }
+          player = null;
+        }
+      });
+      player.play();
+    }
+
+    if (els.run) { els.run.addEventListener('click', function () { stopPlay(); sel = null; runWord(els.word ? els.word.value : '', els.out); render(); }); }
+    if (els.play) { els.play.addEventListener('click', playWord); }
+    if (els.reset) { els.reset.addEventListener('click', function () { stopPlay(); if (els.out) { els.out.textContent = ''; } }); }
     if (els.batchBtn) {
       els.batchBtn.addEventListener('click', function () {
         if (!els.batchOut) { return; }
@@ -631,7 +809,16 @@
       render: render,
       serialize: function () { return JSON.stringify(serializePDA(currentPDA())); },
       exportSvg: function () { return exportSvgString(currentPDA()); },
-      setMode: function (m) { mode = m; }
+      setMode: function (m) { mode = m; },
+      /* Werkzeugkasten-Zugriff fuer die Tests (#173) */
+      undo: function () { return hist ? hist.undo() : null; },
+      redo: function () { return hist ? hist.redo() : null; },
+      canUndo: function () { return hist ? hist.canUndo() : false; },
+      fitView: function () { if (view) { view.fit(bbox(P), 50); } },
+      zoomBy: function (f) { if (view) { view.zoom(f); } },
+      viewBox: function () { return view ? view.cur() : null; },
+      exportPng: function () { return TOOLS ? TOOLS.exportPng(doc, exportSvgString(currentPDA()), 'kellerautomat.png') : false; },
+      playWord: playWord
     };
   }
 
