@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.15.0
+ * @version 0.16.0
  */
 declare(strict_types=1);
 
@@ -27,6 +27,7 @@ use Infocraft\Models\TaskSubmission;
 use Infocraft\Models\TaskTodo;
 use Infocraft\Models\TaskWorking;
 use Infocraft\Models\User;
+use Infocraft\Models\UserPref;
 use Infocraft\SqlWorkshop;
 
 /**
@@ -86,7 +87,7 @@ final class CodeController
         $type = ($_POST['type'] ?? 'code') === 'html' ? 'html' : 'code';
         $language = match ($type) {
             'html' => 'html',
-            default => in_array($_POST['language'] ?? '', ['python', 'java', 'asm', 'blocks'], true) ? (string) $_POST['language'] : SiteSetting::defaultLanguage(),
+            default => in_array($_POST['language'] ?? '', ['python', 'java', 'asm', 'blocks', 'automaton'], true) ? (string) $_POST['language'] : SiteSetting::defaultLanguage(),
         };
         if ($language === 'python' && !self::pythonAllowed($user)) {
             flash('error', 'Python ist für deine Klasse (noch) nicht freigegeben.');
@@ -577,6 +578,7 @@ final class CodeController
             'dbTemplates' => $dbReadOnly ? [] : self::loadableDatabaseTemplates($user),
             'images' => $images,
             'imageUrls' => $imageUrls,
+            'blkMode' => UserPref::get($user->id, 'blk_mode', 'learn'),
         ]);
     }
 
@@ -945,6 +947,27 @@ final class CodeController
                 'stage' => ['scripts' => []],
             ];
             return json_encode($starterBlocks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        if ($language === 'automaton') {
+            /* Startautomat (#163): einfacher DEA, der Woerter akzeptiert,
+             * die mit a beginnen und enden (a b* a). Gleiches JSON-Format,
+             * das die Automaten-Werkstatt laedt und automatisch speichert. */
+            $starterAutomaton = [
+                'format' => 'endlicher-automat',
+                'version' => 1,
+                'alphabet' => ['a', 'b'],
+                'states' => [
+                    ['id' => 's1', 'name' => 'q0', 'x' => 120, 'y' => 200, 'start' => true, 'accept' => false, 'trap' => false],
+                    ['id' => 's2', 'name' => 'q1', 'x' => 300, 'y' => 200, 'start' => false, 'accept' => false, 'trap' => false],
+                    ['id' => 's3', 'name' => 'q2', 'x' => 480, 'y' => 200, 'start' => false, 'accept' => true, 'trap' => false],
+                ],
+                'transitions' => [
+                    ['id' => 't1', 'from' => 's1', 'to' => 's2', 'symbols' => ['a']],
+                    ['id' => 't2', 'from' => 's2', 'to' => 's2', 'symbols' => ['b']],
+                    ['id' => 't3', 'from' => 's2', 'to' => 's3', 'symbols' => ['a']],
+                ],
+            ];
+            return json_encode($starterAutomaton, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
         return "# " . $title . "\nprint(\"Hallo InfoCraft!\")\n";
     }

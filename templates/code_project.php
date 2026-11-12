@@ -2,7 +2,7 @@
    Datei: Code-Werkstatt: Projektansicht mit IDE, Blöcken und Assembler
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.15.0 */ ?>
+   Version: 0.16.0 */ ?>
 <section class="panel">
     <div class="panel-head">
         <a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück">←</a>
@@ -701,6 +701,75 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
         </div>
         </div>
     </div>
+    <?php elseif ($project->type === 'code' && $project->language === 'automaton'): ?>
+    <!-- Automaten-Werkstatt (#163): Zustaende zeichnen, Woerter pruefen,
+         Analyse und Trap-Zustand. Der Automat liegt als JSON im Projekt. -->
+    <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="form amt-meta" id="automaton-save-form">
+        <?= csrf_field() ?>
+        <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
+        <textarea name="content" id="automaton-json" aria-hidden="true" spellcheck="false"><?= e($project->content) ?></textarea>
+        <div class="btn-row">
+            <span class="save-status" id="amt-saveinfo" hidden></span>
+        </div>
+    </form>
+    <div class="ide amt-ide" id="amt-ide">
+        <section class="amt-stage" id="amt-stage">
+            <svg id="amt-canvas" aria-label="Zeichenflaeche des Automaten"></svg>
+            <div class="amt-hint" id="amt-hint"></div>
+            <div class="amt-toolbar">
+                <button class="btn" data-amt-mode="select" type="button" aria-pressed="true" title="Auswaehlen (a)">☝️</button>
+                <button class="btn" data-amt-mode="state" type="button" aria-pressed="false" title="Zustand anlegen (z)">⭕</button>
+                <button class="btn" data-amt-mode="trans" type="button" aria-pressed="false" title="Uebergang anlegen (u)">➡️</button>
+                <button class="btn" data-amt-mode="delete" type="button" aria-pressed="false" title="Loeschen (l)">🗑️</button>
+                <span class="amt-sep"></span>
+                <button class="btn" id="amt-undo" type="button" title="Rueckgaengig (Strg+Z)">↶</button>
+                <button class="btn" id="amt-redo" type="button" title="Wiederholen (Strg+Y)">↷</button>
+                <button class="btn" id="amt-trap" type="button" title="Alle fehlenden Uebergaenge fuehren in einen Trap-Zustand">Trap ergänzen</button>
+                <button class="btn" id="amt-new" type="button" title="Neuer, leerer Automat">Neu</button>
+                <span class="amt-sep"></span>
+                <button class="btn" id="amt-zoom-out" type="button" aria-label="Verkleinern">−</button>
+                <button class="btn" id="amt-zoom-in" type="button" aria-label="Vergroessern">+</button>
+                <button class="btn" id="amt-fit" type="button" title="Automat einpassen">Einpassen</button>
+                <button class="btn" id="amt-png" type="button" title="Automat als Bilddatei speichern">Bild</button>
+            </div>
+            <div class="pop amt-pop" id="amt-pop" hidden>
+                <label for="amt-pop-in" id="amt-pop-lbl">Eingabezeichen</label>
+                <div class="btn-row"><input class="inp mono" id="amt-pop-in" autocomplete="off" spellcheck="false" placeholder="z. B. a, b oder ab"><button class="btn btn-primary" id="amt-pop-ok" type="button">OK</button></div>
+                <small class="muted" id="amt-pop-hint">Mehrere Zeichen: a, b oder ab</small>
+            </div>
+        </section>
+        <aside class="amt-side">
+            <section class="panel" id="amt-sel"></section>
+            <section class="panel">
+                <h3>Wort testen</h3>
+                <input class="inp mono" id="amt-word" placeholder="z. B. abba" autocomplete="off" spellcheck="false">
+                <div class="btn-row">
+                    <button class="btn btn-primary" id="amt-run" type="button">Prüfen</button>
+                    <button class="btn" id="amt-step" type="button">Schritt ▸</button>
+                    <button class="btn" id="amt-play" type="button">▶ Abspielen</button>
+                    <button class="btn" id="amt-reset" type="button" title="Simulation zuruecksetzen">↺</button>
+                </div>
+                <div id="amt-out"></div>
+            </section>
+            <section class="panel">
+                <details>
+                    <summary>Mehrere Wörter testen</summary>
+                    <label class="field"><span>Ein Wort pro Zeile (ε für das leere Wort)</span>
+                        <textarea class="inp mono" id="amt-batch-in" rows="4" spellcheck="false" placeholder="aa&#10;aba&#10;ba"></textarea></label>
+                    <div class="btn-row"><button class="btn" id="amt-batch-btn" type="button">Alle testen</button></div>
+                    <ul class="amt-batch" id="amt-batch-out"></ul>
+                </details>
+            </section>
+            <section class="panel">
+                <h3>Formale Beschreibung</h3>
+                <label class="field"><span>Eingabealphabet Σ</span>
+                    <input class="inp mono" id="amt-sigma" placeholder="z. B. a, b" autocomplete="off" spellcheck="false"></label>
+                <div class="chips" id="amt-chips"></div>
+                <p class="mono amt-tuple" id="amt-tuple"></p>
+                <div class="tablewrap" id="amt-delta"></div>
+            </section>
+        </aside>
+    </div>
     <?php elseif ($project->type === 'code' && $project->language === 'blocks'): ?>
     <!-- Block-Werkstatt (#116-#121): Blöcke aus der Palette ziehen, andocken,
          ausfuehren auf der Buehne. Das Skriptmodell liegt als JSON im Projekt. -->
@@ -712,12 +781,12 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
             <span class="save-status" id="blk-saveinfo" hidden></span>
         </div>
     </form>
-    <div class="ide blk-ide" id="blk-ide">
+    <div class="ide blk-ide" id="blk-ide" data-blk-mode="<?= $blkMode === 'expert' ? 'expert' : 'learn' ?>" data-mode-url="<?= url('einstellungen/werkstattmodus') ?>">
         <aside class="blk-pal-col">
             <div class="ide-side-title">Palette</div>
             <div class="blk-cats" id="blk-cats"></div>
             <div class="blk-pal" id="blk-pal"></div>
-            <button class="btn btn-ghost blk-var-add" id="blk-var-add" type="button" title="Neue Variable anlegen">＋ Variable</button>
+            <button class="btn btn-ghost blk-var-add" id="blk-var-add" type="button" title="Neue Variable anlegen"<?= $blkMode === 'expert' ? '' : ' hidden' ?>>＋ Variable</button>
         </aside>
         <div class="blk-scriptwrap" id="blk-scriptwrap">
             <div class="blk-script" id="blk-script"></div>
@@ -726,7 +795,10 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
             <div class="blk-stagebar">
                 <button class="btn btn-primary" id="blk-flag" type="button" title="Start: alle ▶-Skripte laufen los">▶</button>
                 <button class="btn" id="blk-stop" type="button" title="Stop: alle laufenden Skripte anhalten">⏹</button>
-                <button class="btn blk-mode-btn" id="blk-mode" type="button" title="Zwischen Lernmodus und Expertenmodus wechseln (#151)">🧠 Lernmodus</button>
+                <span class="blk-switch" id="blk-mode" role="group" aria-label="Modus der Werkstatt">
+                    <button class="btn blk-switch-btn<?= $blkMode === 'expert' ? '' : ' active' ?>" id="blk-mode-learn" type="button" aria-pressed="<?= $blkMode === 'expert' ? 'false' : 'true' ?>" title="Lernmodus: die Grundbausteine für den Einstieg (#161)">🧠 Lernmodus</button>
+                    <button class="btn blk-switch-btn<?= $blkMode === 'expert' ? ' active' : '' ?>" id="blk-mode-expert" type="button" aria-pressed="<?= $blkMode === 'expert' ? 'true' : 'false' ?>" title="Expertenmodus: mehr Blöcke, Code-Ansicht und Konsole (#161)">🎓 Expertenmodus</button>
+                </span>
                 <button class="btn" id="blk-code" type="button" data-port="<?= url('werkstatt/code/blocks/port') ?>" title="Block-Programm als Java oder Python anzeigen (#140)">🐍 Java / Python</button>
                 <span class="muted" id="blk-runinfo"></span>
             </div>
@@ -801,6 +873,8 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
 <script>window.IC_IMAGES = <?= json_encode((object) ($imageUrls ?? []), JSON_HEX_TAG | JSON_UNESCAPED_SLASHES) ?>;</script>
 <?php elseif ($project->type === 'code' && $project->language === 'asm'): ?>
 <script src="<?= asset_url('assets/js/asm-vm.js') ?>"></script>
+<?php elseif ($project->type === 'code' && $project->language === 'automaton'): ?>
+<script src="<?= asset_url('assets/js/automaton.js') ?>"></script>
 <?php elseif ($project->type === 'code' && $project->language === 'blocks'): ?>
 <script src="<?= asset_url('assets/js/block-editor.js') ?>"></script>
 <?php elseif ($project->type === 'html'): ?>
