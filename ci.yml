@@ -718,7 +718,6 @@ jobs:
           printf '%s' "$IBKLASTURL" | grep -q "/seite/$IBKCVPG" && IBK_NAVLASTRO_OK=1 || IBK_NAVLASTRO_OK=0
           grep -q 'ibook-pagenav-secdetails' ibkcvview.html && grep -q 'ibook-pagenav-secdetails' ibksecview.html && IBK_NAVSECRO_OK=1 || IBK_NAVSECRO_OK=0
           grep -q 'ibook-navimport-details' ibksecview.html && grep -q 'ibook-navimport-details' ibkcvview.html && IBK_NAVIMPRO_OK=1 || IBK_NAVIMPRO_OK=0
-          grep -q 'slide-stepinfo' ibkpres.html && grep -q 'slide-stepinfo' ibkcvpres.html && IBK_PRESSTEPRO_OK=1 || IBK_PRESSTEPRO_OK=0
           grep -q 'icv-item-link' ibkpreview.html && IBK_LINKRO_OK=1 || IBK_LINKRO_OK=0
           CODE_IBKCVDIST=$(curl -sS -L -o ibkcvdist.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "page_id=$IBKCVPG" -d "class_id=$CLASS6" -d "bereich=lernbereich" http://127.0.0.1:8080/infobuecher/$SEEDBOOK/verteilen)
           grep -q "Seite verteilt" ibkcvdist.html && IBK_CV_DIST_OK=1 || IBK_CV_DIST_OK=0
@@ -761,6 +760,7 @@ jobs:
           grep -q "background:#eff6ff" ibkcvlena.html && grep -q "text-align:right" ibkcvlena.html && IBK_CV_TXT_OK=1 || IBK_CV_TXT_OK=0
           CODE_IBKCVPRES=$(curl -sS -o ibkcvpres.html -w "%{http_code}" -b cookies5.txt "http://127.0.0.1:8080/infobuecher/$SEEDBOOK/praesentation?abschnitt=$SEEDSEC")
           grep -q "icv-stage" ibkcvpres.html && grep -q "Freihand ueber allem" ibkcvpres.html && IBK_CV_PRES_OK=1 || IBK_CV_PRES_OK=0
+          grep -q 'slide-stepinfo' ibkpres.html && grep -q 'slide-stepinfo' ibkcvpres.html && IBK_PRESSTEPRO_OK=1 || IBK_PRESSTEPRO_OK=0
           CODE_IBKEM=$(curl -sS -L -o ibkemma.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt http://127.0.0.1:8080/infobuecher)
           grep -q "Mein Bereich - Emma" ibkemma.html && IBK_EM_OWN_OK=1 || IBK_EM_OWN_OK=0
           grep -q "Zusammenarbeit" ibkemma.html && IBK_EM_GM_OK=1 || IBK_EM_GM_OK=0
