@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.18.0
+ * @version 0.20.0
  */
 declare(strict_types=1);
 
@@ -180,21 +180,7 @@ final class InfoBookController
             flash('error', 'Für dieses InfoBook hast du keinen Zugriff.');
             redirect('/infobuecher');
         }
-        $sections = [];
-        if ($user->role === 'student') {
-            // Privater Schuelerbereich sicherstellen (existiert danach dauerhaft)
-            // und ERST DANACH die Abschnitte laden, sonst fehlt der frisch
-            // angelegte "Mein Bereich" im ersten Seitenaufruf.
-            if ($book->classId !== null && $book->classId === $user->classId) {
-                InfoBook::ensureOwnSection($book->id, $user->id);
-            }
-            $sections = InfoBook::sections($book->id);
-            $sections = array_values(array_filter($sections, static function (array $s) use ($user): bool {
-                return self::visibleSectionForStudent($s, $user);
-            }));
-        } else {
-            $sections = InfoBook::sections($book->id);
-        }
+        $sections = self::navSectionsFor($book, $user);
         $activeId = (int) ($_GET['abschnitt'] ?? 0);
         $active = null;
         foreach ($sections as $section) {
@@ -382,9 +368,11 @@ final class InfoBookController
             $canWrite = false;
         }
         /* Linke Navigation (#68): Abschnitte und Seiten des Buchs, damit man
-         * auf der Seitenseite zwischen den Seiten springen kann. */
+         * auf der Seitenseite zwischen den Seiten springen kann. #184: Fuer
+         * Schuelerinnen und Schueler nur die sichtbaren Abschnitte (der eigene
+         * Bereich wird dabei wie in der Buchansicht sicher angelegt). */
         $nav = [];
-        foreach (InfoBook::sections($book->id) as $navSection) {
+        foreach (self::navSectionsFor($book, $user) as $navSection) {
             /* #72: Schreibrecht je Abschnitt mitgeben, damit die Sidebar nur
              * dort das "Neue Seite"-Formular zeigt, wo es erlaubt ist. */
             $nav[] = ['section' => $navSection, 'pages' => InfoBook::pages((int) $navSection['id']), 'canWrite' => self::canWriteSection($navSection, $user)];
@@ -748,18 +736,7 @@ final class InfoBookController
             flash('error', 'Für dieses InfoBook hast du keinen Zugriff.');
             redirect('/infobuecher');
         }
-        $sections = InfoBook::sections($book->id);
-        if ($user->role === 'student') {
-            // Eigener Bereich gehoert auch in die Präsentation: sicherstellen
-            // und danach neu laden (show() legt ihn beim ersten Buchbesuch an).
-            if ($book->classId !== null && $book->classId === $user->classId) {
-                InfoBook::ensureOwnSection($book->id, $user->id);
-                $sections = InfoBook::sections($book->id);
-            }
-            $sections = array_values(array_filter($sections, static function (array $s) use ($user): bool {
-                return self::visibleSectionForStudent($s, $user);
-            }));
-        }
+        $sections = self::navSectionsFor($book, $user);
         $wanted = (int) ($_GET['abschnitt'] ?? 0);
         $slides = [];
         $linkPages = [];
@@ -883,6 +860,28 @@ final class InfoBookController
             return (int) ($section['owner_user_id'] ?? 0) === $user->id;
         }
         return false;
+    }
+
+    /**
+     * #184: Abschnitte fuer die linke Navigation, die Buchansicht und die
+     * Präsentation. Lehrkraefte und Administration sehen alle Abschnitte des
+     * Buchs; Schuelerinnen und Schueler nur die sichtbaren: Der eigene private
+     * Bereich wird dabei sicher angelegt (vor dem Laden) und fremde "Mein
+     * Bereich"-Abschnitte bleiben voellig aussen vor.
+     * @return list<array<string, mixed>>
+     */
+    private static function navSectionsFor(InfoBook $book, User $user): array
+    {
+        if ($user->role !== 'student') {
+            return InfoBook::sections($book->id);
+        }
+        if ($book->classId !== null && $book->classId === $user->classId) {
+            InfoBook::ensureOwnSection($book->id, $user->id);
+        }
+        $sections = InfoBook::sections($book->id);
+        return array_values(array_filter($sections, static function (array $s) use ($user): bool {
+            return self::visibleSectionForStudent($s, $user);
+        }));
     }
 
     /** Prozentwert (0 bis 100) ohne unnötige Nullen, fuer die Positionen der Freien Flaeche. */

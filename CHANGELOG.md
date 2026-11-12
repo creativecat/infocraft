@@ -5,6 +5,15 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.20.0] - 2026-11-12
+
+### InfoBook: Seitennavigation (#184)
+
+- Die linke Navigation auf einer InfoBook-Seite zeigt nur noch die Seiten des aktiven Abschnitts; die anderen Abschnitte stehen als je eine Zeile in der Liste (mit Bereichsüberschriften), statt alle Seiten aller Abschnitte aufzuklappen.
+- Genau ein „Neue Seite“-Feld, direkt unter den Seiten des aktiven Abschnitts, statt einem je Abschnitt. Der aktive Abschnitt ist als Label erkennbar und kein Link mehr auf sich selbst.
+- „Neuer Abschnitt“ unten klappt auf (ohne JavaScript nutzbar), statt als Dauerformular Platz zu verbrauchen.
+- Datenschärfung: Schülerinnen und Schüler sehen in der Navigation nur die für sie sichtbaren Abschnitte; fremde „Mein Bereich“-Bereiche erscheinen nicht mehr (der eigene wird wie in der Buchansicht sicher angelegt). Gilt für Seitennavigation, Buchansicht und Präsentationsmodus gemeinsam.
+
 ## [0.19.0] - 2026-11-12
 
 ### Übersicht (#175 bis #183)
