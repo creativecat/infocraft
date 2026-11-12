@@ -284,7 +284,7 @@ jobs:
           ! grep -q "target=" templates/ibook_page.php && IBK_PREVWIN_OK=1 || IBK_PREVWIN_OK=0
           grep -q "icv-clsbox" public/assets/js/app.js && grep -q ".icv-clsbox" public/assets/css/style.css && IBK_CLSBOX_OK=1 || IBK_CLSBOX_OK=0
           grep -q "slide-step-hidden" public/assets/js/app.js && grep -q "slide-stepinfo" public/assets/js/app.js && IBK_PRESSTEP_OK=1 || IBK_PRESSTEP_OK=0
-          grep -q "item['step']" src/Models/InfoBook.php && grep -q "item['anim']" src/Models/InfoBook.php && grep -q "'fade', 'up', 'left', 'zoom'" src/Models/InfoBook.php && IBK_STEPPHP_OK=1 || IBK_STEPPHP_OK=0
+          grep -Fq "item['step']" src/Models/InfoBook.php && grep -Fq "item['anim']" src/Models/InfoBook.php && grep -q "'fade', 'up', 'left', 'zoom'" src/Models/InfoBook.php && IBK_STEPPHP_OK=1 || IBK_STEPPHP_OK=0
           grep -q "data-step=" src/Controllers/InfoBookController.php && grep -q "data-anim=" src/Controllers/InfoBookController.php && grep -q "'present'" src/Controllers/InfoBookController.php && grep -q "66vh" src/Controllers/InfoBookController.php && IBK_STEPRENDER_OK=1 || IBK_STEPRENDER_OK=0
           grep -q "data-step" public/assets/js/app.js && grep -q "icv-ctx-step" public/assets/js/app.js && grep -q "refreshStepBadge" public/assets/js/app.js && IBK_STEPJS_OK=1 || IBK_STEPJS_OK=0
           grep -q "slide-in-up" public/assets/css/style.css && grep -q "slide-in-left" public/assets/css/style.css && grep -q "slide-in-zoom" public/assets/css/style.css && IBK_STEPANIM_OK=1 || IBK_STEPANIM_OK=0
