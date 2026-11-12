@@ -2712,7 +2712,7 @@ setTimeout(function () {
                   var blkSpr2 = blkUi.addSprite('fish');
                   ok(blkSpr2 !== null && blkUi.program.sprites.length === 2 && blkSpritesEl.children.length === 4, 'T98d eine neue Figur landet in der Liste und wird zum Ziel');
                   blkUi.selectTarget(null);
-                  ok(blkUi.isStage() === true && blkCatsEl.children.length === 5, 'T99b die Buehne zeigt im Lernmodus nur passende Kategorien (fuenf statt acht)');
+                  ok(blkUi.isStage() === true && blkCatsEl.children.length === 5, 'T99b die Buehne zeigt nur passende Kategorien (fuenf statt acht im Lernmodus)');
                   blkUi.addBlock('flag', 10, 10);
                   ok(blkUi.program.stage.scripts.length === 1 && blkUi.program.sprites[0].scripts.length === blkUi.program.sprites[0].scripts.length, 'T99c ein Block auf der Buehne landet im Buehnen-Skript');
                   blkUi.selectTarget(blkUi.program.sprites[0]);
@@ -3115,13 +3115,13 @@ setTimeout(function () {
                      Code-Generator und sichtbares Ziehen mit Einfuege-Linie. */
                   ok(blkUi.isExpert() === false, 'T109 der Editor startet im Lernmodus (#151)');
                   ok(blkModeEl.getAttribute('data-active') === 'learn' && blkModeLearnEl.getAttribute('aria-pressed') === 'true' && blkModeLearnEl.classList.contains('active') === true && blkModeExpertEl.getAttribute('aria-pressed') === 'false' && blkModeExpertEl.classList.contains('active') === false, 'T109b der Schalter zeigt den Lernmodus als aktive Haelfte an (#161)');
-                  ok(blkCodeEl.hasAttribute('hidden') && blkConsoleBox.hasAttribute('hidden') && blkVarAddEl.hasAttribute('hidden'), 'T109c im Lernmodus bleiben Code-Knopf, Konsole und Variablen-Knopf verborgen (#151, #162)');
+                  ok(blkCodeEl.hasAttribute('hidden') && blkConsoleBox.hasAttribute('hidden') && blkVarAddEl.hasAttribute('hidden'), 'T109d im Lernmodus bleiben Code-Knopf, Konsole und Variablen-Knopf verborgen (#151, #162)');
                   var catColored = 0;
                   var c9;
                   for (c9 = 0; c9 < blkCatsEl.children.length; c9++) {
                     if (blkCatsEl.children[c9].style && blkCatsEl.children[c9].style.background) { catColored++; }
                   }
-                  ok(catColored === blkCatsEl.children.length && blkCatsEl.children.length === 8, 'T109d jeder der acht Kategorie-Knoepfe traegt seine Kategoriefarbe (#150, #162)');
+                  ok(catColored === blkCatsEl.children.length && blkCatsEl.children.length === 8, 'T109c jeder Kategorie-Knopf traegt seine Kategoriefarbe, im Lernmodus acht Stueck (#150, #162)');
                   var catLabels109 = [], btn109;
                   for (btn109 = 0; btn109 < blkCatsEl.children.length; btn109++) { catLabels109.push(blkCatsEl.children[btn109].textContent); }
                   ok(catLabels109.indexOf('Variablen') === -1, 'T109e im Lernmodus fehlt die Variablen-Kategorie (#162)');
