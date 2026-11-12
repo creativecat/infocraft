@@ -4,7 +4,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.21.0
+ * @version 0.22.0
  */
 /* InfoCraft UI-Tests: Sind alle Buttons der Java-IDE klickbar und funktionieren sie?
  *
@@ -3849,93 +3849,119 @@ setTimeout(function () {
                     'T122d eigene Farbwerte aus dem Stylesheet fließen in die Zeichnung ein (#174)');
                   delete global.getComputedStyle;
 
-                  /* T123 (#177): Präsentationsmodus im InfoBook. Navigation,
-                   * Autoplay mit Zeitsteuerung und Fortschrittsbalken laufen
-                   * als IC_PRESENT-Modul in app.js, nicht mehr als
-                   * Inline-Script auf der Folgenseite. */
+                  /* T123 (#177/#188): Präsentationsmodus im InfoBook.
+                   * Folien-Navigation und Elemente-Einblendung per Klick
+                   * laufen als IC_PRESENT-Modul in app.js; Autoplay mit
+                   * Zeitsteuerung, Fortschrittsbalken und Zeitauswahl sind
+                   * mit #188 entfallen. */
                   global.window = {};
                   var presPath123 = require.resolve('../public/assets/js/app.js');
                   delete require.cache[presPath123];
                   global.document = new FakeDoc();
                   require('../public/assets/js/app.js');
-                  ok(global.window.IC_PRESENT && typeof global.window.IC_PRESENT.parseInterval === 'function',
-                    'T123 der Präsentationsmodus stellt seine Helfer bereit (#177)');
-                  ok(global.window.IC_PRESENT.parseInterval('10') === 10
-                    && global.window.IC_PRESENT.parseInterval('abc', 10) === 10
-                    && global.window.IC_PRESENT.parseInterval('1', 10) === 2
-                    && global.window.IC_PRESENT.parseInterval('9999', 10) === 600,
-                    'T123b die Foliendauer akzeptiert nur vernuenftige Sekunden (#177)');
-                  ok(global.window.IC_PRESENT.progressPct(5000, 10000) === 50
-                    && global.window.IC_PRESENT.progressPct(-5, 10000) === 0
-                    && global.window.IC_PRESENT.progressPct(99999, 10000) === 100,
-                    'T123c der Fortschrittsbalken bleibt zwischen 0 und 100 Prozent (#177)');
-                  ok(global.window.IC_PRESENT.nextIndex(1, 3, true) === 2
-                    && global.window.IC_PRESENT.nextIndex(2, 3, true) === 0
-                    && global.window.IC_PRESENT.nextIndex(2, 3, false) === 2,
-                    'T123d der Autoplay springt am Ende zurueck zum Anfang (#177)');
-                  /* Folgenseite mit drei Folien nachbauen, Boot laeuft beim
+                  ok(global.window.IC_PRESENT && typeof global.window.IC_PRESENT.nextIndex === 'function'
+                    && typeof global.window.IC_PRESENT.stepsOf === 'function'
+                    && typeof global.window.IC_PRESENT.stepInfoText === 'function',
+                    'T123 der Präsentationsmodus stellt seine Helfer bereit (#177, #188)');
+                  ok(global.window.IC_PRESENT.nextIndex(1, 3, false) === 2
+                    && global.window.IC_PRESENT.nextIndex(2, 3, false) === 2
+                    && global.window.IC_PRESENT.nextIndex(2, 3, true) === 0,
+                    'T123b der Folienzeiger bleibt am Ende stehen, nur im Kreislauf springt er um (#188)');
+                  var stepSlide123 = new FakeEl('section');
+                  var stepBox123 = new FakeEl('div');
+                  stepBox123.className = 'ibook-slide-blocks';
+                  var stepPill123 = new FakeEl('p');
+                  stepPill123.className = 'pill ibook-slide-section';
+                  var stepA123 = new FakeEl('p');
+                  var stepB123 = new FakeEl('p');
+                  stepBox123.appendChild(stepPill123);
+                  stepBox123.appendChild(stepA123);
+                  stepBox123.appendChild(stepB123);
+                  stepSlide123.appendChild(stepBox123);
+                  var steps123 = global.window.IC_PRESENT.stepsOf(stepSlide123);
+                  ok(steps123.length === 2 && steps123[0] === stepA123 && steps123[1] === stepB123,
+                    'T123c die Einblend-Schritte sind die Elemente der Folie, ohne die Bereichs-Pill (#188)');
+                  ok(global.window.IC_PRESENT.stepInfoText(0, 2) === 'Element 1 / 2'
+                    && global.window.IC_PRESENT.stepInfoText(1, 2) === 'Element 2 / 2'
+                    && global.window.IC_PRESENT.stepInfoText(2, 2) === ''
+                    && global.window.IC_PRESENT.stepInfoText(0, 1) === '',
+                    'T123d die Schritt-Anzeige nennt das nächste Element und schweigt, wenn alles sichtbar ist (#188)');
+                  /* Folgeseite mit zwei Folien nachbauen, jede mit zwei
+                   * Elementen unter der Bereichs-Pill. Boot laeuft beim
                    * Einbinden von app.js, weil das Fake-DOM nie "loading" ist. */
                   delete require.cache[presPath123];
                   var presDoc123 = new FakeDoc();
                   var stage123 = new FakeEl('div');
                   stage123.setAttribute('data-ibook', '41');
-                  ['Alpha', 'Beta', 'Gamma'].forEach(function (t123s, idx123) {
-                    var sl123 = new FakeEl('section');
-                    sl123.className = 'slide' + (idx123 === 0 ? ' slide-active' : '');
-                    sl123.textContent = t123s;
-                    stage123.appendChild(sl123);
-                  });
+                  function buildSlide123(name123) {
+                    var sl = new FakeEl('section');
+                    sl.className = 'slide';
+                    var box = new FakeEl('div');
+                    box.className = 'ibook-slide-blocks';
+                    var pill = new FakeEl('p');
+                    pill.className = 'pill ibook-slide-section';
+                    var b1 = new FakeEl('p');
+                    b1.textContent = name123 + ' A';
+                    var b2 = new FakeEl('p');
+                    b2.textContent = name123 + ' B';
+                    box.appendChild(pill);
+                    box.appendChild(b1);
+                    box.appendChild(b2);
+                    sl.appendChild(box);
+                    return { slide: sl, b1: b1, b2: b2 };
+                  }
+                  var sl1_123 = buildSlide123('Alpha');
+                  var sl2_123 = buildSlide123('Beta');
+                  stage123.appendChild(sl1_123.slide);
+                  stage123.appendChild(sl2_123.slide);
                   presDoc123.register(stage123, 'slide-stage');
                   var pCounter123 = new FakeEl('span'); presDoc123.register(pCounter123, 'slide-counter');
                   var pPrev123 = new FakeEl('button'); presDoc123.register(pPrev123, 'slide-prev');
                   var pNext123 = new FakeEl('button'); presDoc123.register(pNext123, 'slide-next');
                   var pFull123 = new FakeEl('button'); presDoc123.register(pFull123, 'slide-full');
-                  var pPlay123 = new FakeEl('button'); pPlay123.textContent = '▶'; presDoc123.register(pPlay123, 'slide-play');
-                  var pInt123 = new FakeEl('select'); pInt123.value = '10'; presDoc123.register(pInt123, 'slide-interval');
-                  var pFill123 = new FakeEl('div'); pFill123.style.width = '0%'; presDoc123.register(pFill123, 'slide-progress-fill');
+                  var pStep123 = new FakeEl('span'); presDoc123.register(pStep123, 'slide-stepinfo');
                   global.document = presDoc123;
                   require('../public/assets/js/app.js');
-                  ok(stage123.querySelectorAll('.slide')[0].classList.contains('slide-active')
-                    && pCounter123.textContent === '1 / 3',
-                    'T123e der Boot zeigt die erste Folie und zaehlt sie (#177)');
+                  ok(sl1_123.slide.classList.contains('slide-active') && pCounter123.textContent === '1 / 2'
+                    && sl1_123.b1.classList.contains('slide-step-hidden') && sl1_123.b2.classList.contains('slide-step-hidden')
+                    && pStep123.textContent === 'Element 1 / 2',
+                    'T123e der Boot zeigt die erste Folie und haelt ihre Elemente zurueck (#188)');
                   pNext123.dispatch('click');
-                  ok(stage123.querySelectorAll('.slide')[1].classList.contains('slide-active')
-                    && pCounter123.textContent === '2 / 3',
-                    'T123f der Weiter-Knopf springt auf die zweite Folie (#177)');
-                  /* Tastatur: Pfeiltaste rechts und P fuer Autoplay. */
-                  var savedInterval123 = global.setInterval;
-                  var savedClear123 = global.clearInterval;
-                  var tickFn123 = null;
-                  global.setInterval = function (fn, ms) { tickFn123 = fn; return 7; };
-                  global.clearInterval = function () {};
+                  ok(sl1_123.b1.classList.contains('slide-step-in') && !sl1_123.b1.classList.contains('slide-step-hidden')
+                    && sl1_123.b2.classList.contains('slide-step-hidden') && pStep123.textContent === 'Element 2 / 2',
+                    'T123f der Weiter-Knopf blendet das erste Element einzeln per Klick ein (#188)');
+                  pNext123.dispatch('click');
+                  ok(!sl1_123.b2.classList.contains('slide-step-hidden') && pStep123.textContent === '',
+                    'T123g ist die Folie komplett aufgedeckt, bleibt die Schritt-Anzeige leer (#188)');
+                  pNext123.dispatch('click');
+                  ok(sl2_123.slide.classList.contains('slide-active') && pCounter123.textContent === '2 / 2'
+                    && sl2_123.b1.classList.contains('slide-step-hidden') && sl2_123.b2.classList.contains('slide-step-hidden'),
+                    'T123h die naechste Folie startet wieder mit verborgenen Elementen (#188)');
+                  pPrev123.dispatch('click');
+                  ok(sl1_123.slide.classList.contains('slide-active') && !sl1_123.b1.classList.contains('slide-step-hidden')
+                    && !sl1_123.b2.classList.contains('slide-step-hidden'),
+                    'T123i der Rueck-Knopf zeigt die vorige Folie komplett aufgedeckt (#188)');
+                  pPrev123.dispatch('click');
+                  ok(sl1_123.b2.classList.contains('slide-step-hidden') && !sl1_123.b1.classList.contains('slide-step-hidden')
+                    && pStep123.textContent === 'Element 2 / 2',
+                    'T123j auf der Folie blendet der Rueck-Knopf das zuletzt eingeblendete Element wieder aus (#188)');
                   presDoc123._fire('keydown', { key: 'ArrowRight', preventDefault: function () {} });
-                  ok(stage123.querySelectorAll('.slide')[2].classList.contains('slide-active')
-                    && pCounter123.textContent === '3 / 3',
-                    'T123g die Pfeiltaste rechts blaettert weiter (#177)');
+                  ok(!sl1_123.b2.classList.contains('slide-step-hidden') && pStep123.textContent === '',
+                    'T123k die Pfeiltaste rechts blendet das nächste Element ein (#188)');
                   presDoc123._fire('keydown', { key: 'p', preventDefault: function () {} });
-                  ok(tickFn123 !== null && pPlay123.textContent === '⏸',
-                    'T123h die Taste P startet den Automatikmodus (#177)');
-                  /* 39 Ticks a 250 ms: der Balken laeuft auf 98 Prozent, ohne
-                   * dass die Folie schon wechselt. */
-                  var fill123 = '';
-                  for (var tk123 = 0; tk123 < 39; tk123++) { tickFn123(); fill123 = pFill123.style.width; }
-                  ok(fill123 === '98%' && stage123.querySelectorAll('.slide')[2].classList.contains('slide-active'),
-                    'T123i der Fortschrittsbalken fuellt sich mit der Zeit (#177)');
-                  /* Der 40. Tick schliesst die 10 Sekunden ab: die Folie
-                   * springt wegen Autoplay zurueck zum Anfang. */
-                  tickFn123();
-                  ok(stage123.querySelectorAll('.slide')[0].classList.contains('slide-active')
-                    && pCounter123.textContent === '1 / 3',
-                    'T123j nach Ablauf der Zeit springt die Folie weiter (#177)');
-                  presDoc123._fire('keydown', { key: 'p', preventDefault: function () {} });
-                  ok(pPlay123.textContent === '▶' && pFill123.style.width === '0%',
-                    'T123k ein zweites P haelt den Automatikmodus an (#177)');
-                  global.setInterval = savedInterval123;
-                  global.clearInterval = savedClear123;
+                  ok(sl1_123.slide.classList.contains('slide-active') && pStep123.textContent === ''
+                    && !sl1_123.b1.classList.contains('slide-step-hidden') && !sl1_123.b2.classList.contains('slide-step-hidden'),
+                    'T123l die Taste P startet keinen Automatikmodus mehr (#188)');
                   var presTpl123 = require('fs').readFileSync(require.resolve('../templates/ibook_present.php'), 'utf8');
-                  ok(presTpl123.indexOf('slide-progress') !== -1 && presTpl123.indexOf('slide-play') !== -1
-                    && presTpl123.indexOf('slide-interval') !== -1 && presTpl123.indexOf('IC_PRESENT') !== -1,
-                    'T123l die Folgenseite liefert Balken, Startknopf und Zeitauswahl (#177)');
+                  var presJs123 = require('fs').readFileSync(presPath123, 'utf8');
+                  var presCss123 = require('fs').readFileSync(require.resolve('../public/assets/css/style.css'), 'utf8');
+                  ok(presTpl123.indexOf('slide-stepinfo') !== -1 && presTpl123.indexOf('slide-interval') === -1
+                    && presTpl123.indexOf('slide-play') === -1 && presTpl123.indexOf('slide-progress') === -1
+                    && presTpl123.indexOf('IC_PRESENT') !== -1,
+                    'T123m die Folgenseite liefert die Schritt-Anzeige statt Balken, Startknopf und Zeitauswahl (#188)');
+                  ok(presJs123.indexOf('slide-step-hidden') !== -1 && presCss123.indexOf('.slide-step-hidden') !== -1
+                    && presCss123.indexOf('.slide-step-in') !== -1,
+                    'T123n app.js und style.css tragen die Einblend-Klassen (#188)');
 
                   /* T124 (#184): Die linke Seitennavigation zeigt nur die
                    * Seiten des aktiven Abschnitts; genau ein "Neue Seite"-
@@ -3982,6 +4008,77 @@ setTimeout(function () {
                   ok(navModel125.indexOf('first_section_id') !== -1 && navPhp124.indexOf('first_section_id') !== -1,
                     'T125g nach dem Buchpaket-Import landet man direkt in der neuen Abschnittsansicht (#185)');
 
+
+                  /* T126 (#186-#190): Runde 22. Abschnitte in der Navigation
+                   * aufklappbar, Aufklappzustand je Abschnitt im Browser
+                   * gespeichert, genau ein Neue-Seite-Feld, Buchpaket-Import
+                   * unten in der Navigation, leere Abschnitte als Karten-
+                   * Raster, Vorschau im gleichen Fenster, Klassenkarte als
+                   * echter UML-Klassenkasten. */
+                  var navTpl126 = navTpl124;
+                  var navJs126 = require('fs').readFileSync(presPath123, 'utf8');
+                  ok(navTpl126.indexOf('ibook-pagenav-secdetails') !== -1 && navTpl126.indexOf('data-secid') !== -1
+                    && navCss124.indexOf('.ibook-pagenav-secdetails') !== -1,
+                    'T126 die Abschnitte der Navigation sind aufklappbare Eintraege mit Zustands-Pfeil (#186)');
+                  var navStore126 = {};
+                  var savedLs126 = global.localStorage;
+                  global.localStorage = {
+                    getItem: function (k) { return Object.prototype.hasOwnProperty.call(navStore126, k) ? navStore126[k] : null; },
+                    setItem: function (k, v) { navStore126[k] = String(v); }
+                  };
+                  var aside126 = new FakeEl('aside');
+                  var secA126 = new FakeEl('details');
+                  secA126.className = 'ibook-pagenav-secdetails';
+                  secA126.setAttribute('data-secid', '5');
+                  var secB126 = new FakeEl('details');
+                  secB126.className = 'ibook-pagenav-secdetails';
+                  secB126.setAttribute('data-secid', '7');
+                  aside126.appendChild(secA126);
+                  aside126.appendChild(secB126);
+                  ok(typeof global.window.IC_IBOOK_NAVSEC === 'function'
+                    && global.window.IC_IBOOK_NAVSEC(aside126) === true,
+                    'T126b die Aufklapp-Logik der Abschnitte ist als Modul bereit (#186)');
+                  ok(secA126.hasAttribute('open') === false && secB126.hasAttribute('open') === false,
+                    'T126c ohne gespeicherten Zustand bleibt der vom Server gelieferte Zustand stehen (#186)');
+                  secA126.setAttribute('open', 'open');
+                  secA126.dispatch('toggle');
+                  ok(navStore126['ic-ibook-navsec'] === '{"5":1}',
+                    'T126d das Auf- und Zuklappen wird je Abschnitt im Browser gespeichert (#186)');
+                  secB126.setAttribute('open', 'open');
+                  secB126.dispatch('toggle');
+                  var st126e = JSON.parse(navStore126['ic-ibook-navsec']);
+                  ok(st126e['5'] === 1 && st126e['7'] === 1,
+                    'T126e mehrere Abschnitte bleiben gleichzeitig offen (#186)');
+                  secB126.removeAttribute('open');
+                  secB126.dispatch('toggle');
+                  var secC126 = new FakeEl('details');
+                  secC126.className = 'ibook-pagenav-secdetails';
+                  secC126.setAttribute('data-secid', '7');
+                  secC126.setAttribute('open', 'open');
+                  var aside126b = new FakeEl('aside');
+                  aside126b.appendChild(secC126);
+                  global.window.IC_IBOOK_NAVSEC(aside126b);
+                  ok(secC126.hasAttribute('open') === false,
+                    'T126f der gespeicherte Aufklappzustand ueberschreibt den Server-Standard (#186)');
+                  global.localStorage = savedLs126;
+                  ok(navTpl126.split('ibook-navnew"').length - 1 === 1
+                    && navTpl126.indexOf('navIsActive && $canWrite') !== -1,
+                    'T126g das einzige Neue-Seite-Feld bleibt allein am aktiven Abschnitt (#186)');
+                  ok(navTpl126.indexOf('ibook-navimport-details') !== -1
+                    && navCss124.indexOf('.ibook-navimport-details') !== -1
+                    && navBook125.indexOf('name="paket"') === -1,
+                    'T126h der Buchpaket-Import sitzt unten in der Navigation, nicht im Hauptbereich (#187)');
+                  ok(navBook125.indexOf('ibook-page-card-empty') !== -1
+                    && navCss124.indexOf('.ibook-page-card-empty') !== -1,
+                    'T126i ein leerer Abschnitt zeigt dasselbe Karten-Raster mit Platzhalter-Karte (#187)');
+                  ok(navPage125.indexOf('?lesen=1') !== -1 && navPage125.indexOf('target=') === -1,
+                    'T126j die Vorschau oeffnet im gleichen Fenster (#189)');
+                  ok(navJs126.indexOf('icv-clsbox') !== -1 && navCss124.indexOf('.icv-clsbox') !== -1,
+                    'T126k die Klassenkarte ist ein echter UML-Klassenkasten (#190)');
+                  ok(navJs126.indexOf('clsCard: clsCardDetail') !== -1
+                    && navJs126.indexOf('IC_EDIT_TOOLS.clsCard') !== -1
+                    && navJs126.indexOf('clsCardDetail(name, code)') !== -1,
+                    'T126l Editor und Lesemodus zeichnen die Klassenkarte aus demselben Baustein (#190)');
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;
 

@@ -1996,6 +1996,54 @@
     return { fields: fields, methods: methods };
   }
 
+  /* #190: Die aufklappbare Klassenkarte ist ein echter UML-Klassenkasten:
+   * Namensbereich oben (Klassenname zentriert), darunter die Abteilung
+   * Attribute (Name : Typ), darunter die Abteilung Methoden. Derselbe
+   * Baustein zeichnet die Karte im Editor und im Lesemodus, statt zwei
+   * getrennte Listen zu pflegen. */
+  function clsCardDetail(name, code) {
+    var det = document.createElement('div');
+    det.className = 'icv-code-card-detail icv-clsbox';
+    var head = document.createElement('div');
+    head.className = 'icv-clsbox-name';
+    head.textContent = String(name || 'Klasse');
+    det.appendChild(head);
+    var mem = clsMembersOf(code);
+    var attrs = document.createElement('div');
+    attrs.className = 'icv-clsbox-comp icv-clsbox-attrs';
+    if (mem.fields.length === 0) {
+      var noA = document.createElement('div');
+      noA.className = 'icv-clsbox-empty';
+      noA.textContent = 'keine Attribute erkannt';
+      attrs.appendChild(noA);
+    } else {
+      mem.fields.forEach(function (f) {
+        var row = document.createElement('div');
+        row.className = 'icv-code-card-field';
+        row.textContent = f.name + ' : ' + f.type;
+        attrs.appendChild(row);
+      });
+    }
+    det.appendChild(attrs);
+    var mets = document.createElement('div');
+    mets.className = 'icv-clsbox-comp icv-clsbox-methods';
+    if (mem.methods.length === 0) {
+      var noM = document.createElement('div');
+      noM.className = 'icv-clsbox-empty';
+      noM.textContent = 'keine Methoden erkannt';
+      mets.appendChild(noM);
+    } else {
+      mem.methods.forEach(function (m) {
+        var row = document.createElement('div');
+        row.className = 'icv-code-card-method';
+        row.textContent = m.name + '(' + m.args + ')';
+        mets.appendChild(row);
+      });
+    }
+    det.appendChild(mets);
+    return det;
+  }
+
   /* Aus den importierten Klassen (data-clsfiles am Ausfuehren-Knopf)
    * Vorschlaege bauen: Klassenname plus Attribute/Methoden pro Klasse. */
   function extraFromClsFiles(clsFiles) {
@@ -2031,16 +2079,9 @@
         (clsFiles || []).forEach(function (f) {
           if (String(f && f.name ? f.name : '').replace(/\.java$/i, '') === name) { code = String(f && f.code ? f.code : ''); }
         });
-        var det = document.createElement('div');
-        det.className = 'icv-code-card-detail';
-        var mem = clsMembersOf(code);
-        if (mem.fields.length === 0 && mem.methods.length === 0) {
-          det.appendChild(document.createTextNode('keine Attribute oder Methoden erkannt'));
-        } else {
-          mem.fields.forEach(function (f) { det.appendChild(document.createTextNode(f.name + ' : ' + f.type)); det.appendChild(document.createElement('br')); });
-          mem.methods.forEach(function (m) { det.appendChild(document.createTextNode(m.name + '(' + m.args + ')')); det.appendChild(document.createElement('br')); });
-        }
-        chip.appendChild(det);
+        /* #190: Echte UML-Klassenkarte, derselbe Baustein wie im
+         * Editor (clsCardDetail oben). */
+        chip.appendChild(clsCardDetail(name, code));
         chip.title = 'Attribute und Methoden anzeigen';
         chip.addEventListener('click', function () { chip.classList.toggle('open'); });
       })(chips[i]);
@@ -2101,7 +2142,7 @@
   }
   try { boostRead(); } catch (eBoost) { /* Lesemodus ohne Felder: harmlos */ }
 
-  window.IC_EDIT_TOOLS = { gutter: gutter, brackets: brackets, tabIndent: tabIndent, highlight: highlight, boostRead: boostRead, clsMembers: clsMembersOf };
+  window.IC_EDIT_TOOLS = { gutter: gutter, brackets: brackets, tabIndent: tabIndent, highlight: highlight, boostRead: boostRead, clsMembers: clsMembersOf, clsCard: clsCardDetail };
 })();
 
 /* =====================================================================
@@ -2659,14 +2700,11 @@
             rebuildCards(); syncClsFiles(); collect(); markDirty();
           });
           card.appendChild(xBtn);
-          var det = el('div', 'icv-code-card-detail');
-          var mem = clsMembers(c.code);
-          if (mem.fields.length === 0 && mem.methods.length === 0) {
-            det.appendChild(el('div', 'muted', 'keine Attribute oder Methoden erkannt'));
-          } else {
-            mem.fields.forEach(function (f) { det.appendChild(el('div', 'icv-code-card-field', f.name + ' : ' + f.type)); });
-            mem.methods.forEach(function (m) { det.appendChild(el('div', 'icv-code-card-method', m.name + '(' + m.args + ')')); });
-          }
+          /* #190: Echte UML-Klassenkarte, derselbe Baustein wie im
+           * Lesemodus (IC_EDIT_TOOLS.clsCard), kein zweiter Zeichner. */
+          var det = (window.IC_EDIT_TOOLS && window.IC_EDIT_TOOLS.clsCard)
+            ? window.IC_EDIT_TOOLS.clsCard(clsTitle(c.name), c.code)
+            : el('div', 'icv-code-card-detail');
           card.appendChild(det);
           ccards.appendChild(card);
         });
@@ -4264,6 +4302,54 @@
   if (aside && btn) { wireNavFold(aside, btn); }
 })();
 
+/* InfoBook: Abschnitte in der Navigation ausklappbar (#186). Jeder
+ * Abschnitt ist ein details-Element: Der aktive Abschnitt steht vom
+ * Server aus offen, alle anderen zu. app.js merkt sich den Aufklapp-
+ * zustand JE ABSCHNITT im Browser (localStorage), damit mehrere
+ * aufgeklappte Abschnitte erhalten bleiben und auch der aktive
+ * Abschnitt zugeklappt werden kann. Ohne Javascript bleibt
+ * details/summary bedienbar, der Server-Zustand gilt dann. */
+(function () {
+  'use strict';
+  if (typeof window === 'undefined') { return; }
+  var KEY = 'ic-ibook-navsec';
+  function readState() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (eNs) { return {}; }
+  }
+  function writeState(state) {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (eNs2) { /* privater Modus */ }
+  }
+  function wireNavSections(aside) {
+    if (!aside || !aside.querySelectorAll) { return null; }
+    var boxes = aside.querySelectorAll('.ibook-pagenav-secdetails');
+    if (!boxes || !boxes.length) { return null; }
+    var state = readState();
+    for (var i = 0; i < boxes.length; i++) {
+      (function (box) {
+        var secId = String(box.getAttribute('data-secid') || '');
+        /* Gespeicherter Zustand ueberschreibt den Server-Standard
+         * (aktiv offen, Rest zu); ohne Eintrag bleibt alles wie gerendert. */
+        if (Object.prototype.hasOwnProperty.call(state, secId)) {
+          if (state[secId] === 1 || state[secId] === '1') { box.setAttribute('open', 'open'); }
+          else { box.removeAttribute('open'); }
+        }
+        if (box.addEventListener) {
+          box.addEventListener('toggle', function () {
+            var st = readState();
+            st[secId] = (box.hasAttribute && box.hasAttribute('open')) ? 1 : 0;
+            writeState(st);
+          });
+        }
+      })(boxes[i]);
+    }
+    return true;
+  }
+  window.IC_IBOOK_NAVSEC = wireNavSections;
+  if (typeof document === 'undefined' || !document.getElementById) { return; }
+  var asideNs = document.getElementById('ibook-pagenav');
+  if (asideNs) { wireNavSections(asideNs); }
+})();
+
 
 /* InfoBook: Seiten in der Navigation per Drag&Drop sortieren (#101).
  * Nur Links mit Schreibrecht sind draggable (Klasse ibook-pagenav-drag).
@@ -4456,54 +4542,78 @@
 })();
 
 
-/* InfoBook Präsentationsmodus (#177): Folien-Navigation, Autoplay mit
- * Zeitsteuerung und Fortschrittsbalken. Die Logik lief frueher als
- * Inline-Script in der Präsentationsseite; jetzt laeuft sie hier als
- * IC_PRESENT-Modul, genau wie die anderen InfoBook-Werkzeuge. Reine
- * Helfer (parseInterval, progressPct, nextIndex) haengen an window,
- * damit die UI-Tests sie direkt pruefen koennen. */
+/* InfoBook Präsentationsmodus (#177, #188): Folien-Navigation und
+ * Elemente-Einblendung per Klick statt Autoplay mit Zeitsteuerung.
+ * Klick, Leertaste oder Pfeil rechts blenden das nächste Element der
+ * Folie ein (slide-step-hidden raus, slide-step-in als Animation),
+ * Pfeil links blendet in umgekehrter Reihenfolge wieder aus; ist eine
+ * Folie komplett sichtbar, geht der nächste Klick zur nächsten Folie,
+ * der Weg zurück zeigt Folien wieder komplett aufgedeckt. Titel und
+ * Bereichs-Pill (ibook-slide-section) bleiben immer sichtbar. Die
+ * Logik laeuft als IC_PRESENT-Modul wie die anderen InfoBook-Werkzeuge,
+ * reine Helfer (stepsOf, stepInfoText, nextIndex) haengen an window,
+ * damit die UI-Tests sie direkt pruefen koennen. Folien ohne
+ * ibook-slide-blocks (aeltere Präsentationsansicht) haben keine
+ * Einblend-Schritte, Klick blaettert dort direkt um. */
 (function () {
   'use strict';
   if (typeof window === 'undefined') { return; }
-  function clampInt(n, fallback) {
-    if (isNaN(n)) { return fallback; }
-    if (n < 2) { return 2; }
-    if (n > 600) { return 600; }
-    return n;
-  }
-  function parseInterval(value, fallback) {
-    return clampInt(parseInt(String(value), 10), clampInt(fallback, 10));
-  }
-  function intervalMs(sec) { return parseInterval(sec, 10) * 1000; }
-  function progressPct(elapsedMs, ms) {
-    if (!ms || ms <= 0) { return 0; }
-    var pct = Math.round((elapsedMs / ms) * 100);
-    if (pct < 0) { pct = 0; }
-    if (pct > 100) { pct = 100; }
-    return pct;
-  }
   function nextIndex(i, count, loop) {
     if (count <= 0) { return 0; }
     var n = i + 1;
     if (n >= count) { return loop ? 0 : count - 1; }
     return n;
   }
+  /* Revealbare Elemente einer Folie: Kinder von .ibook-slide-blocks in
+   * Seitenreihenfolge, ohne die Bereichs-Pill (bleibt immer sichtbar). */
+  function stepsOf(slideEl) {
+    if (!slideEl || !slideEl.querySelector || !slideEl.querySelectorAll) { return []; }
+    var box = slideEl.querySelector('.ibook-slide-blocks');
+    if (!box || !box.children) { return []; }
+    var out = [];
+    for (var i = 0; i < box.children.length; i++) {
+      var ch = box.children[i];
+      if (!ch || !ch.classList) { continue; }
+      if (ch.classList.contains('ibook-slide-section')) { continue; }
+      out.push(ch);
+    }
+    return out;
+  }
+  /* Anzeige fuer die Kopfzeile: nennt das Element, das der naechste
+   * Klick einblendet; ist alles sichtbar, bleibt die Anzeige leer. */
+  function stepInfoText(revealed, total) {
+    if (!total || total <= 1 || revealed >= total) { return ''; }
+    return 'Element ' + (revealed + 1) + ' / ' + total;
+  }
   window.IC_PRESENT = {
-    parseInterval: parseInterval,
-    intervalMs: intervalMs,
-    progressPct: progressPct,
-    nextIndex: nextIndex
+    nextIndex: nextIndex,
+    stepsOf: stepsOf,
+    stepInfoText: stepInfoText
   };
   if (typeof document === 'undefined' || !document.addEventListener) { return; }
 
   var stage = null, slides = [], counter = null, prevBtn = null, nextBtn = null,
-      fullBtn = null, playBtn = null, intervalSel = null, progressFill = null,
-      timer = null, elapsed = 0, current = 0, storeKey = '';
+      fullBtn = null, stepinfo = null, current = 0, revealed = 0,
+      stepsCache = [], storeKey = '';
 
-  function intervalValue() {
-    return intervalSel ? intervalMs(intervalSel.value) : 10000;
+  function stepsOfCurrent() {
+    if (!stepsCache[current]) { stepsCache[current] = stepsOf(slides[current]); }
+    return stepsCache[current];
   }
-  function show(n) {
+  function showStep(el, on) {
+    if (!el || !el.classList) { return; }
+    if (on) {
+      el.classList.remove('slide-step-hidden');
+      el.classList.add('slide-step-in');
+    } else {
+      el.classList.add('slide-step-hidden');
+      el.classList.remove('slide-step-in');
+    }
+  }
+  function updateStepInfo() {
+    if (stepinfo) { stepinfo.textContent = stepInfoText(revealed, stepsOfCurrent().length); }
+  }
+  function show(n, revealAll) {
     if (slides.length === 0) { return; }
     if (n < 0) { n = 0; }
     if (n >= slides.length) { n = slides.length - 1; }
@@ -4511,32 +4621,33 @@
     current = n;
     if (slides[current] && slides[current].classList) { slides[current].classList.add('slide-active'); }
     if (counter) { counter.textContent = (current + 1) + ' / ' + slides.length; }
-    elapsed = 0;
-    if (progressFill && progressFill.style) { progressFill.style.width = '0%'; }
+    /* #188: Neue Folie startet mit verborgenen Elementen; beim
+     * Zurueckblaettern erscheint die Folie komplett aufgedeckt. */
+    var steps = stepsOfCurrent();
+    revealed = revealAll ? steps.length : 0;
+    for (var i = 0; i < steps.length; i++) { showStep(steps[i], revealAll); }
+    updateStepInfo();
     try { localStorage.setItem(storeKey, String(current)); } catch (e) { /* privater Modus: egal */ }
   }
-  function tick() {
-    elapsed += 250;
-    var ms = intervalValue();
-    var pct = progressPct(elapsed, ms);
-    if (progressFill && progressFill.style) { progressFill.style.width = pct + '%'; }
-    if (elapsed >= ms) { show(nextIndex(current, slides.length, true)); }
+  function next() {
+    var steps = stepsOfCurrent();
+    if (revealed < steps.length) {
+      showStep(steps[revealed], true);
+      revealed++;
+      updateStepInfo();
+      return;
+    }
+    show(nextIndex(current, slides.length, false));
   }
-  function start() {
-    if (timer !== null) { return; }
-    timer = setInterval(tick, 250);
-    if (playBtn) { playBtn.textContent = '⏸'; }
-  }
-  function stop() {
-    if (timer === null) { return; }
-    clearInterval(timer);
-    timer = null;
-    elapsed = 0;
-    if (progressFill && progressFill.style) { progressFill.style.width = '0%'; }
-    if (playBtn) { playBtn.textContent = '▶'; }
-  }
-  function togglePlay() {
-    if (timer === null) { start(); } else { stop(); }
+  function prev() {
+    var steps = stepsOfCurrent();
+    if (revealed > 0) {
+      revealed--;
+      showStep(steps[revealed], false);
+      updateStepInfo();
+      return;
+    }
+    show(current - 1, true);
   }
   function attach(doc) {
     if (!doc || !doc.getElementById) { return; }
@@ -4547,12 +4658,11 @@
     prevBtn = doc.getElementById('slide-prev');
     nextBtn = doc.getElementById('slide-next');
     fullBtn = doc.getElementById('slide-full');
-    playBtn = doc.getElementById('slide-play');
-    intervalSel = doc.getElementById('slide-interval');
-    progressFill = doc.getElementById('slide-progress-fill');
+    stepinfo = doc.getElementById('slide-stepinfo');
+    stepsCache = [];
     storeKey = 'ibook-slide-' + (stage.getAttribute('data-ibook') || '0');
-    if (prevBtn) { prevBtn.addEventListener('click', function () { show(current - 1); }); }
-    if (nextBtn) { nextBtn.addEventListener('click', function () { show(current + 1); }); }
+    if (prevBtn) { prevBtn.addEventListener('click', function () { prev(); }); }
+    if (nextBtn) { nextBtn.addEventListener('click', function () { next(); }); }
     if (fullBtn) {
       fullBtn.addEventListener('click', function () {
         try {
@@ -4561,12 +4671,9 @@
         } catch (e) { /* aeltere Browser: egal */ }
       });
     }
-    if (playBtn) { playBtn.addEventListener('click', togglePlay); }
-    if (intervalSel) { intervalSel.addEventListener('change', function () { elapsed = 0; }); }
     doc.addEventListener('keydown', function (ev) {
-      if (ev.key === 'ArrowRight' || ev.key === ' ' || ev.key === 'PageDown') { ev.preventDefault(); show(current + 1); }
-      else if (ev.key === 'ArrowLeft' || ev.key === 'PageUp') { ev.preventDefault(); show(current - 1); }
-      else if (ev.key === 'p' || ev.key === 'P') { togglePlay(); }
+      if (ev.key === 'ArrowRight' || ev.key === ' ' || ev.key === 'PageDown') { ev.preventDefault(); next(); }
+      else if (ev.key === 'ArrowLeft' || ev.key === 'PageUp') { ev.preventDefault(); prev(); }
       else if (ev.key === 'f' || ev.key === 'F') { if (fullBtn) { fullBtn.click(); } }
     });
     var startAt = 0;

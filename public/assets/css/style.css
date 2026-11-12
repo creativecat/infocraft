@@ -2404,26 +2404,17 @@ table.delta { border-collapse: collapse; font-family: var(--font-mono, monospace
 }
 .folder-add:hover { border-color: var(--primary); color: var(--primary); background: var(--surface); }
 
-/* #177: Präsentationsmodus im InfoBook: Autoplay mit Zeitsteuerung,
- * Fortschrittsbalken unter der Werkzeugleiste und ein weiches,
- * gestaffeltes Einblenden der Bausteine je Folie. */
-.slide-progress { height: 4px; background: #e2e7ef; border-radius: 4px; overflow: hidden; margin-bottom: 16px; }
-.slide-progress-fill { height: 100%; width: 0%; background: var(--primary, #1f4fc9); transition: width 250ms linear; border-radius: 4px; }
-.slide-interval-label { display: inline-flex; align-items: center; gap: 4px; }
-.slide-interval-label .input { width: auto; padding: 4px 8px; font-size: 0.85rem; }
-@keyframes slide-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+/* #177/#188: Präsentationsmodus im InfoBook: Die Elemente einer Folie
+ * erscheinen einzeln per Klick (slide-step-hidden haelt sie zurueck,
+ * slide-step-in blendet sie weich ein). Autoplay mit Zeitsteuerung,
+ * Fortschrittsbalken und gestaffeltes Selbst-Einblenden sind entfallen,
+ * die Schritt-Anzeige (slide-stepinfo) sitzt in der Werkzeugleiste. */
 @keyframes slide-block-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.slide.slide-active .ibook-slide-blocks > * { animation: slide-block-in 320ms ease-out backwards; }
-.slide.slide-active .ibook-slide-blocks > *:nth-child(2) { animation-delay: 90ms; }
-.slide.slide-active .ibook-slide-blocks > *:nth-child(3) { animation-delay: 180ms; }
-.slide.slide-active .ibook-slide-blocks > *:nth-child(4) { animation-delay: 270ms; }
-.slide.slide-active .ibook-slide-blocks > *:nth-child(5) { animation-delay: 360ms; }
-.slide.slide-active .ibook-slide-blocks > *:nth-child(6) { animation-delay: 450ms; }
-.slide.slide-active .ibook-slide-blocks > *:nth-child(7) { animation-delay: 540ms; }
-.slide.slide-active .ibook-slide-blocks > *:nth-child(8) { animation-delay: 630ms; }
+.slide-stepinfo { font-size: 0.8rem; color: var(--muted, #64748b); min-width: 90px; text-align: right; }
+.slide-step-hidden { display: none; }
+.slide-step-in { animation: slide-block-in 320ms ease-out; }
 @media (prefers-reduced-motion: reduce) {
-    .slide.slide-active .ibook-slide-blocks > * { animation: none; }
-    .slide-progress-fill { transition: none; }
+    .slide-step-in { animation: none; }
 }
 
 /* #181: Impressum als klare Angabentabelle statt loser Absaetze. */
@@ -2500,12 +2491,46 @@ table.delta { border-collapse: collapse; font-family: var(--font-mono, monospace
 .ibook-page-card-hint { font-size: 0.75rem; color: var(--muted, #64748b); }
 .ibook-secview-cards .ibook-page-card:hover .ibook-page-card-hint { color: #1d4ed8; }
 .ibook-secview-admin { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; border-top: 1px dashed var(--border, #d7dce5); padding-top: 12px; }
-.ibook-import-details { position: relative; }
-.ibook-import-details summary { list-style: none; cursor: pointer; }
-.ibook-import-details summary::-webkit-details-marker { display: none; }
-.ibook-import-panel {
-    position: absolute; left: 0; top: calc(100% + 8px); z-index: 40;
-    width: min(520px, 92vw); background: var(--panel, #ffffff);
-    border: 1px solid var(--border, #d7dce5); border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14); padding: 14px;
-}
+
+/* ============================================================
+   Runde 22 (#186-#190): InfoBook-Feinschliff
+   ============================================================ */
+
+/* #186: Jeder Abschnitt in der Navigation ist ein eigener aufklapp-
+ * barer Eintrag (details): Der Titel (summary) klappt seine Seiten
+ * auf und zu, ein kleiner Pfeil zeigt den Zustand. Der aktive
+ * Abschnitt traegt die bekannte Aktiv-Markierung und steht vom
+ * Server aus offen; app.js merkt sich den Zustand je Abschnitt im
+ * Browser, damit mehrere Abschnitte offen bleiben koennen. */
+.ibook-pagenav-secdetails summary { list-style: none; cursor: pointer; }
+.ibook-pagenav-secdetails summary::-webkit-details-marker { display: none; }
+.ibook-pagenav-secdetails summary::after { content: '▸'; float: right; color: #94a3b8; font-size: 0.75rem; }
+.ibook-pagenav-secdetails[open] summary::after { content: '▾'; }
+.ibook-pagenav-pages-sub { padding-left: 10px; }
+.ibook-pagenav-empty { font-size: 0.78rem; color: #94a3b8; font-style: italic; padding: 2px 6px; }
+.ibook-pagenav-secopen { display: block; padding: 2px 6px 6px 24px; font-size: 0.78rem; color: #1d4ed8; }
+
+/* #187: Buchpaket-Import als fester aufklappbarer Eintrag unten in
+ * der Navigation (nur Verwalter), auf jeder Ansicht am selben Ort.
+ * Das Formular klappt inline auf, kein Schwebefeld mehr. */
+.ibook-navimport-details { border-top: 1px solid var(--border, #d7dce5); margin-top: 8px; padding-top: 8px; }
+.ibook-navimport-details summary { list-style: none; cursor: pointer; display: block; padding: 4px 6px; border-radius: 8px; font-size: 0.85rem; }
+.ibook-navimport-details summary::-webkit-details-marker { display: none; }
+.ibook-navimport-details summary:hover { background: rgba(29, 78, 216, 0.06); }
+.ibook-navimport textarea { font-family: ui-monospace, Consolas, monospace; font-size: 0.75rem; }
+
+/* #187: Ein leerer Abschnitt zeigt dasselbe Karten-Raster wie ein
+ * gefuellter, nur mit einer Platzhalter-Karte statt einer fremd
+ * aussehenden Hinweisbox. */
+.ibook-page-card-empty { border-style: dashed; }
+.ibook-page-card-empty .ibook-page-title { color: #1d4ed8; }
+
+/* #190: Klassenkarte als echter UML-Klassenkasten: Klassenname oben
+ * zentriert, darunter die Abteilungen Attribute und Methoden mit
+ * Trennlinien, wie im Diagramm-Editor. Derselbe Baustein zeichnet
+ * die Karte im Editor und im Lesemodus. */
+.icv-clsbox { border: 1px solid #93c5fd; border-radius: 6px; overflow: hidden; background: #ffffff; margin-top: 6px; }
+.icv-clsbox-name { background: #dbeafe; color: #1e3a8a; font-weight: 700; text-align: center; padding: 4px 10px; border-bottom: 1px solid #93c5fd; }
+.icv-clsbox-comp { padding: 5px 10px; }
+.icv-clsbox-comp + .icv-clsbox-comp { border-top: 1px solid #93c5fd; }
+.icv-clsbox-empty { color: var(--muted, #64748b); font-style: italic; font-size: 0.72rem; }
