@@ -4,7 +4,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.17.0
+ * @version 0.18.0
  */
 /* InfoCraft: Basis-Stylesheet */
 
@@ -22,6 +22,18 @@
     --sidebar-2: #1e293b;
     --radius: 14px;
     --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.06);
+    /* Automaten-Werkstatt (#174): Farbwerte der Zeichenflaeche. Die
+     * Werkstatt liest diese Variablen, frueher fielen sie auf ein
+     * leeres Ergebnis zurueck und die Kreise wurden schwarz gezeichnet. */
+    --paper: #ffffff;
+    --ink: #1b2a41;
+    --grid: #e2e7ef;
+    --accent: #1f4fc9;
+    --accent-soft: #e2e9fb;
+    --hl: #ffd84a;
+    --hl-ink: #1b2a41;
+    --hl-line: #c98a00;
+    --bad: #bd2e24;
 }
 
 :root.presenting { font-size: 125%; }
@@ -1183,7 +1195,7 @@ span.hlwrap { display: block; }
 .poll-bar-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 0.92em; }
 .poll-bar-row > span:first-child { flex: 0 0 42%; overflow-wrap: anywhere; }
 .poll-bar-box { flex: 1 1 auto; background: var(--bg-inset, #f0f0f0); border-radius: 6px; overflow: hidden; }
-.poll-bar { height: 14px; background: var(--accent, #4a7dbe); border-radius: 6px 0 0 6px; min-width: 2px; transition: width 0.4s ease; }
+.poll-bar { height: 14px; background: #4a7dbe; border-radius: 6px 0 0 6px; min-width: 2px; transition: width 0.4s ease; }
 .poll-bar-row > span:last-child { flex: 0 0 auto; font-weight: bold; }
 .poll-answer-row { flex-wrap: wrap; }
 .mod-poll-result { margin-top: 8px; }
@@ -1818,6 +1830,24 @@ a.icv-item-link:hover .icv-item { outline: 2px dashed #1d4ed8; outline-offset: 2
     font-family: var(--mono, ui-monospace, monospace); font-size: 0.8rem; white-space: pre-wrap; color: #1e293b;
 }
 .icv-db .icv-db-seed-src { display: none; }
+/* HTML-Baustein (#174): Eingabemaske im abgeschotteten iframe */
+.icv-html {
+    display: flex; flex-direction: column; gap: 6px;
+    background: #f8fafc; border: 1px solid var(--border, #d7dce5); border-radius: 10px; padding: 10px;
+}
+.icv-html .icv-html-head { font-size: 0.82rem; font-weight: 600; color: #1e293b; }
+.icv-html .icv-html-ta {
+    width: 100%; min-height: 100px; box-sizing: border-box; resize: vertical;
+    background: #ffffff; color: #1e293b; border: 1px solid var(--border, #d7dce5); border-radius: 6px;
+    font-family: var(--mono, ui-monospace, monospace); font-size: 0.82rem; padding: 6px; outline: none;
+}
+.icv-html .icv-html-prev {
+    min-height: 140px; border: 1px solid var(--border, #d7dce5); border-radius: 6px;
+    overflow: hidden; background: #ffffff;
+}
+.icv-html .icv-html-src { display: none; }
+.icv-html-frame iframe, .icv-html-prev iframe { display: block; width: 100%; height: 320px; border: 0; background: #ffffff; }
+.icv-html .icv-html-prev iframe { height: 240px; }
 /* Diagramm-Element (#77): Code links, Diagramm rechts */
 .icv-diagram {
     display: flex; flex-direction: column;
@@ -2379,3 +2409,13 @@ table.delta { border-collapse: collapse; font-family: var(--font-mono, monospace
   .pda-side, .tm-side, .lc-side { border-left: 0; max-height: none; }
   .pda-stage, .tm-stage, .lc-stage { height: 60vh; min-height: 380px; }
 }
+
+
+/* -------------------------------------------------- */
+/* Runde 18: Code-Uebersicht in Kisten (#170)         */
+/* -------------------------------------------------- */
+/* Drei Kisten oben (neues Projekt, neuer Ordner, verteilen), die
+ * Projektliste in voller Breite darunter. */
+.code-ov { display: flex; flex-direction: column; gap: 20px; }
+.ov-boxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start; }
+@media (max-width: 980px) { .ov-boxes { grid-template-columns: 1fr; } }
