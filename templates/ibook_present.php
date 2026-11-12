@@ -1,3 +1,8 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: InfoBook: Präsentationsansicht
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
 <?php /* InfoBook im Präsentationsmodus (#62): eine Folie je Seite, mit Bildern, Audio, Video und Einbettungen direkt abspielbar. */ ?>
 <div class="slide-stage" id="slide-stage" data-ibook="1">
     <div class="slide-toolbar">

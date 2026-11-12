@@ -1,5 +1,13 @@
 #!/usr/bin/env node
 /**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: PHP-Syntaxprüfung für CI und lokale Arbeit
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
+/**
  * Grober PHP-Syntax-Vorcheck ohne PHP-Interpreter:
  * prüft die Balance von (), {}, [] ausserhalb von Strings, Kommentaren
  * und Heredocs/Nowdocs. Kein Ersatz für php -l, aber faengt die

@@ -1,3 +1,8 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: InfoBook: Seite
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
 <?php /* InfoBook: Seite bearbeiten/ansehen (#62). Bloecke: Text, Bild, Audio, Video, Einbettung, Zeichnung (Apple Pencil). */
 ?>
 <?php /* #67: Zurueck ganz links, rechts Vorschau/Lesemodus und kleines aufklappbares Verteilen, Autospeichern statt Speichern-Button. */ ?>

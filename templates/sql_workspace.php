@@ -1,3 +1,8 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: SQL-Werkstatt: Arbeitsfläche
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
 <?php $sqlTableNames = array_map(static fn (array $t): string => (string) $t['name'], $tables); ?>
 <section class="panel">
     <div class="panel-head">

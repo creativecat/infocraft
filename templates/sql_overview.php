@@ -1,3 +1,8 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: SQL-Werkstatt: Übersicht
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
 <?php $classNames = []; foreach ($classes as $class) { $classNames[$class->id] = $class->name; } ?>
 <section class="hero">
     <div class="hero-emoji">🗄️</div>

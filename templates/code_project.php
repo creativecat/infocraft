@@ -1,3 +1,8 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: Code-Werkstatt: Projektansicht mit IDE, Blöcken und Assembler
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
 <section class="panel">
     <div class="panel-head">
         <a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück">←</a>
@@ -721,6 +726,7 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
             <div class="blk-stagebar">
                 <button class="btn btn-primary" id="blk-flag" type="button" title="Start: alle ▶-Skripte laufen los">▶</button>
                 <button class="btn" id="blk-stop" type="button" title="Stop: alle laufenden Skripte anhalten">⏹</button>
+                <button class="btn blk-mode-btn" id="blk-mode" type="button" title="Zwischen Lernmodus und Expertenmodus wechseln (#151)">🧠 Lernmodus</button>
                 <button class="btn" id="blk-code" type="button" data-port="<?= url('werkstatt/code/blocks/port') ?>" title="Block-Programm als Java oder Python anzeigen (#140)">🐍 Java / Python</button>
                 <span class="muted" id="blk-runinfo"></span>
             </div>
@@ -728,8 +734,15 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
                 <canvas id="blk-pen" width="480" height="360"></canvas>
                 <canvas id="blk-ctr" width="480" height="360"></canvas>
             </div>
+            <div class="blk-console" id="blk-console" hidden>
+                <div class="blk-console-log" id="blk-console-log" title="Protokoll der Konsole"></div>
+                <div class="blk-console-row">
+                    <input class="blk-console-in" id="blk-console-in" type="text" spellcheck="false" placeholder="Befehl für die ausgewählte Figur, z. B. gehe 50 - oder robo.gehe 50 - hilfe zeigt alles">
+                    <button class="btn" id="blk-console-send" type="button" title="Befehl ausführen">Ausführen</button>
+                </div>
+            </div>
             <div class="blk-sprites" id="blk-sprites"></div>
-            <p class="muted blk-stage-hint">Bühne 480 × 360. Die Mitte ist x = 0, y = 0; oben ist y = 180. Richtung: 0 Grad schaut nach oben, 90 Grad nach rechts. Wähle oben eine Figur oder die Bühne aus, um ihre Skripte zu bearbeiten.</p>
+            <p class="muted blk-stage-hint">Bühne 480 × 360. Der Ursprung (0, 0) liegt oben links wie in der Coding-Werkstatt: x läuft nach rechts (0 bis 480), y nach unten (0 bis 360), die Mitte ist x = 240, y = 180. Richtung: 0 Grad schaut nach oben, 90 Grad nach rechts. Wähle oben eine Figur oder die Bühne aus, um ihre Skripte zu bearbeiten.</p>
         </aside>
     </div>
     <section class="panel">

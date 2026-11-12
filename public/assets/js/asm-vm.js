@@ -1,3 +1,11 @@
+/**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Assembler-Registermaschine für die Code-Werkstatt
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
 /* InfoCraft: Assembler-VM und Assembler-IDE (public/assets/js/asm-vm.js).
  *
  * Eigene didaktische Registermaschine fuer Assembler-Projekte:

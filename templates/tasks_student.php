@@ -1,5 +1,13 @@
 <?php
 /**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Aufgaben: Ansicht für Lernende
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
+/**
  * @var list<array{task: \Infocraft\Models\Task, className: ?string, teacherName: string, dueAt: string|null, submission: array{content: string, submittedAt: string}|null, grading: array{grade: string, comment: string, source: string, checked: bool}|null}> $tasks
  * @var string|null $nextDue @var array<int, \Infocraft\Models\TaskTopic> $topics
  * @var array<int, list<\Infocraft\Models\TaskTodo>> $todoTemplates @var array<int, list<\Infocraft\Models\TaskTodo>> $studentTodos

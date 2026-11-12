@@ -1,3 +1,8 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: Präsentationen: Wiedergabe
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
 <?php /** Präsentationsmodus: Folie für Folie, Vollbild (Taste F), Pfeiltasten.
  * Code-Folien tragen Syntax-Highlighting (highlight.js) und sind für
  * Lehrkräfte direkt hier editierbar und speicherbar. */ ?>

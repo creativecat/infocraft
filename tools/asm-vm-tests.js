@@ -1,3 +1,11 @@
+/**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Tests der Assembler-Registermaschine
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
 /* InfoCraft: Tests fuer die Assembler-VM (public/assets/js/asm-vm.js).
  * Ausfuehrung: node tools/asm-vm-tests.js  (Exit 1 bei Fehlern).
  */

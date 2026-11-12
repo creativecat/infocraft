@@ -1,3 +1,8 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: Code-Werkstatt: Ansicht für Lernende
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
 <section class="hero">
     <div class="hero-emoji">🎒</div>
     <h1>Projekte von <?= e($student->fullName()) ?></h1>

@@ -1,4 +1,12 @@
 <?php
+/**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Einstiegspunkt: Routing aller Anfragen an die Controller
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
 declare(strict_types=1);
 
 // Eingebauter PHP-Server (Entwicklung): statische Dateien direkt ausliefern.

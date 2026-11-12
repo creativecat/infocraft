@@ -1,3 +1,11 @@
+/**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Block-Werkstatt: Editor, Laufzeit, Code-Generator
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
 /* InfoCraft Block-Editor: Programmieren mit Blöcken per Drag & Drop (#116-#128).
  *
  * Die Werkstatt kennt daneben Java, Python und Assembler - hier kommt eine
@@ -140,7 +148,7 @@
     broadcast: { cat: 'events', kind: 'stack', inputs: { msg: { type: 'select', src: 'msgs', def: 'nachricht1' } },
       parts: ['sende ', { in: 'msg' }],
       help: 'Schickt eine Nachricht an alle Figuren: Jede mit passendem Empfänger-Block startet (#131).' },
-    broadcast_wait: { cat: 'events', kind: 'stack', inputs: { msg: { type: 'select', src: 'msgs', def: 'nachricht1' } },
+    broadcast_wait: { cat: 'events', kind: 'stack', inputs: { msg: { type: 'select', src: 'msgs', def: 'nachricht1' } }, pro: true,
       parts: ['sende ', { in: 'msg' }, ' und warte'],
       help: 'Wie senden, aber dieses Skript wartet, bis alle Empfänger fertig sind (#131).' },
 
@@ -155,9 +163,9 @@
       parts: ['drehe dich ↺ um ', { in: 'deg' }, ' Grad'],
       help: 'Dreht die Figur gegen den Uhrzeigersinn.' },
     goto_xy: { cat: 'motion', kind: 'stack',
-      inputs: { x: { type: 'slot', def: '0' }, y: { type: 'slot', def: '0' } },
+      inputs: { x: { type: 'slot', def: '240' }, y: { type: 'slot', def: '180' } },
       parts: ['gehe zu x: ', { in: 'x' }, ' y: ', { in: 'y' }],
-      help: 'Setzt die Figur an eine Position. Die Mitte der Bühne ist x = 0, y = 0.' },
+      help: 'Setzt die Figur an eine Position. Der Ursprung (0, 0) ist oben links, die Mitte der Bühne liegt bei x = 240, y = 180 (#144).' },
     point_dir: { cat: 'motion', kind: 'stack', inputs: { deg: { type: 'slot', def: '90' } },
       parts: ['setze Richtung auf ', { in: 'deg' }, ' Grad'],
       help: 'Legt die Richtung fest: 0 Grad schaut nach oben, 90 Grad nach rechts.' },
@@ -175,9 +183,9 @@
       inputs: { secs: { type: 'slot', def: '1' }, x: { type: 'slot', def: '0' }, y: { type: 'slot', def: '0' } },
       parts: ['gleite in ', { in: 'secs' }, ' Sekunden zu x: ', { in: 'x' }, ' y: ', { in: 'y' }],
       help: 'Bewegt die Figur weich und gleichmäßig zur Zielposition (#134).' },
-    bounce: { cat: 'motion', kind: 'stack', inputs: {}, parts: ['pralle vom Rand ab'],
+    bounce: { cat: 'motion', kind: 'stack', inputs: {}, parts: ['pralle vom Rand ab'], pro: true,
       help: 'Wenn die Figur den Rand berührt, dreht sie sich und läuft zurück (#134).' },
-    point_towards: { cat: 'motion', kind: 'stack', inputs: { name: { type: 'select', src: 'sprites', def: '' } },
+    point_towards: { cat: 'motion', kind: 'stack', inputs: { name: { type: 'select', src: 'sprites', def: '' } }, pro: true,
       parts: ['drehe dich zu ', { in: 'name' }],
       help: 'Richtet die Figur auf eine andere Figur aus (#134).' },
 
@@ -207,15 +215,15 @@
       help: 'Zeigt eine Denkblase für die angegebene Zeit und wartet solange (#135).' },
     next_costume: { cat: 'looks', kind: 'stack', inputs: {}, parts: ['wechsle zum nächsten Kostüm'],
       help: 'Schaltet aufs nächste Bild weiter: Roboter, Rakete, Fisch, Ball (#135).' },
-    change_effect: { cat: 'looks', kind: 'stack', inputs: { d: { type: 'slot', def: '25' } },
+    change_effect: { cat: 'looks', kind: 'stack', inputs: { d: { type: 'slot', def: '25' } }, pro: true,
       parts: ['ändere Farbeffekt um ', { in: 'd' }], help: 'Verdreht die Farbe der Figur weiter (0 bis 200) (#135).' },
-    set_effect: { cat: 'looks', kind: 'stack', inputs: { v: { type: 'slot', def: '0' } },
+    set_effect: { cat: 'looks', kind: 'stack', inputs: { v: { type: 'slot', def: '0' } }, pro: true,
       parts: ['setze Farbeffekt auf ', { in: 'v' }], help: 'Legt die Farbmischung fest: 0 = normal, 100 = halb gedreht (#135).' },
-    clear_effects: { cat: 'looks', kind: 'stack', inputs: {}, parts: ['Farbeffekte aus'],
+    clear_effects: { cat: 'looks', kind: 'stack', inputs: {}, parts: ['Farbeffekte aus'], pro: true,
       help: 'Stellt die Originalfarbe der Figur wieder her (#135).' },
-    go_front: { cat: 'looks', kind: 'stack', inputs: {}, parts: ['gehe zu vorderster Ebene'],
+    go_front: { cat: 'looks', kind: 'stack', inputs: {}, parts: ['gehe zu vorderster Ebene'], pro: true,
       help: 'Legt die Figur ganz nach vorn, sie verdeckt alle anderen (#135).' },
-    go_back: { cat: 'looks', kind: 'stack', inputs: { n: { type: 'slot', def: '1' } },
+    go_back: { cat: 'looks', kind: 'stack', inputs: { n: { type: 'slot', def: '1' } }, pro: true,
       parts: ['gehe ', { in: 'n' }, ' Ebenen nach hinten'],
       help: 'Schiebt die Figur um n Positionen nach hinten (#135).' },
 
@@ -269,21 +277,21 @@
     reset_timer: { cat: 'sensing', kind: 'stack', inputs: {}, parts: ['setze Stoppuhr zurück'],
       help: 'Stellt die Stoppuhr auf 0.' },
     xpos: { cat: 'sensing', kind: 'rep', inputs: {}, parts: ['x-Position'],
-      help: 'Die waagerechte Position der Figur (-240 bis 240).' },
+      help: 'Die waagerechte Position der Figur (0 bis 480), gemessen vom linken Rand (#144).' },
     ypos: { cat: 'sensing', kind: 'rep', inputs: {}, parts: ['y-Position'],
-      help: 'Die senkrechte Position der Figur (-180 bis 180).' },
+      help: 'Die senkrechte Position der Figur (0 bis 360), gemessen vom oberen Rand (#144).' },
     direction: { cat: 'sensing', kind: 'rep', inputs: {}, parts: ['Richtung'],
       help: 'Die aktuelle Richtung in Grad (0 = oben, 90 = rechts).' },
     mouse_x: { cat: 'sensing', kind: 'rep', inputs: {}, parts: ['Maus-x'],
       help: 'Die waagerechte Position des Mauszeigers auf der Bühne (#133).' },
     mouse_y: { cat: 'sensing', kind: 'rep', inputs: {}, parts: ['Maus-y'],
       help: 'Die senkrechte Position des Mauszeigers auf der Bühne (#133).' },
-    mouse_down: { cat: 'sensing', kind: 'bool', inputs: {}, parts: ['Maus gedrückt?'],
+    mouse_down: { cat: 'sensing', kind: 'bool', inputs: {}, parts: ['Maus gedrückt?'], pro: true,
       help: 'Wahr, solange die Maustaste auf der Bühne gehalten wird (#133).' },
-    touching_sprite: { cat: 'sensing', kind: 'bool', inputs: { name: { type: 'select', src: 'sprites', def: '' } },
+    touching_sprite: { cat: 'sensing', kind: 'bool', inputs: { name: { type: 'select', src: 'sprites', def: '' } }, pro: true,
       parts: ['berühre ich ', { in: 'name' }, '?'],
       help: 'Wahr, wenn die Figur die ausgewählte andere Figur berührt (#133).' },
-    distance_to: { cat: 'sensing', kind: 'rep', inputs: { name: { type: 'select', src: 'sprites', def: '' } },
+    distance_to: { cat: 'sensing', kind: 'rep', inputs: { name: { type: 'select', src: 'sprites', def: '' } }, pro: true,
       parts: ['Abstand zu ', { in: 'name' }],
       help: 'Wie weit die ausgewählte Figur entfernt ist, in Bühnenschritten (#133).' },
 
@@ -312,22 +320,22 @@
       parts: [{ in: 'a' }, ' oder ', { in: 'b' }], help: 'Wahr, wenn mindestens eine Bedingung wahr ist.' },
     not: { cat: 'ops', kind: 'bool', inputs: { a: { type: 'bool' } },
       parts: ['nicht ', { in: 'a' }], help: 'Kehrt einen Wahrheitswert um.' },
-    mod: { cat: 'ops', kind: 'rep', inputs: { a: { type: 'slot', def: '' }, b: { type: 'slot', def: '' } },
+    mod: { cat: 'ops', kind: 'rep', inputs: { a: { type: 'slot', def: '' }, b: { type: 'slot', def: '' } }, pro: true,
       parts: ['Rest von ', { in: 'a' }, ' durch ', { in: 'b' }],
       help: 'Der Divisionsrest, wie in der Grundschule: 7 durch 3 = Rest 1 (#136).' },
     round: { cat: 'ops', kind: 'rep', inputs: { a: { type: 'slot', def: '' } },
       parts: ['runde ', { in: 'a' }], help: 'Rundet kaufmännisch auf die nächste ganze Zahl (#136).' },
-    sqrt: { cat: 'ops', kind: 'rep', inputs: { a: { type: 'slot', def: '' } },
+    sqrt: { cat: 'ops', kind: 'rep', inputs: { a: { type: 'slot', def: '' } }, pro: true,
       parts: ['Wurzel von ', { in: 'a' }], help: 'Die Quadratwurzel, z. B. Wurzel aus 25 = 5 (#136).' },
-    abs: { cat: 'ops', kind: 'rep', inputs: { a: { type: 'slot', def: '' } },
+    abs: { cat: 'ops', kind: 'rep', inputs: { a: { type: 'slot', def: '' } }, pro: true,
       parts: ['Betrag von ', { in: 'a' }], help: 'Macht aus −7 die Zahl 7, das Vorzeichen fällt weg (#136).' },
     join: { cat: 'ops', kind: 'rep', inputs: { a: { type: 'slot', def: '' }, b: { type: 'slot', def: '' } },
       parts: ['verbinde ', { in: 'a' }, ' und ', { in: 'b' }],
       help: 'Hängt zwei Texte oder Zahlen aneinander (#136).' },
-    letter_of: { cat: 'ops', kind: 'rep', inputs: { n: { type: 'slot', def: '1' }, txt: { type: 'slot', def: 'Text' } },
+    letter_of: { cat: 'ops', kind: 'rep', inputs: { n: { type: 'slot', def: '1' }, txt: { type: 'slot', def: 'Text' } }, pro: true,
       parts: ['Buchstabe ', { in: 'n' }, ' von ', { in: 'txt' }],
       help: 'Der n-te Buchstabe eines Textes, gezählt ab 1 (#136).' },
-    length_of: { cat: 'ops', kind: 'rep', inputs: { txt: { type: 'slot', def: 'Text' } },
+    length_of: { cat: 'ops', kind: 'rep', inputs: { txt: { type: 'slot', def: 'Text' } }, pro: true,
       parts: ['Länge von ', { in: 'txt' }], help: 'Wie viele Zeichen ein Text hat (#136).' },
 
     /* Variablen */
@@ -377,27 +385,31 @@
     return {
       id: uid('sp'), name: name || 'Figur 1',
       costume: COSTUME_EMOJI[costume] ? costume : 'robot',
-      x: 0, y: 0, dir: 90, size: 100, visible: true,
+      x: 240, y: 180, dir: 90, size: 100, visible: true,
       scripts: []
     };
   }
 
   function emptyProgram() {
     return {
-      v: 2,
+      v: 3,
       vars: [],
       sprites: [defaultSprite('robot', 'Figur 1')],
       stage: { scripts: [] }
     };
   }
 
-  /* ---------- Serialisierung und Validierung (#121) ----------
-   * Gespeichert wird ein JSON-Objekt der Version 2: globale Variablen,
+  /* ---------- Serialisierung und Validierung (#121, #144) ----------
+   * Gespeichert wird ein JSON-Objekt der Version 3: globale Variablen,
    * die Liste der Figuren mit JE eigenen Skripten und die Buehne mit
-   * eigenen Skripten. Beim Laden wird alles bereinigt: unbekannte
+   * eigenen Skripten. Das Koordinatensystem hat seinen Ursprung oben
+   * links wie in der Coding-Werkstatt: x laeuft 0..480, y 0..360 nach
+   * unten. Beim Laden wird alles bereinigt: unbekannte
    * Bloecke entfallen, Felder werden gekuerzt, Grenzen greifen. Alte
-   * Programme der Version 1 (eine Figur, flache Skriptliste) werden
-   * automatisch auf Version 2 gehoben. */
+   * Programme der Version 1 (eine Figur, flache Skriptliste) und der
+   * Version 2 (zentrierter Ursprung, y nach oben) werden automatisch
+   * auf Version 3 gehoben, Positionen werden dabei umgerechnet
+   * (x + 240, y zu 180 - y). */
   var LIMITS = { scripts: 60, depth: 12, blocks: 800, fields: 200, vars: 30, sprites: 12 };
 
   function serializeBlock(node) {
@@ -439,7 +451,7 @@
       });
     }
     return {
-      v: 2,
+      v: 3,
       vars: (prog.vars || []).slice(0),
       sprites: sprites,
       stage: { scripts: serializeScriptList(prog.stage.scripts) }
@@ -503,15 +515,21 @@
     return out;
   }
 
-  function parseSprite(raw, index) {
+  function parseSprite(raw, index, legacyCoords) {
     var sp = defaultSprite(raw && raw.costume, 'Figur ' + (index + 1));
     if (!raw || typeof raw !== 'object') { return sp; }
     if (typeof raw.id === 'string' && raw.id.length > 0 && raw.id.length <= 24) { sp.id = raw.id; }
     if (typeof raw.name === 'string' && raw.name.trim() !== '') { sp.name = raw.name.trim().slice(0, 24); }
     /* Nur vorhandene Properties uebernehmen: ein leeres Objekt {} soll die
-     * Defaults (z. B. Richtung 90) nicht mit 0 ueberschreiben. */
-    if (typeof raw.x !== 'undefined') { sp.x = clamp(num(raw.x), -240, 240); }
-    if (typeof raw.y !== 'undefined') { sp.y = clamp(num(raw.y), -180, 180); }
+     * Defaults (z. B. Richtung 90) nicht mit 0 ueberschreiben.
+     * Alte Koordinaten (Version 1/2, Ursprung Mitte, y nach oben) werden
+     * beim Laden auf Ursprung oben links umgerechnet (#144). */
+    if (typeof raw.x !== 'undefined') {
+      sp.x = legacyCoords ? clamp(num(raw.x) + 240, 0, 480) : clamp(num(raw.x), 0, 480);
+    }
+    if (typeof raw.y !== 'undefined') {
+      sp.y = legacyCoords ? clamp(180 - num(raw.y), 0, 360) : clamp(num(raw.y), 0, 360);
+    }
     if (typeof raw.dir !== 'undefined') { sp.dir = num(raw.dir); }
     if (typeof raw.size !== 'undefined') { sp.size = clamp(num(raw.size), 10, 400); }
     sp.visible = raw.visible !== false;
@@ -524,6 +542,9 @@
     try { data = JSON.parse(String(text)); } catch (e) { data = null; }
     var prog = emptyProgram();
     if (!data || typeof data !== 'object') { return prog; }
+    /* Version 3 nutzt Ursprung oben links; aeltere Programme werden
+     * beim Laden umgerechnet (#144). */
+    var legacyCoords = !(num(data.v) >= 3);
     var i;
     if (Object.prototype.toString.call(data.vars) === '[object Array]') {
       for (i = 0; i < data.vars.length && i < LIMITS.vars; i++) {
@@ -533,10 +554,10 @@
     }
     var budget = { count: 0 };
     if (Object.prototype.toString.call(data.sprites) === '[object Array]') {
-      /* Version 2: Liste von Figuren, jede mit eigenen Skripten. */
+      /* Version 2/3: Liste von Figuren, jede mit eigenen Skripten. */
       prog.sprites = [];
       for (i = 0; i < data.sprites.length && i < LIMITS.sprites; i++) {
-        var sp = parseSprite(data.sprites[i], i);
+        var sp = parseSprite(data.sprites[i], i, legacyCoords);
         sp.scripts = parseScriptList(data.sprites[i] && data.sprites[i].scripts, budget);
         prog.sprites.push(sp);
       }
@@ -545,10 +566,10 @@
       }
     } else {
       /* Version 1 (vor #125): eine Figur, Skripte direkt am Programm. */
-      var legacy = parseSprite(data.sprite, 0);
+      var legacy = parseSprite(data.sprite, 0, true);
       if (data.sprite && typeof data.sprite === 'object') {
-        if (typeof data.sprite.x !== 'undefined') { legacy.x = clamp(num(data.sprite.x), -240, 240); }
-        if (typeof data.sprite.y !== 'undefined') { legacy.y = clamp(num(data.sprite.y), -180, 180); }
+        if (typeof data.sprite.x !== 'undefined') { legacy.x = clamp(num(data.sprite.x) + 240, 0, 480); }
+        if (typeof data.sprite.y !== 'undefined') { legacy.y = clamp(180 - num(data.sprite.y), 0, 360); }
         if (typeof data.sprite.dir !== 'undefined') { legacy.dir = num(data.sprite.dir); }
         if (typeof data.sprite.size !== 'undefined') { legacy.size = clamp(num(data.sprite.size), 10, 400); }
         legacy.visible = data.sprite.visible !== false;
@@ -737,7 +758,8 @@
 
   function touchingEdge(sp) {
     var half = 24 * Math.max(10, sp.size) / 100;
-    return Math.abs(sp.x) + half >= 240 || Math.abs(sp.y) + half >= 180;
+    /* Ursprung oben links (#144): der Rand ist x/y 0 oder 480/360. */
+    return sp.x - half <= 0 || sp.x + half >= 480 || sp.y - half <= 0 || sp.y + half >= 360;
   }
 
   /* ---------- Helfer fuer Sensoren, Klang und Ebenen (#130, #133, #135) ---------- */
@@ -813,12 +835,13 @@
    * spiegeln, am Boden an der Decke die senkrechte. */
   function bounceSprite(sp) {
     var half = 24 * Math.max(10, sp.size) / 100;
-    if (Math.abs(sp.x) + half >= 240) {
+    /* Ursprung oben links (#144): Spiegelung an der beruehrten Seite. */
+    if (sp.x + half >= 480 || sp.x - half <= 0) {
       sp.dir = (360 - sp.dir) % 360;
-      sp.x = clamp(sp.x, -(240 - half), 240 - half);
-    } else if (Math.abs(sp.y) + half >= 180) {
+      sp.x = clamp(sp.x, half, 480 - half);
+    } else if (sp.y + half >= 360 || sp.y - half <= 0) {
       sp.dir = (180 - sp.dir + 360) % 360;
-      sp.y = clamp(sp.y, -(180 - half), 180 - half);
+      sp.y = clamp(sp.y, half, 360 - half);
     }
   }
 
@@ -929,7 +952,8 @@
       case 'move_steps':
         if (!sp) { break; }
         var rad = sp.dir * Math.PI / 180;
-        moveBy(rt, sp, Math.sin(rad) * num(A.steps(rt, th)), Math.cos(rad) * num(A.steps(rt, th)));
+        /* y waechst nach unten (#144): der Richtungskosinus kehrt sich um. */
+        moveBy(rt, sp, Math.sin(rad) * num(A.steps(rt, th)), -Math.cos(rad) * num(A.steps(rt, th)));
         break;
       case 'turn_right': if (sp) { sp.dir = (sp.dir + num(A.deg(rt, th))) % 360; } break;
       case 'turn_left': if (sp) { sp.dir = (sp.dir - num(A.deg(rt, th))) % 360; } break;
@@ -973,7 +997,8 @@
       case 'point_towards':
         if (sp) {
           var target2 = findSpriteById(rt, String(A.name(rt, th)));
-          if (target2) { sp.dir = Math.atan2(target2.x - sp.x, target2.y - sp.y) * 180 / Math.PI; }
+          /* y nach unten (#144): der Richtungswinkel dreht die y-Achse um. */
+          if (target2) { sp.dir = Math.atan2(target2.x - sp.x, sp.y - target2.y) * 180 / Math.PI; }
         }
         break;
       /* ---------- Aussehen-Plus (#135) ---------- */
@@ -1006,8 +1031,9 @@
         rt.penCtx.strokeStyle = seg.color;
         rt.penCtx.lineWidth = 2;
         rt.penCtx.beginPath();
-        rt.penCtx.moveTo(240 + seg.x1, 180 - seg.y1);
-        rt.penCtx.lineTo(240 + seg.x2, 180 - seg.y2);
+        /* Ursprung oben links (#144): Stift-Koordinaten sind direkt Pixel. */
+        rt.penCtx.moveTo(seg.x1, seg.y1);
+        rt.penCtx.lineTo(seg.x2, seg.y2);
         rt.penCtx.stroke();
       }
     }
@@ -1108,7 +1134,7 @@
     return langLiteral(field, lang);
   }
 
-  function langReporter(node, lang, helpers) {
+  function langReporterRaw(node, lang, helpers) {
     var v2 = function (name) { return langValue(node.f[name], lang, helpers); };
     var q = function (name) { return langQuote(node.f[name] && node.f[name].v, lang); };
     switch (node.op) {
@@ -1148,6 +1174,14 @@
     }
   }
 
+  /* Platzhalter-Reporter sind in Python Instanzmethoden und brauchen
+   * daher ein self. davor (#152); reine Ausdruecke starten mit '(' . */
+  function langReporter(node, lang, helpers) {
+    var r = langReporterRaw(node, lang, helpers);
+    if (lang === 'py' && /^[a-z]/.test(r)) { return 'self.' + r; }
+    return r;
+  }
+
   function langCallLine(node, lang, helpers) {
     var def = LANG_CALLS[node.op];
     if (!def) {
@@ -1159,6 +1193,7 @@
     for (i = 0; i < def[1].length; i++) { args.push(langValue(node.f[def[1][i]], lang, helpers)); }
     var call = def[0] + '(' + args.join(', ') + ')';
     if (node.op === 'wait' && lang === 'py') { call = 'time.sleep(' + args[0] + ')'; }
+    else if (lang === 'py') { call = 'self.' + call; }
     return call;
   }
 
@@ -1179,13 +1214,17 @@
             ? 'for ' + zv + ' in range(int(' + langValue(n.f.count, lang, helpers) + ')):'
             : 'for (int ' + zv + ' = 0; ' + zv + ' < ' + langValue(n.f.count, lang, helpers) + '; ' + zv + '++) {')
             + '  ' + (lang === 'py' ? '# ' : '// ') + blockText(n));
+          var before = out.length;
           langChain(n.sub[0], lang, ind + IND, out, helpers);
+          if (lang === 'py' && out.length === before) { out.push(ind + IND + 'pass'); }
           if (lang !== 'py') { out.push(ind + '}'); }
           break;
         case 'forever':
           out.push(ind + (lang === 'py' ? 'while True:' : 'while (true) {')
             + '  ' + (lang === 'py' ? '# ' : '// ') + blockText(n));
+          var before = out.length;
           langChain(n.sub[0], lang, ind + IND, out, helpers);
+          if (lang === 'py' && out.length === before) { out.push(ind + IND + 'pass'); }
           if (lang !== 'py') { out.push(ind + '}'); }
           break;
         case 'if_then':
@@ -1193,7 +1232,9 @@
             ? 'if ' + langValue(n.f.cond, lang, helpers) + ':'
             : 'if (' + langValue(n.f.cond, lang, helpers) + ') {')
             + '  ' + (lang === 'py' ? '# ' : '// ') + blockText(n));
+          var before = out.length;
           langChain(n.sub[0], lang, ind + IND, out, helpers);
+          if (lang === 'py' && out.length === before) { out.push(ind + IND + 'pass'); }
           if (lang !== 'py') { out.push(ind + '}'); }
           break;
         case 'if_else':
@@ -1203,7 +1244,9 @@
             + '  ' + (lang === 'py' ? '# ' : '// ') + blockText(n));
           langChain(n.sub[0], lang, ind + IND, out, helpers);
           out.push(ind + (lang === 'py' ? 'else:' : '} else {'));
+          var before2 = out.length;
           langChain(n.sub[1], lang, ind + IND, out, helpers);
+          if (lang === 'py' && out.length === before2) { out.push(ind + IND + 'pass'); }
           if (lang !== 'py') { out.push(ind + '}'); }
           break;
         case 'repeat_until':
@@ -1211,7 +1254,9 @@
             ? 'while not ' + langValue(n.f.cond, lang, helpers) + ':'
             : 'while (!(' + langValue(n.f.cond, lang, helpers) + ')) {')
             + '  ' + (lang === 'py' ? '# ' : '// ') + blockText(n));
+          var before = out.length;
           langChain(n.sub[0], lang, ind + IND, out, helpers);
+          if (lang === 'py' && out.length === before) { out.push(ind + IND + 'pass'); }
           if (lang !== 'py') { out.push(ind + '}'); }
           break;
         case 'wait_until':
@@ -1243,25 +1288,27 @@
     return n.charAt(0).toUpperCase() + n.slice(1);
   }
 
-  function langScriptsOf(list, prefix, lang, out, helpers, usedNames) {
-    // Java: Methoden liegen in der Klasse (4 Spalten Einzug),
-    // Python: Funktionen liegen auf Modulebene (kein Einzug) (#140).
-    var ind = lang === 'py' ? '' : '    ';
+  function langScriptsOf(list, lang, out, helpers, usedNames, ind) {
+    /* Skripte einer Figur werden Methoden ihrer Klasse (#152): ind ist der
+     * Einzug der Methodenkoepfe, der Methodenkoerper liegt 4 Spalten tiefer.
+     * Rueckgabe: Liste der erzeugten Methoden mit ihrem Hut-Typ. */
+    var made = [];
     var i, s, head;
     for (i = 0; i < list.length; i++) {
       s = list[i];
       head = s.top;
       if (!head) { continue; }
-      var base = prefix + '_' + langHatName(head.op);
+      var base = langHatName(head.op);
       var name = base;
       var k = 2;
       while (usedNames[name]) { name = base + '_' + k; k++; }
       usedNames[name] = true;
+      made.push({ op: head.op, name: name });
       var hatText = blockText(head);
       out.push('');
       out.push(ind + (lang === 'py' ? '# ' : '// ') + 'Skript: ' + hatText);
       if (lang === 'py') {
-        out.push(ind + 'def ' + name + '():');
+        out.push(ind + 'def ' + name + '(self):');
         var before = out.length;
         langChain(head.next, 'py', ind + '    ', out, helpers);
         if (out.length === before) { out.push(ind + '    pass'); }
@@ -1271,83 +1318,229 @@
         out.push(ind + '}');
       }
     }
+    return made;
+  }
+
+  function usedNameIn(set, base) {
+    var name = base;
+    var k = 2;
+    while (set[name]) { name = base + k; k++; }
+    set[name] = true;
+    return name;
+  }
+
+  var RESERVED_NAMES = {
+    new: 1, int: 1, for: 1, if: 1, while: 1, return: 1, class: 1, void: 1,
+    double: 1, boolean: 1, static: 1, final: 1, do: 1, else: 1, break: 1,
+    continue: 1, this: 1, super: 1, import: 1, args: 1, def: 1, pass: 1,
+    lambda: 1, None: 1, True: 1, False: 1, print: 1, time: 1, threading: 1,
+    self: 1, not: 1, and: 1, or: 1, in: 1, is: 1
+  };
+
+  function varNameFor(cls) {
+    var v = cls.charAt(0).toLowerCase() + cls.slice(1);
+    if (RESERVED_NAMES[v]) { v = v + '_figur'; }
+    return v;
+  }
+
+  function helperDecl(name, info, lang, ind) {
+    /* Platzhalter-Methode der Basisklasse Figur (#152). */
+    var i;
+    var params = [];
+    for (i = 0; i < info.n; i++) { params.push('p' + (i + 1)); }
+    if (lang === 'py') {
+      var ps = params.length > 0 ? ', ' + params.join(', ') : '';
+      if (info.kind === 'void') { return [ind + 'def ' + name + '(self' + ps + '):', ind + '    pass']; }
+      var ret = info.kind === 'boolean' ? 'False' : (info.kind === 'String' ? "''" : '0');
+      return [ind + 'def ' + name + '(self' + ps + '):', ind + '    return ' + ret];
+    }
+    var jp = [];
+    for (i = 0; i < params.length; i++) { jp.push('Object ' + params[i]); }
+    if (info.kind === 'void') { return [ind + 'void ' + name + '(' + jp.join(', ') + ') { }']; }
+    var jr = info.kind === 'boolean' ? 'false' : (info.kind === 'String' ? '""' : '0');
+    return [ind + info.kind + ' ' + name + '(' + jp.join(', ') + ') { return ' + jr + '; }'];
   }
 
   function programToJava(prog, title) {
     var helpers = makeHelpers();
-    var out = [];
-    out.push('/* Automatisch aus der Block-Werkstatt erzeugt (#140).');
-    out.push(' * Jede Methode entspricht einem Skript deiner Figuren, jeder');
-    out.push(' * Aufruf entspricht einem Block, der Blocktext steht daneben.');
-    out.push(' * Die Platzhalter am Ende zeigen, was auf der Buehne passieren wuerde. */');
-    out.push('public class ' + javaClassName(title) + ' {');
-    var used = {};
-    var i;
+    var body = [];
+    var mainL = [];
+    var flagCalls = [];
+    var classes = { Figur: true };
+    var stageHas = prog.stage.scripts.length > 0;
+    if (stageHas) { classes.Buehne = true; }
+    var i, j;
+    /* Zunaechst die Klassen je Figur generieren, damit die Platzhalter
+     * der Basisklasse danach komplett bekannt sind (#152). */
     for (i = 0; i < prog.sprites.length; i++) {
       var sp = prog.sprites[i];
-      out.push('');
-      out.push('    // ===== ' + sp.name + ' (Kostuem: ' + (COSTUME_EMOJI[sp.costume] || sp.costume) + ') =====');
-      langScriptsOf(sp.scripts, 'figur' + (i + 1), 'java', out, helpers, used);
-    }
-    if (prog.stage.scripts.length > 0) {
-      out.push('');
-      out.push('    // ===== Buehne =====');
-      langScriptsOf(prog.stage.scripts, 'buehne', 'java', out, helpers, used);
-    }
-    var names = Object.keys(helpers.used).sort();
-    if (names.length > 0) {
-      out.push('');
-      out.push('    // ----- Platzhalter-Aktionen: so wuerde die Buehne arbeiten -----');
-      for (i = 0; i < names.length; i++) {
-        var info = helpers.used[names[i]];
-        var params = [];
-        var j;
-        for (j = 0; j < info.n; j++) { params.push('Object p' + (j + 1)); }
-        if (info.kind === 'void') {
-          out.push('    static void ' + names[i] + '(' + params.join(', ') + ') { }');
-        } else {
-          var ret = info.kind === 'boolean' ? 'false' : (info.kind === 'String' ? '""' : '0');
-          out.push('    static ' + info.kind + ' ' + names[i] + '(' + params.join(', ') + ') { return ' + ret + '; }');
+      var cls = usedNameIn(classes, javaClassName(sp.name));
+      var varName = varNameFor(cls);
+      var usedN = {};
+      var part = [];
+      var made = langScriptsOf(sp.scripts, 'java', part, helpers, usedN, '        ');
+      body.push('');
+      body.push('    /** ' + sp.name + ' (Kostuem: ' + (COSTUME_EMOJI[sp.costume] || sp.costume) + ') */');
+      body.push('    static class ' + cls + ' extends Figur {');
+      if (made.length === 0) { body.push('        /* Diese Figur hat noch keine Skripte. */'); }
+      for (j = 0; j < part.length; j++) { body.push(part[j]); }
+      body.push('    }');
+      mainL.push('        ' + cls + ' ' + varName + ' = new ' + cls + '();');
+      for (j = 0; j < made.length; j++) {
+        if (made[j].op === 'flag') {
+          flagCalls.push('        new Thread(() -> ' + varName + '.' + made[j].name + '()).start();');
         }
       }
     }
+    if (stageHas) {
+      var usedS = {};
+      var partS = [];
+      var madeS = langScriptsOf(prog.stage.scripts, 'java', partS, helpers, usedS, '        ');
+      body.push('');
+      body.push('    /** Die Buehne: Hintergrund und eigene Skripte. */');
+      body.push('    static class Buehne extends Figur {');
+      if (madeS.length === 0) { body.push('        /* Die Buehne hat noch keine Skripte. */'); }
+      for (j = 0; j < partS.length; j++) { body.push(partS[j]); }
+      body.push('    }');
+      mainL.push('        Buehne buehne = new Buehne();');
+      for (j = 0; j < madeS.length; j++) {
+        if (madeS[j].op === 'flag') {
+          flagCalls.push('        new Thread(() -> buehne.' + madeS[j].name + '()).start();');
+        }
+      }
+    }
+    var out = [];
+    out.push('/* Automatisch aus der Block-Werkstatt erzeugt (#140, #152).');
+    out.push(' * Objektorientiert: Jede Figur ist eine eigene Klasse, die von der');
+    out.push(' * Basisklasse Figur erbt; die Buehne ist ebenfalls ein Objekt. Jede');
+    out.push(' * Skriptspur wird eine Methode ihrer Klasse, jeder Aufruf entspricht');
+    out.push(' * einem Block, der Blocktext steht daneben. main erzeugt die Objekte');
+    out.push(' * und startet alle Skripte mit dem Fahnen-Hut parallel als Threads -');
+    out.push(' * genau wie auf der Buehne. */');
+    out.push('public class ' + javaClassName(title) + ' {');
+    out.push('');
+    out.push('    /** Gemeinsame Basis: alles, was jede Figur kann (#152).');
+    out.push('     * Die Platzhalter zeigen, was auf der Buehne passieren wuerde. */');
+    out.push('    static class Figur {');
+    out.push('        double x = 240, y = 180;   /* Ursprung: oben links (#144) */');
+    out.push('        int richtung = 90;         /* 90 Grad = nach rechts */');
+    out.push('        boolean sichtbar = true;');
+    out.push('');
+    var names = Object.keys(helpers.used).sort();
+    for (i = 0; i < names.length; i++) {
+      var decl = helperDecl(names[i], helpers.used[names[i]], 'java', '        ');
+      for (j = 0; j < decl.length; j++) { out.push(decl[j]); }
+    }
+    if (names.length === 0) {
+      out.push('        /* Hier stehen die Platzhalter-Aktionen, sobald deine Figuren */');
+      out.push('        /* Bloecke mit Aktionen und Reportern verwenden. */');
+    }
+    out.push('    }');
+    for (i = 0; i < body.length; i++) { out.push(body[i]); }
+    out.push('');
+    out.push('    public static void main(String[] args) {');
+    if (mainL.length === 0) {
+      out.push('        /* Noch keine Figuren in diesem Projekt. */');
+    }
+    for (i = 0; i < mainL.length; i++) { out.push(mainL[i]); }
+    out.push('');
+    if (flagCalls.length > 0) {
+      for (i = 0; i < flagCalls.length; i++) { out.push(flagCalls[i]); }
+    } else {
+      out.push('        /* Noch kein Skript mit dem Fahnen-Hut: main legt nur die Objekte an. */');
+    }
+    out.push('        /* Ereignis-Skripte (Taste, Nachricht, Klick) ruft die Laufzeit auf, */');
+    out.push('        /* sobald das Ereignis eintritt. */');
+    out.push('    }');
     out.push('}');
     return out.join('\n') + '\n';
   }
 
   function programToPython(prog, title) {
     var helpers = makeHelpers();
-    var out = [];
-    out.push('# Automatisch aus der Block-Werkstatt erzeugt (#140).');
-    out.push('# Jede Funktion entspricht einem Skript, jeder Aufruf einem Block,');
-    out.push('# der Blocktext steht daneben. import time gehoert zum warte-Block.');
-    out.push('import time');
-    out.push('');
-    var used = {};
-    var i;
+    var body = [];
+    var mainL = [];
+    var flagCalls = [];
+    var classes = { Figur: true };
+    var stageHas = prog.stage.scripts.length > 0;
+    if (stageHas) { classes.Buehne = true; }
+    var i, j;
     for (i = 0; i < prog.sprites.length; i++) {
       var sp = prog.sprites[i];
-      out.push('# ===== ' + sp.name + ' (Kostuem: ' + (COSTUME_EMOJI[sp.costume] || sp.costume) + ') =====');
-      langScriptsOf(sp.scripts, 'figur' + (i + 1), 'py', out, helpers, used);
-    }
-    if (prog.stage.scripts.length > 0) {
-      out.push('');
-      out.push('# ===== Buehne =====');
-      langScriptsOf(prog.stage.scripts, 'buehne', 'py', out, helpers, used);
-    }
-    var names = Object.keys(helpers.used).sort();
-    if (names.length > 0) {
-      out.push('');
-      out.push('# ----- Platzhalter-Aktionen: so wuerde die Buehne arbeiten -----');
-      for (i = 0; i < names.length; i++) {
-        var info = helpers.used[names[i]];
-        var line = 'def ' + names[i] + '(*args):';
-        if (info.kind === 'void') { out.push(line); out.push('    pass'); }
-        else if (info.kind === 'boolean') { out.push(line); out.push('    return False'); }
-        else if (info.kind === 'String') { out.push(line); out.push('    return \'\''); }
-        else { out.push(line); out.push('    return 0'); }
+      var cls = usedNameIn(classes, javaClassName(sp.name));
+      var varName = varNameFor(cls);
+      var usedN = {};
+      var part = [];
+      var made = langScriptsOf(sp.scripts, 'py', part, helpers, usedN, '    ');
+      body.push('class ' + cls + '(Figur):');
+      body.push('    """' + sp.name + ' (Kostuem: ' + (COSTUME_EMOJI[sp.costume] || sp.costume) + ')"""');
+      for (j = 0; j < part.length; j++) { body.push(part[j]); }
+      body.push('');
+      mainL.push(varName + ' = ' + cls + '()');
+      for (j = 0; j < made.length; j++) {
+        if (made[j].op === 'flag') {
+          flagCalls.push('threading.Thread(target=' + varName + '.' + made[j].name + ').start()');
+        }
       }
     }
+    if (stageHas) {
+      var usedS = {};
+      var partS = [];
+      var madeS = langScriptsOf(prog.stage.scripts, 'py', partS, helpers, usedS, '    ');
+      body.push('class Buehne(Figur):');
+      body.push('    """Die Buehne: Hintergrund und eigene Skripte."""');
+      for (j = 0; j < partS.length; j++) { body.push(partS[j]); }
+      body.push('');
+      mainL.push('buehne = Buehne()');
+      for (j = 0; j < madeS.length; j++) {
+        if (madeS[j].op === 'flag') {
+          flagCalls.push('threading.Thread(target=buehne.' + madeS[j].name + ').start()');
+        }
+      }
+    }
+    var out = [];
+    out.push('# Automatisch aus der Block-Werkstatt erzeugt (#140, #152).');
+    out.push('# Objektorientiert: Jede Figur ist eine eigene Klasse, die von der');
+    out.push('# Basisklasse Figur erbt; die Buehne ist ebenfalls ein Objekt. Jede');
+    out.push('# Skriptspur wird eine Methode ihrer Klasse, jeder Aufruf entspricht');
+    out.push('# einem Block, der Blocktext steht daneben. Unten entstehen die');
+    out.push('# Objekte, und alle Skripte mit dem Fahnen-Hut starten parallel als');
+    out.push('# Threads - genau wie auf der Buehne.');
+    out.push('import threading');
+    out.push('import time');
+    out.push('');
+    out.push('class Figur:');
+    out.push('    """Gemeinsame Basis: alles, was jede Figur kann (#152).');
+    out.push('    Die Platzhalter zeigen, was auf der Buehne passieren wuerde."""');
+    out.push('    x = 240.0   # Ursprung: oben links (#144)');
+    out.push('    y = 180.0');
+    out.push('    richtung = 90   # 90 Grad = nach rechts');
+    out.push('    sichtbar = True');
+    out.push('');
+    var names = Object.keys(helpers.used).sort();
+    for (i = 0; i < names.length; i++) {
+      var decl = helperDecl(names[i], helpers.used[names[i]], 'py', '    ');
+      for (j = 0; j < decl.length; j++) { out.push(decl[j]); }
+    }
+    if (names.length === 0) {
+      out.push('    # Hier stehen die Platzhalter-Aktionen, sobald deine Figuren');
+      out.push('    # Bloecke mit Aktionen und Reportern verwenden.');
+      out.push('    pass');
+    }
+    out.push('');
+    for (i = 0; i < body.length; i++) { out.push(body[i]); }
+    if (mainL.length === 0) {
+      out.push('# Noch keine Figuren in diesem Projekt.');
+    }
+    for (i = 0; i < mainL.length; i++) { out.push(mainL[i]); }
+    if (mainL.length > 0) { out.push(''); }
+    if (flagCalls.length > 0) {
+      for (i = 0; i < flagCalls.length; i++) { out.push(flagCalls[i]); }
+    } else {
+      out.push('# Noch kein Skript mit dem Fahnen-Hut: es entstehen nur die Objekte.');
+    }
+    out.push('# Ereignis-Skripte (Taste, Nachricht, Klick) ruft die Laufzeit auf,');
+    out.push('# sobald das Ereignis eintritt.');
     return out.join('\n') + '\n';
   }
 
@@ -1640,7 +1833,12 @@
       penCanvas: doc.getElementById('blk-pen'),
       ctrCanvas: doc.getElementById('blk-ctr'),
       saveForm: doc.getElementById('blocks-save-form'),
-      jsonTa: doc.getElementById('blocks-json')
+      jsonTa: doc.getElementById('blocks-json'),
+      mode: doc.getElementById('blk-mode'),
+      consoleBox: doc.getElementById('blk-console'),
+      consoleLog: doc.getElementById('blk-console-log'),
+      consoleIn: doc.getElementById('blk-console-in'),
+      consoleSend: doc.getElementById('blk-console-send')
     };
     if (!els.script || !els.pal || !els.jsonTa) { return null; }
 
@@ -1654,6 +1852,33 @@
     var drag = null;
     var dropHint = null;
     var pickerOpen = false;
+    /* Lernmodus/Expertenmodus (#151): Voreinstellung Lernmodus, Auswahl
+     * pro Browser gemerkt. Der Expertenmodus zeigt die erweiterte
+     * Palette, den Code-Knopf und die Konsole (#152). */
+    var expertMode = false;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        expertMode = window.localStorage.getItem('blk.expert') === '1';
+      }
+    } catch (eStore) { expertMode = false; }
+
+    function applyMode() {
+      if (els.mode) {
+        els.mode.textContent = expertMode ? '🎓 Expertenmodus' : '🧠 Lernmodus';
+        els.mode.setAttribute('title', expertMode
+          ? 'Zum Lernmodus wechseln: das Basis-Angebot fuer den Einstieg (#151)'
+          : 'Zum Expertenmodus wechseln: mehr Bloecke, Code-Ansicht und Konsole (#151)');
+      }
+      if (els.codeBtn) {
+        if (expertMode) { els.codeBtn.removeAttribute('hidden'); }
+        else { els.codeBtn.setAttribute('hidden', 'hidden'); }
+      }
+      if (els.consoleBox) {
+        if (expertMode) { els.consoleBox.removeAttribute('hidden'); }
+        else { els.consoleBox.setAttribute('hidden', 'hidden'); }
+      }
+      renderPalette();
+    }
 
     function isStage() { return target === null; }
     function targetScripts() { return isStage() ? prog.stage.scripts : target.scripts; }
@@ -1728,6 +1953,8 @@
       b.setAttribute('data-op', node.op);
       b.style['--c'] = colorOf(node);
       b.style.background = colorOf(node);
+      /* #153: Der gezogene Block bleibt sichtbar, nur abgeblendet. */
+      if (node._drag && b.classList && b.classList.add) { b.classList.add('blk-dragging'); }
       var row = el('div', 'blk-row');
       var i, part;
       for (i = 0; i < spec.parts.length; i++) {
@@ -1806,6 +2033,10 @@
         (function (cat) {
           var btn = el('button', 'blk-cat-btn' + (cat.id === activeCat ? ' active' : ''), cat.label);
           btn.setAttribute('type', 'button');
+          /* #150: Jeder Kategorie-Knopf traegt die Farbe der Bloecke
+           * dahinter, damit die Zuordnung sofort ins Auge faellt. */
+          btn.style.background = cat.color;
+          btn.style.borderColor = cat.color;
           btn.style['--c'] = cat.color;
           btn.addEventListener('click', function () {
             activeCat = cat.id;
@@ -1823,6 +2054,10 @@
       for (op in BLOCKS) {
         if (!Object.prototype.hasOwnProperty.call(BLOCKS, op)) { continue; }
         if (BLOCKS[op].cat !== activeCat) { continue; }
+        /* #151: Im Lernmodus bleibt der Basis-Vorrat, der Expertenmodus
+         * zeigt zusaetzlich die erweiterten Bloecke. Im Skript bereits
+         * liegende Expertenbloecke bleiben sichtbar und lauffaehig. */
+        if (!expertMode && BLOCKS[op].pro) { continue; }
         var demo = newBlock(op);
         var b = renderBlock(demo, { palette: true });
         b.setAttribute('data-pal-op', op);
@@ -2084,22 +2319,16 @@
       } else {
         var pos = findBlockPos(drag.blockId);
         if (!pos) { drag = null; return; }
-        /* Merken, wo der Block herkam, damit ein Abbruch ihn zurueckstellen kann */
+        /* #153: Der gezogene Block samt Teilbaum bleibt waehrend des Ziehens
+         * an seinem Platz sichtbar (nur abgeblendet markiert). Frueher wurde
+         * er sofort aus dem Modell geloest, wodurch die ganze Skriptflaeche
+         * kurz leer flackerte. Geloesst wird erst beim Drop (removeDragged). */
         drag.restore = {
           kind: pos.parentKind, parentNode: pos.parentNode, subIdx: pos.subIdx,
           script: pos.script, scriptIdx: targetScripts().indexOf(pos.script)
         };
-        if (pos.parentKind === 'top') {
-          pos.script.top = null;
-          removeScriptQuiet(pos.script);
-        } else if (pos.parentKind === 'next') {
-          pos.parentNode.next = null;
-        } else if (pos.parentKind === 'sub') {
-          pos.parentNode.sub[pos.subIdx] = null;
-        } else if (pos.parentKind === 'field') {
-          pos.parentNode.f[pos.subIdx] = { v: fieldDefault(BLOCKS[pos.parentNode.op].inputs[pos.subIdx]) };
-        }
         drag.node = pos.node;
+        markDragged(drag.node, true);
         renderScripts();
       }
       var ghost = renderBlock(drag.node, { staticMode: true });
@@ -2112,26 +2341,69 @@
 
     function moveGhost(px, py) {
       if (!drag || !drag.ghost) { return; }
-      drag.ghost.style.left = (px - drag.grabDX) + 'px';
-      drag.ghost.style.top = (py - drag.grabDY) + 'px';
+      /* Optimierung: transform statt left/top. Ein Klick auf left/top
+       * loest einen Bildaufbau (Layout) aus, transform hingegen wird
+       * vom Compositor erledigt: Das Ziehen bleibt auch bei schnellen
+       * Mausbewegungen fluessig. */
+      drag.ghost.style.transform = 'translate(' + (px - drag.grabDX) + 'px, ' + (py - drag.grabDY) + 'px)';
+    }
+
+    /* #153: Den kompletten gezogenen Teilbaum markieren (next, Koerper,
+     * Steckplaetze), damit er auf der Skriptflaeche abgeblendet bleibt,
+     * statt zu verschwinden. */
+    function markDragged(node, on) {
+      var n = node;
+      while (n) {
+        n._drag = on;
+        var i, k;
+        for (i = 0; i < (n.sub ? n.sub.length : 0); i++) {
+          if (n.sub[i]) { markDragged(n.sub[i], on); }
+        }
+        for (k in n.f) {
+          if (n.f[k] && n.f[k].b) { markDragged(n.f[k].b, on); }
+        }
+        n = n.next;
+      }
+    }
+
+    /* Liegt die Block-ID im gezogenen Teilbaum? Ziel eines Drops darf
+     * nie der eigene Teilbaum sein (Zirkelgefahr, #153). */
+    function inDraggedTree(node, id) {
+      if (!node) { return false; }
+      if (node.id === id) { return true; }
+      var i, k;
+      if (inDraggedTree(node.next, id)) { return true; }
+      for (i = 0; i < (node.sub ? node.sub.length : 0); i++) {
+        if (inDraggedTree(node.sub[i], id)) { return true; }
+      }
+      for (k in node.f) {
+        if (n_f_b(node, k) && inDraggedTree(node.f[k].b, id)) { return true; }
+      }
+      return false;
+    }
+    function n_f_b(node, k) { return node.f[k] && node.f[k].b; }
+
+    /* #153: Loest den gezogenen Block erst beim Drop aus dem Modell - */
+    function removeDragged() {
+      if (!drag || !drag.restore || !drag.node) { return; }
+      var r = drag.restore;
+      if (r.kind === 'top') {
+        r.script.top = null;
+        removeScriptQuiet(r.script);
+      } else if (r.kind === 'next') {
+        r.parentNode.next = null;
+      } else if (r.kind === 'sub') {
+        r.parentNode.sub[r.subIdx] = null;
+      } else if (r.kind === 'field') {
+        r.parentNode.f[r.subIdx] = { v: fieldDefault(BLOCKS[r.parentNode.op].inputs[r.subIdx]) };
+      }
     }
 
     function restoreDrag() {
-      /* Abbruch ohne Drop: der Block geht an seinen alten Platz (#122). */
-      if (!drag || !drag.restore || !drag.node) { return false; }
-      var r = drag.restore;
-      if (r.kind === 'top') {
-        r.script.top = drag.node;
-        var list = targetScripts();
-        var at = clamp(r.scriptIdx, 0, list.length);
-        list.splice(at, 0, r.script);
-      } else if (r.kind === 'next') {
-        r.parentNode.next = drag.node;
-      } else if (r.kind === 'sub') {
-        r.parentNode.sub[r.subIdx] = drag.node;
-      } else if (r.kind === 'field') {
-        r.parentNode.f[r.subIdx] = { b: drag.node };
-      }
+      /* Abbruch ohne Drop (#122, #153): Der Block war nie aus dem Modell
+       * geloest, er bleibt an seinem Platz - nur die Markierung fliegt weg. */
+      if (!drag || !drag.node) { return false; }
+      markDragged(drag.node, false);
       return true;
     }
 
@@ -2194,6 +2466,7 @@
       for (j = 0; j < blocks.length; j++) {
         var be = blocks[j];
         if (!be.getAttribute('data-id')) { continue; }
+        if (be.classList && be.classList.contains('blk-dragging')) { continue; }
         var br = rectOf(be);
         if (!br) { continue; }
         var d2 = Math.sqrt((px - (br.left + 14)) * (px - (br.left + 14)) + (py - br.bottom) * (py - br.bottom));
@@ -2205,7 +2478,33 @@
         var sr = rectOf(subs[k]);
         if (!sr) { continue; }
         var d3 = dist(px, py, sr);
-        if (d3 < bestScore) { bestScore = d3; best = { type: 'sub', el: subs[k] }; }
+        if (d3 >= bestScore) { continue; }
+        /* #148: Wo genau im Koerper landet der Block? Ueber einem Kind
+         * entscheidet die Haelfte: oben davor, unten dahinter - die
+         * Einfuege-Linie zeigt die genaue Stelle statt nur den Koerper. */
+        var kids = subs[k].children || [];
+        var picked = null;
+        var prevKid = null;
+        var ci;
+        for (ci = 0; ci < kids.length; ci++) {
+          var ke = kids[ci];
+          if (!ke.classList || !ke.classList.contains('blk') || !ke.getAttribute || !ke.getAttribute('data-id')) { continue; }
+          if (ke.classList.contains('blk-dragging')) { continue; }
+          var kr = rectOf(ke);
+          if (!kr) { continue; }
+          if (px >= kr.left - 10 && px <= kr.left + kr.width + 10 && py >= kr.top - 8 && py <= kr.top + kr.height + 8) {
+            if (py <= kr.top + kr.height / 2) {
+              picked = prevKid ? { type: 'below', el: prevKid } : { type: 'sub', el: subs[k] };
+            } else {
+              picked = { type: 'below', el: ke };
+            }
+            break;
+          }
+          prevKid = ke;
+        }
+        if (!picked) { picked = { type: 'sub', el: subs[k] }; }
+        best = picked;
+        bestScore = d3;
       }
       if (best) { return best; }
       return { type: 'free' };
@@ -2224,6 +2523,13 @@
       if (drop.type === 'below') {
         dropHint.style.left = (r.left - wrapR.left) + 'px';
         dropHint.style.top = (r.bottom - wrapR.top - 3) + 'px';
+        dropHint.style.width = Math.max(40, r.width) + 'px';
+        dropHint.style.height = '6px';
+      } else if (drop.type === 'sub') {
+        /* #148: Auch im (leeren) Koerper zeigt eine Linie die genaue
+         * Einfuegestelle am Anfang des Koerpers statt nur ein Rahmen. */
+        dropHint.style.left = (r.left - wrapR.left) + 'px';
+        dropHint.style.top = (r.top - wrapR.top - 3) + 'px';
         dropHint.style.width = Math.max(40, r.width) + 'px';
         dropHint.style.height = '6px';
       } else {
@@ -2248,21 +2554,25 @@
         });
         if (!hostEl) { return false; }
         var hostId = hostEl.getAttribute('data-id');
+        if (drag.origin === 'script' && inDraggedTree(node, hostId)) { return false; }
         var pos = findBlockPos(hostId);
         if (!pos) { return false; }
         var fname = drop.el.getAttribute('data-f');
         var want = BLOCKS[pos.node.op].inputs[fname];
         var fits = want && ((kind === 'bool' && want.type === 'bool') || (kind === 'rep' && want.type === 'slot'));
         if (!fits) { return false; }
+        if (drag.origin === 'script') { removeDragged(); }
         pos.node.f[fname] = { b: node };
         return true;
       }
       if (drop.type === 'below') {
         var tid = drop.el.getAttribute('data-id');
+        if (drag.origin === 'script' && inDraggedTree(node, tid)) { return false; }
         var tpos = findBlockPos(tid);
         if (!tpos) { return false; }
         var tail = node;
         while (tail.next) { tail = tail.next; }
+        if (drag.origin === 'script') { removeDragged(); }
         tail.next = tpos.node.next;
         tpos.node.next = node;
         return true;
@@ -2271,16 +2581,20 @@
         var host = drop.el.parent || drop.el.parentNode;
         while (host && !(host.classList && host.classList.contains('blk') && host.getAttribute('data-id'))) { host = host.parent || host.parentNode; }
         if (!host) { return false; }
-        var hpos = findBlockPos(host.getAttribute('data-id'));
+        var hid = host.getAttribute('data-id');
+        if (drag.origin === 'script' && inDraggedTree(node, hid)) { return false; }
+        var hpos = findBlockPos(hid);
         if (!hpos) { return false; }
         var idx = parseInt(drop.el.getAttribute('data-sub'), 10) || 0;
         var tail2 = node;
         while (tail2.next) { tail2 = tail2.next; }
+        if (drag.origin === 'script') { removeDragged(); }
         tail2.next = hpos.node.sub[idx];
         hpos.node.sub[idx] = node;
         return true;
       }
       if (drop.type === 'free') {
+        if (drag.origin === 'script') { removeDragged(); }
         var wrapR = rectOf(els.script) || { left: 0, top: 0 };
         targetScripts().push({
           id: uid('s'), x: clamp(Math.round(drag.lastX - wrapR.left - 12), 0, 4000),
@@ -2333,7 +2647,9 @@
         var drop = drag.drop || { type: 'outside' };
         if (drop.type === 'palette') {
           if (drag.origin === 'script') {
-            /* bewusst auf die Palette gezogen: loeschen */
+            /* bewusst auf die Palette gezogen: loeschen (#153: erst hier
+             * wird der Block wirklich aus dem Modell geloest) */
+            removeDragged();
             handled = true;
           } else {
             handled = true; /* Palette-Block zurueck: nichts zu tun */
@@ -2350,6 +2666,7 @@
         }
       }
       var wasReal = drag.phase === 'dragging';
+      if (drag.node) { markDragged(drag.node, false); }
       endDragVisuals();
       drag = null;
       if (wasReal) {
@@ -2456,7 +2773,8 @@
         sp = drawList[i];
         if (!sp.visible) { continue; }
         ctx.save();
-        ctx.translate(240 + sp.x, 180 - sp.y);
+        /* Ursprung oben links (#144): x/y sind direkt Buehnen-Pixel. */
+        ctx.translate(sp.x, sp.y);
         ctx.rotate(sp.dir * Math.PI / 180);
         ctx.font = Math.round(40 * sp.size / 100) + 'px system-ui, "Segoe UI Symbol", sans-serif';
         ctx.textAlign = 'center';
@@ -2473,10 +2791,22 @@
         ctx.restore();
         var bub = sp.bubble;
         if (bub) {
-          var bx = 240 + sp.x + 18;
-          var by = 180 - sp.y - 44;
+          var bx = sp.x + 18;
+          var by = sp.y - 44;
           ctx.font = '14px system-ui, sans-serif';
-          var w = ctx.measureText ? (ctx.measureText(bub.text).width || 60) : 60;
+          var w;
+          /* Optimierung: Die Textbreite einer Sprechblase aendert sich nur
+           * mit dem Text. measureText ist aufwaendig, also wird pro Figur
+           * und Blasentext einmal gemessen und dann wiederverwendet. Die
+           * Cache-Felder beginnen mit _ und werden beim Speichern
+           * herausgefiltert. */
+          if (sp._bubTxt === bub.text && typeof sp._bubW === 'number') {
+            w = sp._bubW;
+          } else {
+            w = ctx.measureText ? (ctx.measureText(bub.text).width || 60) : 60;
+            sp._bubTxt = bub.text;
+            sp._bubW = w;
+          }
           ctx.fillStyle = '#ffffff';
           ctx.strokeStyle = '#334155';
           ctx.fillRect(bx, by - 18, Math.max(40, w + 14), 28);
@@ -2499,7 +2829,7 @@
         ctx.strokeStyle = 'rgba(37, 99, 235, .8)';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(240 + target.x, 180 - target.y, 24 * Math.max(10, target.size) / 100 + 8, 0, Math.PI * 2);
+        ctx.arc(target.x, target.y, 24 * Math.max(10, target.size) / 100 + 8, 0, Math.PI * 2);
         if (typeof ctx.setLineDash === 'function') { ctx.setLineDash([6, 4]); }
         ctx.stroke();
         if (typeof ctx.setLineDash === 'function') { ctx.setLineDash([]); }
@@ -2600,8 +2930,9 @@
       var r = els.ctrCanvas.getBoundingClientRect();
       if (!r || !r.width) { return null; }
       return {
-        x: clamp((ev.clientX - r.left) / r.width * 480 - 240, -240, 240),
-        y: clamp(180 - (ev.clientY - r.top) / r.height * 360, -180, 180)
+        /* Ursprung oben links (#144): Buehnen-Pixel ohne Versatz. */
+        x: clamp((ev.clientX - r.left) / r.width * 480, 0, 480),
+        y: clamp((ev.clientY - r.top) / r.height * 360, 0, 360)
       };
     }
     if (els.ctrCanvas) {
@@ -2632,6 +2963,163 @@
     /* ---------- Verdrahtung ---------- */
     if (els.flagBtn) { els.flagBtn.addEventListener('click', function () { startRun(); }); }
     if (els.stopBtn) { els.stopBtn.addEventListener('click', function () { stopRun(); }); }
+    if (els.mode) {
+      els.mode.addEventListener('click', function () {
+        expertMode = !expertMode;
+        try {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            window.localStorage.setItem('blk.expert', expertMode ? '1' : '0');
+          }
+        } catch (eStore2) {}
+        applyMode();
+      });
+    }
+
+    /* ---------- Konsole: gezielt steuern im Expertenmodus (#152) ---------- */
+    function consoleLog(text, kind) {
+      if (!els.consoleLog) { return; }
+      var line = el('div', 'blk-console-line' + (kind === 'cmd' ? ' blk-console-cmd' : (kind === 'err' ? ' blk-console-err' : '')), text);
+      els.consoleLog.appendChild(line);
+      /* Optimierung: Das Protokoll wird gedeckelt, damit das Element
+       * in langen Sitzungen nicht unbegrenzt waechst und der Browser
+       * den wachsenden Teil bei jedem neuen Befehl neu richten muss.
+       * Die aeltesten Zeilen fallen zuerst weg. */
+      while (els.consoleLog.children.length > 200) {
+        els.consoleLog.removeChild(els.consoleLog.children[0]);
+      }
+    }
+
+    function consoleEnsureRuntime() {
+      if (!rt) {
+        clearPen();
+        rt = newRuntime(prog, { penCtx: (els.penCanvas && els.penCanvas.getContext) ? els.penCanvas.getContext('2d') : null });
+      }
+      return rt;
+    }
+
+    function consoleTarget(name) {
+      var r = consoleEnsureRuntime();
+      if (name) {
+        var i;
+        for (i = 0; i < r.sprites.length; i++) {
+          if (String(r.sprites[i].name).toLowerCase() === String(name).toLowerCase()) { return r.sprites[i]; }
+        }
+        return null;
+      }
+      if (target) { return findSpriteById(r, target.id); }
+      return null;
+    }
+
+    function consoleRun(cmdRaw) {
+      var cmd = String(cmdRaw || '').trim();
+      if (cmd === '') { return; }
+      consoleLog('» ' + cmd, 'cmd');
+      var parts = cmd.replace(/\s+/g, ' ').split(' ');
+      /* "robo.gehe 50" steuert die benannte Figur, sonst die ausgewaehlte (#152).
+       * Der Befehl ist das Wort mit dem Punkt; davor steht der Name, der
+       * durchaus Leerzeichen enthalten darf ("Figur 1.gehe 50"). */
+      var namePrefix = null;
+      var dotIdx = -1;
+      for (var pi = 0; pi < parts.length; pi++) {
+        if (parts[pi].indexOf('.') !== -1) { dotIdx = pi; break; }
+      }
+      if (dotIdx !== -1) {
+        var seg = parts[dotIdx].split('.');
+        var cmdWord = seg[seg.length - 1];
+        var namePart = seg.slice(0, seg.length - 1).join('.');
+        if (dotIdx > 0) { namePart = parts.slice(0, dotIdx).join(' ') + (namePart ? ' ' + namePart : ''); }
+        if (namePart) { namePrefix = namePart; }
+        parts = [cmdWord].concat(parts.slice(dotIdx + 1));
+      }
+      var op = parts[0].toLowerCase();
+      var arg = parts.slice(1).join(' ');
+      var n = num(arg);
+      var i2;
+      if (op === 'hilfe') {
+        consoleLog('Befehle: gehe N - drehe N - x N - y N - zeige - verstecke - sage Text - kostuem N - ton Name [Sek] - sende Nachricht - info - stoppe');
+        consoleLog('Mit Figurnamen gezielt steuern: robo.gehe 50. Ohne Namen trifft der Befehl die ausgewaehlte Figur.');
+        return;
+      }
+      if (op === 'info') {
+        var r = consoleEnsureRuntime();
+        if (r.sprites.length === 0) { consoleLog('Es gibt noch keine Figuren auf der Buehne.'); return; }
+        for (i2 = 0; i2 < r.sprites.length; i2++) {
+          var s2 = r.sprites[i2];
+          consoleLog(s2.name + ': x ' + Math.round(s2.x) + ', y ' + Math.round(s2.y) + ', Richtung ' + Math.round(s2.dir) + (s2.visible ? '' : ', versteckt'));
+        }
+        return;
+      }
+      if (op === 'sende') {
+        if (arg === '') { consoleLog('Welche Nachricht? Beispiel: sende nachricht1', 'err'); return; }
+        var rr = consoleEnsureRuntime();
+        if (rr.api.broadcast) { rr.api.broadcast(arg, nowMs()); }
+        consoleLog('Nachricht "' + arg + '" gesendet.');
+        drawStage();
+        ensureLoop();
+        return;
+      }
+      if (op === 'stoppe') {
+        stopRun();
+        consoleLog('Alles angehalten.');
+        return;
+      }
+      var sp = consoleTarget(namePrefix);
+      if (!sp) {
+        if (namePrefix) { consoleLog('Ich kenne keine Figur namens "' + namePrefix + '". info zeigt alle Figuren.', 'err'); }
+        else { consoleLog('Waehle links eine Figur aus oder steuere sie direkt mit Namen: robo.gehe 50', 'err'); }
+        return;
+      }
+      switch (op) {
+        case 'gehe':
+          sp.x = clamp(sp.x + Math.sin(sp.dir * Math.PI / 180) * n, 0, 480);
+          sp.y = clamp(sp.y - Math.cos(sp.dir * Math.PI / 180) * n, 0, 360);
+          consoleLog(sp.name + ' geht ' + Math.round(n) + ' Schritte.');
+          break;
+        case 'drehe':
+          sp.dir = (sp.dir + n) % 360;
+          consoleLog(sp.name + ' dreht um ' + Math.round(n) + ' Grad.');
+          break;
+        case 'x': sp.x = clamp(n, 0, 480); consoleLog('x von ' + sp.name + ' ist jetzt ' + Math.round(sp.x) + '.'); break;
+        case 'y': sp.y = clamp(n, 0, 360); consoleLog('y von ' + sp.name + ' ist jetzt ' + Math.round(sp.y) + '.'); break;
+        case 'zeige': sp.visible = true; consoleLog(sp.name + ' ist sichtbar.'); break;
+        case 'verstecke': sp.visible = false; sp.bubble = null; consoleLog(sp.name + ' ist versteckt.'); break;
+        case 'sage':
+          if (arg === '') { consoleLog('Was soll ' + sp.name + ' sagen? Beispiel: sage Hallo!', 'err'); return; }
+          sp.bubble = { text: arg, until: null };
+          consoleLog(sp.name + ' sagt: "' + arg + '"');
+          break;
+        case 'kostuem':
+          sp.costume = COSTUME_EMOJI[arg] ? arg : (COSTUME_ORDER[clamp(Math.round(n) - 1, 0, COSTUME_ORDER.length - 1)] || 'robot');
+          consoleLog(sp.name + ' traegt jetzt ' + COSTUME_EMOJI[sp.costume] + '.');
+          break;
+        case 'ton':
+          playTone(consoleEnsureRuntime(), parts[1] || 'c4', parts[2] ? num(parts[2]) * 1000 : null);
+          consoleLog('Ton ' + (parts[1] || 'c4') + ' gestartet.');
+          break;
+        default:
+          consoleLog('Ich kenne "' + parts[0] + '" nicht. hilfe zeigt alle Befehle.', 'err');
+          return;
+      }
+      drawStage();
+      ensureLoop();
+    }
+
+    if (els.consoleSend) {
+      els.consoleSend.addEventListener('click', function () {
+        if (els.consoleIn) {
+          consoleRun(els.consoleIn.value);
+          els.consoleIn.value = '';
+        }
+      });
+    }
+    if (els.consoleIn) {
+      els.consoleIn.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') {
+          consoleRun(els.consoleIn.value);
+          els.consoleIn.value = '';
+        }
+      });
+    }
 
     /* ---------- Code-Ansicht und Portierung (#140, #141) ---------- */
     var codeBox = null;
@@ -2796,7 +3284,7 @@
 
     renderSprites();
     renderCats();
-    renderPalette();
+    applyMode();
     renderHelp();
     renderScripts();
     /* Buehne einmal zeichnen: alle Figuren sind sofort sichtbar */
@@ -2835,6 +3323,13 @@
         if (rt) { rt.frame(ts); drawStage(); }
       },
       runtime: function () { return rt; },
+      isExpert: function () { return expertMode; },
+      setMode: function (on) {
+        expertMode = !!on;
+        applyMode();
+      },
+      consoleRun: consoleRun,
+      consoleLogEl: function () { return els.consoleLog; },
       newRuntime: function () {
         rt = newRuntime(prog, { penCtx: (els.penCanvas && els.penCanvas.getContext) ? els.penCanvas.getContext('2d') : null });
         return rt;

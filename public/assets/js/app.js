@@ -1,3 +1,11 @@
+/**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Kern-JavaScript: Anmeldung, Module, Bedienung
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
 /* InfoCraft app.js: ein Bundle aus eigenstaendigen Modulen (IIFEs).
  * Wiederverwendbare Editor-Bausteine (#102) sind an window.* exportiert
  * und an allen Stellen (Werkstatt, InfoBook-Editor, Lesemodus, geteiltes

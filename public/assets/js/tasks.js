@@ -1,4 +1,12 @@
 /**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Aufgaben: Bedienungshilfen im Browser
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
+/**
  * Aufgabenbereich: WYSIWYG-Editor für Beschreibungen (Toolbar + Editierbereich,
  * ohne externe Abhängigkeiten) und ein-/ausblendbare Aufgabenbeschreibungen
  * in der Schüler-Sicht (Zustand pro Aufgabe im localStorage gemerkt).

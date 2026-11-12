@@ -1,5 +1,13 @@
 <?php
 /**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Aufgaben: Musterlösung im Fenster
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
+/**
  * Musterlösung der Lehrkraft in einem eigenen Fenster (Issue #36):
  * schlanke Seite ohne Navigation, gedacht für den Zweitbildschirm,
  * bleibt unabhängig vom Arbeitsfenster offen.

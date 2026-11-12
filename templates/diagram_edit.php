@@ -1,4 +1,12 @@
 <?php
+/**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Diagramme: Editor
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
 $isStruktur = $diagram->kind === 'struktogramm';
 $isDatenfluss = $diagram->kind === 'datenfluss';
 $isKlassendiagramm = !$isStruktur && !$isDatenfluss;

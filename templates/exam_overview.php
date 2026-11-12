@@ -1,3 +1,8 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: Prüfung: Übersicht
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
 <?php if ($isTeacher): ?>
 <section class="hero">
     <div class="hero-emoji">📋</div>

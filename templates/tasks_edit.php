@@ -1,4 +1,12 @@
 <?php
+/**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Aufgaben: Bearbeiten
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
 /** @var \Infocraft\Models\Task $task @var \Infocraft\Models\TaskTopic[] $topics @var \Infocraft\Models\TaskMaterial[] $materials @var list<\Infocraft\Models\TaskTodo> $todos @var list<array{id:int,kind:string,name:string,dueAt:?string,visibleFrom:?string,assignedAt:string,classId:?int,userId:?int}> $targets @var array<int, array{total:int,submitted:int}> $progress @var int $openGradings @var \Infocraft\Models\SchoolClass[] $classes @var array<int, list<\Infocraft\Models\User>> $studentsByClass @var string $defaultLanguage */
 $typeLabels = ['allgemein' => 'Allgemein', 'sql' => 'SQL', 'html' => 'HTML', 'code' => 'Java/Python', 'quiz' => 'Quiz'];
 $typeHints = [

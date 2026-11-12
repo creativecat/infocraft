@@ -1,4 +1,12 @@
 <?php
+/**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Globale Hilfsfunktionen, Assets, CSRF, Versionierung
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
 declare(strict_types=1);
 
 /**
@@ -22,7 +30,15 @@ function url(string $path = ''): string
  * Zeitstempel erhalten (rsync --times, Docker-Layer): Browser laden dann garantiert
  * die neue Datei statt einer alten Version aus dem Cache.
  */
-const ASSET_VERSION = '70';
+const ASSET_VERSION = '71';
+
+/**
+ * Programmversion nach Semantic Versioning (#145): MAJOR.MINOR.PATCH.
+ * Eine neue Funktion erhoeht MINOR, reine Fehlerbehebung PATCH; MAJOR
+ * bleibt fuer inkompatible Umstiege reserviert. Die Entwicklungshistorie
+ * steht in CHANGELOG.md im Wurzelverzeichnis.
+ */
+const APP_VERSION = '0.15.0';
 
 /**
  * Dateisystem-Pfad eines Assets unter public/. __DIR__ ist hier src/, der

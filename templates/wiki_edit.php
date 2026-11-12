@@ -1,3 +1,8 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: Wiki: Editor
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
 <section class="panel">
     <div class="panel-head">
         <a class="btn btn-ghost" href="<?= url('wiki/' . (int) $page->id) ?>" title="Abbrechen">←</a>

@@ -1,5 +1,13 @@
 <?php
 /**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Grundgerüst aller Seiten (Navigation, Footer)
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
+/**
  * Zentrales Layout. Im $bare-Modus (Anmeldeseite) wird nur eine Karte gerendert.
  * Die Navigation links lässt sich oben links verkleinern (mini) oder ausblenden.
  */
@@ -103,7 +111,7 @@ $navView = $user !== null ? \Infocraft\Models\UserPref::navView($user->id) : 'fu
             <?php endforeach; ?>
             <?= $content ?>
         </main>
-        <footer class="foot">InfoCraft · Digitale Informatik-Werkstatt · PHP <?= e(PHP_VERSION) ?></footer>
+        <footer class="foot">InfoCraft <?= e(APP_VERSION) ?> · Digitale Informatik-Werkstatt · PHP <?= e(PHP_VERSION) ?></footer>
     </div>
 </div>
 <script src="<?= asset_url('assets/js/app.js') ?>"></script>

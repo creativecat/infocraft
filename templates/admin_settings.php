@@ -1,4 +1,12 @@
 <?php
+/**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Verwaltung: Einstellungen
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
 /** @var string $defaultLanguage @var \Infocraft\Models\User $user */
 ?>
 <section class="hero">

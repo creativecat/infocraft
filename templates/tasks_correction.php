@@ -1,4 +1,12 @@
 <?php
+/**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Aufgaben: Korrektur
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
 /** @var \Infocraft\Models\Task $task */
 /** @var array{total: int, submitted: int, late: int, graded: int, open: int, avgGrade: float|null} $stats */
 /** @var list<array{student: \Infocraft\Models\User, submission: array{content: string, submittedAt: string, selfRating: int, firstName: string, lastName: string, projectId: int|null}|null, grading: array{grade: string, comment: string, source: string, checked: bool}|null, dueAt: string|null, late: bool, project: \Infocraft\Models\Project|null}> $rows */

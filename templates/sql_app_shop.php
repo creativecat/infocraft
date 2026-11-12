@@ -1,3 +1,8 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: SQL-Anwendung Shop
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
 <?php $appUrl = url('werkstatt/sql/' . e($template->slug) . '/app'); ?>
 <section class="panel">
     <div class="panel-head">

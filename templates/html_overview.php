@@ -1,4 +1,12 @@
 <?php
+/**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: HTML-Werkstatt: Übersicht
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
 $groupedProjects = [];
 foreach ($projects as $project) {
     $groupedProjects[(int) ($project->folderId ?? 0)][] = $project;

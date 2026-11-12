@@ -1,3 +1,11 @@
+/**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: UI-Tests mit Fake-DOM
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
 /* InfoCraft UI-Tests: Sind alle Buttons der Java-IDE klickbar und funktionieren sie?
  *
  * java-vm.js startet beim Laden wireUi(), sobald ein document existiert. Diese
@@ -173,14 +181,15 @@ FakeEl.prototype.dispatch = function (type, opts) {
    * Test-Harness bildet das jetzt genauso ab. */
   var stopped = false;
   ev.stopPropagation = function () { stopped = true; };
-  var list = this.handlers[type] || [];
+  /* Snapshot der Listener-Liste wie im echten DOM (#153). */
+  var list = (this.handlers[type] || []).slice();
   var i;
   for (i = 0; i < list.length; i++) { list[i](ev); }
   var node = this.parent;
   var sawBody = (global.document && global.document.body === this);
   while (!stopped && node) {
     if (global.document && global.document.body === node) { sawBody = true; }
-    var l2 = (node.handlers && node.handlers[type]) || [];
+    var l2 = ((node.handlers && node.handlers[type]) || []).slice();
     ev.currentTarget = node;
     for (var j = 0; j < l2.length; j++) { l2[j](ev); }
     node = node.parent;
@@ -264,7 +273,11 @@ FakeDoc.prototype.removeEventListener = function (type, fn) {
 FakeDoc.prototype._fire = function (type, ev) {
   var l = this._handlers && this._handlers[type];
   if (!l) { return; }
-  for (var i = 0; i < l.length; i++) { l[i](ev); }
+  /* DOM-Spezifikation: die Liste der Listener wird vor dem Feuern
+   * kopiert; ein Handler, der einen anderen abmeldet, darf den noch
+   * ausstehenden Dispatch nicht zum Verschwinden bringen (#153). */
+  var copy = l.slice();
+  for (var i = 0; i < copy.length; i++) { copy[i](ev); }
 };
 
 /* ---------- IDE-Seite nachbauen (wie templates/code_project.php) ---------- */
@@ -2434,6 +2447,13 @@ setTimeout(function () {
                   var blkRuninfoEl = blkReg('blk-runinfo');
                   var blkSaveinfoEl = blkReg('blk-saveinfo');
                   blkReg('blk-var-add', 'button');
+                  var blkModeEl = blkReg('blk-mode', 'button');
+                  var blkCodeEl = blkReg('blk-code', 'button');
+                  blkCodeEl.setAttribute('data-port', '/werkstatt/code/blocks/port');
+                  var blkConsoleBox = blkReg('blk-console');
+                  var blkConsoleLogEl = blkReg('blk-console-log');
+                  blkReg('blk-console-in', 'input');
+                  blkReg('blk-console-send', 'button');
                   var blkPenEl = blkDoc.createElement('canvas');
                   blkDoc.register(blkPenEl, 'blk-pen');
                   var blkCtrEl = blkDoc.createElement('canvas');
@@ -2484,7 +2504,7 @@ setTimeout(function () {
                   ok(BLK && BLK.BLOCKS && BLK.BLOCKS.flag && BLK.newRuntime, 'T87 der Block-Editor meldet Registry und Laufzeit als Exponat');
                   ok(Object.keys(BLK.BLOCKS).length >= 40, 'T87b die Registry enthaelt alle Bloecke der jetzt neun Kategorien');
                   var blkParsed = BLK.parseProgram(blkJsonEl.value);
-                  ok(blkParsed.v === 2 && blkParsed.sprites.length === 1 && blkParsed.sprites[0].scripts.length === 1 && blkParsed.sprites[0].scripts[0].top.op === 'flag' && blkParsed.sprites[0].scripts[0].top.next.op === 'say_for', 'T87c das gespeicherte JSON laedt als Skript mit Start-Hut und sage-Befehl');
+                  ok(blkParsed.v === 3 && blkParsed.sprites.length === 1 && blkParsed.sprites[0].scripts.length === 1 && blkParsed.sprites[0].scripts[0].top.op === 'flag' && blkParsed.sprites[0].scripts[0].top.next.op === 'say_for', 'T87c das gespeicherte JSON laedt als Skript (Version 3, Ursprung oben links) mit Start-Hut und sage-Befehl');
                   var blkEmpty = BLK.parseProgram('kein json');
                   ok(blkEmpty.sprites.length === 1 && blkEmpty.sprites[0].scripts.length === 0, 'T87d ungueltiges JSON laedt als leeres Programm statt zu abstuerzen');
 
@@ -2492,32 +2512,32 @@ setTimeout(function () {
                   var rt88 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('move_steps', { steps: '10' }))));
                   rt88.flag(0);
                   rt88.frame(0);
-                  ok(rt88.sprites[0].x === 10, 'T88 gehe 10 Schritte in Richtung 90 Grad bewegt die Figur nach rechts');
+                  ok(rt88.sprites[0].x === 250, 'T88 gehe 10 Schritte in Richtung 90 Grad bewegt die Figur nach rechts (Start in der Buehnenmitte 240/180)');
                   var rt88b = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('point_dir', { deg: '0' }, blkRaw('move_steps', { steps: '10' })))));
                   rt88b.flag(0);
                   rt88b.frame(0);
-                  ok(rt88b.sprites[0].y === 10, 'T88b Richtung 0 Grad heisst nach oben');
+                  ok(rt88b.sprites[0].y === 170, 'T88b Richtung 0 Grad heisst nach oben (y wird kleiner)');
                   var rt88c = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('wait', { secs: '1' }, blkRaw('change_y', { dy: '7' })))));
                   rt88c.flag(0);
                   rt88c.frame(999);
-                  ok(rt88c.sprites[0].y === 0, 'T88c waehrend des Wartens steht das Skript still');
+                  ok(rt88c.sprites[0].y === 180, 'T88c waehrend des Wartens steht das Skript still');
                   rt88c.frame(1000);
-                  ok(rt88c.sprites[0].y === 0, 'T88d die Wartezeit zaehlt ab dem ersten Anlauf (hier: bis Frame 1999)');
+                  ok(rt88c.sprites[0].y === 180, 'T88d die Wartezeit zaehlt ab dem ersten Anlauf (hier: bis Frame 1999)');
                   rt88c.frame(2500);
-                  ok(rt88c.sprites[0].y === 7, 'T88e nach Ablauf der Wartezeit laeuft es weiter');
+                  ok(rt88c.sprites[0].y === 187, 'T88e nach Ablauf der Wartezeit laeuft es weiter (y nach unten)');
                   var rt88e = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('repeat', { count: '3' }, null, [blkRaw('change_y', { dy: '5' })])) }] })));
                   rt88e.flag(0);
                   rt88e.frame(0);
                   rt88e.frame(0);
                   rt88e.frame(0);
-                  ok(rt88e.sprites[0].y === 15, 'T88f wiederhole 3 mal lauft mit einem Durchlauf pro Bild');
+                  ok(rt88e.sprites[0].y === 195, 'T88f wiederhole 3 mal lauft mit einem Durchlauf pro Bild');
                   rt88e.frame(0);
                   ok(rt88e.running() === false, 'T88g nach dem letzten Durchlauf ist der Thread beendet');
                   var rt88g = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('forever', {}, null, [blkRaw('move_steps', { steps: '1' })])) }] })));
                   rt88g.flag(0);
                   var f88;
                   for (f88 = 0; f88 < 10; f88++) { rt88g.frame(f88); }
-                  ok(rt88g.sprites[0].x === 10, 'T88h wiederhole fortlaufend bewegt Bild fuer Bild');
+                  ok(rt88g.sprites[0].x === 250, 'T88h wiederhole fortlaufend bewegt Bild fuer Bild');
                   var rt88h = BLK.newRuntime(BLK.parseProgram(JSON.stringify({ v: 1, vars: [], sprite: {}, scripts: [{ id: 's1', x: 0, y: 0, top: blkRaw('flag', {}, blkRaw('forever', {}, null, [blkRaw('stop_all')])) }] })));
                   rt88h.flag(0);
                   rt88h.frame(0);
@@ -2571,7 +2591,7 @@ setTimeout(function () {
                   var rt91 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('pen_down', {}, blkRaw('move_steps', { steps: '100' })))));
                   rt91.flag(0);
                   rt91.frame(0);
-                  ok(rt91.sprites[0].pen.segments.length === 1 && rt91.sprites[0].pen.segments[0].x2 === 100, 'T91 Stift ab zeichnet beim Bewegen eine Spur');
+                  ok(rt91.sprites[0].pen.segments.length === 1 && rt91.sprites[0].pen.segments[0].x2 === 340, 'T91 Stift ab zeichnet beim Bewegen eine Spur (240 nach 340)');
                   var rt91b = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('pen_down', {}, blkRaw('move_steps', { steps: '50' }, blkRaw('pen_clear'))))));
                   rt91b.flag(0);
                   rt91b.frame(0);
@@ -2585,7 +2605,7 @@ setTimeout(function () {
 
                   /* T92: Serialisierung und Validierung */
                   var blkSer = BLK.serializeProgram(blkParsed);
-                  ok(blkSer.v === 2 && blkSer.sprites.length === 1 && blkSer.sprites[0].scripts.length === 1 && blkSer.sprites[0].scripts[0].top.next.op === 'say_for' && blkSer.stage.scripts.length === 0, 'T92 das Programm serialisiert sich mit Figuren, Skripten und Buehne');
+                  ok(blkSer.v === 3 && blkSer.sprites.length === 1 && blkSer.sprites[0].scripts.length === 1 && blkSer.sprites[0].scripts[0].top.next.op === 'say_for' && blkSer.stage.scripts.length === 0, 'T92 das Programm serialisiert sich (Version 3) mit Figuren, Skripten und Buehne');
                   var blkRawMany = { v: 1, vars: [], sprite: {}, scripts: [] };
                   var i92;
                   for (i92 = 0; i92 < 100; i92++) { blkRawMany.scripts.push({ id: 's' + i92, x: 0, y: 0, top: blkRaw('flag') }); }
@@ -2598,7 +2618,7 @@ setTimeout(function () {
                   var blkUi = BLK.ui;
                   ok(blkUi !== null && typeof blkUi === 'object', 'T93 der Editor initialisiert sich auf der Blöcke-Seite von selbst');
                   ok(blkCatsEl.children.length === 9, 'T93b die Palette listet alle neun Kategorien (inkl. Klang)');
-                  ok(blkPalEl.children.length === 6, 'T93c die Ereignis-Kategorie zeigt die sechs Ereignis-Bloecke');
+                  ok(blkPalEl.children.length === 5, 'T93c die Ereignis-Kategorie zeigt im Lernmodus die fuenf Basis-Bloecke (#151)');
                   blkCatsEl.children[1].dispatch('click');
                   ok(blkPalEl.querySelector('.blk[data-pal-op="move_steps"]') !== null, 'T93d der Kategorie-Wechsel zeigt die Bewegungs-Bloecke');
                   ok(blkHelpEl.querySelectorAll('.blk-help-row').length === Object.keys(BLK.BLOCKS).length, 'T93e die Befehlsuebersicht erklaert jeden Block der Registry');
@@ -2617,7 +2637,7 @@ setTimeout(function () {
                   ok(blkFetchCalls.length === 1 && blkFetchCalls[0].url === '/werkstatt/code/5', 'T94 das Autospeichern geht als POST auf die Projekt-URL');
 
                   var blkBodyJson = decodeURIComponent(blkFetchCalls[0].body.split('content=')[1] || '');
-                  ok(blkBodyJson.indexOf('{"v":2') === 0 && blkBodyJson.indexOf('"op":"flag"') !== -1 && blkBodyJson.indexOf('"sprites"') !== -1 && blkBodyJson.indexOf('"stage"') !== -1, 'T94c das komplette Skriptmodell wird als JSON mit Figuren und Buehne gespeichert');
+                  ok(blkBodyJson.indexOf('{"v":3') === 0 && blkBodyJson.indexOf('"op":"flag"') !== -1 && blkBodyJson.indexOf('"sprites"') !== -1 && blkBodyJson.indexOf('"stage"') !== -1, 'T94c das komplette Skriptmodell wird als JSON (Version 3) mit Figuren und Buehne gespeichert');
                   ok(blkJsonEl.value.indexOf('"op":"flag"') !== -1, 'T94d das JSON-Feld im Formular bleibt synchron');
                   ok(blkSaveinfoEl.textContent.indexOf('automatisch gespeichert') !== -1, 'T94e der Editor meldet den automatischen Speichervorgang im Statusfeld');
 
@@ -2629,7 +2649,7 @@ setTimeout(function () {
                   blkUi.tick(1500);
                   ok(blkCtrEl.__ctx.__calls.indexOf('fillText:🤖') !== -1, 'T95c die Figur zeichnet sich in der Mitte der Buehne');
                   blkUi.tick(2500);
-                  ok(blkUi.runtime().sprites[0].x === 50, 'T95d nach der Sprechblase laeuft der weitere Block (hier: 50 Schritte)');
+                  ok(blkUi.runtime().sprites[0].x === 290, 'T95d nach der Sprechblase laeuft der weitere Block (hier: 50 Schritte nach rechts)');
 
                   /* T96: Formen (#127): Registry traegt die Form je Block,
                    * der Start-Hut nennt den Play-Knopf (#128). */
@@ -2646,9 +2666,9 @@ setTimeout(function () {
                   ok(BLK.BLOCKS.flag.parts[0] === 'Wenn ▶ angeklickt wird', 'T96b der Start-Hut nennt den Play-Knopf statt der Fahne');
 
                   /* T97: Migration von Version 1 auf Version 2 (#125) */
-                  ok(blkParsed.sprites[0].name === 'Figur 1' && blkParsed.sprites[0].id && blkParsed.stage.scripts.length === 0, 'T97 ein altes Programm der Version 1 laedt als Version 2 mit einer Figur und einer Buehne');
+                  ok(blkParsed.sprites[0].name === 'Figur 1' && blkParsed.sprites[0].id && blkParsed.stage.scripts.length === 0, 'T97 ein altes Programm der Version 1 laedt als Version 3 (Koordinaten umgerechnet) mit einer Figur und einer Buehne');
                   var blkRound = BLK.parseProgram(JSON.stringify(BLK.serializeProgram(blkParsed)));
-                  ok(blkRound.v === 2 && blkRound.sprites.length === blkParsed.sprites.length && blkRound.sprites[0].scripts.length === blkParsed.sprites[0].scripts.length && blkRound.stage.scripts.length === 0, 'T97b speichern und laden ergibt denselben Stand (Round-trip)');
+                  ok(blkRound.v === 3 && blkRound.sprites.length === blkParsed.sprites.length && blkRound.sprites[0].scripts.length === blkParsed.sprites[0].scripts.length && blkRound.stage.scripts.length === 0, 'T97b speichern und laden ergibt denselben Stand (Round-trip, Version 3)');
 
                   /* T98: mehrere Figuren, jede mit eigenen Skripten (#125) */
                   var blkTwo = BLK.parseProgram(JSON.stringify({
@@ -2664,11 +2684,11 @@ setTimeout(function () {
                   var rt98 = BLK.newRuntime(blkTwo);
                   rt98.flag(0);
                   rt98.frame(0);
-                  ok(rt98.sprites[0].x === 10 && rt98.sprites[1].x === -40, 'T98b zwei Figuren laufen unabhaengig voneinander (hier: 10 und 20 Schritte)');
+                  ok(rt98.sprites[0].x === 250 && rt98.sprites[1].x === 200, 'T98b zwei Figuren laufen unabhaengig voneinander (hier: 10 und 20 Schritte, Startpositionen aus Version 2 migriert)');
                   var rt98c = BLK.newRuntime(blkTwo);
                   rt98c.flag(0);
                   rt98c.stopAll();
-                  ok(rt98c.running() === false && rt98c.sprites[0].x === 0 && rt98c.sprites[1].x === -60, 'T98c stoppe alles haelt beide Figuren an');
+                  ok(rt98c.running() === false && rt98c.sprites[0].x === 240 && rt98c.sprites[1].x === 180, 'T98c stoppe alles haelt beide Figuren an (migrierte Positionen)');
 
                   /* T99: die Buehne als eigenes Ziel (#126) */
                   var blkStageProg = BLK.parseProgram(JSON.stringify({
@@ -2725,8 +2745,8 @@ setTimeout(function () {
                     blkDragDoc.scriptEl = scr2;
                     blkDragDoc.jsonEl = jt2;
                   })();
-                  function blkDragFresh() {
-                    blkDragDoc.jsonEl.value = JSON.stringify({
+                  function blkDragFresh(jsonText) {
+                    blkDragDoc.jsonEl.value = jsonText || JSON.stringify({
                       v: 2, vars: [], sprites: [{ id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true, scripts: [{
                         id: 's1', x: 24, y: 16,
                         top: { op: 'flag', id: 'b1', f: {}, sub: [],
@@ -2735,6 +2755,13 @@ setTimeout(function () {
                       }] }], stage: { scripts: [] }
                     });
                     var dSaved = global.document;
+                    /* Nur die frische Instanz darf am Dokument lauschen: Ohne
+                     * das Leeren wuerden Delegations-Handler aelterer
+                     * Instanzen (gleiche Element-IDs, getrennte Programme)
+                     * parallel mitziehen und dabei das gemeinsame DOM neu
+                     * rendern - der Browser kennt das nicht, er hat nur
+                     * eine Editor-Instanz pro Seite. */
+                    blkDragDoc._handlers = {};
                     global.document = blkDragDoc;
                     delete require.cache[require.resolve('../public/assets/js/block-editor.js')];
                     var B2 = require('../public/assets/js/block-editor.js');
@@ -2747,6 +2774,20 @@ setTimeout(function () {
                           y += 34;
                         }
                         y += 20;
+                      }
+                    };
+                    /* Wie setRects, aber inklusive der Bloecke in C-Block-Koerpern
+                     * und der Koerper-Container selbst (#148). */
+                    blkDragDoc.setRectsDeep = function () {
+                      var all = blkDragDoc.scriptEl.querySelectorAll('.blk');
+                      var y = 116;
+                      for (var i = 0; i < all.length; i++) {
+                        (function (bb, yy) { bb.getBoundingClientRect = function () { return { left: 224, top: yy, width: 180, height: 34, right: 404, bottom: yy + 34 }; }; })(all[i], y);
+                        y += 34;
+                      }
+                      var subs = blkDragDoc.scriptEl.querySelectorAll('.blk-sub');
+                      for (var s = 0; s < subs.length; s++) {
+                        (function (bb) { bb.getBoundingClientRect = function () { return { left: 224, top: 170, width: 180, height: 96, right: 404, bottom: 266 }; }; })(subs[s]);
                       }
                     };
                     blkDragDoc.restoreDoc = function () { global.document = dSaved; };
@@ -2820,11 +2861,11 @@ setTimeout(function () {
                   rt101.frame(0);
                   ok(rt101.sounds.length === 1, 'T101b spiele Ton legt einen (im Test stummen) Ton an und haelt das Skript an (#130)');
                   rt101.frame(600);
-                  ok(rt101.sounds.length === 0 && rt101.sprites[0].y === 7, 'T101c nach der Tonzeit laeuft das Skript weiter (#130)');
+                  ok(rt101.sounds.length === 0 && rt101.sprites[0].y === 187, 'T101c nach der Tonzeit laeuft das Skript weiter (#130)');
                   var rt101b = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('start_note', { tone: 'c4' }, blkRaw('stop_sounds', {})))));
                   rt101b.flag(0);
                   rt101b.frame(0);
-                  ok(rt101b.sounds.length === 0 && rt101b.sprites[0].y === 0, 'T101d starte Ton wartet nicht, stoppe alle Toene raeumt ab (#130)');
+                  ok(rt101b.sounds.length === 0 && rt101b.sprites[0].y === 180, 'T101d starte Ton wartet nicht, stoppe alle Toene raeumt ab (#130)');
                   var rt101c = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('set_volume', { v: '40' }, blkRaw('var_set', { name: 'l', value: { b: blkRaw('volume') } })))));
                   rt101c.flag(0);
                   rt101c.frame(0);
@@ -2869,10 +2910,10 @@ setTimeout(function () {
                     blkRaw('var_set', { name: 'mx', value: { b: blkRaw('mouse_x') } },
                       blkRaw('var_set', { name: 'my', value: { b: blkRaw('mouse_y') } },
                         blkRaw('var_set', { name: 'md', value: { b: blkRaw('mouse_down') } }))))));
-                  rt103.setMouse(30, -20, true);
+                  rt103.setMouse(30, 20, true);
                   rt103.flag(0);
                   rt103.frame(0);
-                  ok(rt103.vars.mx === 30 && rt103.vars.my === -20 && rt103.vars.md === true, 'T103 Maus-x, Maus-y und gedrueckt folgen dem Zeiger (#133)');
+                  ok(rt103.vars.mx === 30 && rt103.vars.my === 20 && rt103.vars.md === true, 'T103 Maus-x, Maus-y und gedrueckt folgen dem Zeiger (#133)');
                   var progTouch = BLK.parseProgram(JSON.stringify({
                     v: 2, vars: [],
                     sprites: [
@@ -2897,12 +2938,12 @@ setTimeout(function () {
                     stage: { scripts: [{ id: 'st', x: 0, y: 0, top: blkRaw('when_clicked', {}, blkRaw('var_set', { name: 'b', value: '1' })) }] }
                   }));
                   var rt103c = BLK.newRuntime(progClick);
-                  rt103c.setMouse(0, 0, true);
+                  rt103c.setMouse(240, 180, true);
                   rt103c.click(0);
                   rt103c.frame(0);
                   ok(rt103c.vars.c === 1 && rt103c.vars.b === undefined, 'T103c Klick auf die Figur startet nur das Figuren-Skript (#133)');
                   var rt103d = BLK.newRuntime(progClick);
-                  rt103d.setMouse(230, 170, true);
+                  rt103d.setMouse(300, 180, true);
                   rt103d.click(0);
                   rt103d.frame(0);
                   ok(rt103d.vars.b === 1 && rt103d.vars.c === undefined, 'T103d Klick neben die Figur startet das Buehnen-Skript (#133)');
@@ -2911,9 +2952,9 @@ setTimeout(function () {
                   var rt104 = BLK.newRuntime(blkProgram(blkRaw('flag', {}, blkRaw('glide', { secs: '1', x: '100', y: '0' }))));
                   rt104.flag(0);
                   rt104.frame(0);
-                  ok(rt104.sprites[0].x === 0, 'T104 gleiten startet an der alten Position (#134)');
+                  ok(rt104.sprites[0].x === 240, 'T104 gleiten startet an der alten Position (#134)');
                   rt104.frame(500);
-                  ok(Math.round(rt104.sprites[0].x) === 50, 'T104b halbwegs auf der Strecke liegt die Figur in der Mitte (#134)');
+                  ok(Math.round(rt104.sprites[0].x) === 170, 'T104b halbwegs auf der Strecke liegt die Figur in der Mitte (#134)');
                   rt104.frame(1000);
                   ok(rt104.sprites[0].x === 100, 'T104c am Ende steht die Figur am Ziel (#134)');
                   var prog104 = BLK.parseProgram(JSON.stringify({
@@ -2928,7 +2969,7 @@ setTimeout(function () {
                   var rt104b = BLK.newRuntime(prog104);
                   rt104b.flag(0);
                   rt104b.frame(0);
-                  ok(rt104b.sprites[0].dir === 270 && rt104b.sprites[0].x === 216, 'T104d am Rand prallt die Figur ab und rueckt ein (#134)');
+                  ok(rt104b.sprites[0].dir === 270 && rt104b.sprites[0].x === 456, 'T104d am Rand prallt die Figur ab und rueckt ein (#144: rechter Rand bei x 480)');
                   var prog104b = BLK.parseProgram(JSON.stringify({
                     v: 2, vars: [],
                     sprites: [
@@ -3014,9 +3055,9 @@ setTimeout(function () {
                     stage: { scripts: [] }
                   }));
                   var jOut = BLK.programToJava(genProg, 'Block Demo');
-                  ok(jOut.indexOf('public class BlockDemo') !== -1 && jOut.indexOf('void figur1_wenn_flag_angeklickt()') !== -1 && jOut.indexOf('sage_fuer("Hallo!", 2)') !== -1 && jOut.indexOf('for (int zaehler1') !== -1 && jOut.indexOf('static void sage_fuer(Object p1, Object p2) { }') !== -1, 'T107 Java-Ansicht: Klasse, Methode, Aufruf, Schleife und Platzhalter (#140)');
+                  ok(jOut.indexOf('public class BlockDemo') !== -1 && jOut.indexOf('static class Figur1 extends Figur') !== -1 && jOut.indexOf('void wenn_flag_angeklickt()') !== -1 && jOut.indexOf('sage_fuer(\"Hallo!\", 2)') !== -1 && jOut.indexOf('for (int zaehler1') !== -1 && jOut.indexOf('void sage_fuer(Object p1, Object p2) { }') !== -1 && jOut.indexOf('new Thread(() -> figur1.wenn_flag_angeklickt()).start();') !== -1, 'T107 Java-Ansicht: Klasse, Vererbung, Methode, Aufruf, Schleife und Platzhalter (#140, #152)');
                   var pOut = BLK.programToPython(genProg, 'Block Demo');
-                  ok(pOut.indexOf('def figur1_wenn_flag_angeklickt():') !== -1 && pOut.indexOf('for zaehler1 in range(int(3)):') !== -1 && pOut.indexOf('# sage Hallo! für 2 Sekunden') !== -1, 'T107b Python-Ansicht: Funktion, Schleife und Blocktext-Kommentar (#140)');
+                  ok(pOut.indexOf('class Figur1(Figur):') !== -1 && pOut.indexOf('def wenn_flag_angeklickt(self):') !== -1 && pOut.indexOf('self.sage_fuer(\'Hallo!\', 2)') !== -1 && pOut.indexOf('for zaehler1 in range(int(3)):') !== -1 && pOut.indexOf('# sage Hallo! für 2 Sekunden') !== -1 && pOut.indexOf('threading.Thread(target=figur1.wenn_flag_angeklickt).start()') !== -1, 'T107b Python-Ansicht: Klasse, Methode, Schleife und Blocktext-Kommentar (#140, #152)');
                   genProg.sprites[0].scripts[0].top.next = { op: 'gibts_nicht', id: 'bx', f: {}, sub: [], next: null };
                   var jOut2 = BLK.programToJava(genProg, 'Block Demo');
                   ok(jOut2.indexOf('Block ohne Textfassung') !== -1, 'T107c ein Block ohne Uebersetzung bleibt als Kommentar sichtbar (#140)');
@@ -3042,7 +3083,7 @@ setTimeout(function () {
                     if (tabWrap.children[di].textContent === 'Python') { pyTab = tabWrap.children[di]; }
                   }
                   if (pyTab) { pyTab.dispatch('click', {}); }
-                  ok(pyTab && preEl.textContent.indexOf('def figur1_') !== -1, 'T108c der Python-Reiter zeigt dieselben Skripte als Funktionen (#140)');
+                  ok(pyTab && preEl.textContent.indexOf('def wenn_flag_angeklickt(self):') !== -1, 'T108c der Python-Reiter zeigt dieselben Skripte als Funktionen (#140)');
                   var portBtn = null;
                   var actRow = dlgEl.children[2];
                   for (di = 0; di < actRow.children.length; di++) {
@@ -3060,7 +3101,147 @@ setTimeout(function () {
                       pf[portForm.children[di].getAttribute('name')] = portForm.children[di].getAttribute('value');
                     }
                   }
-                  ok(pf.language === 'python' && String(pf.title).indexOf('(Python)') !== -1 && String(pf.code).indexOf('def figur1_') !== -1 && pf.csrf === 'tok', 'T108e das Port-Formular traegt Sprache, Titel, Code und Sicherheitsfeld (#141)');
+                  ok(pf.language === 'python' && String(pf.title).indexOf('(Python)') !== -1 && String(pf.code).indexOf('class Figur1(Figur):') !== -1 && pf.csrf === 'tok', 'T108e das Port-Formular traegt Sprache, Titel, Code und Sicherheitsfeld (#141)');
+
+                  /* T109-T112 (#144, #148, #150-#153): Lern-/Expertenmodus,
+                     bunte Kategorie-Knoepfe, Konsole, OOP-Klassenmodell im
+                     Code-Generator und sichtbares Ziehen mit Einfuege-Linie. */
+                  ok(blkUi.isExpert() === false, 'T109 der Editor startet im Lernmodus (#151)');
+                  ok(blkModeEl.textContent === '🧠 Lernmodus' && blkCodeEl.hasAttribute('hidden') && blkConsoleBox.hasAttribute('hidden'), 'T109b im Lernmodus bleiben Code-Knopf und Konsole verborgen (#151)');
+                  var catColored = 0;
+                  var c9;
+                  for (c9 = 0; c9 < blkCatsEl.children.length; c9++) {
+                    if (blkCatsEl.children[c9].style && blkCatsEl.children[c9].style.background) { catColored++; }
+                  }
+                  ok(catColored === blkCatsEl.children.length, 'T109c jeder Kategorie-Knopf traegt seine Kategoriefarbe (#150)');
+                  ok(blkPalEl.querySelector('.blk[data-pal-op="broadcast_wait"]') === null, 'T109d Profi-Bloecke wie warten auf Nachricht bleiben im Lernmodus verborgen (#151)');
+                  blkUi.setMode(true);
+                  ok(blkUi.isExpert() === true && blkModeEl.textContent === '🎓 Expertenmodus' && !blkCodeEl.hasAttribute('hidden') && !blkConsoleBox.hasAttribute('hidden'), 'T109e der Expertenmodus blendet Code-Knopf und Konsole ein (#151)');
+                  ok(blkPalEl.children.length === 6 && blkPalEl.querySelector('.blk[data-pal-op="broadcast_wait"]') !== null, 'T109f im Expertenmodus zeigt die Ereignis-Kategorie alle sechs Bloecke (#151)');
+                  blkUi.setMode(false);
+                  ok(blkUi.isExpert() === false && blkPalEl.children.length === 5, 'T109g zurueck im Lernmodus gilt wieder das Basis-Angebot (#151)');
+
+                  function blkLogText() {
+                    var t = '';
+                    var ch = blkConsoleLogEl.children;
+                    for (var li = 0; li < ch.length; li++) { t += ch[li].textContent + '\n'; }
+                    return t;
+                  }
+                  blkUi.setMode(true);
+                  blkUi.consoleRun('hilfe');
+                  ok(blkLogText().indexOf('Befehle:') !== -1, 'T110 hilfe listet die Konsolen-Befehle im Protokoll (#152)');
+                  blkUi.consoleRun('x 240');
+                  blkUi.consoleRun('gehe 50');
+                  blkUi.consoleRun('info');
+                  ok(blkLogText().indexOf('geht 50 Schritte') !== -1 && blkLogText().indexOf('x 290') !== -1, 'T110b gehe 50 bewegt die ausgewaehlte Figur bis x 290 (#144, #152)');
+                  blkUi.consoleRun('Figur 1.gehe 10');
+                  blkUi.consoleRun('info');
+                  ok(blkLogText().indexOf('x 300') !== -1, 'T110c mit dem Figurnamen steuert die Konsole gezielt diese Figur (#152)');
+                  var errBefore = blkConsoleLogEl.querySelectorAll('.blk-console-err').length;
+                  blkUi.consoleRun('huepfe 5');
+                  ok(blkConsoleLogEl.querySelectorAll('.blk-console-err').length === errBefore + 1, 'T110d ein unbekannter Befehl landet als Fehlerzeile im Protokoll (#152)');
+                  blkUi.consoleRun('x 100');
+                  blkUi.consoleRun('info');
+                  ok(blkLogText().indexOf('x 100') !== -1, 'T110e x 100 setzt die x-Position direkt (Ursprung oben links) (#144, #152)');
+
+                  /* Sichtbares Ziehen (#153): der Block bleibt beim Ziehen im DOM */
+                  var ui3 = blkDragFresh();
+                  var dragEl3 = blkDragDoc.scriptEl.children[0].children[2];
+                  dragEl3.dispatch('pointerdown', { clientX: 250, clientY: 200, pointerId: 1 });
+                  blkDragDoc._fire('pointermove', { clientX: 250, clientY: 212, pointerId: 1 });
+                  blkDragDoc.setRects();
+                  var midOps3 = blkDragOps(ui3);
+                  var midDrag3 = blkDragDoc.scriptEl.querySelectorAll('.blk-dragging').length;
+                  var midRows3 = blkDragDoc.scriptEl.children[0].children.length;
+                  blkDragDoc._fire('pointerup', { clientX: 500, clientY: 400, pointerId: 1 });
+                  blkDragDoc.restoreDoc();
+                  ok(midOps3.length === 1 && midOps3[0] === 'flag,say_for,move_steps' && midDrag3 === 1 && midRows3 === 3, 'T111 beim Ziehen bleiben alle Bloecke sichtbar, nur der gezogene ist markiert (#153)');
+
+                  /* Einfuege-Linie im Loop-Koerper (#148) */
+                  var loopJson = JSON.stringify({
+                    v: 2, vars: [], sprites: [{ id: 'sp1', name: 'Figur 1', costume: 'robot', x: 0, y: 0, dir: 90, size: 100, visible: true, scripts: [{
+                      id: 's1', x: 24, y: 16,
+                      top: { op: 'flag', id: 'b1', f: {}, sub: [],
+                        next: { op: 'repeat', id: 'b2', f: { count: { v: '3' } }, sub: [
+                          { op: 'move_steps', id: 'b3', f: { steps: { v: '10' } }, sub: [], next: { op: 'say_for', id: 'b4', f: { msg: { v: 'Hi' }, secs: { v: '1' } }, sub: [], next: null } }
+                        ], next: null } }
+                    }] }], stage: { scripts: [] }
+                  });
+                  var ui4 = blkDragFresh(loopJson);
+                  var all4 = blkDragDoc.scriptEl.querySelectorAll('.blk');
+                  blkDragDoc.setRectsDeep();
+                  all4[3].dispatch('pointerdown', { clientX: 250, clientY: 234, pointerId: 1 });
+                  blkDragDoc._fire('pointermove', { clientX: 250, clientY: 190, pointerId: 1 });
+                  blkDragDoc.setRectsDeep();
+                  blkDragDoc._fire('pointermove', { clientX: 250, clientY: 190, pointerId: 1 });
+                  var hints4 = blkDragDoc.getElementById('blk-scriptwrap').querySelectorAll('.blk-drop-hint');
+                  var hint4 = hints4.length > 0 ? hints4[hints4.length - 1] : null;
+                  var hintCls4 = hint4 ? hint4.className : '';
+                  var hintH4 = hint4 ? hint4.style.height : '';
+                  blkDragDoc._fire('pointerup', { clientX: 250, clientY: 190, pointerId: 1 });
+                  var sub4 = ui4.program.sprites[0].scripts[0].top.next.sub[0];
+                  blkDragDoc.restoreDoc();
+                  ok(hint4 !== null && hintCls4.indexOf('sub') !== -1 && hintH4 === '6px' && sub4.op === 'say_for', 'T111b die Einfuege-Linie zeigt im Koerper die genaue Stelle, hier den Anfang (#148)');
+
+                  var ui5 = blkDragFresh(loopJson);
+                  var all5 = blkDragDoc.scriptEl.querySelectorAll('.blk');
+                  blkDragDoc.setRectsDeep();
+                  all5[3].dispatch('pointerdown', { clientX: 250, clientY: 234, pointerId: 1 });
+                  blkDragDoc._fire('pointermove', { clientX: 250, clientY: 210, pointerId: 1 });
+                  blkDragDoc.setRectsDeep();
+                  blkDragDoc._fire('pointermove', { clientX: 250, clientY: 210, pointerId: 1 });
+                  blkDragDoc._fire('pointerup', { clientX: 250, clientY: 210, pointerId: 1 });
+                  var sub5 = ui5.program.sprites[0].scripts[0].top.next.sub[0];
+                  blkDragDoc.restoreDoc();
+                  ok(sub5.op === 'move_steps' && sub5.next && sub5.next.op === 'say_for', 'T111c ueber der unteren Blockhaelfte fuegt der Editor dahinter statt davor ein (#148)');
+
+                  /* OOP-Generator mit Buehne (#152) */
+                  var stageProg = BLK.parseProgram(JSON.stringify({
+                    v: 3, vars: [],
+                    sprites: [{ name: 'Robo', costume: 'robot', x: 240, y: 180, dir: 90, scripts: [{ top: blkRaw('flag', {}, blkRaw('broadcast', { msg: 'los' })) }] }],
+                    stage: { scripts: [{ top: blkRaw('flag', {}, blkRaw('broadcast', { msg: 'start' })) }] }
+                  }));
+                  var stageJava = BLK.programToJava(stageProg, 'Buehnen Demo');
+                  ok(stageJava.indexOf('static class Buehne extends Figur') !== -1 && stageJava.indexOf('Buehne buehne = new Buehne();') !== -1 && stageJava.indexOf('new Thread(() -> buehne.wenn_flag_angeklickt()).start();') !== -1, 'T112 die Buehne wird im Java-Code zur eigenen Klasse mit eigenem Objekt (#152)');
+                  var stagePy = BLK.programToPython(stageProg, 'Buehnen Demo');
+                  ok(stagePy.indexOf('class Buehne(Figur):') !== -1 && stagePy.indexOf('buehne = Buehne()') !== -1 && stagePy.indexOf('threading.Thread(target=buehne.wenn_flag_angeklickt).start()') !== -1, 'T112b die Buehne wird im Python-Code zur eigenen Klasse mit eigenem Objekt (#152)');
+                  var plainProg = BLK.parseProgram(JSON.stringify({
+                    v: 3, vars: [], sprites: [{ name: 'Robo', costume: 'robot', x: 240, y: 180, dir: 90, scripts: [] }], stage: { scripts: [] }
+                  }));
+                  var plainJava = BLK.programToJava(plainProg, 'Leer');
+                  var plainPy = BLK.programToPython(plainProg, 'Leer');
+                  ok(plainJava.indexOf('static class Robo extends Figur') !== -1 && plainJava.indexOf('Robo robo = new Robo();') !== -1 && plainPy.indexOf('class Robo(Figur):') !== -1 && plainPy.indexOf('robo = Robo()') !== -1 && plainJava.indexOf('class Buehne') === -1 && plainPy.indexOf('class Buehne') === -1, 'T112c jede Figur wird zum Objekt, auch ohne Skripte; ohne Buehnenskript entsteht keine Buehnen-Klasse (#152)');
+
+                  /* T113-T113c (Optimierungen): Zieh-Geist per transform,
+                     gedeckeltes Konsolenprotokoll, Blasenbreiten-Cache. */
+                  var uiO = blkDragFresh();
+                  var dragElO = blkDragDoc.scriptEl.children[0].children[2];
+                  dragElO.dispatch('pointerdown', { clientX: 250, clientY: 200, pointerId: 1 });
+                  blkDragDoc._fire('pointermove', { clientX: 250, clientY: 212, pointerId: 1 });
+                  blkDragDoc.setRects();
+                  blkDragDoc._fire('pointermove', { clientX: 300, clientY: 240, pointerId: 1 });
+                  blkDragDoc.setRects();
+                  var ghostO = blkDragDoc.body.querySelector('.blk-ghost');
+                  var ghostTransform = ghostO && ghostO.style && String(ghostO.style.transform || '');
+                  blkDragDoc._fire('pointerup', { clientX: 500, clientY: 400, pointerId: 1 });
+                  blkDragDoc.restoreDoc();
+                  ok(ghostO !== null && ghostTransform.indexOf('translate(') === 0 && ghostTransform.indexOf('px') !== -1 && !ghostO.style.left && !ghostO.style.top, 'T113 der gezogene Block folgt dem Zeiger per transform statt left/top, ohne Bildaufbau (Optimierung)');
+
+                  blkUi.setMode(true);
+                  var iLog;
+                  for (iLog = 0; iLog < 260; iLog++) { blkUi.consoleRun('x ' + (10 + iLog)); }
+                  ok(blkConsoleLogEl.children.length === 200, 'T113b das Konsolenprotokoll bleibt bei 200 Zeilen gedeckelt (Optimierung)');
+
+                  var mtCalls = 0;
+                  blkCtrEl.__ctx.measureText = function () { mtCalls++; return { width: 44 }; };
+                  blkUi.consoleRun('sage Messtext A!');
+                  var mtA = mtCalls;
+                  blkUi.consoleRun('sage Messtext A!');
+                  blkUi.consoleRun('info');
+                  var mtB = mtCalls;
+                  blkUi.consoleRun('sage Messtext B!');
+                  var mtC = mtCalls;
+                  ok(mtA >= 1 && mtB === mtA && mtC === mtA + 1, 'T113c die Blasenbreite wird pro Blasentext nur einmal gemessen (Optimierung)');
 
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;

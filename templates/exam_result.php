@@ -1,3 +1,8 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: Prüfung: Ergebnis und Herausgabe
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
 <?php /** @var \Infocraft\Models\Exam $exam */ ?>
 <?php $percent = $totals['total'] > 0 ? $totals['reached'] / $totals['total'] * 100.0 : 0.0; ?>
 <p><a class="btn btn-ghost" href="<?= url('pruefungen') ?>" title="Zur Übersicht">←</a></p>

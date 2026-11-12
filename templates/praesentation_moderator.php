@@ -1,3 +1,8 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: Präsentationen: Moderatorenbildschirm
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
 <?php /** Moderatorenbildschirm (nur für Lehrkräfte): Steuerzentrale mit aktueller
  * und nächster Folie, Folienliste, Timer und Uhr. Zusammen mit der Präsentations-
  * ansicht im zweiten Fenster (gleicher Browser) über einen BroadcastChannel

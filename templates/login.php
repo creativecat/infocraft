@@ -1,3 +1,8 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: Anmeldung
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
 <div class="auth-card">
     <div class="auth-brand"><span class="brand-mark">🔨</span> <span class="brand-name">Info<strong>Craft</strong></span></div>
     <p class="auth-sub">Digitale Informatik-Werkstatt</p>

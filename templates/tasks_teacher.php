@@ -1,4 +1,12 @@
 <?php
+/**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Aufgaben: Ansicht für Lehrkräfte
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
 /** @var string $view @var list<\Infocraft\Models\Task> $tasks @var array<int, list<\Infocraft\Models\Task>> $groupedTasks @var array<int, list<array<string, mixed>>> $groupedCatalog @var array<int, list<array{id:int,kind:string,name:string,dueAt:?string,visibleFrom:?string,assignedAt:string,classId:?int,userId:?int}>> $targets @var \Infocraft\Models\SchoolClass[] $classes @var array<int, list<\Infocraft\Models\User>> $studentsByClass @var list<array<string, mixed>> $catalog @var list<array{task:\Infocraft\Models\Task,authorName:string}> $pool @var \Infocraft\Models\TaskTopic[] $topics @var \Infocraft\Models\TaskTopic[] $allTopics */
 $typeLabels = ['allgemein' => 'Allgemein', 'sql' => 'SQL', 'html' => 'HTML', 'code' => 'Java/Python', 'quiz' => 'Quiz'];
 $topicNames = [];

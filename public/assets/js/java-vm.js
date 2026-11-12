@@ -1,4 +1,12 @@
 /**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Java-Simulation für die Code-Werkstatt
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
+/**
  * InfoCraft Java-Simulation: LEXER + PARSER (Teil 1 von 2)
  * Eigener Java-Subset-Interpreter, läuft komplett im Browser (keine Server-
  * Kompilierung). Ein Dateipaar pro Klasse, mehrere Dateien pro Projekt.

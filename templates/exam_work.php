@@ -1,3 +1,8 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: Prüfung: Bearbeitung im Prüfungsmodus
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
 <?php /** @var \Infocraft\Models\Exam $exam */ ?>
 <div data-exam-save="<?= url('pruefungen/' . $exam->id . '/antwort') ?>">
 <section class="panel">

@@ -1,5 +1,13 @@
 <?php
 /**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Lehrkräfte: Klassenfortschritt
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.15.0
+ */
+/**
  * Fortschrittsübersicht einer Klasse (Issue #8): eine Zeile je Schülerin bzw.
  * Schüler mit Quiz-Bestwerten, erledigten Aufgaben und zuletzt bearbeiteten
  * Projekten aus der Werkstatt.
