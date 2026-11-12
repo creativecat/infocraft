@@ -1450,6 +1450,24 @@
    * einem Minus beginnt. */
   var MERMAID_KEYWORDS = ['graph TD', 'graph LR', 'flowchart TD', 'flowchart LR', 'sequenceDiagram', 'classDiagram', 'stateDiagram-v2', 'erDiagram', 'subgraph', 'end'];
   var MERMAID_ARROWS = ['-->', '-->|Text|', '-.->', '-.->|Text|', '---', '==>', '--o', '--x'];
+  /* Zeilen-Snippets (#96): fertige Grundgerueste ganzer Zeilen, von der
+   * Kante bis zum Teilnehmer, sofort uebernehmbar wie die anderen
+   * Vorschlaege. */
+  var MERMAID_SNIPPETS = [
+    { label: 'A --> B', insert: 'A --> B', detail: 'Kante' },
+    { label: 'A -->|Text| B', insert: 'A -->|Text| B', detail: 'Kante mit Beschriftung' },
+    { label: 'A[Label] --> B', insert: 'A[Label] --> B', detail: 'Kasten und Kante' },
+    { label: 'participant X', insert: 'participant X', detail: 'sequenceDiagram' },
+    { label: 'X --> Y : Aktion', insert: 'X --> Y : Aktion', detail: 'sequenceDiagram' },
+    { label: 'class X', insert: 'class X', detail: 'classDiagram' },
+    { label: 'X : methode()', insert: 'X : methode()', detail: 'classDiagram' },
+    { label: 'X --> Y : erbt', insert: 'X --> Y : erbt', detail: 'classDiagram' },
+    { label: 'X : String feld', insert: 'X : String feld', detail: 'classDiagram' },
+    { label: '[*] --> X', insert: '[*] --> X', detail: 'stateDiagram' },
+    { label: 'X : "Zustand"', insert: 'X : "Zustand"', detail: 'stateDiagram' },
+    { label: 'X ||--|| Y', insert: 'X ||--|| Y', detail: 'erDiagram' },
+    { label: 'subgraph Titel', insert: 'subgraph Titel', detail: 'Untergruppe (end danach)' }
+  ];
 
   function collectIdentifiers(scopeDoc, ta) {
     /* Klassen, Attribute und Methoden aus dem eigenen Java-Code sammeln. */
@@ -1554,6 +1572,7 @@
     } else if (kind === 'mermaid') {
       for (i = 0; i < MERMAID_KEYWORDS.length; i++) { items.push({ label: MERMAID_KEYWORDS[i], insert: MERMAID_KEYWORDS[i], detail: 'Mermaid' }); }
       for (i = 0; i < MERMAID_ARROWS.length; i++) { items.push({ label: MERMAID_ARROWS[i], insert: MERMAID_ARROWS[i], detail: 'Pfeil' }); }
+      for (i = 0; i < MERMAID_SNIPPETS.length; i++) { items.push(MERMAID_SNIPPETS[i]); }
     } else if (kind === 'python') {
       var PY = ['def', 'return', 'if', 'elif', 'else', 'for', 'while', 'in', 'range', 'print', 'import', 'from', 'class', 'True', 'False', 'None', 'and', 'or', 'not', 'len', 'str', 'int', 'float', 'list', 'append'];
       for (i = 0; i < PY.length; i++) { items.push({ label: PY[i], insert: PY[i], detail: 'Python' }); }
@@ -1823,6 +1842,20 @@
       var v = String(ta.value || '');
       var pos = typeof ta.selectionStart === 'number' ? ta.selectionStart : v.length;
       var end = typeof ta.selectionEnd === 'number' ? ta.selectionEnd : pos;
+      /* #94: Enter direkt nach einer oeffnenden Klammer legt eine neue
+       * eingerueckte Zeile an, darunter die schliessende Klammer -
+       * wie in der Java-IDE der Werkstatt. */
+      if (k === 'Enter' && pos === end && pos > 0 && v.charAt(pos - 1) === '{' && v.charAt(pos) === '}') {
+        var indM = /(?:^|\n)([ \t]*)$/.exec(v.slice(0, pos - 1));
+        var ind = indM ? indM[1] : '';
+        ta.value = v.slice(0, pos) + '\n' + ind + '  \n' + ind + v.slice(end);
+        var openCaret = pos + 1 + ind.length + 2;
+        if (ta.setSelectionRange) { ta.setSelectionRange(openCaret, openCaret); }
+        else { ta.selectionStart = openCaret; ta.selectionEnd = openCaret; }
+        if (ev.preventDefault) { ev.preventDefault(); }
+        fireInput(ta);
+        return;
+      }
       if (OPENERS[k]) {
         ta.value = v.slice(0, pos) + k + OPENERS[k] + v.slice(end);
         if (ta.setSelectionRange) { ta.setSelectionRange(pos + 1, pos + 1); }
@@ -2576,9 +2609,6 @@
       var cta = el('textarea', 'mono icv-code-ta');
       cta.value = item.code || '';
       cta.setAttribute('spellcheck', 'false');
-      var acBox = el('div', 'icv-code-ac');
-      var acItems = [];
-      var acSel = 0;
       function clsTitle(nm) { return String(nm || 'Klasse').replace(/\.java$/i, ''); }
       /* #102: Die Member-Erkennung (Attribute und Methoden einer Klasse)
        * ist EINMAL im Editor-Baustein implementiert und wird hier nur noch
@@ -2586,67 +2616,30 @@
       var clsMembers = (window.IC_EDIT_TOOLS && window.IC_EDIT_TOOLS.clsMembers)
         ? window.IC_EDIT_TOOLS.clsMembers
         : function () { return { fields: [], methods: [] }; };
-      function acHide() {
-        acItems = []; acSel = 0;
-        acBox.innerHTML = '';
-        acBox.classList.remove('icv-code-ac-open');
-      }
-      function acInsert(si) {
-        var sug = acItems[si];
-        if (!sug) { acHide(); return; }
-        var pos = cta.selectionStart;
-        if (typeof pos !== 'number' || pos < 0) { pos = String(cta.value || '').length; }
-        var val = String(cta.value || '');
-        var before = val.slice(0, pos);
-        var after = val.slice(pos);
-        var tokM = /[A-Za-z_]\w*$/.exec(before);
-        var tok = tokM ? tokM[0] : '';
-        var rest = sug.insert.slice(Math.min(tok.length, sug.insert.length));
-        cta.value = before + rest + after;
-        cta.selectionStart = cta.selectionEnd = pos + rest.length;
-        item.code = cta.value;
-        acHide();
-        collect(); markDirty();
-      }
-      function acShow() {
-        var pos = cta.selectionStart;
-        if (typeof pos !== 'number' || pos < 0) { pos = String(cta.value || '').length; }
-        var before = String(cta.value || '').slice(0, pos);
-        var tokM = /[A-Za-z_]\w*$/.exec(before);
-        if (!tokM) { acHide(); return; }
-        var tok = tokM[0];
-        var memM = /([A-Za-z_]\w*)\.$/.exec(before.slice(0, before.length - tok.length));
-        var list = [];
-        if (memM) {
-          var cls = item.cls.filter(function (c) { return clsTitle(c.name) === memM[1]; })[0];
-          if (cls) {
-            var mem = clsMembers(cls.code);
-            mem.fields.forEach(function (f) {
-              if (f.name.toLowerCase().indexOf(tok.toLowerCase()) === 0) { list.push({ label: f.name + ' : ' + f.type, insert: f.name }); }
-            });
-            mem.methods.forEach(function (m) {
-              if (m.name.toLowerCase().indexOf(tok.toLowerCase()) === 0) { list.push({ label: m.name + '(' + m.args + ')', insert: m.name + '(' }); }
-            });
-          }
-        } else {
-          item.cls.forEach(function (c) {
-            var cn = clsTitle(c.name);
-            if (cn.toLowerCase().indexOf(tok.toLowerCase()) === 0) { list.push({ label: cn, insert: cn }); }
-          });
-        }
-        if (list.length === 0) { acHide(); return; }
-        acItems = list; acSel = 0;
-        acBox.innerHTML = '';
-        list.forEach(function (s2, sI) {
-          var it = el('div', 'icv-code-ac-item', s2.label);
-          if (sI === 0) { it.classList.add('sel'); }
-          it.addEventListener('click', function () { acInsert(sI); });
-          acBox.appendChild(it);
+      /* #95: Das Code-Fenster der Bearbeitung nutzt die GLEICHE Vorschlags-
+       * Engine wie der Lesemodus (IC_AUTOCOMPLETE): Schluesselwoerter und
+       * Snippets der gewaehlten Sprache plus Klassennamen und Member der
+       * importierten Klassen in einer Liste. Die alte, separate Klassen-AC
+       * (icv-code-ac) ist damit sauber abgeloest, nicht doppelt aufgesetzt. */
+      function refreshAcExtra() {
+        var items = [];
+        var members = {};
+        item.cls.forEach(function (c) {
+          var cn = clsTitle(c.name);
+          if (!cn) { return; }
+          items.push({ label: cn, insert: cn, detail: 'importierte Klasse' });
+          var mem = clsMembers(c.code);
+          var pool = [];
+          mem.fields.forEach(function (f) { pool.push({ label: f.name, insert: f.name, detail: f.type }); });
+          mem.methods.forEach(function (m) { pool.push({ label: m.name + '()', insert: m.name + '(', detail: 'Methode' }); });
+          members[cn] = pool;
         });
-        acBox.classList.add('icv-code-ac-open');
+        cta.__icAcExtra = items;
+        cta.__icAcMembers = members;
       }
       function syncClsFiles() {
         crun.setAttribute('data-clsfiles', JSON.stringify(item.cls.map(function (c) { return { name: c.name, code: c.code }; })));
+        refreshAcExtra();
       }
       function rebuildCards() {
         ccards.innerHTML = '';
@@ -2663,7 +2656,7 @@
           xBtn.title = 'Klasse entfernen';
           xBtn.addEventListener('click', function () {
             item.cls.splice(cI, 1);
-            acHide(); rebuildCards(); syncClsFiles(); collect(); markDirty();
+            rebuildCards(); syncClsFiles(); collect(); markDirty();
           });
           card.appendChild(xBtn);
           var det = el('div', 'icv-code-card-detail');
@@ -2682,35 +2675,9 @@
       cta.addEventListener('input', function () {
         item.code = cta.value;
         collect(); markDirty();
-        acShow();
-      });
-      cta.addEventListener('keydown', function (ev) {
-        if (acItems.length === 0) {
-          /* Tab ohne Vorschlag (#103): Vorschub statt Fokus-Sprung. */
-          if (ev && ev.key === 'Tab' && window.IC_EDIT_TOOLS && window.IC_EDIT_TOOLS.tabIndent) {
-            if (ev.preventDefault) { ev.preventDefault(); }
-            window.IC_EDIT_TOOLS.tabIndent(cta);
-          }
-          return;
-        }
-        var k = ev && ev.key ? ev.key : '';
-        if (k === 'ArrowDown' || k === 'ArrowUp') {
-          acSel = (acSel + (k === 'ArrowDown' ? 1 : -1) + acItems.length) % acItems.length;
-          var kids = acBox.children;
-          for (var ki = 0; ki < kids.length; ki++) { kids[ki].classList.toggle('sel', ki === acSel); }
-          if (ev.preventDefault) { ev.preventDefault(); }
-          return;
-        }
-        if (k === 'Tab' || k === 'Enter') {
-          acInsert(acSel);
-          if (ev.preventDefault) { ev.preventDefault(); }
-          return;
-        }
-        if (k === 'Escape') { acHide(); }
       });
       div.appendChild(ccards);
       div.appendChild(cta);
-      div.appendChild(acBox);
       /* Editor-Paritaet (#93): Zeilennummern und Klammer-Automatik auch
        * am Code-Fenster des InfoBook-Editors, wie in der Werkstatt. */
       try {
@@ -2718,6 +2685,12 @@
         /* Syntax-Highlighting (#105) */
         if (window.IC_EDIT_TOOLS && window.IC_EDIT_TOOLS.highlight) {
           codeHl = window.IC_EDIT_TOOLS.highlight(cta, clang.value || clangVal);
+        }
+        /* #95: gemeinsame Vorschlags-Engine, Sprachwahl entscheidet ueber
+         * die Schluesselwoerter; JavaScript nutzt den Java-Vorrat. */
+        if (window.IC_AUTOCOMPLETE) {
+          window.IC_AUTOCOMPLETE.attach(cta, clangVal === 'python' ? 'python' : 'java');
+          refreshAcExtra();
         }
       } catch (eEd) { /* ohne Gutter laeuft das Feld trotzdem */ }
       var crun = el('button', 'icv-code-run', '▶ Ausführen');

@@ -770,6 +770,147 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
             </section>
         </aside>
     </div>
+    <?php elseif ($project->type === 'code' && $project->language === 'pda'): ?>
+    <!-- Kellerautomat-Werkstatt (#164): Zustaende zeichnen, Woerter mit
+         Keller pruefen, Akzeptanz per Endzustand oder leerem Keller. -->
+    <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="form pda-meta" id="pda-save-form">
+        <?= csrf_field() ?>
+        <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
+        <textarea name="content" id="pda-json" aria-hidden="true" spellcheck="false"><?= e($project->content) ?></textarea>
+        <div class="btn-row">
+            <span class="save-status" id="pda-saveinfo" hidden></span>
+        </div>
+    </form>
+    <div class="ide pda-ide" id="pda-ide">
+        <section class="pda-stage" id="pda-stage">
+            <svg id="pda-canvas" aria-label="Zeichenflaeche des Kellerautomaten"></svg>
+            <div class="pda-hint" id="pda-hint"></div>
+            <div class="pda-toolbar">
+                <button class="btn" data-pda-mode="select" type="button" aria-pressed="true" title="Auswaehlen">☝️</button>
+                <button class="btn" data-pda-mode="state" type="button" aria-pressed="false" title="Zustand anlegen">⭕</button>
+                <button class="btn" data-pda-mode="trans" type="button" aria-pressed="false" title="Uebergang anlegen">➡️</button>
+                <button class="btn" data-pda-mode="delete" type="button" aria-pressed="false" title="Loeschen">🗑️</button>
+            </div>
+            <div class="pop pda-pop" id="pda-pop" hidden>
+                <label for="pda-pop-in" id="pda-pop-lbl">Uebergang</label>
+                <div class="btn-row"><input class="inp mono" id="pda-pop-in" autocomplete="off" spellcheck="false" placeholder="z. B. a, A -> BC"><button class="btn btn-primary" id="pda-pop-ok" type="button">OK</button></div>
+                <small class="muted" id="pda-pop-hint">lesen, vom Keller holen, ablegen. Leeres Zeichen heisst ε.</small>
+            </div>
+        </section>
+        <aside class="pda-side">
+            <section class="panel" id="pda-sel"></section>
+            <section class="panel">
+                <h3>Wort testen</h3>
+                <input class="inp mono" id="pda-word" placeholder="z. B. aabb oder ε" autocomplete="off" spellcheck="false">
+                <div class="btn-row">
+                    <button class="btn btn-primary" id="pda-run" type="button">Prüfen</button>
+                    <button class="btn" id="pda-reset" type="button" title="Ausgabe zuruecksetzen">↺</button>
+                </div>
+                <div id="pda-out"></div>
+            </section>
+            <section class="panel">
+                <h3>Keller</h3>
+                <label class="field"><span>Bodenzeichen</span>
+                    <input class="inp mono" id="pda-stack0" placeholder="z. B. Z" maxlength="1" autocomplete="off" spellcheck="false"></label>
+                <div class="btn-row" role="radiogroup" aria-label="Akzeptiert...">
+                    <label class="chip"><input type="radio" name="pda-accept" value="state"> am Endzustand</label>
+                    <label class="chip"><input type="radio" name="pda-accept" value="stack"> bei leerem Keller</label>
+                </div>
+            </section>
+            <section class="panel">
+                <details>
+                    <summary>Mehrere Wörter testen</summary>
+                    <label class="field"><span>Ein Wort pro Zeile (ε für das leere Wort)</span>
+                        <textarea class="inp mono" id="pda-batch-in" rows="4" spellcheck="false" placeholder="aabb&#10;ab&#10;aab"></textarea></label>
+                    <div class="btn-row"><button class="btn" id="pda-batch-btn" type="button">Alle testen</button></div>
+                    <ul class="pda-batch" id="pda-batch-out"></ul>
+                </details>
+            </section>
+        </aside>
+    </div>
+    <?php elseif ($project->type === 'code' && $project->language === 'turing'): ?>
+    <!-- Turingmaschinen-Werkstatt (#165): Zustaende und Regeln zeichnen,
+         Woerter auf dem Band laufen lassen, Schrittliste mit Kopf. -->
+    <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="form tm-meta" id="tm-save-form">
+        <?= csrf_field() ?>
+        <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
+        <textarea name="content" id="tm-json" aria-hidden="true" spellcheck="false"><?= e($project->content) ?></textarea>
+        <div class="btn-row">
+            <span class="save-status" id="tm-saveinfo" hidden></span>
+        </div>
+    </form>
+    <div class="ide tm-ide" id="tm-ide">
+        <section class="tm-stage" id="tm-stage">
+            <svg id="tm-canvas" aria-label="Zeichenflaeche der Turingmaschine"></svg>
+            <div class="tm-hint" id="tm-hint"></div>
+            <div class="tm-toolbar">
+                <button class="btn" data-tm-mode="select" type="button" aria-pressed="true" title="Auswaehlen">☝️</button>
+                <button class="btn" data-tm-mode="state" type="button" aria-pressed="false" title="Zustand anlegen">⭕</button>
+                <button class="btn" data-tm-mode="rule" type="button" aria-pressed="false" title="Regel anlegen">➡️</button>
+                <button class="btn" data-tm-mode="delete" type="button" aria-pressed="false" title="Loeschen">🗑️</button>
+            </div>
+            <div class="pop tm-pop" id="tm-pop" hidden>
+                <label for="tm-pop-in" id="tm-pop-lbl">Regel</label>
+                <div class="btn-row"><input class="inp mono" id="tm-pop-in" autocomplete="off" spellcheck="false" placeholder="z. B. 1 / 0, L"><button class="btn btn-primary" id="tm-pop-ok" type="button">OK</button></div>
+                <small class="muted" id="tm-pop-hint">lesen / schreiben, Richtung R, L oder N. _ ist das leere Feld.</small>
+            </div>
+        </section>
+        <aside class="tm-side">
+            <section class="panel" id="tm-sel"></section>
+            <section class="panel">
+                <h3>Wort testen</h3>
+                <input class="inp mono" id="tm-word" placeholder="z. B. 1011" autocomplete="off" spellcheck="false">
+                <div class="btn-row">
+                    <button class="btn btn-primary" id="tm-run" type="button">Laufen lassen</button>
+                    <button class="btn" id="tm-step" type="button" title="Einzelne Schritte ansehen">Schritt ▸</button>
+                    <button class="btn" id="tm-reset" type="button" title="Ausgabe zuruecksetzen">↺</button>
+                </div>
+                <div id="tm-out"></div>
+            </section>
+        </aside>
+    </div>
+    <?php elseif ($project->type === 'code' && $project->language === 'logic'): ?>
+    <!-- Schaltwerk-Werkstatt (#166): Schalter, Gatter und Lampen setzen,
+         Drähte ziehen, Takt und D-Flipflop. -->
+    <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id) ?>" class="form lc-meta" id="lc-save-form">
+        <?= csrf_field() ?>
+        <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
+        <textarea name="content" id="lc-json" aria-hidden="true" spellcheck="false"><?= e($project->content) ?></textarea>
+        <div class="btn-row">
+            <span class="save-status" id="lc-saveinfo" hidden></span>
+        </div>
+    </form>
+    <div class="ide lc-ide" id="lc-ide">
+        <section class="lc-stage" id="lc-stage">
+            <svg id="lc-canvas" aria-label="Zeichenflaeche des Schaltwerks"></svg>
+            <div class="lc-hint" id="lc-hint"></div>
+            <div class="lc-toolbar">
+                <button class="btn" data-lc-mode="select" type="button" aria-pressed="true" title="Schalter umschalten und auswaehlen">☝️</button>
+                <button class="btn" data-lc-mode="place" data-lc-kind="switch" type="button" aria-pressed="false" title="Schalter platzieren">🔲 Schalter</button>
+                <button class="btn" data-lc-mode="place" data-lc-kind="lamp" type="button" aria-pressed="false" title="Lampe platzieren">💡 Lampe</button>
+                <button class="btn" data-lc-mode="place" data-lc-kind="and" type="button" aria-pressed="false" title="UND-Gatter platzieren">UND</button>
+                <button class="btn" data-lc-mode="place" data-lc-kind="or" type="button" aria-pressed="false" title="ODER-Gatter platzieren">ODER</button>
+                <button class="btn" data-lc-mode="place" data-lc-kind="not" type="button" aria-pressed="false" title="NICHT-Gatter platzieren">NICHT</button>
+                <button class="btn" data-lc-mode="place" data-lc-kind="nand" type="button" aria-pressed="false" title="NAND-Gatter platzieren">NAND</button>
+                <button class="btn" data-lc-mode="place" data-lc-kind="xor" type="button" aria-pressed="false" title="XOR-Gatter platzieren">XOR</button>
+                <button class="btn" data-lc-mode="place" data-lc-kind="clock" type="button" aria-pressed="false" title="Taktgeber platzieren">⏱ Takt</button>
+                <button class="btn" data-lc-mode="place" data-lc-kind="dff" type="button" aria-pressed="false" title="D-Flipflop platzieren">D-FF</button>
+                <button class="btn" data-lc-mode="wire" type="button" aria-pressed="false" title="Draht ziehen">🔌 Draht</button>
+                <button class="btn" data-lc-mode="delete" type="button" aria-pressed="false" title="Loeschen">🗑️</button>
+            </div>
+        </section>
+        <aside class="lc-side">
+            <section class="panel" id="lc-sel"></section>
+            <section class="panel">
+                <h3>Auswertung</h3>
+                <div class="btn-row">
+                    <button class="btn btn-primary" id="lc-eval" type="button">Auswerten</button>
+                    <button class="btn" id="lc-clock" type="button" title="Taktgeber laufen lassen oder stoppen">▶ Takt</button>
+                </div>
+                <div id="lc-out"></div>
+            </section>
+        </aside>
+    </div>
     <?php elseif ($project->type === 'code' && $project->language === 'blocks'): ?>
     <!-- Block-Werkstatt (#116-#121): Blöcke aus der Palette ziehen, andocken,
          ausfuehren auf der Buehne. Das Skriptmodell liegt als JSON im Projekt. -->
@@ -787,6 +928,8 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
             <div class="blk-cats" id="blk-cats"></div>
             <div class="blk-pal" id="blk-pal"></div>
             <button class="btn btn-ghost blk-var-add" id="blk-var-add" type="button" title="Neue Variable anlegen"<?= $blkMode === 'expert' ? '' : ' hidden' ?>>＋ Variable</button>
+            <button class="btn btn-ghost blk-list-add" id="blk-list-add" type="button" title="Neue Liste anlegen (#137)"<?= $blkMode === 'expert' ? '' : ' hidden' ?>>＋ Liste</button>
+            <button class="btn btn-ghost blk-proc-add" id="blk-proc-add" type="button" title="Neuen Baustein (eigenen Block) anlegen (#138)">＋ Baustein</button>
         </aside>
         <div class="blk-scriptwrap" id="blk-scriptwrap">
             <div class="blk-script" id="blk-script"></div>
@@ -795,6 +938,8 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
             <div class="blk-stagebar">
                 <button class="btn btn-primary" id="blk-flag" type="button" title="Start: alle ▶-Skripte laufen los">▶</button>
                 <button class="btn" id="blk-stop" type="button" title="Stop: alle laufenden Skripte anhalten">⏹</button>
+                <button class="btn" id="blk-templates" type="button" title="Beispielprogramm laden (#142)">Vorlagen</button>
+                <button class="btn" id="blk-full" type="button" title="Buehne im Vollbild anzeigen (#143)">⛶</button>
                 <span class="blk-switch" id="blk-mode" role="group" aria-label="Modus der Werkstatt">
                     <button class="btn blk-switch-btn<?= $blkMode === 'expert' ? '' : ' active' ?>" id="blk-mode-learn" type="button" aria-pressed="<?= $blkMode === 'expert' ? 'false' : 'true' ?>" title="Lernmodus: die Grundbausteine für den Einstieg (#161)">🧠 Lernmodus</button>
                     <button class="btn blk-switch-btn<?= $blkMode === 'expert' ? ' active' : '' ?>" id="blk-mode-expert" type="button" aria-pressed="<?= $blkMode === 'expert' ? 'true' : 'false' ?>" title="Expertenmodus: mehr Blöcke, Code-Ansicht und Konsole (#161)">🎓 Expertenmodus</button>
@@ -803,6 +948,7 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
                 <span class="muted" id="blk-runinfo"></span>
             </div>
             <div class="blk-stage" id="blk-stage">
+                <canvas id="blk-bg" width="480" height="360"></canvas>
                 <canvas id="blk-pen" width="480" height="360"></canvas>
                 <canvas id="blk-ctr" width="480" height="360"></canvas>
             </div>
@@ -875,6 +1021,12 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
 <script src="<?= asset_url('assets/js/asm-vm.js') ?>"></script>
 <?php elseif ($project->type === 'code' && $project->language === 'automaton'): ?>
 <script src="<?= asset_url('assets/js/automaton.js') ?>"></script>
+<?php elseif ($project->type === 'code' && $project->language === 'pda'): ?>
+<script src="<?= asset_url('assets/js/pda.js') ?>"></script>
+<?php elseif ($project->type === 'code' && $project->language === 'turing'): ?>
+<script src="<?= asset_url('assets/js/turing.js') ?>"></script>
+<?php elseif ($project->type === 'code' && $project->language === 'logic'): ?>
+<script src="<?= asset_url('assets/js/logic.js') ?>"></script>
 <?php elseif ($project->type === 'code' && $project->language === 'blocks'): ?>
 <script src="<?= asset_url('assets/js/block-editor.js') ?>"></script>
 <?php elseif ($project->type === 'html'): ?>

@@ -4,7 +4,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.16.0
+ * @version 0.17.0
  */
 /* InfoCraft Block-Editor: Programmieren mit Blöcken per Drag & Drop (#116-#128).
  *
@@ -40,7 +40,11 @@
     { id: 'sensing', label: 'Wahrnehmung', color: '#0891b2' },
     { id: 'ops', label: 'Operatoren', color: '#059669' },
     { id: 'vars', label: 'Variablen', color: '#db2777', pro: true },
-    { id: 'pen', label: 'Stift', color: '#65a30d' }
+    { id: 'pen', label: 'Stift', color: '#65a30d' },
+    /* Meine Bloecke (#138): eigene Bausteine (Prozeduren ohne Parameter). */
+    { id: 'myblocks', label: 'Meine Blöcke', color: '#7c3aed' },
+    /* Buehne (#139): Hintergruende wechseln, nur als Ziel Buehne sichtbar. */
+    { id: 'stage', label: 'Bühne', color: '#0f766e', stageOnly: true }
   ];
   /* Fuer die Buehne (kein Koerper, kein Stift) ausgeblendete Kategorien. */
   var STAGE_HIDDEN_CATS = { motion: true, looks: true, pen: true };
@@ -97,8 +101,125 @@
     { v: 'nachricht5', l: 'Nachricht 5' }
   ];
   var COSTUME_ORDER = ['robot', 'rocket', 'fish', 'ball'];
+  /* Buehnen-Hintergruende (#139): schlichte Farbverlaeufe, direkt im
+   * Canvas gezeichnet, unter allen Spuren und Figuren. */
+  var BACKDROP_OPTIONS = [
+    { v: 'paper', l: '⚪ Papier' },
+    { v: 'sunrise', l: '🌅 Sonnenaufgang' },
+    { v: 'sea', l: '🌊 Meer' },
+    { v: 'meadow', l: '🌾 Wiese' }
+  ];
+  var BACKDROP_ORDER = ['paper', 'sunrise', 'sea', 'meadow'];
+  /* Klone (#132): Obergrenze wie bei klassischen Block-Plattformen. */
+  var CLONE_LIMIT = 300;
+  /* Beispielprogramme (#142): vier Vorlagen im serialisierten Format. */
+  var TEMPLATES = [
+    {
+      name: 'Begrüßung', desc: 'Die Figur sagt Hallo und bedankt sich für Klicks.', prog: {
+        v: 3, vars: [], lists: [],
+        sprites: [{
+          id: 'tpl-robot', name: 'Roboter', costume: 'robot',
+          x: 240, y: 180, dir: 90, size: 100, visible: true, procs: [],
+          scripts: [
+            { id: 'tpl-s1', x: 40, y: 40, top: { op: 'flag', id: 'tpl-t1', f: {}, sub: [], next:
+              { op: 'say_for', id: 'tpl-t2', f: { msg: { v: 'Hallo!' }, secs: { v: '2' } }, sub: [], next:
+              { op: 'say', id: 'tpl-t3', f: { msg: { v: 'Klick mich!' } }, sub: [], next: null } } } },
+            { id: 'tpl-s2', x: 40, y: 150, top: { op: 'when_clicked', id: 'tpl-t4', f: {}, sub: [], next:
+              { op: 'say', id: 'tpl-t5', f: { msg: { v: 'Danke!' } }, sub: [], next: null } } }
+          ]
+        }],
+        stage: { scripts: [], procs: [], backdrop: 'paper' }
+      }
+    },
+    {
+      name: 'Labyrinth zeichnen', desc: 'Der Stift zeichnet ein Quadrat.', prog: {
+        v: 3, vars: [], lists: [],
+        sprites: [{
+          id: 'tpl-robot', name: 'Zeichner', costume: 'robot',
+          x: 120, y: 120, dir: 90, size: 100, visible: true, procs: [],
+          scripts: [
+            { id: 'tpl-s1', x: 40, y: 40, top: { op: 'flag', id: 'tpl-t1', f: {}, sub: [], next:
+              { op: 'pen_down', id: 'tpl-t2', f: {}, sub: [], next:
+              { op: 'repeat', id: 'tpl-t3', f: { count: { v: '4' } }, sub: [
+                { op: 'move_steps', id: 'tpl-t4', f: { steps: { v: '100' } }, sub: [], next:
+                { op: 'turn_right', id: 'tpl-t5', f: { deg: { v: '90' } }, sub: [], next: null } }
+              ], next: null } } } }
+          ]
+        }],
+        stage: { scripts: [], procs: [], backdrop: 'paper' }
+      }
+    },
+    {
+      name: 'Verfolger-Spiel', desc: 'Der Roboter folgt dem Fisch, du steuerst mit den Pfeiltasten.', prog: {
+        v: 3, vars: [], lists: [],
+        sprites: [
+          {
+            id: 'tpl-robot', name: 'Verfolger', costume: 'robot',
+            x: 60, y: 300, dir: 90, size: 100, visible: true, procs: [],
+            scripts: [
+              { id: 'tpl-s1', x: 40, y: 40, top: { op: 'flag', id: 'tpl-t1', f: {}, sub: [], next:
+                { op: 'forever', id: 'tpl-t2', f: {}, sub: [
+                  { op: 'point_towards', id: 'tpl-t3', f: { name: { v: 'tpl-fisch' } }, sub: [], next:
+                  { op: 'move_steps', id: 'tpl-t4', f: { steps: { v: '3' } }, sub: [], next: null } }
+                ], next: null } } }
+            ]
+          },
+          {
+            id: 'tpl-fisch', name: 'Fisch', costume: 'fish',
+            x: 400, y: 80, dir: 90, size: 100, visible: true, procs: [],
+            scripts: [
+              { id: 'tpl-f1', x: 40, y: 40, top: { op: 'when_key', id: 'tpl-k1', f: { key: { v: 'pfeil links' } }, sub: [], next:
+                { op: 'change_x', id: 'tpl-k2', f: { dx: { v: '-20' } }, sub: [], next: null } } },
+              { id: 'tpl-f2', x: 40, y: 120, top: { op: 'when_key', id: 'tpl-k3', f: { key: { v: 'pfeil rechts' } }, sub: [], next:
+                { op: 'change_x', id: 'tpl-k4', f: { dx: { v: '20' } }, sub: [], next: null } } },
+              { id: 'tpl-f3', x: 40, y: 200, top: { op: 'when_key', id: 'tpl-k5', f: { key: { v: 'pfeil hoch' } }, sub: [], next:
+                { op: 'change_y', id: 'tpl-k6', f: { dy: { v: '-20' } }, sub: [], next: null } } },
+              { id: 'tpl-f4', x: 40, y: 280, top: { op: 'when_key', id: 'tpl-k7', f: { key: { v: 'pfeil runter' } }, sub: [], next:
+                { op: 'change_y', id: 'tpl-k8', f: { dy: { v: '20' } }, sub: [], next: null } } }
+            ]
+          }
+        ],
+        stage: { scripts: [], procs: [], backdrop: 'paper' }
+      }
+    },
+    {
+      name: 'Rhythmus', desc: 'Zwei Töne im Wechsel, endlos.', prog: {
+        v: 3, vars: [], lists: [],
+        sprites: [{
+          id: 'tpl-robot', name: 'Schlagzeug', costume: 'ball',
+          x: 240, y: 180, dir: 90, size: 100, visible: true, procs: [],
+          scripts: [
+            { id: 'tpl-s1', x: 40, y: 40, top: { op: 'flag', id: 'tpl-t1', f: {}, sub: [], next:
+              { op: 'forever', id: 'tpl-t2', f: {}, sub: [
+                { op: 'play_note', id: 'tpl-t3', f: { tone: { v: 'c4' }, secs: { v: '0.5' } }, sub: [], next:
+                { op: 'play_note', id: 'tpl-t4', f: { tone: { v: 'g4' }, secs: { v: '0.5' } }, sub: [], next: null } }
+              ], next: null } } }
+            ]
+        }],
+        stage: { scripts: [], procs: [], backdrop: 'paper' }
+      }
+    }
+  ];
 
-  function optionSource(name, vars, sprites) {
+  function templateBlockCount(prog) {
+    var nBlocks = 0;
+    function cntChain(node) {
+      while (node) {
+        nBlocks++;
+        var i;
+        for (i = 0; i < (node.sub || []).length; i++) { cntChain(node.sub[i]); }
+        node = node.next;
+      }
+    }
+    var i, all = [];
+    for (i = 0; i < prog.sprites.length; i++) { all = all.concat(prog.sprites[i].scripts); }
+    all = all.concat(prog.stage.scripts);
+    var s;
+    for (s = 0; s < all.length; s++) { cntChain(all[s].top); }
+    return nBlocks;
+  }
+
+  function optionSource(name, vars, sprites, lists, procs) {
     if (name === 'keys') { return KEY_OPTIONS; }
     if (name === 'costumes') { return COSTUME_OPTIONS; }
     if (name === 'colors') { return PEN_COLORS; }
@@ -119,6 +240,30 @@
       for (i = 0; i < vs.length; i++) { out.push({ v: vs[i], l: vs[i] }); }
       if (out.length === 0) { out.push({ v: '', l: '(keine Variable)' }); }
       return out;
+    }
+    if (name === 'lists') {
+      var outL = [];
+      var ls = lists || [];
+      var il;
+      for (il = 0; il < ls.length; il++) { outL.push({ v: ls[il], l: ls[il] }); }
+      if (outL.length === 0) { outL.push({ v: '', l: '(keine Liste)' }); }
+      return outL;
+    }
+    if (name === 'procs') {
+      var outP = [];
+      var ps = procs || [];
+      var ip;
+      for (ip = 0; ip < ps.length; ip++) { outP.push({ v: ps[ip], l: ps[ip] }); }
+      if (outP.length === 0) { outP.push({ v: '', l: '(kein Baustein)' }); }
+      return outP;
+    }
+    if (name === 'backdrops') { return BACKDROP_OPTIONS; }
+    if (name === 'sprites_self') {
+      var outSelf = [{ v: '', l: '(diese Figur)' }];
+      var sps2 = sprites || [];
+      var j2;
+      for (j2 = 0; j2 < sps2.length; j2++) { outSelf.push({ v: sps2[j2].id, l: sps2[j2].name }); }
+      return outSelf;
     }
     return [];
   }
@@ -145,6 +290,10 @@
     when_clicked: { cat: 'events', kind: 'hat', inputs: {},
       parts: ['Wenn ich angeklickt werde'],
       help: 'Startet dieses Skript, wenn du die Figur auf der Bühne anklickst (#133).' },
+    /* Klone (#132): dieses Skript läuft in jedem frisch erzeugten Klon. */
+    when_clone: { cat: 'events', kind: 'hat', inputs: {},
+      parts: ['Wenn ich als Klon gestartet werde'],
+      help: 'Startet dieses Skript in jedem neu erzeugten Klon (#132).' },
     broadcast: { cat: 'events', kind: 'stack', inputs: { msg: { type: 'select', src: 'msgs', def: 'nachricht1' } }, pro: true,
       parts: ['sende ', { in: 'msg' }],
       help: 'Schickt eine Nachricht an alle Figuren: Jede mit passendem Empfänger-Block startet (#131).' },
@@ -266,6 +415,14 @@
       help: 'Läuft im Kreis, bis die Bedingung wahr wird.' },
     stop_all: { cat: 'control', kind: 'stack', inputs: {}, parts: ['stoppe alles'],
       help: 'Beendet sofort alle laufenden Skripte.' },
+    /* Klone (#132): Original belassen, Kopie erzeugen und wieder entfernen. */
+    clone_create: { cat: 'control', kind: 'stack',
+      inputs: { name: { type: 'select', src: 'sprites_self', def: '' } },
+      parts: ['erzeuge Klon von ', { in: 'name' }],
+      help: 'Erzeugt eine Kopie einer Figur und startet deren Klon-Skript. Diese Figur bedeutet: die Figur selbst (#132).' },
+    clone_delete: { cat: 'control', kind: 'stack', inputs: {},
+      parts: ['lösche diesen Klon'],
+      help: 'Entfernt diesen Klon von der Bühne. Beim Original passiert nichts (#132).' },
 
     /* Wahrnehmung */
     touching_edge: { cat: 'sensing', kind: 'bool', inputs: {}, parts: ['berühre ich den Rand?'],
@@ -349,6 +506,31 @@
       help: 'Addiert einen Wert auf den aktuellen Variablenwert.' },
     var_value: { cat: 'vars', kind: 'rep', inputs: { name: { type: 'select', src: 'vars', def: '' } },
       parts: [{ in: 'name' }], help: 'Liest den Wert einer Variablen, zum Einstecken in Steckplätze.' },
+    /* Listen (#137): Werte sammeln, verwalten und nachschlagen. */
+    list_add: { cat: 'vars', kind: 'stack', pro: true,
+      inputs: { list: { type: 'select', src: 'lists', def: '' }, value: { type: 'slot', def: '1' } },
+      parts: ['füge ', { in: 'value' }, ' zu Liste ', { in: 'list' }, ' hinzu'],
+      help: 'Hängt einen Wert hinten an die Liste an (#137).' },
+    list_del: { cat: 'vars', kind: 'stack', pro: true,
+      inputs: { list: { type: 'select', src: 'lists', def: '' }, n: { type: 'slot', def: '1' } },
+      parts: ['lösche ', { in: 'n' }, '. aus Liste ', { in: 'list' }],
+      help: 'Entfernt den Eintrag an der Position, 1 ist der erste (#137).' },
+    list_set: { cat: 'vars', kind: 'stack', pro: true,
+      inputs: { list: { type: 'select', src: 'lists', def: '' }, n: { type: 'slot', def: '1' }, value: { type: 'slot', def: '1' } },
+      parts: ['ersetze ', { in: 'n' }, '. in Liste ', { in: 'list' }, ' durch ', { in: 'value' }],
+      help: 'Überschreibt den Eintrag an der Position (#137).' },
+    list_get: { cat: 'vars', kind: 'rep', pro: true,
+      inputs: { list: { type: 'select', src: 'lists', def: '' }, n: { type: 'slot', def: '1' } },
+      parts: [{ in: 'n' }, '. Eintrag von ', { in: 'list' }],
+      help: 'Liest den Eintrag an der Position, 1 ist der erste (#137).' },
+    list_len: { cat: 'vars', kind: 'rep', pro: true,
+      inputs: { list: { type: 'select', src: 'lists', def: '' } },
+      parts: ['Länge von ', { in: 'list' }],
+      help: 'Zählt die Einträge in der Liste (#137).' },
+    list_has: { cat: 'vars', kind: 'bool', pro: true,
+      inputs: { list: { type: 'select', src: 'lists', def: '' }, value: { type: 'slot', def: '1' } },
+      parts: ['enthält ', { in: 'list' }, ' ', { in: 'value' }, '?'],
+      help: 'Wahr, wenn der Wert in der Liste steht (#137).' },
 
     /* Stift */
     pen_down: { cat: 'pen', kind: 'stack', inputs: {}, parts: ['Stift ab, fange an zu zeichnen'],
@@ -358,7 +540,25 @@
     pen_clear: { cat: 'pen', kind: 'stack', inputs: {}, parts: ['lösche alle Spuren'],
       help: 'Entfernt alle gezeichneten Spuren von der Bühne.' },
     pen_color: { cat: 'pen', kind: 'stack', inputs: { color: { type: 'select', src: 'colors', def: '#1f2937' } },
-      parts: ['setze Stiftfarbe auf ', { in: 'color' }], help: 'Wählt die Farbe künftiger Spuren.' }
+      parts: ['setze Stiftfarbe auf ', { in: 'color' }], help: 'Wählt die Farbe künftiger Spuren.' },
+
+    /* Meine Blöcke (#138): eigene Bausteine ohne Parameter. */
+    proc_def: { cat: 'myblocks', kind: 'hat', inputs: { name: { type: 'slot', def: 'Mein Baustein' } },
+      parts: ['Definiere ', { in: 'name' }],
+      help: 'Gibt einem eigenen Baustein einen Namen, darunter kommt was er tun soll (#138).' },
+    proc_call: { cat: 'myblocks', kind: 'stack',
+      inputs: { name: { type: 'select', src: 'procs', def: '' } },
+      parts: [{ in: 'name' }],
+      help: 'Ruft einen eigenen Baustein auf (#138).' },
+
+    /* Bühne (#139): Hintergründe wechseln, nur im Ziel Bühne sichtbar. */
+    backdrop_switch: { cat: 'stage', kind: 'stack',
+      inputs: { name: { type: 'select', src: 'backdrops', def: 'paper' } },
+      parts: ['wechsle zu Hintergrund ', { in: 'name' }],
+      help: 'Legt den Bühnen-Hintergrund fest (#139).' },
+    backdrop_next: { cat: 'stage', kind: 'stack', inputs: {},
+      parts: ['nächster Hintergrund'],
+      help: 'Blättert zum nächsten Hintergrund weiter (#139).' }
   };
 
   /* ---------- Modell (#125, #126) ---------- */
@@ -386,7 +586,8 @@
       id: uid('sp'), name: name || 'Figur 1',
       costume: COSTUME_EMOJI[costume] ? costume : 'robot',
       x: 240, y: 180, dir: 90, size: 100, visible: true,
-      scripts: []
+      scripts: [],
+      procs: []
     };
   }
 
@@ -394,8 +595,9 @@
     return {
       v: 3,
       vars: [],
+      lists: [],
       sprites: [defaultSprite('robot', 'Figur 1')],
-      stage: { scripts: [] }
+      stage: { scripts: [], procs: [], backdrop: 'paper' }
     };
   }
 
@@ -410,7 +612,7 @@
    * Version 2 (zentrierter Ursprung, y nach oben) werden automatisch
    * auf Version 3 gehoben, Positionen werden dabei umgerechnet
    * (x + 240, y zu 180 - y). */
-  var LIMITS = { scripts: 60, depth: 12, blocks: 800, fields: 200, vars: 30, sprites: 12 };
+  var LIMITS = { scripts: 60, depth: 12, blocks: 800, fields: 200, vars: 30, sprites: 12, lists: 30, procs: 20 };
 
   function serializeBlock(node) {
     var out = { op: node.op, id: node.id, f: {}, sub: [], next: null };
@@ -447,14 +649,20 @@
         id: sp.id, name: String(sp.name), costume: String(sp.costume),
         x: num(sp.x), y: num(sp.y), dir: num(sp.dir),
         size: clamp(num(sp.size), 10, 400), visible: !!sp.visible,
-        scripts: serializeScriptList(sp.scripts)
+        scripts: serializeScriptList(sp.scripts),
+        procs: (sp.procs || []).slice(0, LIMITS.procs)
       });
     }
     return {
       v: 3,
       vars: (prog.vars || []).slice(0),
+      lists: (prog.lists || []).slice(0, LIMITS.lists),
       sprites: sprites,
-      stage: { scripts: serializeScriptList(prog.stage.scripts) }
+      stage: {
+        scripts: serializeScriptList(prog.stage.scripts),
+        procs: (prog.stage.procs || []).slice(0, LIMITS.procs),
+        backdrop: prog.stage.backdrop || 'paper'
+      }
     };
   }
 
@@ -534,6 +742,14 @@
     if (typeof raw.size !== 'undefined') { sp.size = clamp(num(raw.size), 10, 400); }
     sp.visible = raw.visible !== false;
     if (COSTUME_EMOJI[raw.costume]) { sp.costume = String(raw.costume); }
+    /* Eigene Bloecke (#138): Namen pro Figur, ohne Dubletten. */
+    if (Object.prototype.toString.call(raw.procs) === '[object Array]') {
+      var pi;
+      for (pi = 0; pi < raw.procs.length && sp.procs.length < LIMITS.procs; pi++) {
+        var pn = sanitizeVarName(String(raw.procs[pi]));
+        if (pn !== '' && sp.procs.indexOf(pn) === -1) { sp.procs.push(pn); }
+      }
+    }
     return sp;
   }
 
@@ -552,6 +768,13 @@
         if (name !== '' && prog.vars.indexOf(name) === -1) { prog.vars.push(name); }
       }
     }
+    /* Listen (#137): globale Namensliste wie bei Variablen. */
+    if (Object.prototype.toString.call(data.lists) === '[object Array]') {
+      for (i = 0; i < data.lists.length && prog.lists.length < LIMITS.lists; i++) {
+        var lname = sanitizeVarName(String(data.lists[i]));
+        if (lname !== '' && prog.lists.indexOf(lname) === -1) { prog.lists.push(lname); }
+      }
+    }
     var budget = { count: 0 };
     if (Object.prototype.toString.call(data.sprites) === '[object Array]') {
       /* Version 2/3: Liste von Figuren, jede mit eigenen Skripten. */
@@ -563,6 +786,13 @@
       }
       if (data.stage && Object.prototype.toString.call(data.stage.scripts) === '[object Array]') {
         prog.stage.scripts = parseScriptList(data.stage.scripts, budget);
+        if (Object.prototype.toString.call(data.stage.procs) === '[object Array]') {
+          for (i = 0; i < data.stage.procs.length && prog.stage.procs.length < LIMITS.procs; i++) {
+            var sname = sanitizeVarName(String(data.stage.procs[i]));
+            if (sname !== '' && prog.stage.procs.indexOf(sname) === -1) { prog.stage.procs.push(sname); }
+          }
+        }
+        if (BACKDROP_ORDER.indexOf(data.stage.backdrop) !== -1) { prog.stage.backdrop = String(data.stage.backdrop); }
       }
     } else {
       /* Version 1 (vor #125): eine Figur, Skripte direkt am Programm. */
@@ -677,6 +907,23 @@
       case 'var_value':
         a = String(node.f.name.v);
         return function (rt) { return Object.prototype.hasOwnProperty.call(rt.vars, a) ? rt.vars[a] : 0; };
+      /* Listen (#137): Position 1 ist der erste Eintrag. */
+      case 'list_get':
+        a = String(node.f.list.v);
+        fa = valFn(node.f.n);
+        return function (rt) {
+          if (!Object.prototype.hasOwnProperty.call(rt.lists, a)) { throw BlkErr('Unbekannte Liste: ' + a + '.'); }
+          var idx = Math.round(num(fa(rt)));
+          if (idx < 1 || idx > rt.lists[a].length) { throw BlkErr('Position ' + idx + ' liegt nicht in Liste ' + a + '.'); }
+          return rt.lists[a][idx - 1];
+        };
+      case 'list_len':
+        a = String(node.f.list.v);
+        return function (rt) { return Object.prototype.hasOwnProperty.call(rt.lists, a) ? rt.lists[a].length : 0; };
+      case 'list_has':
+        a = String(node.f.list.v);
+        fa = valFn(node.f.value);
+        return function (rt) { return Object.prototype.hasOwnProperty.call(rt.lists, a) ? rt.lists[a].indexOf(fa(rt)) !== -1 : false; };
       case 'xpos':
         return function (rt, th) { return th && th.tgt ? Math.round(th.tgt.x * 100) / 100 : 0; };
       case 'ypos':
@@ -940,6 +1187,11 @@
       case 'broadcast_wait':
         out.push({ t: 'bcastwait', fn: valFn(node.f.msg) });
         return;
+      /* Eigene Bloecke (#138): Sprung in die Baustein-Kette, Ruecksprung
+       * liegt auf dem Rueckkehrstapel des Threads. */
+      case 'proc_call':
+        out.push({ t: 'callproc', name: valFn(node.f.name) });
+        return;
       default:
         out.push({ t: 'call', op: node.op, A: argsOf(node) });
     }
@@ -1018,6 +1270,74 @@
       case 'clear_effects': if (sp) { sp.effect = 0; } break;
       case 'go_front': moveLayer(rt, th, 999); break;
       case 'go_back': moveLayer(rt, th, -Math.round(num(A.n(rt, th)))); break;
+      /* ---------- Klone (#132) ---------- */
+      case 'clone_create': {
+        var cName = String(A.name(rt, th));
+        var cSrc = cName === '' ? (sp || null) : findSpriteById(rt, cName);
+        if (!cSrc) { break; }
+        var cCount = 0;
+        var ci;
+        for (ci = 0; ci < rt.sprites.length; ci++) { if (rt.sprites[ci].isClone) { cCount++; } }
+        if (cCount >= CLONE_LIMIT) { throw BlkErr('Klon-Grenze von ' + CLONE_LIMIT + ' erreicht.'); }
+        var clone = {
+          id: uid('cl'), name: cSrc.name, costume: String(cSrc.costume),
+          x: num(cSrc.x), y: num(cSrc.y), dir: num(cSrc.dir),
+          size: clamp(num(cSrc.size), 10, 400), visible: cSrc.visible !== false,
+          bubble: null, effect: num(cSrc.effect),
+          pen: { down: false, color: String(cSrc.pen.color), segments: [] },
+          isClone: true, srcId: cSrc.isClone ? cSrc.srcId : cSrc.id
+        };
+        rt.sprites.push(clone);
+        rt.order.push(clone.id);
+        if (rt._startScripts) { rt._startScripts('when_clone', null, rt.now, clone); }
+        break;
+      }
+      case 'clone_delete':
+        if (sp && sp.isClone) {
+          var di = rt.sprites.indexOf(sp);
+          if (di !== -1) { rt.sprites.splice(di, 1); }
+          var doidx = rt.order.indexOf(sp.id);
+          if (doidx !== -1) { rt.order.splice(doidx, 1); }
+          var keepC = [];
+          var ti;
+          for (ti = 0; ti < rt.threads.length; ti++) {
+            if (rt.threads[ti].tgt !== sp) { keepC.push(rt.threads[ti]); }
+          }
+          rt.threads = keepC;
+          return 'kill';
+        }
+        break;
+      /* ---------- Listen (#137): Position 1 ist der erste Eintrag ---------- */
+      case 'list_add': {
+        var la = String(A.list(rt, th));
+        if (la === '') { throw BlkErr('Wähle zuerst eine Liste aus.'); }
+        if (!Object.prototype.hasOwnProperty.call(rt.lists, la)) { rt.lists[la] = []; }
+        rt.lists[la].push(A.value(rt, th));
+        break;
+      }
+      case 'list_del': {
+        var ld = String(A.list(rt, th));
+        if (Object.prototype.hasOwnProperty.call(rt.lists, ld)) {
+          var ln = Math.round(num(A.n(rt, th)));
+          if (ln >= 1 && ln <= rt.lists[ld].length) { rt.lists[ld].splice(ln - 1, 1); }
+        }
+        break;
+      }
+      case 'list_set': {
+        var ls = String(A.list(rt, th));
+        if (Object.prototype.hasOwnProperty.call(rt.lists, ls)) {
+          var lsn = Math.round(num(A.n(rt, th)));
+          if (lsn >= 1 && lsn <= rt.lists[ls].length) { rt.lists[ls][lsn - 1] = A.value(rt, th); }
+        }
+        break;
+      }
+      /* ---------- Buehne (#139): Hintergründe ---------- */
+      case 'backdrop_switch': rt.backdrop = String(A.name(rt, th)); break;
+      case 'backdrop_next': {
+        var bi = BACKDROP_ORDER.indexOf(rt.backdrop);
+        rt.backdrop = BACKDROP_ORDER[(bi + 1 + BACKDROP_ORDER.length) % BACKDROP_ORDER.length] || 'paper';
+        break;
+      }
     }
   }
 
@@ -1089,7 +1409,19 @@
     pen_down: ['stift_ab', [], 'void'],
     pen_up: ['stift_hoch', [], 'void'],
     pen_clear: ['loesche_spuren', [], 'void'],
-    pen_color: ['stift_farbe', ['color'], 'void']
+    pen_color: ['stift_farbe', ['color'], 'void'],
+    /* Klone (#132) */
+    clone_create: ['erzeuge_klon_von', ['name'], 'void'],
+    clone_delete: ['loesche_diesen_klon', [], 'void'],
+    /* Listen (#137) */
+    list_add: ['fuege_hinzu', ['list', 'value'], 'void'],
+    list_del: ['loesche_aus_liste', ['list', 'n'], 'void'],
+    list_set: ['ersetze_in_liste', ['list', 'n', 'value'], 'void'],
+    /* Eigene Bloecke (#138) */
+    proc_call: ['rufe_baustein', ['name'], 'void'],
+    /* Buehne (#139) */
+    backdrop_switch: ['wechsle_hintergrund', ['name'], 'void'],
+    backdrop_next: ['naechster_hintergrund', [], 'void']
   };
 
   function langQuote(v, lang) {
@@ -1157,6 +1489,9 @@
       case 'or': return '(' + v2('a') + (lang === 'py' ? ' or ' : ' || ') + v2('b') + ')';
       case 'not': return lang === 'py' ? '(not ' + v2('a') + ')' : '(!' + v2('a') + ')';
       case 'var_value': helpers.use('wert', 'double', 1); return 'wert(' + q('name') + ')';
+      case 'list_get': helpers.use('liste_eintrag', 'double', 2); return 'liste_eintrag(' + q('list') + ', ' + v2('n') + ')';
+      case 'list_len': helpers.use('liste_laenge', 'double', 1); return 'liste_laenge(' + q('list') + ')';
+      case 'list_has': helpers.use('liste_enthaelt', 'boolean', 2); return 'liste_enthaelt(' + q('list') + ', ' + v2('value') + ')';
       case 'xpos': helpers.use('x_position', 'double', 0); return 'x_position()';
       case 'ypos': helpers.use('y_position', 'double', 0); return 'y_position()';
       case 'direction': helpers.use('richtung', 'double', 0); return 'richtung()';
@@ -1279,6 +1614,8 @@
     if (op === 'when_key') { return 'wenn_taste_gedrueckt'; }
     if (op === 'when_msg') { return 'wenn_nachricht_kommt'; }
     if (op === 'when_clicked') { return 'wenn_angeklickt'; }
+    if (op === 'when_clone') { return 'wenn_ich_als_klon_gestartet_werde'; }
+    if (op === 'proc_def') { return 'baustein'; }
     return 'skript';
   }
 
@@ -1549,6 +1886,10 @@
     opts = opts || {};
     var rt = {
       vars: {},
+      lists: {},
+      backdrop: prog.stage.backdrop || 'paper',
+      _procCache: {},
+      _startScripts: null,
       sprites: [],
       bubbleFor: {}, /* nicht genutzt, Sprechblasen liegen an der Figur */
       penCtx: opts.penCtx || null,
@@ -1567,6 +1908,7 @@
     };
     var i;
     for (i = 0; i < prog.vars.length; i++) { rt.vars[prog.vars[i]] = 0; }
+    for (i = 0; i < (prog.lists || []).length; i++) { rt.lists[prog.lists[i]] = []; }
     for (i = 0; i < prog.sprites.length; i++) {
       var p = prog.sprites[i];
       rt.sprites.push({
@@ -1582,12 +1924,48 @@
 
     function scriptTargets() {
       var lists = [];
-      var i2;
+      var i2, j2, src;
       lists.push({ scripts: prog.stage.scripts, tgt: null });
       for (i2 = 0; i2 < prog.sprites.length; i2++) {
         lists.push({ scripts: prog.sprites[i2].scripts, tgt: rt.sprites[i2] });
       }
+      /* Klone (#132): ein Klon laeuft mit den Skripten seines Quell-Sprites. */
+      for (i2 = 0; i2 < rt.sprites.length; i2++) {
+        if (!rt.sprites[i2].isClone) { continue; }
+        src = null;
+        for (j2 = 0; j2 < prog.sprites.length; j2++) {
+          if (prog.sprites[j2].id === rt.sprites[i2].srcId) { src = prog.sprites[j2]; break; }
+        }
+        if (src) { lists.push({ scripts: src.scripts, tgt: rt.sprites[i2] }); }
+      }
       return lists;
+    }
+
+    /* Eigene Bloecke (#138): Kette eines Bausteins suchen und uebersetzen.
+     * Buehne-Bausteine liegen an prog.stage, Figuren-Bausteine am Sprite
+     * (Klone greifen auf die Bausteine ihres Quell-Sprites zu). */
+    function findProcChain(tgt, procName) {
+      var srcScripts = null;
+      var i2, src, head;
+      if (!tgt) {
+        srcScripts = prog.stage.scripts;
+      } else {
+        var oid = tgt.srcId || tgt.id;
+        for (i2 = 0; i2 < prog.sprites.length; i2++) {
+          if (prog.sprites[i2].id === oid) { src = prog.sprites[i2]; break; }
+        }
+        srcScripts = src ? src.scripts : null;
+      }
+      if (!srcScripts) { return null; }
+      for (i2 = 0; i2 < srcScripts.length; i2++) {
+        head = srcScripts[i2].top;
+        if (head && head.op === 'proc_def' && String(head.f.name.v) === procName) {
+          var out = [];
+          compileChain(head.next, { mem: 0 }, out);
+          return out;
+        }
+      }
+      return null;
     }
 
     function startScripts(op, keyName, now, onlyTgt) {
@@ -1602,7 +1980,7 @@
           if (!head || head.op !== op) { continue; }
           if (op === 'when_key' && String(head.f.key.v) !== keyName) { continue; }
           if (op === 'when_msg' && String(head.f.msg.v) !== keyName) { continue; }
-          if (op === 'when_clicked' && onlyTgt !== undefined && lists[l].tgt !== onlyTgt) { continue; }
+          if (onlyTgt !== undefined && lists[l].tgt !== onlyTgt) { continue; }
           /* laufenden Thread dieses Skripts sauber neu starten */
           var keep = [];
           var t;
@@ -1613,7 +1991,7 @@
           var ctx = { mem: 0 };
           var out = [];
           compileChain(head.next, ctx, out);
-          var th = { scriptId: s.id, tgt: lists[l].tgt, instrs: out, ip: 0, mem: [], waitT: null, glide: null, msgThreads: null };
+          var th = { scriptId: s.id, tgt: lists[l].tgt, instrs: out, ip: 0, mem: [], retStack: [], waitT: null, glide: null, msgThreads: null };
           rt.threads.push(th);
           started.push(th);
         }
@@ -1623,6 +2001,11 @@
 
     function stepThread(th) {
       var guard = 0;
+      /* Eigene Bloecke (#138): die innere Schleife laeuft die aktuelle
+       * Kette; ist der Rueckkehrstapel gefuellt, wird nach Kette-Ende die
+       * aufrufende Kette wiederhergestellt und weitergelaufen. */
+      var stepRun = true;
+      while (stepRun) {
       while (th.ip < th.instrs.length) {
         if (++guard > 100000) { rt.errors.push('Endlosschleife gestoppt: baue einen warte-Block ein.'); return 'dead'; }
         var ins = th.instrs[th.ip];
@@ -1703,8 +2086,26 @@
               }
               if (aliveM === 0) { th.msgThreads = null; th.ip++; break; }
               return 'alive';
+            /* Eigene Bloecke (#138): in die Baustein-Kette springen, der
+             * Ruecksprung landet auf dem Rueckkehrstapel des Threads. */
+            case 'callproc': {
+              var pName = String(ins.name(rt, th));
+              var pKey = (th.tgt ? (th.tgt.srcId || th.tgt.id) : 'buehne') + '::' + pName;
+              var chain = rt._procCache[pKey];
+              if (!chain) {
+                chain = findProcChain(th.tgt, pName);
+                if (!chain) { throw BlkErr('Unbekannter Baustein: ' + pName + '.'); }
+                rt._procCache[pKey] = chain;
+              }
+              if (th.retStack.length >= 64) { throw BlkErr('Zu viele verschachtelte Bausteine.'); }
+              th.retStack.push({ instrs: th.instrs, ip: th.ip + 1, mem: th.mem });
+              th.instrs = chain;
+              th.ip = 0;
+              th.mem = [];
+              break;
+            }
             case 'call':
-              applyCall(rt, th, ins.op, ins.A);
+              if (applyCall(rt, th, ins.op, ins.A) === 'kill') { return 'dead'; }
               if (rt.stopped) { return 'dead'; }
               th.ip++;
               break;
@@ -1715,9 +2116,20 @@
           throw e;
         }
       }
+      /* Kette beendet: bei offenem Ruecksprung zurueck zum Aufrufer (#138). */
+      if (th.retStack.length) {
+        var rRet = th.retStack.pop();
+        th.instrs = rRet.instrs;
+        th.ip = rRet.ip;
+        th.mem = rRet.mem;
+        continue;
+      }
+      stepRun = false;
+      }
       return 'dead';
     }
 
+    rt._startScripts = startScripts;
     rt.api.flag = function (now) {
       rt.stopped = false;
       rt.timerStart = now;
@@ -1799,6 +2211,8 @@
       stopAll: rt.api.stopAll, running: rt.api.running,
       broadcast: rt.api.broadcast, setMouse: rt.api.setMouse, click: rt.api.click,
       vars: rt.vars, sprites: rt.sprites, keys: rt.keys,
+      lists: rt.lists,
+      backdrop: function () { return rt.backdrop; },
       mouse: rt.mouse, sounds: rt.sounds, order: rt.order,
       volume: function () { return rt.volume; },
       errors: rt.errors,
@@ -1829,7 +2243,13 @@
       runInfo: doc.getElementById('blk-runinfo'),
       saveInfo: doc.getElementById('blk-saveinfo'),
       varAdd: doc.getElementById('blk-var-add'),
+      listAdd: doc.getElementById('blk-list-add'),
+      procAdd: doc.getElementById('blk-proc-add'),
+      templatesBtn: doc.getElementById('blk-templates'),
+      fullBtn: doc.getElementById('blk-full'),
       sprites: doc.getElementById('blk-sprites'),
+      stage: doc.getElementById('blk-stage'),
+      bgCanvas: doc.getElementById('blk-bg'),
       penCanvas: doc.getElementById('blk-pen'),
       ctrCanvas: doc.getElementById('blk-ctr'),
       saveForm: doc.getElementById('blocks-save-form'),
@@ -1900,6 +2320,12 @@
         if (expertMode) { els.varAdd.removeAttribute('hidden'); }
         else { els.varAdd.setAttribute('hidden', 'hidden'); }
       }
+      /* #162/#137: Der Knopf fuer neue Listen ebenso, eigene Bloecke (#138)
+       * duerfen auch im Lernmodus angelegt werden. */
+      if (els.listAdd) {
+        if (expertMode) { els.listAdd.removeAttribute('hidden'); }
+        else { els.listAdd.setAttribute('hidden', 'hidden'); }
+      }
       /* #162: Die Knopfleiste gehoert zum Modus, sonst bliebe die
        * Variablen-Kategorie beim Umschalten stehen oder fehlte. */
       renderCats();
@@ -1908,6 +2334,11 @@
 
     function isStage() { return target === null; }
     function targetScripts() { return isStage() ? prog.stage.scripts : target.scripts; }
+    /* Eigene Bloecke (#138): der Ziel-Bausteinvorrat, Buehne oder Figur. */
+    function procsOfTarget() {
+      if (isStage()) { return prog.stage.procs || []; }
+      return (target && target.procs) || [];
+    }
 
     function el(tag, cls, text) {
       var e = doc.createElement(tag);
@@ -1923,7 +2354,7 @@
       var wrap;
       if (spec.type === 'select') {
         wrap = el('select', 'blk-sel');
-        var options = optionSource(spec.src, prog.vars, prog.sprites);
+        var options = optionSource(spec.src, prog.vars, prog.sprites, prog.lists, procsOfTarget());
         var found = false;
         var i;
         for (i = 0; i < options.length; i++) {
@@ -2048,6 +2479,10 @@
     /* ---------- Palette: Kategorien je nach Ziel (#126) ---------- */
     function catAllowed(catId) {
       var i;
+      /* Buehnen-Kategorie (#139): nur im Ziel Buehne sichtbar. */
+      for (i = 0; i < CATS.length; i++) {
+        if (CATS[i].id === catId && CATS[i].stageOnly) { return isStage(); }
+      }
       if (isStage() && STAGE_HIDDEN_CATS[catId]) { return false; }
       /* #162: Kategorien fuer Fortgeschrittene (Variablen, Listen) stehen
        * nur im Expertenmodus auf den Knopfleisten. */
@@ -2106,6 +2541,19 @@
         var b = renderBlock(demo, { palette: true });
         b.setAttribute('data-pal-op', op);
         els.pal.appendChild(b);
+      }
+      /* Meine Bloecke (#138): zusaetzlich ein Aufruf-Knopf je Baustein. */
+      if (activeCat === 'myblocks') {
+        var procsHere = procsOfTarget();
+        var pi;
+        for (pi = 0; pi < procsHere.length; pi++) {
+          var pdemo = newBlock('proc_call');
+          pdemo.f.name.v = procsHere[pi];
+          var pb = renderBlock(pdemo, { palette: true });
+          pb.setAttribute('data-pal-op', 'proc_call');
+          pb.setAttribute('data-pal-proc', procsHere[pi]);
+          els.pal.appendChild(pb);
+        }
       }
     }
 
@@ -2746,6 +3194,151 @@
       return true;
     }
 
+    /* ---------- Listen (#137) ---------- */
+    function addList(name) {
+      var clean = sanitizeVarName(name);
+      if (clean === '') { return false; }
+      if (prog.lists.indexOf(clean) !== -1) { return false; }
+      if (prog.lists.length >= LIMITS.lists) { return false; }
+      prog.lists.push(clean);
+      renderScripts();
+      renderPalette();
+      renderHelp();
+      autosaveSoon();
+      return true;
+    }
+
+    /* ---------- Eigene Bloecke (#138) ---------- */
+    function addProc(name) {
+      var clean = sanitizeVarName(name);
+      if (clean === '') { return false; }
+      var pool = procsOfTarget();
+      if (pool.indexOf(clean) !== -1) { return false; }
+      if (pool.length >= LIMITS.procs) { return false; }
+      pool.push(clean);
+      renderPalette();
+      renderScripts();
+      renderHelp();
+      autosaveSoon();
+      return true;
+    }
+
+    /* ---------- Vorlagen (#142): Beispielprogramm laden ---------- */
+    function loadTemplate(idx) {
+      var t = TEMPLATES[idx];
+      if (!t) { return false; }
+      stopRun();
+      prog = parseProgram(JSON.stringify(t.prog));
+      target = prog.sprites.length > 0 ? prog.sprites[0] : null;
+      activeCat = 'events';
+      renderSprites();
+      renderCats();
+      renderPalette();
+      renderScripts();
+      renderHelp();
+      drawStage();
+      autosaveSoon();
+      return true;
+    }
+
+    var templatesBox = null;
+    function ensureTemplatesBox() {
+      if (templatesBox) { return templatesBox; }
+      templatesBox = el('div', 'blk-templates-box');
+      templatesBox.setAttribute('id', 'blk-templates-box');
+      var head = el('div', 'blk-templates-head');
+      head.appendChild(el('strong', '', 'Beispielprogramme'));
+      var closeT = el('button', 'blk-x', '✕');
+      closeT.setAttribute('type', 'button');
+      closeT.setAttribute('aria-label', 'Vorlagen schließen');
+      closeT.addEventListener('click', function () { templatesBox.setAttribute('hidden', 'hidden'); });
+      head.appendChild(closeT);
+      templatesBox.appendChild(head);
+      templatesBox.appendChild(el('p', 'blk-templates-note',
+        'Achtung: Laden ersetzt das aktuelle Programm.'));
+      var i;
+      for (i = 0; i < TEMPLATES.length; i++) {
+        (function (idx) {
+          var row = el('div', 'blk-templates-row');
+          var info = el('div', 'blk-templates-info');
+          info.appendChild(el('strong', '', TEMPLATES[idx].name));
+          info.appendChild(el('span', '', TEMPLATES[idx].desc + ' (' +
+            templateBlockCount(TEMPLATES[idx].prog) + ' Blöcke)'));
+          row.appendChild(info);
+          var loadBtn = el('button', 'btn btn-primary', 'Laden');
+          loadBtn.setAttribute('type', 'button');
+          loadBtn.addEventListener('click', function () {
+            loadTemplate(idx);
+            templatesBox.setAttribute('hidden', 'hidden');
+          });
+          row.appendChild(loadBtn);
+          templatesBox.appendChild(row);
+        })(i);
+      }
+      root.appendChild(templatesBox);
+      templatesBox.setAttribute('hidden', 'hidden');
+      return templatesBox;
+    }
+
+    function openTemplates() {
+      var box = ensureTemplatesBox();
+      box.removeAttribute('hidden');
+    }
+
+    /* ---------- Vollbild (#143): Buehne gross ueber dem Editor ---------- */
+    var fullOverlay = null;
+    var stageHome = null;
+
+    function fullscreenOn() {
+      if (fullOverlay || !els.stage) { return false; }
+      fullOverlay = el('div', 'blk-fullbox');
+      fullOverlay.setAttribute('id', 'blk-fullbox');
+      stageHome = els.stage.parentNode || null;
+      var bar = el('div', 'blk-fullbar');
+      var startBtn = el('button', 'btn btn-primary', '▶ Start');
+      startBtn.setAttribute('type', 'button');
+      startBtn.addEventListener('click', function () { startRun(); });
+      var stopBtn = el('button', 'btn', '⏹ Stopp');
+      stopBtn.setAttribute('type', 'button');
+      stopBtn.addEventListener('click', function () { stopRun(); });
+      var closeBtn = el('button', 'btn', '✕ Beenden');
+      closeBtn.setAttribute('type', 'button');
+      closeBtn.addEventListener('click', function () { fullscreenOff(); });
+      bar.appendChild(startBtn);
+      bar.appendChild(stopBtn);
+      bar.appendChild(closeBtn);
+      fullOverlay.appendChild(bar);
+      fullOverlay.appendChild(els.stage);
+      root.appendChild(fullOverlay);
+      try {
+        if (typeof window !== 'undefined' && window.innerHeight) {
+          var sc = Math.min(window.innerHeight / 360, window.innerWidth / 480);
+          if (sc > 0.1 && els.stage.style) {
+            els.stage.style.transform = 'scale(' + sc + ')';
+            els.stage.style.transformOrigin = 'center top';
+          }
+        }
+      } catch (eScale) { /* ohne Fenster bleibt die Buehne 1:1 */ }
+      drawStage();
+      return true;
+    }
+
+    function fullscreenOff() {
+      if (!fullOverlay) { return false; }
+      if (els.stage.style) {
+        try { els.stage.style.transform = ''; } catch (eT) { /* egal */ }
+      }
+      if (stageHome) { stageHome.appendChild(els.stage); }
+      var ob = fullOverlay;
+      fullOverlay = null;
+      stageHome = null;
+      if (ob.parentNode) { ob.parentNode.removeChild(ob); }
+      drawStage();
+      return true;
+    }
+
+    function isFullscreen() { return fullOverlay !== null; }
+
     /* ---------- Autospeichern (#121) ---------- */
     var saveTimer = null;
     var lastSave = null;
@@ -2794,8 +3387,39 @@
       saveTimer = setTimeout(function () { saveTimer = null; saveNow(); }, 900);
     }
 
+    /* Buehnen-Hintergrund (#139): schlichte Farbverlaeufe auf dem
+     * Hintergrund-Canvas, unter allen Spuren und Figuren. */
+    function drawBackdrop() {
+      if (!els.bgCanvas || typeof els.bgCanvas.getContext !== 'function') { return; }
+      var bctx = els.bgCanvas.getContext('2d');
+      if (!bctx) { return; }
+      var bd = rt ? rt.backdrop() : (prog.stage.backdrop || 'paper');
+      try {
+        if (bd === 'sunrise') {
+          var g1 = bctx.createLinearGradient(0, 0, 0, 360);
+          g1.addColorStop(0, '#fde68a');
+          g1.addColorStop(1, '#fb7185');
+          bctx.fillStyle = g1;
+        } else if (bd === 'sea') {
+          var g2 = bctx.createLinearGradient(0, 0, 0, 360);
+          g2.addColorStop(0, '#38bdf8');
+          g2.addColorStop(1, '#0c4a6e');
+          bctx.fillStyle = g2;
+        } else if (bd === 'meadow') {
+          var g3 = bctx.createLinearGradient(0, 0, 0, 360);
+          g3.addColorStop(0, '#86efac');
+          g3.addColorStop(1, '#166534');
+          bctx.fillStyle = g3;
+        } else {
+          bctx.fillStyle = '#ffffff';
+        }
+        bctx.fillRect(0, 0, 480, 360);
+      } catch (eBg) { /* Canvas ohne echte 2D-Kontext: nur der Hintergrund fehlt */ }
+    }
+
     /* ---------- Buehne: alle Figuren zeichnen (#119, #125) ---------- */
     function drawStage() {
+      drawBackdrop();
       if (!els.ctrCanvas || typeof els.ctrCanvas.getContext !== 'function') { return; }
       var ctx = els.ctrCanvas.getContext('2d');
       if (!ctx) { return; }
@@ -3333,6 +3957,27 @@
         if (name) { addVariable(name); }
       });
     }
+    if (els.listAdd) {
+      els.listAdd.addEventListener('click', function () {
+        var name = typeof window !== 'undefined' && window.prompt ? window.prompt('Name der neuen Liste:') : '';
+        if (name) { addList(name); }
+      });
+    }
+    if (els.procAdd) {
+      els.procAdd.addEventListener('click', function () {
+        var name = typeof window !== 'undefined' && window.prompt ? window.prompt('Name des neuen Bausteins:') : '';
+        if (name) { addProc(name); }
+      });
+    }
+    if (els.templatesBtn) {
+      els.templatesBtn.addEventListener('click', function () { openTemplates(); });
+    }
+    if (els.fullBtn) {
+      els.fullBtn.addEventListener('click', function () { fullscreenOn(); });
+    }
+    doc.addEventListener('keydown', function (ev) {
+      if (fullOverlay && ev && ev.key === 'Escape') { fullscreenOff(); }
+    });
     doc.addEventListener('pointerdown', function (ev) {
       var targetEl = ev.target;
       if (!targetEl) { return; }
@@ -3362,6 +4007,14 @@
       renderHelp: renderHelp,
       renderSprites: renderSprites,
       addVariable: addVariable,
+      addList: addList,
+      addProc: addProc,
+      loadTemplate: loadTemplate,
+      templateCount: function () { return TEMPLATES.length; },
+      openTemplates: openTemplates,
+      fullscreenOn: fullscreenOn,
+      fullscreenOff: fullscreenOff,
+      isFullscreen: isFullscreen,
       saveNow: saveNow,
       autosaveSoon: autosaveSoon,
       programJson: programJson,
