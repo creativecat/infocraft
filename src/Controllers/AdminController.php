@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.15.0
+ * @version 0.16.0
  */
 declare(strict_types=1);
 
@@ -90,6 +90,7 @@ final class AdminController
             'title' => 'Admin-Einstellungen',
             'active' => 'admin',
             'defaultLanguage' => SiteSetting::defaultLanguage(),
+            'legal' => self::legalValues(),
             'user' => $user,
         ]);
     }
@@ -105,6 +106,42 @@ final class AdminController
         $language = (string) ($_POST['default_language'] ?? 'java');
         SiteSetting::set('default_language', $language === 'python' ? 'python' : 'java');
         flash('success', 'Einstellungen gespeichert. Die Standard-Programmiersprache ist jetzt ' . ($language === 'python' ? 'Python' : 'Java') . '.');
+        redirect('/admin/einstellungen');
+    }
+
+    /**
+     * Impressum und Datenschutz (#160): strukturierte Angaben der Instanz,
+     * schulweit in den Seiteneinstellungen. Die Felder sind bewusst frei
+     * lassbar; erst hinterlegte Inhalte erscheinen im Frontend.
+     */
+    private static function legalKeys(): array
+    {
+        return ['operator', 'person', 'street', 'zip', 'city', 'phone', 'email', 'extra', 'dsb', 'hosting', 'data', 'text'];
+    }
+
+    /** @return array<string, string> */
+    private static function legalValues(): array
+    {
+        $values = [];
+        foreach (self::legalKeys() as $key) {
+            $values[$key] = SiteSetting::get('legal_' . $key, '');
+        }
+        return $values;
+    }
+
+    public static function legalSave(): void
+    {
+        $user = Auth::user();
+        if ($user === null || !Auth::isAdmin()) {
+            flash('error', 'Dieser Bereich ist nur für Admins zugänglich.');
+            redirect('/');
+        }
+        csrf_validate();
+        foreach (self::legalKeys() as $key) {
+            $value = isset($_POST['legal_' . $key]) ? trim((string) $_POST['legal_' . $key]) : '';
+            SiteSetting::set('legal_' . $key, $value);
+        }
+        flash('success', 'Impressum und Datenschutz gespeichert. Die Seiten im Fuß der Plattform zeigen die Angaben sofort.');
         redirect('/admin/einstellungen');
     }
 }

@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.15.0
+ * @version 0.16.0
  */
 declare(strict_types=1);
 
@@ -43,6 +43,8 @@ define('BASE_PATH', $scriptDir === '/' ? '' : $scriptDir);
 $router = new Router();
 
 $router->get('/', [HomeController::class, 'index']);
+$router->get('/impressum', [HomeController::class, 'imprint']);
+$router->get('/datenschutz', [HomeController::class, 'privacy']);
 $router->get('/login', [AuthController::class, 'showLogin']);
 $router->post('/login', [AuthController::class, 'login']);
 $router->post('/login/demo', [AuthController::class, 'demoLogin']);
@@ -231,9 +233,11 @@ $router->get('/admin/import', [AdminController::class, 'importForm']);
 $router->post('/admin/import', [AdminController::class, 'import']);
 $router->get('/admin/einstellungen', [AdminController::class, 'settings']);
 $router->post('/admin/einstellungen', [AdminController::class, 'settingsSave']);
+$router->post('/admin/einstellungen/rechtliches', [AdminController::class, 'legalSave']);
 
 // Persönliche Ansichten (je Nutzerkonto gespeichert)
 $router->post('/einstellungen/navigation', [AuthController::class, 'saveNavView']);
+$router->post('/einstellungen/werkstattmodus', [AuthController::class, 'saveBlkMode']);
 
 // Module (Platzhalter und Weiterleitungen)
 $router->get('/modul/{slug}', [ModuleController::class, 'show']);

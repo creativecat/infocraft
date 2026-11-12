@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.15.0
+ * @version 0.16.0
  */
 declare(strict_types=1);
 
@@ -85,6 +85,25 @@ final class AuthController
         csrf_validate();
         $view = (string) ($_POST['view'] ?? 'full');
         UserPref::set($user->id, 'nav_view', $view === 'mini' ? 'mini' : 'full');
+        header('Content-Type: application/json; charset=utf-8');
+        echo '{"ok":true}';
+        exit;
+    }
+
+    /**
+     * Modus der Block-Werkstatt (Lernmodus oder Expertenmodus) dauerhaft
+     * je Nutzerkonto speichern. Wird vom Segment-Schalter in der Werkstatt
+     * aufgerufen (#161); der Browser-Speicher ist nur der Fallback.
+     */
+    public static function saveBlkMode(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $mode = (string) ($_POST['mode'] ?? 'learn');
+        UserPref::set($user->id, 'blk_mode', $mode === 'expert' ? 'expert' : 'learn');
         header('Content-Type: application/json; charset=utf-8');
         echo '{"ok":true}';
         exit;

@@ -5,6 +5,34 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.16.0] - 2026-11-12
+
+### Rechtliches (#160)
+
+- Impressum und Datenschutzerklärung als eigene, öffentliche Seiten (`/impressum`, `/datenschutz`), die sich aus den Angaben der Admin-Einstellungen aufbauen.
+- Neues Panel „Impressum und Datenschutz“ in den Admin-Einstellungen: Anbieter, Vertretung, Anschrift, Kontakt, ergänzende Angaben, Datenschutzbeauftragte Person, Hosting, verarbeitete Daten und freier Text.
+- Der Fuß der Plattform verlinkt Impressum und Datenschutz, sobald Angaben hinterlegt sind.
+
+### Block-Werkstatt (#161, #162)
+
+- Lern- und Expertenmodus als klar beschrifteter Segment-Schalter mit sichtbarem Aktivzustand; Standard ist der Lernmodus.
+- Die Moduswahl wird im Nutzerkonto gespeichert und gilt plattformweit, nicht nur im jeweiligen Browser.
+- Der Lernmodus verzichtet auf die Kategorien für Fortgeschrittene: Variablen, Nachrichten-Blöcke (senden, empfangen, warten) und der Knopf für neue Variablen erscheinen nur im Expertenmodus. Bereits im Skript liegende Experten-Blöcke bleiben sichtbar und lauffähig.
+
+### Automaten-Werkstatt (#163)
+
+- Neuer Projekttyp „Automat“ für endliche Automaten: Zustände zeichnen, Übergänge beschriften, Start- und Endzustände setzen.
+- Wörter prüfen: sofort, Schritt für Schritt oder als Abspielfahrt mit farbiger Zustandsanzeige; mehrere Wörter auf einmal testen.
+- Formale Beschreibung live: Fünf-Tupel, Chips für Vollständigkeit und Determinismus, Übergangstabelle δ.
+- Trap-Zustand auf Knopfdruck: alle fehlenden Übergänge führen künftig in einen (vollständigen) Trap-Zustand.
+- Analyse meldet fehlende Übergänge und Nichtdeterminismus; die Simulation rechnet mit Zustandsmengen und bleibt auch bei NEA korrekt.
+- Bild-Export des Automaten als SVG-Datei; automatisches Speichern wie in den anderen Werkstätten.
+- Engine ohne DOM-Abhängigkeiten, dadurch in Node-Tests vollständig prüfbar (18 neue UI-Tests, T114-Serie).
+
+### Tests
+
+- 27 neue UI-Tests (511 → 538): Modus-Schalter mit Konto-Speicherung, Lernmodus-Kategorien, Automaten-Engine.
+
 ## [0.15.0] - 2026-11-12
 
 ### Block-Werkstatt

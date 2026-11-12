@@ -111,7 +111,10 @@ $navView = $user !== null ? \Infocraft\Models\UserPref::navView($user->id) : 'fu
             <?php endforeach; ?>
             <?= $content ?>
         </main>
-        <footer class="foot">InfoCraft <?= e(APP_VERSION) ?> · Digitale Informatik-Werkstatt · PHP <?= e(PHP_VERSION) ?></footer>
+        <footer class="foot">InfoCraft <?= e(APP_VERSION) ?> · Digitale Informatik-Werkstatt · PHP <?= e(PHP_VERSION) ?><?php
+            $legalFooter = \Infocraft\Models\SiteSetting::get('legal_operator', '') !== ''
+                || \Infocraft\Models\SiteSetting::get('legal_text', '') !== '';
+            if ($legalFooter): ?> · <a href="<?= url('impressum') ?>">Impressum</a> · <a href="<?= url('datenschutz') ?>">Datenschutz</a><?php endif; ?></footer>
     </div>
 </div>
 <script src="<?= asset_url('assets/js/app.js') ?>"></script>

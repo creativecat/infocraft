@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.15.0
+ * @version 0.16.0
  */
 declare(strict_types=1);
 
@@ -14,6 +14,7 @@ namespace Infocraft\Controllers;
 use Infocraft\Auth;
 use Infocraft\Config;
 use Infocraft\Database;
+use Infocraft\Models\SiteSetting;
 use Infocraft\SsoM365;
 
 final class HomeController
@@ -34,5 +35,41 @@ final class HomeController
                 'sso' => SsoM365::enabled(),
             ],
         ]);
+    }
+
+    /**
+     * Impressum der Instanz (#160): baut sich aus den Angaben der
+     * Admin-Einstellungen auf und ist auch ohne Anmeldung erreichbar.
+     */
+    public static function imprint(): void
+    {
+        render('legal_imprint', [
+            'title' => 'Impressum',
+            'active' => '',
+            'legal' => self::legalFields(),
+        ]);
+    }
+
+    /**
+     * Datenschutzerklaerung der Instanz (#160): baut sich aus den Angaben
+     * der Admin-Einstellungen auf und ist auch ohne Anmeldung erreichbar.
+     */
+    public static function privacy(): void
+    {
+        render('legal_privacy', [
+            'title' => 'Datenschutz',
+            'active' => '',
+            'legal' => self::legalFields(),
+        ]);
+    }
+
+    /** @return array<string, string> */
+    private static function legalFields(): array
+    {
+        $fields = [];
+        foreach (['operator', 'person', 'street', 'zip', 'city', 'phone', 'email', 'extra', 'dsb', 'hosting', 'data', 'text'] as $key) {
+            $fields[$key] = SiteSetting::get('legal_' . $key, '');
+        }
+        return $fields;
     }
 }
