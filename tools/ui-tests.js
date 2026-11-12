@@ -2446,8 +2446,15 @@ setTimeout(function () {
                   blkReg('blk-stop', 'button');
                   var blkRuninfoEl = blkReg('blk-runinfo');
                   var blkSaveinfoEl = blkReg('blk-saveinfo');
-                  blkReg('blk-var-add', 'button');
-                  var blkModeEl = blkReg('blk-mode', 'button');
+                  var blkVarAddEl = blkReg('blk-var-add', 'button');
+                  var blkModeEl = blkReg('blk-mode', 'div');
+                  var blkModeLearnEl = blkReg('blk-mode-learn', 'button');
+                  var blkModeExpertEl = blkReg('blk-mode-expert', 'button');
+                  /* #161: Modus am Werkstatt-Geruest (Konto-Vorgabe) und
+                   * Speicher-Route fuer die Moduswahl. */
+                  var blkIdeEl = blkDoc.getElementById('blk-ide');
+                  blkIdeEl.setAttribute('data-blk-mode', 'learn');
+                  blkIdeEl.setAttribute('data-mode-url', '/einstellungen/werkstattmodus');
                   var blkCodeEl = blkReg('blk-code', 'button');
                   blkCodeEl.setAttribute('data-port', '/werkstatt/code/blocks/port');
                   var blkConsoleBox = blkReg('blk-console');
@@ -2617,8 +2624,8 @@ setTimeout(function () {
                   /* T93: Editor-UI am eigenen FakeDoc */
                   var blkUi = BLK.ui;
                   ok(blkUi !== null && typeof blkUi === 'object', 'T93 der Editor initialisiert sich auf der Blöcke-Seite von selbst');
-                  ok(blkCatsEl.children.length === 9, 'T93b die Palette listet alle neun Kategorien (inkl. Klang)');
-                  ok(blkPalEl.children.length === 5, 'T93c die Ereignis-Kategorie zeigt im Lernmodus die fuenf Basis-Bloecke (#151)');
+                  ok(blkCatsEl.children.length === 8, 'T93b die Palette listet im Lernmodus acht Kategorien, die Variablen-Kategorie bleibt dem Expertenmodus vorbehalten (#162)');
+                  ok(blkPalEl.children.length === 3, 'T93c die Ereignis-Kategorie zeigt im Lernmodus die drei Basis-Bloecke (#162)');
                   blkCatsEl.children[1].dispatch('click');
                   ok(blkPalEl.querySelector('.blk[data-pal-op="move_steps"]') !== null, 'T93d der Kategorie-Wechsel zeigt die Bewegungs-Bloecke');
                   ok(blkHelpEl.querySelectorAll('.blk-help-row').length === Object.keys(BLK.BLOCKS).length, 'T93e die Befehlsuebersicht erklaert jeden Block der Registry');
@@ -2705,11 +2712,11 @@ setTimeout(function () {
                   var blkSpr2 = blkUi.addSprite('fish');
                   ok(blkSpr2 !== null && blkUi.program.sprites.length === 2 && blkSpritesEl.children.length === 4, 'T98d eine neue Figur landet in der Liste und wird zum Ziel');
                   blkUi.selectTarget(null);
-                  ok(blkUi.isStage() === true && blkCatsEl.children.length === 6, 'T99b die Buehne zeigt nur passende Kategorien (sechs statt neun)');
+                  ok(blkUi.isStage() === true && blkCatsEl.children.length === 5, 'T99b die Buehne zeigt im Lernmodus nur passende Kategorien (fuenf statt acht)');
                   blkUi.addBlock('flag', 10, 10);
                   ok(blkUi.program.stage.scripts.length === 1 && blkUi.program.sprites[0].scripts.length === blkUi.program.sprites[0].scripts.length, 'T99c ein Block auf der Buehne landet im Buehnen-Skript');
                   blkUi.selectTarget(blkUi.program.sprites[0]);
-                  ok(blkUi.isStage() === false && blkCatsEl.children.length === 9, 'T99d zurueck auf der Figur sind alle neun Kategorien da');
+                  ok(blkUi.isStage() === false && blkCatsEl.children.length === 8, 'T99d zurueck auf der Figur sind im Lernmodus alle acht zulaessigen Kategorien da');
                   blkUi.deleteSprite(blkUi.program.sprites[1]);
                   ok(blkUi.program.sprites.length === 1 && blkUi.target() === blkUi.program.sprites[0], 'T99e das Loeschen der zweiten Figur waehlt die erste zurueck');
                   ok(blkUi.program.stage.scripts.length === 1, 'T99f das Buehnen-Skript bleibt beim Figuren-Wechsel erhalten');
@@ -3107,19 +3114,39 @@ setTimeout(function () {
                      bunte Kategorie-Knoepfe, Konsole, OOP-Klassenmodell im
                      Code-Generator und sichtbares Ziehen mit Einfuege-Linie. */
                   ok(blkUi.isExpert() === false, 'T109 der Editor startet im Lernmodus (#151)');
-                  ok(blkModeEl.textContent === '🧠 Lernmodus' && blkCodeEl.hasAttribute('hidden') && blkConsoleBox.hasAttribute('hidden'), 'T109b im Lernmodus bleiben Code-Knopf und Konsole verborgen (#151)');
+                  ok(blkModeEl.getAttribute('data-active') === 'learn' && blkModeLearnEl.getAttribute('aria-pressed') === 'true' && blkModeLearnEl.classList.contains('active') === true && blkModeExpertEl.getAttribute('aria-pressed') === 'false' && blkModeExpertEl.classList.contains('active') === false, 'T109b der Schalter zeigt den Lernmodus als aktive Haelfte an (#161)');
+                  ok(blkCodeEl.hasAttribute('hidden') && blkConsoleBox.hasAttribute('hidden') && blkVarAddEl.hasAttribute('hidden'), 'T109c im Lernmodus bleiben Code-Knopf, Konsole und Variablen-Knopf verborgen (#151, #162)');
                   var catColored = 0;
                   var c9;
                   for (c9 = 0; c9 < blkCatsEl.children.length; c9++) {
                     if (blkCatsEl.children[c9].style && blkCatsEl.children[c9].style.background) { catColored++; }
                   }
-                  ok(catColored === blkCatsEl.children.length, 'T109c jeder Kategorie-Knopf traegt seine Kategoriefarbe (#150)');
-                  ok(blkPalEl.querySelector('.blk[data-pal-op="broadcast_wait"]') === null, 'T109d Profi-Bloecke wie warten auf Nachricht bleiben im Lernmodus verborgen (#151)');
-                  blkUi.setMode(true);
-                  ok(blkUi.isExpert() === true && blkModeEl.textContent === '🎓 Expertenmodus' && !blkCodeEl.hasAttribute('hidden') && !blkConsoleBox.hasAttribute('hidden'), 'T109e der Expertenmodus blendet Code-Knopf und Konsole ein (#151)');
-                  ok(blkPalEl.children.length === 6 && blkPalEl.querySelector('.blk[data-pal-op="broadcast_wait"]') !== null, 'T109f im Expertenmodus zeigt die Ereignis-Kategorie alle sechs Bloecke (#151)');
+                  ok(catColored === blkCatsEl.children.length && blkCatsEl.children.length === 8, 'T109d jeder der acht Kategorie-Knoepfe traegt seine Kategoriefarbe (#150, #162)');
+                  var catLabels109 = [], btn109;
+                  for (btn109 = 0; btn109 < blkCatsEl.children.length; btn109++) { catLabels109.push(blkCatsEl.children[btn109].textContent); }
+                  ok(catLabels109.indexOf('Variablen') === -1, 'T109e im Lernmodus fehlt die Variablen-Kategorie (#162)');
+                  ok(blkPalEl.children.length === 3 && blkPalEl.querySelector('.blk[data-pal-op="broadcast_wait"]') === null && blkPalEl.querySelector('.blk[data-pal-op="when_msg"]') === null && blkPalEl.querySelector('.blk[data-pal-op="broadcast"]') === null, 'T109f die Ereignis-Kategorie zeigt im Lernmodus nur die drei Basis-Bloecke (#151, #162)');
+                  blkFetchCalls.length = 0;
+                  blkModeExpertEl.dispatch('click');
+                  var blkModeCalls = blkFetchCalls.filter(function (mc) { return String(mc.url).indexOf('/einstellungen/werkstattmodus') !== -1; });
+                  ok(blkUi.isExpert() === true && !blkCodeEl.hasAttribute('hidden') && !blkConsoleBox.hasAttribute('hidden') && !blkVarAddEl.hasAttribute('hidden'), 'T109g ein Klick auf die Experten-Haelfte schaltet um und blendet Code, Konsole und Variablen ein (#161)');
+                  ok(blkModeCalls.length === 1 && blkModeCalls[0].body === 'csrf=tok&mode=expert', 'T109h der Wechsel in den Expertenmodus speichert die Wahl im Konto (POST mit mode=expert)');
+                  ok(blkCatsEl.children.length === 9 && blkPalEl.children.length === 6 && blkPalEl.querySelector('.blk[data-pal-op="broadcast_wait"]') !== null, 'T109i im Expertenmodus sind alle neun Kategorien und alle sechs Ereignis-Bloecke da (#151, #162)');
+                  blkModeExpertEl.dispatch('click');
+                  ok(blkFetchCalls.length === 1, 'T109j ein Klick auf die bereits aktive Haelfte loest keinen neuen Speichervorgang aus (#161)');
                   blkUi.setMode(false);
-                  ok(blkUi.isExpert() === false && blkPalEl.children.length === 5, 'T109g zurueck im Lernmodus gilt wieder das Basis-Angebot (#151)');
+                  ok(blkUi.isExpert() === false && blkFetchCalls.length === 1 && blkCatsEl.children.length === 8, 'T109k die programmatische Moduswahl wirkt sofort, ohne die Konto-Route aufzurufen (#161)');
+                  blkUi.setMode(true);
+                  blkCatsEl.children[7].dispatch('click');
+                  ok(blkPalEl.querySelector('.blk[data-pal-op="var_set"]') !== null, 'T109l die Variablen-Kategorie zeigt im Expertenmodus ihre Bloecke (#162)');
+                  blkFetchCalls.length = 0;
+                  blkModeLearnEl.dispatch('click');
+                  blkModeCalls = blkFetchCalls.filter(function (mc2) { return String(mc2.url).indexOf('/einstellungen/werkstattmodus') !== -1; });
+                  ok(blkModeCalls.length === 1 && blkModeCalls[0].body === 'csrf=tok&mode=learn', 'T109m die Moduswahl wird je Konto gespeichert: der Ruecksprung in den Lernmodus geht als POST mit mode=learn (#161)');
+                  ok(blkUi.isExpert() === false && blkPalEl.children.length === 3 && blkPalEl.querySelector('.blk[data-pal-op="var_set"]') === null, 'T109n beim Rueckschalten springt die Palette von der Experten-Kategorie auf die Ereignisse zurueck (#162)');
+                  ok(blkModeLearnEl.getAttribute('aria-pressed') === 'true' && blkModeLearnEl.classList.contains('active') === true && blkModeExpertEl.getAttribute('aria-pressed') === 'false' && blkModeExpertEl.classList.contains('active') === false && blkModeEl.getAttribute('data-active') === 'learn', 'T109o der Schalter spiegelt den Lernmodus konsistent in aria-pressed und Aktvierung (#161)');
+                  blkModeLearnEl.dispatch('click');
+                  ok(blkFetchCalls.length === 1, 'T109p auch im Lernmodus bleibt ein Klick auf die aktive Haelfte ohne Speichervorgang (#161)');
 
                   function blkLogText() {
                     var t = '';
@@ -3242,6 +3269,45 @@ setTimeout(function () {
                   blkUi.consoleRun('sage Messtext B!');
                   var mtC = mtCalls;
                   ok(mtA >= 1 && mtB === mtA && mtC === mtA + 1, 'T113c die Blasenbreite wird pro Blasentext nur einmal gemessen (Optimierung)');
+
+                  /* T114-T114r (#163): Automaten-Werkstatt. Die Engine ist
+                   * DOM-frei, deshalb laesst sie sich direkt am Modul
+                   * pruefen. */
+                  var AMT = require('../public/assets/js/automaton.js');
+                  var amtEx = AMT.exampleAutomaton();
+                  ok(AMT !== null && amtEx.states.length === 3 && amtEx.transitions.length === 3, 'T114 die Automaten-Engine liefert den Beispiel-DEA');
+                  ok(AMT.simulateAutomaton(amtEx, 'aa').accepted === true, 'T114b das Wort aa ist im Beispiel-DEA akzeptiert');
+                  ok(AMT.simulateAutomaton(amtEx, 'abbba').accepted === true, 'T114c das Wort abbba ist im Beispiel-DEA akzeptiert');
+                  ok(AMT.simulateAutomaton(amtEx, '').accepted === false, 'T114d das leere Wort ist im Beispiel-DEA nicht akzeptiert');
+                  ok(AMT.simulateAutomaton(amtEx, 'ab').accepted === false, 'T114e das Wort ab endet nicht im Endzustand');
+                  var amtBa = AMT.simulateAutomaton(amtEx, 'ba');
+                  ok(amtBa.accepted === false && amtBa.stuck === 0 && amtBa.reason.indexOf('keinen Uebergang') !== -1, 'T114f bei ba bleibt der Automat schon vor dem ersten Zeichen stecken');
+                  var amtC = AMT.simulateAutomaton(amtEx, 'c');
+                  ok(amtC.accepted === false && amtC.reason.indexOf('nicht zum Eingabealphabet') !== -1, 'T114g ein Zeichen ausserhalb des Alphabets bleibt ohne Uebergang');
+                  var amtAn = AMT.analyseAutomaton(amtEx);
+                  ok(amtAn.missing === 3 && amtAn.nd.length === 0 && amtAn.sigma.join('') === 'ab', 'T114h die Analyse zaehlt drei fehlende Uebergaenge und erkennt Determinismus');
+                  var amtNorm = AMT.normalizeAutomaton(JSON.parse(JSON.stringify(amtEx)));
+                  ok(amtNorm !== null && amtNorm.states.length === 3 && amtNorm.transitions.length === 3 && AMT.normalizeAutomaton({ kaputt: 1 }) === null, 'T114i normalizeAutomaton laedt gueltige Automaten und lehnt ungueltige ab');
+                  var amtTrap = AMT.applyTrap(amtEx);
+                  ok(amtTrap.added === 3 && amtTrap.automaton.states.length === 4, 'T114j der Trap-Zustand ergaenzt die drei fehlenden Uebergaenge');
+                  var amtTrapState = amtTrap.automaton.states.filter(function (ts) { return ts.trap; })[0];
+                  var amtTrapLoop = false, at2;
+                  for (at2 = 0; at2 < amtTrap.automaton.transitions.length; at2++) {
+                    var tt2 = amtTrap.automaton.transitions[at2];
+                    if (tt2.from === amtTrapState.id && tt2.to === amtTrapState.id && tt2.symbols.length === 2) { amtTrapLoop = true; }
+                  }
+                  ok(AMT.analyseAutomaton(amtTrap.automaton).missing === 0 && amtTrapLoop, 'T114k nach dem Trap ist der Automat vollstaendig, mit eigener Schleife am Trap');
+                  var amtSer = AMT.serializeAutomaton(amtEx);
+                  ok(amtSer.format === 'endlicher-automat' && amtSer.version === 1, 'T114l das Speicherformat nennt Format und Version');
+                  var amtScene = AMT.sceneMarkup(amtEx, { interactive: true, P: AMT.EXPORT_PAL });
+                  ok(amtScene.indexOf('data-kind="state"') !== -1 && amtScene.indexOf('data-kind="trans"') !== -1, 'T114m die Zeichnung markiert Zustaende und Uebergaenge als Klickziele');
+                  ok((amtScene.match(/cx="480"/g) || []).length === 2, 'T114n der Endzustand erhaelt seinen Doppelkreis');
+                  var amtSvg = AMT.exportSvgString(amtEx);
+                  ok(amtSvg.str.indexOf('<svg xmlns') === 0 && amtSvg.w > 0 && amtSvg.h > 0, 'T114o der Bild-Export liefert ein fertiges SVG');
+                  ok(AMT.tupleText(amtEx).indexOf('F = {q2}') !== -1, 'T114p die formale Beschreibung nennt die Endzustandsmenge');
+                  ok(AMT.effectiveAlphabet(amtEx).join('') === 'ab' && AMT.missingPairs(amtEx, ['a', 'b']).length === 2, 'T114q effektives Alphabet und fehlende Uebergaenge stimmen ueberein');
+                  var amtLoop = AMT.edgeGeom(amtEx, { id: 'x', from: 's2', to: 's2', symbols: ['b'] });
+                  ok(amtLoop !== null && amtLoop.d.indexOf('C') !== -1, 'T114r die Schleifen-Geometrie zeichnet eine Kurve');
 
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;

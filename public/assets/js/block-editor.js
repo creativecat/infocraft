@@ -4,7 +4,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.15.0
+ * @version 0.16.0
  */
 /* InfoCraft Block-Editor: Programmieren mit Blöcken per Drag & Drop (#116-#128).
  *
@@ -39,7 +39,7 @@
     { id: 'control', label: 'Steuerung', color: '#16a34a' },
     { id: 'sensing', label: 'Wahrnehmung', color: '#0891b2' },
     { id: 'ops', label: 'Operatoren', color: '#059669' },
-    { id: 'vars', label: 'Variablen', color: '#db2777' },
+    { id: 'vars', label: 'Variablen', color: '#db2777', pro: true },
     { id: 'pen', label: 'Stift', color: '#65a30d' }
   ];
   /* Fuer die Buehne (kein Koerper, kein Stift) ausgeblendete Kategorien. */
@@ -139,13 +139,13 @@
     when_key: { cat: 'events', kind: 'hat', inputs: { key: { type: 'select', src: 'keys', def: 'leertaste' } },
       parts: ['Wenn Taste ', { in: 'key' }, ' gedrückt wird'],
       help: 'Startet dieses Skript jedes Mal, wenn du die ausgewählte Taste drückst.' },
-    when_msg: { cat: 'events', kind: 'hat', inputs: { msg: { type: 'select', src: 'msgs', def: 'nachricht1' } },
+    when_msg: { cat: 'events', kind: 'hat', inputs: { msg: { type: 'select', src: 'msgs', def: 'nachricht1' } }, pro: true,
       parts: ['Wenn ich ', { in: 'msg' }, ' erhalte'],
       help: 'Startet dieses Skript, sobald jemand die ausgewählte Nachricht sendet (#131).' },
     when_clicked: { cat: 'events', kind: 'hat', inputs: {},
       parts: ['Wenn ich angeklickt werde'],
       help: 'Startet dieses Skript, wenn du die Figur auf der Bühne anklickst (#133).' },
-    broadcast: { cat: 'events', kind: 'stack', inputs: { msg: { type: 'select', src: 'msgs', def: 'nachricht1' } },
+    broadcast: { cat: 'events', kind: 'stack', inputs: { msg: { type: 'select', src: 'msgs', def: 'nachricht1' } }, pro: true,
       parts: ['sende ', { in: 'msg' }],
       help: 'Schickt eine Nachricht an alle Figuren: Jede mit passendem Empfänger-Block startet (#131).' },
     broadcast_wait: { cat: 'events', kind: 'stack', inputs: { msg: { type: 'select', src: 'msgs', def: 'nachricht1' } }, pro: true,
@@ -1835,6 +1835,8 @@
       saveForm: doc.getElementById('blocks-save-form'),
       jsonTa: doc.getElementById('blocks-json'),
       mode: doc.getElementById('blk-mode'),
+      modeLearn: doc.getElementById('blk-mode-learn'),
+      modeExpert: doc.getElementById('blk-mode-expert'),
       consoleBox: doc.getElementById('blk-console'),
       consoleLog: doc.getElementById('blk-console-log'),
       consoleIn: doc.getElementById('blk-console-in'),
@@ -1852,22 +1854,38 @@
     var drag = null;
     var dropHint = null;
     var pickerOpen = false;
-    /* Lernmodus/Expertenmodus (#151): Voreinstellung Lernmodus, Auswahl
-     * pro Browser gemerkt. Der Expertenmodus zeigt die erweiterte
-     * Palette, den Code-Knopf und die Konsole (#152). */
+    /* Lernmodus/Expertenmodus (#161): Standard ist der Lernmodus. Der
+     * Modus kommt vom Nutzerkonto (data-blk-mode am Werkstatt-Geruest);
+     * nur als Fallback dient der Browser-Speicher (#151). Der Experten-
+     * modus zeigt die erweiterte Palette, den Code-Knopf und die Konsole
+     * (#152). */
     var expertMode = false;
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        expertMode = window.localStorage.getItem('blk.expert') === '1';
-      }
-    } catch (eStore) { expertMode = false; }
+    var presetMode = root.getAttribute('data-blk-mode');
+    if (presetMode === 'expert') { expertMode = true; }
+    else if (presetMode !== 'learn') {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          expertMode = window.localStorage.getItem('blk.expert') === '1';
+        }
+      } catch (eStore) { expertMode = false; }
+    }
 
     function applyMode() {
+      var isLearn = !expertMode;
+      /* #161: Segment-Schalter mit zwei beschrifteten Haelften, die
+       * aktive Haelfte ist farblich hervorgehoben (aria-pressed). */
+      if (els.modeLearn) {
+        els.modeLearn.setAttribute('aria-pressed', isLearn ? 'true' : 'false');
+        if (isLearn) { els.modeLearn.classList.add('active'); }
+        else { els.modeLearn.classList.remove('active'); }
+      }
+      if (els.modeExpert) {
+        els.modeExpert.setAttribute('aria-pressed', expertMode ? 'true' : 'false');
+        if (expertMode) { els.modeExpert.classList.add('active'); }
+        else { els.modeExpert.classList.remove('active'); }
+      }
       if (els.mode) {
-        els.mode.textContent = expertMode ? '🎓 Expertenmodus' : '🧠 Lernmodus';
-        els.mode.setAttribute('title', expertMode
-          ? 'Zum Lernmodus wechseln: das Basis-Angebot fuer den Einstieg (#151)'
-          : 'Zum Expertenmodus wechseln: mehr Bloecke, Code-Ansicht und Konsole (#151)');
+        els.mode.setAttribute('data-active', expertMode ? 'expert' : 'learn');
       }
       if (els.codeBtn) {
         if (expertMode) { els.codeBtn.removeAttribute('hidden'); }
@@ -1877,6 +1895,14 @@
         if (expertMode) { els.consoleBox.removeAttribute('hidden'); }
         else { els.consoleBox.setAttribute('hidden', 'hidden'); }
       }
+      /* #162: Der Knopf fuer neue Variablen gehoert zum Expertenmodus. */
+      if (els.varAdd) {
+        if (expertMode) { els.varAdd.removeAttribute('hidden'); }
+        else { els.varAdd.setAttribute('hidden', 'hidden'); }
+      }
+      /* #162: Die Knopfleiste gehoert zum Modus, sonst bliebe die
+       * Variablen-Kategorie beim Umschalten stehen oder fehlte. */
+      renderCats();
       renderPalette();
     }
 
@@ -2021,7 +2047,15 @@
 
     /* ---------- Palette: Kategorien je nach Ziel (#126) ---------- */
     function catAllowed(catId) {
+      var i;
       if (isStage() && STAGE_HIDDEN_CATS[catId]) { return false; }
+      /* #162: Kategorien fuer Fortgeschrittene (Variablen, Listen) stehen
+       * nur im Expertenmodus auf den Knopfleisten. */
+      if (!expertMode) {
+        for (i = 0; i < CATS.length; i++) {
+          if (CATS[i].id === catId) { return !CATS[i].pro; }
+        }
+      }
       return true;
     }
 
@@ -2050,6 +2084,16 @@
 
     function renderPalette() {
       while (els.pal.children.length > 0) { els.pal.removeChild(els.pal.children[0]); }
+      var ci, catSpec = null;
+      for (ci = 0; ci < CATS.length; ci++) {
+        if (CATS[ci].id === activeCat) { catSpec = CATS[ci]; break; }
+      }
+      /* #162: Ist die gewaehlte Kategorie im Lernmodus nicht zugelassen,
+       * springt die Palette auf die Ereignisse zurueck. */
+      if (catSpec && !catAllowed(activeCat)) {
+        activeCat = 'events';
+        renderCats();
+      }
       var op;
       for (op in BLOCKS) {
         if (!Object.prototype.hasOwnProperty.call(BLOCKS, op)) { continue; }
@@ -2963,17 +3007,38 @@
     /* ---------- Verdrahtung ---------- */
     if (els.flagBtn) { els.flagBtn.addEventListener('click', function () { startRun(); }); }
     if (els.stopBtn) { els.stopBtn.addEventListener('click', function () { stopRun(); }); }
-    if (els.mode) {
-      els.mode.addEventListener('click', function () {
-        expertMode = !expertMode;
-        try {
-          if (typeof window !== 'undefined' && window.localStorage) {
-            window.localStorage.setItem('blk.expert', expertMode ? '1' : '0');
-          }
-        } catch (eStore2) {}
-        applyMode();
-      });
+    /* #161: Modus wechseln und je Konto speichern. Der Browser-Speicher
+     * dient nur als Fallback, die Quelle ist die Kontoeinstellung. */
+    function persistMode() {
+      var url = root.getAttribute('data-mode-url');
+      if (!url || typeof fetch !== 'function') { return; }
+      var token = '';
+      var tokenInput = (els.saveForm && els.saveForm.querySelector)
+        ? els.saveForm.querySelector('input[name="csrf"]') : null;
+      if (tokenInput) { token = tokenInput.value || ''; }
+      var body = 'csrf=' + encodeURIComponent(token)
+        + '&mode=' + (expertMode ? 'expert' : 'learn');
+      try {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body
+        }).catch(function () {});
+      } catch (eFetch) {}
     }
+    function switchMode(on) {
+      if (!!on === expertMode) { return; }
+      expertMode = !!on;
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem('blk.expert', expertMode ? '1' : '0');
+        }
+      } catch (eStore2) {}
+      persistMode();
+      applyMode();
+    }
+    if (els.modeLearn) { els.modeLearn.addEventListener('click', function () { switchMode(false); }); }
+    if (els.modeExpert) { els.modeExpert.addEventListener('click', function () { switchMode(true); }); }
 
     /* ---------- Konsole: gezielt steuern im Expertenmodus (#152) ---------- */
     function consoleLog(text, kind) {
