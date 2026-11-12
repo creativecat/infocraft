@@ -1383,52 +1383,9 @@ span.hlwrap { display: block; }
 
 /* ===== InfoBook (#62): OneNote-artige Seiten mit Medien ===== */
 
-/* Buch-Ansicht: Abschnitts-Sidebar links, Seiten rechts */
-.ibook-layout {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 18px;
-    align-items: start;
-}
-.ibook-side {
-    position: sticky;
-    top: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: calc(100vh - 28px);
-    overflow-y: auto;
-    padding: 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-}
-.ibook-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.ibook-side-forms { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
-.ibook-area-head {
-    margin: 10px 0 2px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-}
-.ibook-area-head:first-child { margin-top: 0; }
-.ibook-area-list { display: flex; flex-direction: column; gap: 4px; }
-.ibook-section {
-    display: block;
-    padding: 8px 10px;
-    border-radius: 10px;
-    border: 1px solid transparent;
-    color: var(--text);
-    font-size: 0.92rem;
-    line-height: 1.35;
-}
-.ibook-section:hover { background: #eef0fe; }
-.ibook-section.active { background: var(--primary); color: #fff; font-weight: 600; border-color: var(--primary-2); }
-.ibook-section-title { display: block; }
-.ibook-inline-label { font-size: 0.78rem; opacity: 0.75; }
+/* Buch-/Abschnittsansicht (#185): gleiche Struktur wie die Seitenansicht,
+ * Hauptbereich mit Abschnittskopf und Seitenkarten. Die alten Sidebar- und
+ * Bereichs-Regeln sind entfallen, die Navigation zeichnet ibook_nav.php. */
 .ibook-section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0 0 4px; }
 .ibook-page-card {
     display: flex;
@@ -1476,11 +1433,10 @@ span.hlwrap { display: block; }
 .ibook-pagenav-box summary::-webkit-details-marker { display: none; }
 .ibook-pagenav-box summary::after { content: '▾'; float: right; color: #64748b; font-size: 0.8rem; }
 .ibook-pagenav-box[open] summary::after { content: '▴'; }
-/* Seitenleiste komplett einklappbar (#82, #100): Der Inhalt-Knopf sitzt in
- * der Kopfzeile neben dem Zurueck-Button, die Leiste selbst verschwindet
- * eingeklappt komplett, die Seite nutzt die volle Breite. Zustand merkt
- * sich app.js. */
-.ibook-pagenav-fold { padding: 3px 10px; font-size: 0.85rem; white-space: nowrap; }
+/* Seitenleiste komplett einklappbar (#82, #100, #185): Der Icon-Knopf
+ * (ibook-navtoggle, Runde-21-Block) sitzt in der Kopfzeile, die Leiste
+ * selbst verschwindet eingeklappt komplett, die Seite nutzt die volle
+ * Breite. Zustand merkt sich app.js. */
 .ibook-pagenav.ibook-pagenav-off { display: none; }
 /* Drag&Drop der Seiten (#101): gezogene Zeile gedimmt, Zielzeile markiert. */
 .ibook-pagenav-drag { cursor: grab; }
@@ -1603,15 +1559,10 @@ figure.iblock-image figcaption, figure.iblock-embed figcaption {
     .iblock-bar .btn, .ibook-draw-tools .btn { min-width: 44px; min-height: 44px; }
     .ibook-draw-color, .ibook-draw-width { min-height: 44px; }
     .iblock-ta { min-height: 180px; font-size: 1rem; }
-    .ibook-section { padding: 12px 12px; }
+    .ibook-pagenav-section, .ibook-pagenav-page { padding: 12px 12px; }
+    .ibook-navtoggle { min-width: 44px; min-height: 44px; }
     .ibook-page-card { padding: 14px 16px; }
     #ibook-editor + .btn-row .btn { min-height: 44px; }
-}
-
-/* Schmale Screens: Sidebar des InfoBooks nach oben */
-@media (max-width: 900px) {
-    .ibook-layout { grid-template-columns: 1fr; }
-    .ibook-side { position: static; max-height: none; }
 }
 
 /* =====================================================================
@@ -2502,3 +2453,59 @@ table.delta { border-collapse: collapse; font-family: var(--font-mono, monospace
 .ibook-navnewsec-details summary::-webkit-details-marker { display: none; }
 .ibook-navnewsec-details summary:hover { background: rgba(29, 78, 216, 0.06); }
 .ibook-navnewsec-details .ibook-navnewsec { border-top: none; margin-top: 0; padding: 8px 0 0; }
+
+/* ============================================================
+   Runde 21 (#185): Buch- und Seitenansicht vereinheitlicht
+   ============================================================ */
+
+/* #185: Schmaler Icon-Knopf fuer die Inhaltsnavigation in der Kopfzeile
+ * beider Ansichten. Das Icon zeichnet das CSS: aufgeklappt drei Striche,
+ * eingeklappt ein Pfeil, der zurueck zur Navigation lockt. */
+.ibook-navtoggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; padding: 0;
+    background: var(--panel, #ffffff); border: 1px solid var(--border, #d7dce5);
+    border-radius: 8px; color: var(--muted, #64748b); cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.ibook-navtoggle::after { content: '☰'; font-size: 0.95rem; line-height: 1; }
+.ibook-navtoggle:hover { background: rgba(29, 78, 216, 0.06); color: #1d4ed8; border-color: #a5b4fc; }
+.ibook-navtoggle.ibook-navtoggle-off::after { content: '▸'; }
+
+/* #185: Breadcrumb in der Kopfzeile beider Ansichten: Buch > Abschnitt >
+ * (Seite). Zeigt immer den Standort, der Buch-Eintrag startet die zuletzt
+ * besuchte Seite, der Abschnitt fuehrt in die Abschnittsansicht. */
+.ibook-crumbs {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    font-size: 1.02rem; line-height: 1.3; margin: 0;
+}
+.ibook-crumbs h1 { font-size: inherit; }
+.ibook-crumb { color: var(--muted, #64748b); text-decoration: none; }
+.ibook-crumb:hover { color: #1d4ed8; text-decoration: underline; }
+.ibook-crumb-sep { color: #cbd5e1; font-size: 0.85rem; }
+.ibook-crumb-here { color: var(--text, #1e293b); font-weight: 650; }
+
+/* #185: Abschnittsansicht: Seiten des Abschnitts als Karten im selben
+ * Raster wie die Seitenansicht, darunter Verwaltung fuer Lehrkraefte. */
+.ibook-secview { display: flex; flex-direction: column; gap: 14px; }
+.ibook-secview-cards {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+}
+.ibook-secview-cards .ibook-page-card {
+    flex-direction: column; align-items: flex-start; justify-content: space-between;
+    min-height: 86px; gap: 14px; transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ibook-secview-cards .ibook-page-card:hover { border-color: #a5b4fc; box-shadow: 0 4px 14px rgba(29, 78, 216, 0.08); }
+.ibook-page-card-hint { font-size: 0.75rem; color: var(--muted, #64748b); }
+.ibook-secview-cards .ibook-page-card:hover .ibook-page-card-hint { color: #1d4ed8; }
+.ibook-secview-admin { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; border-top: 1px dashed var(--border, #d7dce5); padding-top: 12px; }
+.ibook-import-details { position: relative; }
+.ibook-import-details summary { list-style: none; cursor: pointer; }
+.ibook-import-details summary::-webkit-details-marker { display: none; }
+.ibook-import-panel {
+    position: absolute; left: 0; top: calc(100% + 8px); z-index: 40;
+    width: min(520px, 92vw); background: var(--panel, #ffffff);
+    border: 1px solid var(--border, #d7dce5); border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14); padding: 14px;
+}

@@ -4223,9 +4223,11 @@
 })();
 
 
-/* InfoBook Seitenleiste einklappbar (#82): Der Knopf an der Navigation
- * klappt die komplette Leiste ein, die Seite nutzt dann die volle Breite.
- * Der Zustand bleibt pro Browser gespeichert (localStorage). */
+/* InfoBook Seitenleiste einklappbar (#82, #185): Der schmale Icon-Knopf
+ * in der Kopfzeile klappt die komplette Leiste ein, die Seite nutzt dann
+ * die volle Breite. Der Zustand bleibt pro Browser gespeichert
+ * (localStorage). Das Icon zeichnet das CSS, app.js schaltet nur die
+ * Klasse am Knopf (ibook-navtoggle-off) und aria-expanded. */
 (function () {
   'use strict';
   if (typeof window === 'undefined') { return; }
@@ -4235,14 +4237,14 @@
     function apply(off) {
       if (off) {
         aside.classList.add('ibook-pagenav-off');
-        btn.textContent = 'Inhalt ▸';
+        btn.classList.add('ibook-navtoggle-off');
         btn.setAttribute('aria-expanded', 'false');
-        btn.title = 'Seitenübersicht ausklappen';
+        btn.title = 'Inhaltsnavigation ausklappen';
       } else {
         aside.classList.remove('ibook-pagenav-off');
-        btn.textContent = 'Inhalt ◂';
+        btn.classList.remove('ibook-navtoggle-off');
         btn.setAttribute('aria-expanded', 'true');
-        btn.title = 'Seitenübersicht einklappen';
+        btn.title = 'Inhaltsnavigation einklappen';
       }
     }
     var saved = null;

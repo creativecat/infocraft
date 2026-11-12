@@ -4,7 +4,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.20.0
+ * @version 0.21.0
  */
 /* InfoCraft UI-Tests: Sind alle Buttons der Java-IDE klickbar und funktionieren sie?
  *
@@ -1735,9 +1735,9 @@ setTimeout(function () {
                 ibAside61.className = 'ibook-pagenav';
                 var ibFoldBtn61 = new FakeEl('button');
                 window.IC_IBOOK_NAVFOLD(ibAside61, ibFoldBtn61);
-                ok(ibFoldBtn61.textContent === 'Inhalt ◂' && !ibAside61.classList.contains('ibook-pagenav-off'), 'T61b Standard ist aufgeklappt');
+                ok(!ibFoldBtn61.classList.contains('ibook-navtoggle-off') && !ibAside61.classList.contains('ibook-pagenav-off'), 'T61b Standard ist aufgeklappt');
                 ibFoldBtn61.dispatch('click');
-                ok(ibAside61.classList.contains('ibook-pagenav-off') === true && ibFoldBtn61.textContent === 'Inhalt ▸' && ibFoldBtn61.getAttribute('aria-expanded') === 'false', 'T61c Klick klappt die komplette Leiste ein');
+                ok(ibAside61.classList.contains('ibook-pagenav-off') === true && ibFoldBtn61.classList.contains('ibook-navtoggle-off') === true && ibFoldBtn61.getAttribute('aria-expanded') === 'false', 'T61c Klick klappt die komplette Leiste ein');
                 ok(ibStore61['ic-ibook-navfold'] === '1', 'T61d der Zustand wird im Browser gespeichert');
                 ibFoldBtn61.dispatch('click');
                 ok(ibAside61.classList.contains('ibook-pagenav-off') === false && ibFoldBtn61.getAttribute('aria-expanded') === 'true', 'T61e zweiter Klick klappt wieder auf');
@@ -1745,7 +1745,7 @@ setTimeout(function () {
                 var ibAside61b = new FakeEl('aside');
                 var ibFoldBtn61b = new FakeEl('button');
                 window.IC_IBOOK_NAVFOLD(ibAside61b, ibFoldBtn61b);
-                ok(ibAside61b.classList.contains('ibook-pagenav-off') === true && ibFoldBtn61b.textContent === 'Inhalt ▸', 'T61f gespeicherter eingeklappter Zustand wird beim Laden wiederhergestellt');
+                ok(ibAside61b.classList.contains('ibook-pagenav-off') === true && ibFoldBtn61b.classList.contains('ibook-navtoggle-off') === true, 'T61f gespeicherter eingeklappter Zustand wird beim Laden wiederhergestellt');
                 global.localStorage = { getItem: function () { return null; }, setItem: function () {} };
 
                 /* T63 (#79): Bibliothek am Diagramm-Element: Auswahl uebernimmt
@@ -2164,11 +2164,12 @@ setTimeout(function () {
                 var savedDoc76 = global.document;
                 global.document = doc76;
                 require(p76);
-                ok(String(foldBtn76.textContent).indexOf('Inhalt') !== -1, 'T76 der Ausklapp-Knopf heisst Inhalt');
+                var tpl76 = require('fs').readFileSync(require.resolve('../templates/ibook_page.php'), 'utf8');
+                ok(tpl76.indexOf('ibook-navtoggle') !== -1 && tpl76.indexOf('aria-label="Inhaltsnavigation') !== -1, 'T76 der Ausklapp-Knopf ist ein Icon-Knopf mit Beschreibung (#185)');
                 aside76.classList.add('ibook-pagenav-off');
                 foldBtn76.dispatch('click');
                 ok(!aside76.classList.contains('ibook-pagenav-off'), 'T76b ein Klick klappt die Leiste wieder aus');
-                ok(String(foldBtn76.textContent).indexOf('Inhalt') !== -1, 'T76c die Beschriftung bleibt auch eingeklappt lesbar');
+                ok(foldBtn76.classList.contains('ibook-navtoggle-off') === false && foldBtn76.getAttribute('aria-expanded') === 'true', 'T76c der Knopf-Zustand bleibt konsistent (Klasse statt Textwechsel, #185)');
                 aside76.classList.add('ibook-pagenav-off');
                 foldBtn76.dispatch('click');
                 global.document = savedDoc76;
@@ -3940,7 +3941,7 @@ setTimeout(function () {
                    * Seiten des aktiven Abschnitts; genau ein "Neue Seite"-
                    * Feld statt einem je Abschnitt, das Abschnitt-Formular
                    * klappt auf. Alles reine Datei-Pruefung wie bei T123l. */
-                  var navTpl124 = require('fs').readFileSync(require.resolve('../templates/ibook_page.php'), 'utf8');
+                  var navTpl124 = require('fs').readFileSync(require.resolve('../templates/ibook_nav.php'), 'utf8');
                   var navCss124 = require('fs').readFileSync(require.resolve('../public/assets/css/style.css'), 'utf8');
                   var navPhp124 = require('fs').readFileSync(require.resolve('../src/Controllers/InfoBookController.php'), 'utf8');
                   ok(navTpl124.indexOf('ibook-pagenav-pages') !== -1 && navCss124.indexOf('.ibook-pagenav-pages') !== -1,
@@ -3957,6 +3958,29 @@ setTimeout(function () {
                     'T124f Buchansicht, Seitennavigation und Praesentation laden die Abschnitte gemeinsam (#184)');
                   ok(navTpl124.indexOf('navLesen') !== -1 && navTpl124.indexOf('?lesen=1') !== -1,
                     'T124g im Lesemodus behalten alle Seiten-Links das lesen-Suffix (#184)');
+
+                  /* T125 (#185): Buch- und Seitenansicht teilen sich
+                   * Navigation und Kopfzeile: gemeinsames Partial,
+                   * Breadcrumb als Standort-Anzeige, Icon-Knopf, Start auf
+                   * der zuletzt besuchten Seite, Abschnittsansicht mit
+                   * Karten. Alles reine Datei-Pruefung. */
+                  var navPage125 = require('fs').readFileSync(require.resolve('../templates/ibook_page.php'), 'utf8');
+                  var navBook125 = require('fs').readFileSync(require.resolve('../templates/ibook_book.php'), 'utf8');
+                  ok(navPage125.indexOf('ibook_nav.php') !== -1 && navBook125.indexOf('ibook_nav.php') !== -1,
+                    'T125 Buch- und Seitenansicht zeichnen die Navigation aus demselben Partial (#185)');
+                  ok(navPage125.indexOf('ibook-crumbs') !== -1 && navBook125.indexOf('ibook-crumbs') !== -1 && navCss124.indexOf('.ibook-crumbs') !== -1,
+                    'T125b beide Ansichten zeigen einen Breadcrumb Buch-Abschnitt-Seite (#185)');
+                  ok(navPhp124.indexOf('ic_ibook_last') !== -1 && navPhp124.indexOf('lastVisitedPage') !== -1,
+                    'T125c der Buch-Start oeffnet die zuletzt besuchte Seite (Cookie je Buch, #185)');
+                  ok(navPhp124.indexOf('lastVisitedPage($book, $sections)') !== -1 && navPhp124.indexOf('\'ic_ibook_last[\'') !== -1,
+                    'T125d die Start-Weiterleitung prueft Sichtbarkeit und Existenz der gemerkten Seite (#185)');
+                  ok(navBook125.indexOf('ibook-secview') !== -1 && navCss124.indexOf('.ibook-secview') !== -1,
+                    'T125e die Abschnittsansicht zeigt die Seiten als Karten im einheitlichen Gewand (#185)');
+                  ok(navPage125.indexOf('ibook-navtoggle') !== -1 && navBook125.indexOf('ibook-navtoggle') !== -1 && navCss124.indexOf('.ibook-navtoggle') !== -1,
+                    'T125f der Aufklapp-Knopf ist ein Icon-Knopf in beiden Ansichten (#185)');
+                  var navModel125 = require('fs').readFileSync(require.resolve('../src/Models/InfoBook.php'), 'utf8');
+                  ok(navModel125.indexOf('first_section_id') !== -1 && navPhp124.indexOf('first_section_id') !== -1,
+                    'T125g nach dem Buchpaket-Import landet man direkt in der neuen Abschnittsansicht (#185)');
 
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;
