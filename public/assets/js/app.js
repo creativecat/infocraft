@@ -2779,6 +2779,25 @@
       /* Ausgabe als echte Tabelle (#84): div statt pre, die Tabelle setzt
        * IC_DB_RUN als HTML hinein. */
       div.appendChild(el('div', 'mono icv-db-out'));
+    } else if (item.kind === 'html') {
+      /* HTML-Baustein (#174): Eingabemaske als eigener Kasten neben Java-
+       * und SQL-Fenster. Der Quelltext laeuft in einem abgeschotteten
+       * iframe (Sandbox ohne same-origin), die Vorschau steht live daneben. */
+      div.appendChild(el('div', 'icv-html-head', '🌐 HTML-Seite (Eingabemaske)'));
+      var hTa = el('textarea', 'mono icv-html-ta');
+      hTa.value = item.html || '';
+      hTa.setAttribute('spellcheck', 'false');
+      hTa.setAttribute('rows', '6');
+      hTa.setAttribute('placeholder', '<form>\n  <label>Name <input name="name"></label>\n  <button>Senden</button>\n</form>');
+      hTa.addEventListener('input', function () {
+        item.html = hTa.value;
+        icvHtmlInto(hPrev, item.html);
+        collect(); markDirty();
+      });
+      div.appendChild(hTa);
+      var hPrev = el('div', 'icv-html-prev');
+      div.appendChild(hPrev);
+      icvHtmlInto(hPrev, item.html);
     } else if (item.kind === 'diagram') {
       /* Diagramm-Element (#77/#79): Zwei Varianten - pur (Standard): im
        * Editor nur der Quelltext (keine Vorschau), im Lesemodus nur das
@@ -3249,6 +3268,10 @@
   dbBtn.title = 'Datenbank einfügen (Schema und SQL-Abfragen)';
   dbBtn.addEventListener('click', function () { addDbAt(block.w / 2 - 210, block.h / 2 - 110); });
   toolbar.appendChild(dbBtn);
+  var htmlBtn = el('button', 'btn btn-ghost', '🌐'); htmlBtn.type = 'button';
+  htmlBtn.title = 'HTML-Seite einfügen (Eingabemaske für die Projektarbeit, #174)';
+  htmlBtn.addEventListener('click', function () { addHtmlAt(block.w / 2 - 210, block.h / 2 - 90); });
+  toolbar.appendChild(htmlBtn);
   var diagBtn = el('button', 'btn btn-ghost', '📊'); diagBtn.type = 'button';
   diagBtn.title = 'Diagramm einfügen (Mermaid: Code links, Diagramm rechts)';
   diagBtn.addEventListener('click', function () { addDiagramAt(block.w / 2 - 240, block.h / 2 - 120); });
@@ -3354,6 +3377,22 @@
     var ta = selDiv && selDiv.querySelector ? selDiv.querySelector('.icv-db-seed-ta') : null;
     if (ta && ta.focus) { ta.focus(); }
     collect(); markDirty();
+  }
+  function addHtmlAt(x, y) {
+    /* HTML-Baustein (#174): dritter Baustein neben Java- und SQL-Fenster,
+     * z. B. Eingabemaske + Verarbeitung + Datenseite auf einer Seite. */
+    var item = { kind: 'html', html: '', x: clampN(x, 0, block.w - 160), y: clampN(y, 0, block.h - 60), w: 440 };
+    block.items.push(item);
+    renderStage();
+    selectItem(item);
+    var ta = selDiv && selDiv.querySelector ? selDiv.querySelector('.icv-html-ta') : null;
+    if (ta && ta.focus) { ta.focus(); }
+    collect(); markDirty();
+  }
+  /* Vorschau des HTML-Bausteins (#174): baut den abgeschotteten iframe,
+   * der gemeinsame Renderer liegt in einem eigenen Modul weiter unten. */
+  function icvHtmlInto(box, src) {
+    if (typeof window !== 'undefined' && window.IC_HTML_RENDER) { window.IC_HTML_RENDER(box, src); }
   }
   function addDiagramAt(x, y) {
     var item = { kind: 'diagram', src: 'graph TD\nA[Start] --> B[Ziel]', x: clampN(x, 0, block.w - 160), y: clampN(y, 0, block.h - 60), w: 480 };
@@ -3622,6 +3661,10 @@
         } else if (item.kind === 'db') {
           e.dbseed = item.dbseed || '';
           e.dbq = item.dbq || '';
+        } else if (item.kind === 'html') {
+          /* HTML-Baustein (#174): reiner Quelltext, das Rendern macht
+           * der Lesemodus in der Sandbox. */
+          e.html = String(item.html || '');
         } else if (item.kind === 'diagram') {
           e.src = item.src || '';
           if (item.dmode === 'split') { e.dmode = 'split'; }
@@ -4073,6 +4116,46 @@
     var query = qEl ? String(qEl.value || '') : '';
     window.IC_DB_RUN(outEl, seed, query);
   });
+})();
+
+
+/* InfoBook HTML-Baustein (#174): Eigene HTML-Seite (z. B. Eingabemaske)
+ * als dritter Kasten neben Java- und SQL-Fenster. Der Quelltext laeuft
+ * ausschliesslich im Browser in einem abgeschotteten iframe: Sandbox
+ * OHNE allow-same-origin und OHNE Navigationrechte, damit die Seite
+ * weder Cookies noch die Plattform selbst anfassen kann. */
+(function () {
+  'use strict';
+  if (typeof window === 'undefined') { return; }
+  window.IC_HTML_RENDER = function (box, src) {
+    if (!box || !box.ownerDocument || !box.ownerDocument.createElement) { return; }
+    var doc = box.ownerDocument;
+    while (box.firstChild) { box.removeChild(box.firstChild); }
+    var frame = doc.createElement('iframe');
+    frame.setAttribute('class', 'icv-html-frame-el');
+    frame.setAttribute('sandbox', 'allow-scripts allow-forms');
+    frame.setAttribute('title', 'HTML-Seite (abgeschottet)');
+    frame.setAttribute('srcdoc', String(src || ''));
+    box.appendChild(frame);
+  };
+  if (typeof document === 'undefined' || !document.addEventListener) { return; }
+  /* Lesemodus: fertige Boxen aus dem serverseitigen Renderer einmalig
+   * bestuecken. Der HTML-Quelltext liegt versteckt daneben (.icv-html-src). */
+  function bootHtmlBoxes() {
+    if (!document.querySelectorAll) { return; }
+    var frames = document.querySelectorAll('.icv-html-frame');
+    for (var i = 0; frames && i < frames.length; i++) {
+      var box = frames[i];
+      var srcEl = box.parentNode && box.parentNode.querySelector ? box.parentNode.querySelector('.icv-html-src') : null;
+      var src = srcEl ? String(srcEl.tagName === 'TEXTAREA' ? srcEl.value : (srcEl.textContent || '')) : '';
+      window.IC_HTML_RENDER(box, src);
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootHtmlBoxes);
+  } else {
+    bootHtmlBoxes();
+  }
 })();
 
 
