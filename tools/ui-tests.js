@@ -4,7 +4,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.17.0
+ * @version 0.18.0
  */
 /* InfoCraft UI-Tests: Sind alle Buttons der Java-IDE klickbar und funktionieren sie?
  *
@@ -127,6 +127,15 @@ FakeEl.prototype.appendChild = function (child) {
 FakeEl.prototype.removeChild = function (child) {
   var i = this.children.indexOf(child);
   if (i !== -1) { this.children.splice(i, 1); }
+};
+Object.defineProperty(FakeEl.prototype, 'firstChild', {
+  get: function () { return this.children.length > 0 ? this.children[0] : null; },
+  configurable: true
+});
+/* Der HTML-Renderer (#174) baut sein iframe ueber box.ownerDocument. */
+FakeEl.prototype.ownerDocument = {
+  createElement: function (tag) { return new FakeEl(tag); },
+  createTextNode: function (text) { return FakeDoc.prototype.createTextNode(text); }
 };
 FakeEl.prototype.insertBefore = function (el, ref) {
   if (ref) {
@@ -3621,6 +3630,223 @@ setTimeout(function () {
                   lcClkBtn.dispatch('click');
                   lcClkBtn.dispatch('click');
                   ok(lcClkBtn.textContent === '▶ Takt', 'T119p der Takt-Knopf startet und stoppt den Takt (#166)');
+
+                  /* T120 (#173): Gemeinsamer Werkzeugkasten fuer die
+                   * Automaten-Werkstaetten: Historie, Ansicht, PNG, Takt,
+                   * Tabelle - einmal umgesetzt, modular eingesetzt. */
+                  var IC_TOOLS = require('../public/assets/js/amt-tools.js');
+                  ok(typeof IC_TOOLS.makeHistory === 'function' && typeof IC_TOOLS.makeView === 'function' && typeof IC_TOOLS.exportPng === 'function' && typeof IC_TOOLS.makePlayer === 'function' && typeof IC_TOOLS.deltaTable === 'function', 'T120 der Werkzeugkasten stellt Historie, Ansicht, PNG, Takt und Tabelle bereit (#173)');
+                  var histCur = { n: 1 };
+                  var histLog = [];
+                  var hist120 = IC_TOOLS.makeHistory({
+                    snapshot: function () { return JSON.stringify(histCur); },
+                    restore: function (snap) { histCur = JSON.parse(snap); histLog.push('r' + histCur.n); }
+                  });
+                  ok(hist120.canUndo() === false, 'T120a ohne Aenderung gibt es nichts Zurueckzunehmen (#173)');
+                  hist120.commit();
+                  histCur.n = 2;
+                  hist120.commit();
+                  histCur.n = 3;
+                  hist120.commit();
+                  ok(hist120.canUndo() === true, 'T120b Aenderungen landen auf der Historie (#173)');
+                  hist120.undo();
+                  ok(histCur.n === 2, 'T120c Undo stellt den vorherigen Stand wieder her (#173)');
+                  hist120.undo();
+                  ok(histCur.n === 1 && hist120.canUndo() === false, 'T120d Undo stoppt am Ausgangszustand (#173)');
+                  hist120.redo();
+                  ok(histCur.n === 2, 'T120e Redo nimmt die Aenderung wieder auf (#173)');
+                  var svg120 = new FakeEl('svg');
+                  var view120 = IC_TOOLS.makeView(svg120, { x: 0, y: 0, w: 900, h: 560 });
+                  ok(svg120.getAttribute('viewBox') === '0 0 900 560', 'T120f die Ansicht schreibt den Anfangsrahmen in die Zeichenflaeche (#173)');
+                  view120.zoom(1.25);
+                  ok(svg120.getAttribute('viewBox').indexOf('720') !== -1, 'T120g Zoom vergroessert den Rahmen (720 statt 900) (#173)');
+                  view120.fit({ x0: 100, y0: 80, x1: 500, y1: 380 }, 50);
+                  var vb120 = svg120.getAttribute('viewBox').split(' ');
+                  ok(parseFloat(vb120[0]) === 50 && parseFloat(vb120[2]) === 500, 'T120h Einpassen legt den Rahmen um die Zeichnung (#173)');
+                  view120.panBy(10, 20);
+                  ok(svg120.getAttribute('viewBox').split(' ')[0] === '60', 'T120i Schieben verschiebt den Rahmen (#173)');
+                  var tbl120 = IC_TOOLS.deltaTable(pdaDoc, ['von', 'nach'], [['q0', 'q1']]);
+                  ok(tbl120.children[0].children[0].children.length === 2 && tbl120.children[1].children[0].children[1].textContent === 'q1', 'T120j die Tabelle baut Kopf und Zeilen der Uebergangsfunktion (#173)');
+                  IC_TOOLS.exportPng(new FakeDoc(), { str: '<svg></svg>', w: 10, h: 10 }, 'x.png');
+                  ok(true, 'T120k der PNG-Export verlaesst sich still auf den Browser und wirft nie (#173)');
+
+                  /* T120l-T120r (#173): Funktionsparitaet des Kellerautomaten:
+                   * Undo/Redo, Zoom/Einpassen, Abspielen, formale Beschreibung. */
+                  var pdaDoc2 = new FakeDoc();
+                  var pdaReg2 = function (id, tag) { var e = pdaDoc2.createElement(tag || 'div'); pdaDoc2.register(e, id); return e; };
+                  var pdaRoot2 = pdaReg2('pda-ide');
+                  var pdaCanvas2 = pdaReg2('pda-canvas', 'svg');
+                  var pdaHint2 = pdaReg2('pda-hint');
+                  var pdaSel2 = pdaReg2('pda-sel');
+                  var pdaOut2 = pdaReg2('pda-out');
+                  var pdaWord2 = pdaReg2('pda-word', 'input');
+                  var pdaRun2 = pdaReg2('pda-run', 'button');
+                  var pdaPlay2 = pdaReg2('pda-play', 'button');
+                  var pdaUndo2 = pdaReg2('pda-undo', 'button');
+                  var pdaRedo2 = pdaReg2('pda-redo', 'button');
+                  var pdaZoomIn2 = pdaReg2('pda-zoom-in', 'button');
+                  var pdaZoomOut2 = pdaReg2('pda-zoom-out', 'button');
+                  var pdaFit2 = pdaReg2('pda-fit', 'button');
+                  var pdaPng2 = pdaReg2('pda-png', 'button');
+                  var pdaTuple2 = pdaReg2('pda-tuple');
+                  var pdaDelta2 = pdaReg2('pda-delta');
+                  var pdaJson2 = pdaReg2('pda-json', 'textarea');
+                  pdaJson2.value = JSON.stringify(IC_PDA.serializePDA(pdaEx));
+                  var pdaUi2 = IC_PDA.attach(pdaDoc2);
+                  ok(String(pdaTuple2.textContent).indexOf('P = (Q') !== -1 && String(pdaTuple2.textContent).indexOf('q0') !== -1, 'T120l die formale Beschreibung nennt das 7-Tupel des Kellerautomaten (#173)');
+                  ok(pdaDelta2.children.length === 1 && pdaDelta2.children[0].children[1].children.length === pdaEx.transitions.length, 'T120m die Uebergangstabelle zaehlt alle Uebergaenge (#173)');
+                  ok(pdaUi2.addState(300, 200) !== null && pdaUi2.pda().states.length === 4, 'T120n ein zugefuegter Zustand zaehlt mit (#173)');
+                  pdaUndo2.dispatch('click');
+                  ok(pdaUi2.pda().states.length === 3, 'T120o der Zurueck-Knopf nimmt den Zustand zurueck (#173)');
+                  pdaRedo2.dispatch('click');
+                  ok(pdaUi2.pda().states.length === 4, 'T120p der Wiederherstellen-Knopf legt ihn erneut an (#173)');
+                  pdaFit2.dispatch('click');
+                  pdaZoomIn2.dispatch('click');
+                  ok(pdaCanvas2.getAttribute('viewBox') !== null && parseFloat(pdaCanvas2.getAttribute('viewBox').split(' ')[2]) < 900, 'T120q Einpassen und Zoom aendern den Rahmen der Kellerautomat-Ansicht (#173)');
+                  pdaWord2.value = 'aabb';
+                  pdaPlay2.dispatch('click');
+                  ok(String(pdaOut2.textContent).indexOf('Start') !== -1, 'T120r der Abspiel-Knopf zeigt den ersten Schritt sofort (#173)');
+                  pdaPng2.dispatch('click');
+                  ok(String(pdaHint2.textContent).indexOf('PNG') !== -1, 'T120s der Bild-Knopf meldet den PNG-Download (#173)');
+
+                  /* T120t-T120z (#173): Funktionsparitaet der Turingmaschine:
+                   * Undo/Redo, Zoom, mehrere Woerter, Abspielen, 7-Tupel. */
+                  var tmDoc2 = new FakeDoc();
+                  var tmReg2 = function (id, tag) { var e = tmDoc2.createElement(tag || 'div'); tmDoc2.register(e, id); return e; };
+                  var tmRoot2 = tmReg2('tm-ide');
+                  var tmCanvas2 = tmReg2('tm-canvas', 'svg');
+                  var tmHint2 = tmReg2('tm-hint');
+                  var tmOut2 = tmReg2('tm-out');
+                  var tmWord2 = tmReg2('tm-word', 'input');
+                  var tmRun2 = tmReg2('tm-run', 'button');
+                  var tmPlay2 = tmReg2('tm-play', 'button');
+                  var tmUndo2 = tmReg2('tm-undo', 'button');
+                  var tmRedo2 = tmReg2('tm-redo', 'button');
+                  var tmFit2 = tmReg2('tm-fit', 'button');
+                  var tmTuple2 = tmReg2('tm-tuple');
+                  var tmDelta2 = tmReg2('tm-delta');
+                  var tmBatchIn2 = tmReg2('tm-batch-in', 'textarea');
+                  var tmBatchBtn2 = tmReg2('tm-batch-btn', 'button');
+                  var tmBatchOut2 = tmReg2('tm-batch-out');
+                  var tmJson2 = tmReg2('tm-json', 'textarea');
+                  tmJson2.value = JSON.stringify(IC_TM.serializeTM(tmEx));
+                  var tmUi2 = IC_TM.attach(tmDoc2);
+                  ok(String(tmTuple2.textContent).indexOf('M = (Q') !== -1 && String(tmTuple2.textContent).indexOf('deterministisch') !== -1, 'T120t die formale Beschreibung nennt das 7-Tupel der Turingmaschine (#173)');
+                  ok(tmDelta2.children.length === 1 && tmDelta2.children[0].children[1].children.length === tmEx.rules.length, 'T120u die Delta-Tabelle listet alle Regeln (#173)');
+                  tmUi2.addState(300, 200);
+                  tmUndo2.dispatch('click');
+                  ok(tmUi2.tm().states.length === 3, 'T120v der Zurueck-Knopf nimmt den Zustand zurueck (#173)');
+                  tmRedo2.dispatch('click');
+                  ok(tmUi2.tm().states.length === 4, 'T120w der Wiederherstellen-Knopf legt ihn erneut an (#173)');
+                  tmBatchIn2.value = '1011' + NL41 + '111';
+                  tmBatchBtn2.dispatch('click');
+                  ok(tmBatchOut2.children.length === 2 && tmBatchOut2.children[0].textContent.indexOf('✓') !== -1, 'T120x der Alle-testen-Knopf prueft mehrere Woerter auf einmal (#173)');
+                  tmWord2.value = '1011';
+                  tmPlay2.dispatch('click');
+                  ok(String(tmOut2.textContent).indexOf('▶ Schritt') !== -1, 'T120y der Abspiel-Knopf zeigt Bandfenster und Kopf sofort (#173)');
+                  tmFit2.dispatch('click');
+                  ok(tmCanvas2.getAttribute('viewBox') !== null, 'T120z der Einpassen-Knopf setzt den Ansichtsrahmen (#173)');
+
+                  /* T121 (#174): HTML-Baustein im InfoBook: dritter Kasten
+                   * neben Java- und SQL-Fenster, Quelltext laeuft nur in
+                   * einer abgeschotteten Sandbox ohne same-origin. */
+                  var appPath121 = require.resolve('../public/assets/js/app.js');
+                  delete require.cache[appPath121];
+                  global.window = {};
+                  var ibDoc121 = new FakeDoc();
+                  var ibEditor121 = new FakeEl('div');
+                  ibEditor121.setAttribute('data-codeclasses', JSON.stringify([]));
+                  ibEditor121.setAttribute('data-blocks', '[]');
+                  ibDoc121.register(ibEditor121, 'ibook-editor');
+                  ibDoc121.register(new FakeEl('input'), 'ibook-blocks-json');
+                  var ibSaveForm121 = new FakeEl('form');
+                  ibSaveForm121.setAttribute('action', '/infobuecher/7/seite/9');
+                  ibDoc121.register(ibSaveForm121, 'ibook-saveform');
+                  global.document = ibDoc121;
+                  global.fetch = function () { return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ ok: true, id: 5, name: 'x.png' }); } }); };
+                  require('../public/assets/js/app.js');
+                  var ibBar121 = ibDoc121.body.querySelector('.icv-toolbar');
+                  var htmlBtn121 = null;
+                  var ibBidx;
+                  for (ibBidx = 0; ibBar121 && ibBidx < ibBar121.children.length; ibBidx++) {
+                    if (ibBar121.children[ibBidx].textContent === '🌐') { htmlBtn121 = ibBar121.children[ibBidx]; break; }
+                  }
+                  ok(htmlBtn121 !== null, 'T121 der InfoBook-Editor hat einen Knopf fuer den HTML-Baustein (#174)');
+                  htmlBtn121.dispatch('click');
+                  var ibCollect121 = function () { return JSON.parse(ibDoc121.getElementById('ibook-blocks-json').value)[0].items || []; };
+                  ok(ibCollect121().length === 1 && ibCollect121()[0].kind === 'html', 'T121b der HTML-Baustein serialisiert als eigener Kasten (#174)');
+                  var hTa121 = ibDoc121.body.querySelector('.icv-html-ta');
+                  var hPrev121 = ibDoc121.body.querySelector('.icv-html-prev');
+                  ok(hTa121 !== null && hPrev121 !== null, 'T121c der Baustein zeigt Quelltextfeld und Vorschau (#174)');
+                  hTa121.value = '<h1>Anmeldung</h1>';
+                  hTa121.dispatch('input');
+                  ok(ibCollect121()[0].html === '<h1>Anmeldung</h1>', 'T121d der getippte Quelltext wird mit der Seite gesichert (#174)');
+                  ok(hPrev121.children.length === 1 && hPrev121.children[0].tagName === 'IFRAME', 'T121e die Vorschau laeuft in einem eigenen Fenster (#174)');
+                  ok(hPrev121.children[0].getAttribute('sandbox') === 'allow-scripts allow-forms', 'T121f die Sandbox erlaubt Skripte und Formulare, aber keinen Zugriff auf die Plattform (#174)');
+                  var roBox121 = new FakeEl('div');
+                  global.window.IC_HTML_RENDER(roBox121, '<p>Lesemodus</p>');
+                  ok(roBox121.children.length === 1 && roBox121.children[0].getAttribute('srcdoc') === '<p>Lesemodus</p>', 'T121g der Lesemodus rendert den gespeicherten Quelltext im abgeschotteten Fenster (#174)');
+                  /* Boot im Lesemodus: fertige Rahmen einmalig bestuecken. */
+                  var appPath121b = require.resolve('../public/assets/js/app.js');
+                  delete require.cache[appPath121b];
+                  var bootDoc121 = new FakeDoc();
+                  var bootFrame121 = new FakeEl('div');
+                  bootFrame121.className = 'icv-html-frame';
+                  var bootItemWrap121 = new FakeEl('div');
+                  bootItemWrap121.appendChild(bootFrame121);
+                  var bootSrc121 = new FakeEl('pre');
+                  bootSrc121.className = 'icv-html-src';
+                  bootSrc121.textContent = '<b>Maskenfeld</b>';
+                  bootItemWrap121.appendChild(bootSrc121);
+                  bootDoc121.register(bootItemWrap121, 'boot-wrap-121');
+                  global.document = bootDoc121;
+                  require('../public/assets/js/app.js');
+                  ok(bootFrame121.children.length === 1 && bootFrame121.children[0].getAttribute('srcdoc') === '<b>Maskenfeld</b>', 'T121h der Boot im Lesemodus liest den versteckten Quelltext und baut das Fenster (#174)');
+                  delete global.window;
+
+                  /* T122 (#174): Die Automaten-Werkstatt liest ihre Farben
+                   * aus CSS-Variablen. Frueher fiel die Ersatzsuche auf
+                   * falsche Schluessel und ergab undefined: Der Browser
+                   * zeichnete Zustandskreise dann solide schwarz. Diese
+                   * Tests simulieren den Browser mit getComputedStyle. */
+                  var fs122 = require('fs');
+                  ok(fs122.readFileSync(require.resolve('../public/assets/css/style.css'), 'utf8').indexOf('--paper:') !== -1,
+                    'T122 das Stylesheet definiert die Farbwerte der Werkstatt zentral (#174)');
+                  var autoPath122 = require.resolve('../public/assets/js/automaton.js');
+                  var stubVals122 = {};
+                  global.getComputedStyle = function () {
+                    return { getPropertyValue: function (n) { return stubVals122[n] || ''; } };
+                  };
+                  var amtBoot122 = function () {
+                    delete require.cache[autoPath122];
+                    var doc122 = new FakeDoc();
+                    doc122.documentElement = new FakeEl('html');
+                    var svg122 = new FakeEl('svg');
+                    doc122.register(new FakeEl('div'), 'amt-ide');
+                    doc122.register(svg122, 'amt-canvas');
+                    doc122.register(new FakeEl('section'), 'amt-stage');
+                    doc122.register(new FakeEl('form'), 'automaton-save-form');
+                    ['amt-sel', 'amt-word', 'amt-run', 'amt-step', 'amt-play', 'amt-reset',
+                     'amt-out', 'amt-sigma', 'amt-chips', 'amt-tuple', 'amt-delta',
+                     'amt-hint', 'amt-undo', 'amt-redo', 'amt-trap', 'amt-new',
+                     'amt-zoom-in', 'amt-zoom-out', 'amt-fit', 'amt-png',
+                     'amt-pop', 'amt-pop-in', 'amt-pop-ok', 'amt-pop-lbl', 'amt-pop-hint',
+                     'amt-batch-in', 'amt-batch-btn', 'amt-batch-out', 'amt-saveinfo'
+                    ].forEach(function (id122) { doc122.register(new FakeEl('div'), id122); });
+                    global.document = doc122;
+                    require('../public/assets/js/automaton.js');
+                    return svg122;
+                  };
+                  var svg122a = amtBoot122();
+                  ok(svg122a.innerHTML.indexOf('fill="#ffffff"') !== -1,
+                    'T122b ohne Farbangaben behalten die Zustandskreise ihre weisse Fuellung (#174)');
+                  ok(svg122a.innerHTML.indexOf('undefined') === -1,
+                    'T122c die Zeichnung enthaelt keine ungueltigen Farbwerte mehr (#174)');
+                  stubVals122['--paper'] = '#fafaff';
+                  var svg122b = amtBoot122();
+                  ok(svg122b.innerHTML.indexOf('fill="#fafaff"') !== -1,
+                    'T122d eigene Farbwerte aus dem Stylesheet fließen in die Zeichnung ein (#174)');
+                  delete global.getComputedStyle;
 
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;
