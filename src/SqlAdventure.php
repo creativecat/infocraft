@@ -291,7 +291,7 @@ SVG;
     private static function spaceChapterScenes(): array
     {
         return [
-            1 => <<'SVG'
+            1 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Brücke der Raumstation mit Sternenfenster und Konsole">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#0b1220"/>
 <rect x="30" y="12" width="200" height="66" rx="10" fill="#0b2544" stroke="#22d3ee" stroke-width="2"/>
@@ -299,7 +299,7 @@ SVG;
   <rect x="18" y="84" width="224" height="28" rx="6" fill="#1e293b"/>
   <circle cx="50" cy="98" r="4" fill="#22d3ee"/><circle cx="70" cy="98" r="4" fill="#fde047"/><circle cx="90" cy="98" r="4" fill="#a78bfa"/><rect x="110" y="92" width="110" height="12" rx="4" fill="#334155"/></svg>
 SVG,
-            2 => <<'SVG'
+            2 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Terminal mit Crew-Liste">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#0b1220"/>
 <rect x="45" y="12" width="170" height="82" rx="8" fill="#0f172a" stroke="#22d3ee" stroke-width="2"/>
@@ -309,7 +309,7 @@ SVG,
   <rect x="58" y="54" width="10" height="10" rx="5" fill="#22d3ee"/><rect x="74" y="57" width="70" height="5" rx="2" fill="#e2e8f0"/>
   <rect x="58" y="72" width="10" height="10" rx="5" fill="#94a3b8"/><rect x="74" y="75" width="100" height="5" rx="2" fill="#e2e8f0"/></svg>
 SVG,
-            3 => <<'SVG'
+            3 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Stationsmodule mit Crew-Punkten">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#0b1220"/>
 <rect x="30" y="20" width="60" height="46" rx="8" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
@@ -320,7 +320,7 @@ SVG,
   <path d="M192 50 l16 0 m-8 -8 l0 16 m-16 -8 l0 0" stroke="#22d3ee" stroke-width="2" fill="none"/>
   <rect x="30" y="76" width="200" height="14" rx="4" fill="#334155"/><circle cx="130" cy="83" r="4" fill="#22d3ee"/></svg>
 SVG,
-            4 => <<'SVG'
+            4 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Meteoriteneinschlag mit Alarmsymbol">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#0b1220"/>
 <path d="M250 6 L188 46" stroke="#fbbf24" stroke-width="4" stroke-linecap="round"/>
@@ -331,7 +331,7 @@ SVG,
   <path d="M70 78 l0 18" stroke="#22d3ee" stroke-width="3" stroke-linecap="round"/>
   <rect x="30" y="96" width="200" height="16" rx="4" fill="#1e293b"/><circle cx="130" cy="104" r="5" fill="#f97316"/></svg>
 SVG,
-            5 => <<'SVG'
+            5 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sauerstofftanks, einer mit Leck">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#0b1220"/>
 <rect x="40" y="26" width="46" height="72" rx="14" fill="#1e293b" stroke="#22d3ee" stroke-width="2"/>
@@ -342,7 +342,7 @@ SVG,
   <path d="M204 58 q6 6 0 12" stroke="#22d3ee" stroke-width="2" fill="none"/>
   <circle cx="204" cy="86" r="3" fill="#38bdf8"/><circle cx="210" cy="96" r="3" fill="#38bdf8"/></svg>
 SVG,
-            6 => <<'SVG'
+            6 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Reparaturdrohne über Tank">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#0b1220"/>
 <rect x="96" y="52" width="68" height="26" rx="10" fill="#334155" stroke="#22d3ee" stroke-width="2"/>
@@ -354,7 +354,7 @@ SVG,
   <path d="M130 78 l0 10" stroke="#fde047" stroke-width="2"/>
   <rect x="76" y="92" width="108" height="18" rx="6" fill="#1e293b" stroke="#22d3ee" stroke-width="2"/></svg>
 SVG,
-            7 => <<'SVG'
+            7 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Balkendiagramm des Sauerstoffs je Modul">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#0b1220"/>
 <path d="M50 96 L210 96" stroke="#94a3b8" stroke-width="2"/>
@@ -364,7 +364,7 @@ SVG,
   <rect x="192" y="28" width="24" height="68" rx="4" fill="#22d3ee"/>
   <circle cx="72" cy="24" r="3" fill="#fde047"/><circle cx="116" cy="24" r="3" fill="#fde047"/><circle cx="204" cy="20" r="3" fill="#fde047"/></svg>
 SVG,
-            8 => <<'SVG'
+            8 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kälteschlaf-Kapsel mit Crew-Mitglied">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#0b1220"/>
 <rect x="70" y="18" width="120" height="84" rx="16" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
@@ -375,7 +375,7 @@ SVG,
   <path d="M204 38 l3 8 l-3 8 l-3 -8 Z" fill="#94a3b8"/>
   <path d="M218 52 l2 6 l-2 6 l-2 -6 Z" fill="#94a3b8"/></svg>
 SVG,
-            9 => <<'SVG'
+            9 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Frachtcontainer mit Gewichts-Pfeil">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#0b1220"/>
 <rect x="40" y="66" width="52" height="40" rx="6" fill="#334155" stroke="#94a3b8" stroke-width="2"/>
@@ -384,7 +384,7 @@ SVG,
   <path d="M194 12 l0 18 m-8 -8 l8 8 l8 -8" stroke="#fde047" stroke-width="3" fill="none" stroke-linecap="round"/>
   <path d="M168 62 l52 0 M168 76 l52 0" stroke="#475569" stroke-width="2"/></svg>
 SVG,
-            10 => <<'SVG'
+            10 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sendeantenne und Erde fuer den Energiebericht">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#0b1220"/>
 <rect x="20" y="60" width="140" height="52" rx="8" fill="#1e293b"/>
@@ -403,7 +403,7 @@ SVG
     private static function museumChapterScenes(): array
     {
         return [
-            1 => <<'SVG'
+            1 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Klemmbrett mit Inventarliste">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#f5efe6"/>
 <rect x="72" y="18" width="116" height="88" rx="8" fill="#fffbeb" stroke="#b45309" stroke-width="3"/>
@@ -414,7 +414,7 @@ SVG
   <rect x="88" y="80" width="66" height="6" rx="3" fill="#d6c9b0"/>
   <rect x="88" y="92" width="74" height="6" rx="3" fill="#d6c9b0"/></svg>
 SVG,
-            2 => <<'SVG'
+            2 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Grundriss des Museums mit Flügeln">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#f5efe6"/>
 <rect x="40" y="24" width="70" height="70" fill="none" stroke="#292524" stroke-width="3"/>
@@ -426,7 +426,7 @@ SVG,
   <rect x="180" y="56" width="20" height="16" fill="#b91c1c" opacity="0.25"/>
   <path d="M75 94 l0 0 M140 94 l0 0" stroke="#292524" stroke-width="6"/></svg>
 SVG,
-            3 => <<'SVG'
+            3 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Uhr am Tatabend neben Museumstür">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#f5efe6"/>
 <circle cx="80" cy="46" r="30" fill="#fffbeb" stroke="#292524" stroke-width="3"/>
@@ -437,7 +437,7 @@ SVG,
   <circle cx="212" cy="66" r="4" fill="#fde047"/>
   <path d="M150 96 q30 -12 66 0" stroke="#292524" stroke-width="2" fill="none" stroke-dasharray="4 4"/></svg>
 SVG,
-            4 => <<'SVG'
+            4 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Rahmen mit Leihgabe-Etikett">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#f5efe6"/>
 <rect x="34" y="18" width="110" height="84" rx="4" fill="#b45309"/>
@@ -448,7 +448,7 @@ SVG,
   <path d="M186 26 l24 0 l0 16 l-24 0 Z" fill="#15803d"/>
   <circle cx="196" cy="44" r="3" fill="#15803d"/><circle cx="206" cy="44" r="3" fill="#15803d"/></svg>
 SVG,
-            5 => <<'SVG'
+            5 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Der Ostflügel mit Bildern an der Wand">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#f5efe6"/>
 <rect x="24" y="30" width="212" height="66" rx="4" fill="#e7dcc8" stroke="#b45309" stroke-width="3"/>
@@ -459,7 +459,7 @@ SVG,
   <path d="M24 96 q40 10 212 0" stroke="#b45309" stroke-width="3" fill="none"/>
   <text x="130" y="20" font-size="14" text-anchor="middle" fill="#b45309" font-family="sans-serif">Ost</text></svg>
 SVG,
-            6 => <<'SVG'
+            6 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kameras mit Sichtkegeln in zwei Flügeln">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#f5efe6"/>
 <path d="M60 18 L34 40 L34 66 L60 88 Z" fill="#e7dcc8" stroke="#292524" stroke-width="2"/>
@@ -470,7 +470,7 @@ SVG,
   <path d="M166 46 L128 30 L128 78 Z" fill="#15803d" opacity="0.2"/>
   <circle cx="85" cy="54" r="3" fill="#fde047"/><circle cx="179" cy="54" r="3" fill="#fde047"/></svg>
 SVG,
-            7 => <<'SVG'
+            7 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kamera wird scharf geschaltet">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#f5efe6"/>
 <rect x="88" y="40" width="40" height="24" rx="5" fill="#292524"/>
@@ -482,7 +482,7 @@ SVG,
   <rect x="92" y="70" width="8" height="30" fill="#292524"/>
   <rect x="84" y="98" width="24" height="8" rx="3" fill="#292524"/></svg>
 SVG,
-            8 => <<'SVG'
+            8 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Wegspur durch die Ausstellungsräume">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#f5efe6"/>
 <rect x="26" y="20" width="90" height="34" rx="4" fill="#e7dcc8" stroke="#292524" stroke-width="2"/>
@@ -494,7 +494,7 @@ SVG,
   <ellipse cx="180" cy="72" rx="6" ry="9" fill="#b45309" transform="rotate(20 180 72)"/>
   <ellipse cx="204" cy="86" rx="6" ry="9" fill="#b45309" transform="rotate(30 204 86)"/></svg>
 SVG,
-            9 => <<'SVG'
+            9 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Besucherzahlen je Raum als Balken">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#f5efe6"/>
 <path d="M40 100 L220 100" stroke="#292524" stroke-width="2"/>
@@ -505,7 +505,7 @@ SVG,
   <circle cx="65" cy="32" r="5" fill="#292524"/><circle cx="111" cy="14" r="5" fill="#292524"/><circle cx="203" cy="26" r="5" fill="#292524"/>
   <rect x="40" y="106" width="180" height="6" rx="3" fill="#d6c9b0"/></svg>
 SVG,
-            10 => <<'SVG'
+            10 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Lupe über der letzten Person im Raum">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#f5efe6"/>
 <rect x="24" y="34" width="120" height="62" rx="4" fill="#e7dcc8" stroke="#292524" stroke-width="2"/>
@@ -524,7 +524,7 @@ SVG
     private static function festivalChapterScenes(): array
     {
         return [
-            1 => <<'SVG'
+            1 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Festivalplakat mit Line-up">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#bae6fd"/><rect x="0" y="88" width="260" height="32" rx="8" fill="#86efac"/>
 <rect x="76" y="14" width="108" height="92" rx="6" fill="#fffbeb" stroke="#a78bfa" stroke-width="3"/>
@@ -534,7 +534,7 @@ SVG
   <circle cx="104" cy="94" r="6" fill="#a78bfa"/><rect x="116" y="90" width="38" height="8" rx="4" fill="#fbbf24"/>
   <path d="M20 60 l18 -8 l0 16 Z" fill="#fbbf24"/><path d="M240 60 l-18 -8 l0 16 Z" fill="#fbbf24"/></svg>
 SVG,
-            2 => <<'SVG'
+            2 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Zwei Festivalbühnen mit Zeltdach">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#bae6fd"/><rect x="0" y="88" width="260" height="32" rx="8" fill="#86efac"/>
 <path d="M30 34 L70 20 L110 34 Z" fill="#f472b6"/>
@@ -546,7 +546,7 @@ SVG,
   <path d="M70 88 q30 8 60 0" stroke="#15803d" stroke-width="3" fill="none"/>
   <circle cx="70" cy="34" r="3" fill="#fde047"/><circle cx="190" cy="34" r="3" fill="#fde047"/></svg>
 SVG,
-            3 => <<'SVG'
+            3 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bands als Punkte am roten Faden">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#bae6fd"/><rect x="0" y="88" width="260" height="32" rx="8" fill="#86efac"/>
 <path d="M30 84 Q130 20 230 74" stroke="#b91c1c" stroke-width="3" fill="none" stroke-dasharray="8 6"/>
@@ -556,7 +556,7 @@ SVG,
   <circle cx="230" cy="74" r="9" fill="#fb7185" stroke="#292524" stroke-width="2"/>
   <rect x="86" y="68" width="16" height="6" rx="2" fill="#15803d"/><rect x="158" y="58" width="16" height="6" rx="2" fill="#15803d"/></svg>
 SVG,
-            4 => <<'SVG'
+            4 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kalenderraster mit Fragezeichen">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#bae6fd"/><rect x="0" y="88" width="260" height="32" rx="8" fill="#86efac"/>
 <rect x="40" y="18" width="180" height="86" rx="6" fill="#fffbeb" stroke="#f472b6" stroke-width="3"/>
@@ -566,7 +566,7 @@ SVG,
   <rect x="162" y="46" width="44" height="26" rx="4" fill="#fecaca"/><text x="184" y="64" font-size="16" text-anchor="middle" fill="#b91c1c" font-family="sans-serif">?</text>
   <rect x="54" y="80" width="44" height="18" rx="4" fill="#e7dcc8"/><rect x="108" y="80" width="44" height="18" rx="4" fill="#e7dcc8"/><rect x="162" y="80" width="44" height="18" rx="4" fill="#e7dcc8"/></svg>
 SVG,
-            5 => <<'SVG'
+            5 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Auslastung der Bühnen als Füllstände">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#bae6fd"/><rect x="0" y="88" width="260" height="32" rx="8" fill="#86efac"/>
 <circle cx="62" cy="52" r="24" fill="none" stroke="#f472b6" stroke-width="6"/>
@@ -578,7 +578,7 @@ SVG,
   <path d="M40 90 q90 12 180 0" stroke="#15803d" stroke-width="3" fill="none"/>
   <rect x="56" y="96" width="12" height="8" fill="#7c2d12"/><rect x="124" y="96" width="12" height="8" fill="#7c2d12"/><rect x="192" y="96" width="12" height="8" fill="#7c2d12"/></svg>
 SVG,
-            6 => <<'SVG'
+            6 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Auftritte bekommen Bestätigungs-Stempel">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#bae6fd"/><rect x="0" y="88" width="260" height="32" rx="8" fill="#86efac"/>
 <rect x="52" y="16" width="156" height="88" rx="6" fill="#fffbeb" stroke="#a78bfa" stroke-width="3"/>
@@ -591,7 +591,7 @@ SVG,
   <circle cx="176" cy="46" r="12" fill="#15803d" opacity="0.5"/>
   <path d="M170 46 l4 5 l9 -10" stroke="#fffbeb" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
 SVG,
-            7 => <<'SVG'
+            7 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Lautsprecher und Kabel zur Waldbühne">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#bae6fd"/><rect x="0" y="88" width="260" height="32" rx="8" fill="#86efac"/>
 <path d="M120 20 q40 -14 80 8" stroke="#7c2d12" stroke-width="4" fill="none" stroke-dasharray="10 6"/>
@@ -603,7 +603,7 @@ SVG,
   <circle cx="186" cy="46" r="5" fill="#fed7aa"/><circle cx="186" cy="64" r="5" fill="#fed7aa"/>
   <circle cx="58" cy="24" r="12" fill="#fde047"/><path d="M58 12 l0 -4 M58 36 l0 4 M46 24 l-4 0 M70 24 l4 0" stroke="#fde047" stroke-width="3"/></svg>
 SVG,
-            8 => <<'SVG'
+            8 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Zeitstrahl fuer den Samstagsplan">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#bae6fd"/><rect x="0" y="88" width="260" height="32" rx="8" fill="#86efac"/>
 <path d="M30 62 L230 62" stroke="#292524" stroke-width="4" stroke-linecap="round"/>
@@ -617,7 +617,7 @@ SVG,
   <circle cx="130" cy="26" r="14" fill="none" stroke="#292524" stroke-width="3"/>
   <path d="M130 26 L130 16 M130 26 L138 30" stroke="#292524" stroke-width="3"/></svg>
 SVG,
-            9 => <<'SVG'
+            9 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aufgeschlagenes Programmheft">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#bae6fd"/><rect x="0" y="88" width="260" height="32" rx="8" fill="#86efac"/>
 <path d="M130 26 L52 38 L52 96 L130 84 Z" fill="#fffbeb" stroke="#a78bfa" stroke-width="3"/>
@@ -630,7 +630,7 @@ SVG,
   <rect x="150" y="72" width="38" height="6" rx="3" fill="#e7dcc8"/>
   <path d="M130 26 L130 84" stroke="#a78bfa" stroke-width="3"/></svg>
 SVG,
-            10 => <<'SVG'
+            10 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Regenschirm schützt die Bühne vor Gewitter">
   <rect x="0" y="0" width="260" height="120" rx="8" fill="#bae6fd"/><rect x="0" y="88" width="260" height="32" rx="8" fill="#86efac"/>
 <path d="M40 34 q0 -26 30 -26 q26 0 30 18 q4 -18 30 -18 q30 0 30 26 Z" fill="#f472b6"/>
@@ -648,7 +648,7 @@ SVG
     private static function islandChapterScenes(): array
     {
         return [
-            1 => <<'SVG'
+            1 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Boot legt am Holzsteg der Insel an">
 <rect x="0" y="0" width="260" height="120" rx="8" fill="#7dd3fc"/><path d="M0 78 Q130 58 260 78 L260 120 L0 120 Z" fill="#fde68a"/><path d="M20 26 L20 84 M40 26 L40 84 M60 26 L60 84" stroke="#7c2d12" stroke-width="6"/>
   <path d="M10 84 L74 84" stroke="#7c2d12" stroke-width="6"/>
@@ -658,7 +658,7 @@ SVG
   <path d="M173 16 L206 40 L173 44 Z" fill="#fde047"/>
   <path d="M100 84 q30 8 60 0" stroke="#0ea5e9" stroke-width="3" fill="none"/></svg>
 SVG,
-            2 => <<'SVG'
+            2 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hütten der Inselbewohner">
 <rect x="0" y="0" width="260" height="120" rx="8" fill="#7dd3fc"/><path d="M0 78 Q130 58 260 78 L260 120 L0 120 Z" fill="#fde68a"/><path d="M40 60 L40 100 L92 100 L92 60 Z" fill="#b45309"/>
   <path d="M32 60 L66 38 L100 60 Z" fill="#7c2d12"/>
@@ -668,7 +668,7 @@ SVG,
   <rect x="168" y="84" width="16" height="16" rx="3" fill="#292524"/>
   <circle cx="66" cy="74" r="3" fill="#fde047"/><circle cx="176" cy="82" r="3" fill="#fde047"/></svg>
 SVG,
-            3 => <<'SVG'
+            3 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Inselkarte mit Huetten und Wegen">
 <rect x="0" y="0" width="260" height="120" rx="8" fill="#7dd3fc"/><rect x="0" y="62" width="260" height="58" rx="8" fill="#38bdf8"/><path d="M20 62 Q60 46 130 54 Q200 62 240 54 L240 90 Q160 106 20 90 Z" fill="#fde68a"/>
   <path d="M60 88 q30 -14 60 -6 q30 8 44 0" stroke="#7c2d12" stroke-width="3" fill="none" stroke-dasharray="6 5"/>
@@ -678,7 +678,7 @@ SVG,
   <path d="M96 42 l20 0 m-10 -10 l0 20" stroke="#292524" stroke-width="2"/>
   <circle cx="28" cy="30" r="10" fill="#fde047"/></svg>
 SVG,
-            4 => <<'SVG'
+            4 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Verzauberte Bewohner mit Funken">
 <rect x="0" y="0" width="260" height="120" rx="8" fill="#7dd3fc"/><path d="M0 78 Q130 58 260 78 L260 120 L0 120 Z" fill="#fde68a"/><circle cx="120" cy="48" r="14" fill="#a78bfa"/>
   <path d="M96 92 q24 -34 48 0 Z" fill="#a78bfa"/>
@@ -688,7 +688,7 @@ SVG,
   <path d="M170 56 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2 Z" fill="#f472b6"/>
   <circle cx="120" cy="44" r="3" fill="#fde68a"/><circle cx="128" cy="48" r="3" fill="#fde68a"/></svg>
 SVG,
-            5 => <<'SVG'
+            5 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kette zerbricht und gib die Figur frei">
 <rect x="0" y="0" width="260" height="120" rx="8" fill="#7dd3fc"/><path d="M0 78 Q130 58 260 78 L260 120 L0 120 Z" fill="#fde68a"/><circle cx="120" cy="44" r="13" fill="#22c55e"/>
   <path d="M98 90 q22 -32 44 0 Z" fill="#22c55e"/>
@@ -698,7 +698,7 @@ SVG,
   <path d="M66 34 l4 9 l9 4 l-9 4 l-4 9 l-4 -9 l-9 -4 l9 -4 Z" fill="#fde047"/>
   <path d="M176 30 l3 7 l7 3 l-7 3 l-3 7 l-3 -7 l-7 -3 l7 -3 Z" fill="#fde047"/></svg>
 SVG,
-            6 => <<'SVG'
+            6 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Goldtruhe mit Münzen">
 <rect x="0" y="0" width="260" height="120" rx="8" fill="#7dd3fc"/><path d="M0 78 Q130 58 260 78 L260 120 L0 120 Z" fill="#fde68a"/><path d="M64 56 L196 56 L186 92 L74 92 Z" fill="#92400e"/>
   <path d="M64 56 Q130 36 196 56 L196 56" fill="#b45309"/>
@@ -708,7 +708,7 @@ SVG,
   <circle cx="130" cy="70" r="3" fill="#92400e"/>
   <path d="M40 76 l8 0 m-4 -4 l0 8" stroke="#fde047" stroke-width="2"/></svg>
 SVG,
-            7 => <<'SVG'
+            7 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Der größte Schatz bekommt einen Stern">
 <rect x="0" y="0" width="260" height="120" rx="8" fill="#7dd3fc"/><path d="M0 78 Q130 58 260 78 L260 120 L0 120 Z" fill="#fde68a"/><path d="M40 92 L100 92 L70 40 Z" fill="#94a3b8"/>
   <path d="M110 92 L162 92 L136 52 Z" fill="#fbbf24"/>
@@ -717,7 +717,7 @@ SVG,
   <path d="M40 100 L214 100" stroke="#7c2d12" stroke-width="3"/>
   <circle cx="70" cy="76" r="4" fill="#e2e8f0"/><circle cx="136" cy="80" r="4" fill="#f59e0b"/><circle cx="193" cy="82" r="4" fill="#e2e8f0"/></svg>
 SVG,
-            8 => <<'SVG'
+            8 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Silbernes Schwert auf einem Sockel">
 <rect x="0" y="0" width="260" height="120" rx="8" fill="#7dd3fc"/><path d="M0 78 Q130 58 260 78 L260 120 L0 120 Z" fill="#fde68a"/><rect x="104" y="84" width="52" height="16" rx="4" fill="#7c2d12"/>
   <rect x="118" y="76" width="24" height="8" rx="3" fill="#b45309"/>
@@ -727,7 +727,7 @@ SVG,
   <path d="M158 30 l3 7 l7 3 l-7 3 l-3 7 l-3 -7 l-7 -3 l7 -3 Z" fill="#fde047"/>
   <path d="M84 40 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2 l6 -2 Z" fill="#fde047"/></svg>
 SVG,
-            9 => <<'SVG'
+            9 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bibliothek der Insel oeffnet ihre Regale">
 <rect x="0" y="0" width="260" height="120" rx="8" fill="#7dd3fc"/><path d="M0 78 Q130 58 260 78 L260 120 L0 120 Z" fill="#fde68a"/><rect x="42" y="24" width="120" height="76" rx="4" fill="#7c2d12"/>
   <rect x="52" y="34" width="100" height="26" rx="3" fill="#fde68a"/>
@@ -738,7 +738,7 @@ SVG,
   <path d="M211 30 L211 94" stroke="#fde047" stroke-width="4"/>
   <circle cx="202" cy="62" r="3" fill="#fde047"/><circle cx="220" cy="62" r="3" fill="#fde047"/></svg>
 SVG,
-            10 => <<'SVG'
+            10 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Feder schreibt Autorinnen-Namen ins Buch">
 <rect x="0" y="0" width="260" height="120" rx="8" fill="#7dd3fc"/><path d="M0 78 Q130 58 260 78 L260 120 L0 120 Z" fill="#fde68a"/><path d="M60 34 L60 92 L196 92 L196 34 Z" fill="#fffbeb" stroke="#92400e" stroke-width="4"/>
   <path d="M60 46 L196 46" stroke="#e7dcc8" stroke-width="3"/>
@@ -749,7 +749,7 @@ SVG,
   <circle cx="216" cy="78" r="6" fill="#fde047"/>
   <path d="M40 60 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 l10 -4 Z" fill="#fde047"/></svg>
 SVG,
-            11 => <<'SVG'
+            11 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Schatzkarte mit Orten und Kreuzen">
 <rect x="0" y="0" width="260" height="120" rx="8" fill="#7dd3fc"/><rect x="0" y="62" width="260" height="58" rx="8" fill="#38bdf8"/><path d="M20 62 Q80 48 130 56 Q190 64 240 56 L240 92 Q150 104 20 92 Z" fill="#fde68a"/>
   <path d="M44 82 l10 0 M49 77 l0 10 M44 82 l0 0" stroke="#b91c1c" stroke-width="4"/>
@@ -759,7 +759,7 @@ SVG,
   <rect x="34" y="28" width="60" height="26" rx="4" fill="#fffbeb" stroke="#b45309" stroke-width="2"/>
   <path d="M64 46 L64 38 M64 46 L58 42 M64 46 L70 42" stroke="#292524" stroke-width="2"/></svg>
 SVG,
-            12 => <<'SVG'
+            12 => <<<'SVG'
 <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Waage vergleicht Schaetze mit dem Durchschnitt">
 <rect x="0" y="0" width="260" height="120" rx="8" fill="#7dd3fc"/><path d="M0 78 Q130 58 260 78 L260 120 L0 120 Z" fill="#fde68a"/><path d="M130 30 L130 88" stroke="#7c2d12" stroke-width="6"/>
   <path d="M130 88 L108 96 M130 88 L152 96" stroke="#7c2d12" stroke-width="6"/>
