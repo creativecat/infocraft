@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.16.0
+ * @version 0.24.0
  */
 declare(strict_types=1);
 
@@ -62,6 +62,7 @@ $router->post('/unterricht/klassen/modul', [TeacherController::class, 'setModule
 
 // SQL-Werkstatt (feste Routen vor den Platzhaltern registrieren)
 $router->get('/werkstatt/sql', [SqlWorkshopController::class, 'index']);
+$router->get('/werkstatt/sql/abenteuer', [SqlWorkshopController::class, 'adventures']);
 $router->post('/werkstatt/sql/verteilen', [SqlWorkshopController::class, 'distribute']);
 $router->post('/werkstatt/sql/kopie', [SqlWorkshopController::class, 'selfCopy']);
 $router->post('/werkstatt/sql/entfernen', [SqlWorkshopController::class, 'revoke']);

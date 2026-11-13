@@ -5,6 +5,15 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.24.0] - 2026-11-13
+
+### SQL-Werkstatt: Abenteuer-Bereich mit Quest-Übersicht und drei neuen Abenteuern (#195, #196)
+
+- Die SQL-Werkstatt bekommt einen eigenen Abenteuer-Bereich für erzählte SQL-Missionen (#195): Eine Quest-Übersicht unter „werkstatt/sql/abenteuer“ zeigt alle Abenteuer als Karten mit handgebauten Szenenbildern (Insel, Raumstation, Museum, Festival), Story-Teaser und Fortschrittsbalken. Die Übersicht ist von der Werkstatt-Startseite aus erreichbar.
+- Abenteuer öffnen sich in einer Kapitel-Ansicht (#195): Rahmenhandlung und Szenenbild oben, dazu die SQL-Konsole und ein aufklappbarer Werkzeugkasten mit Tabellen und ER-Diagramm. Die Missionen erscheinen als Kapitel: Gelöste zeigen die Musterlösung, das aktuelle ist violett hervorgehoben, kommende sind noch verschlossen, bis die Geschichte weitergeht. Ist alles gelöst, gratuliert ein Abschluss-Banner zum Ende der Geschichte.
+- Drei neue Abenteuer mit je 10 Kapiteln und eigenen Seed-Datenbanken (#196): „Raumstation Alpha“ (Meteoritenschauer, Crew retten: SELECT, WHERE, JOIN, COUNT, UPDATE, GROUP BY), „Das Museum des verschwundenen Meisterwerks“ (Gemäldediebstahl aufklären: JOIN, IS NULL, GROUP BY mit HAVING, UPDATE, Unterabfragen) und „Festival der jungen Bühnen“ (Programm retten: ORDER BY, GROUP BY, UPDATE mit Unterabfragen, Dreifach-Join).
+- Das bestehende „Dateninsel-Abenteuer“ zieht in die neue Oberfläche ein; Austeilen, Rechte und Lösungskontrolle laufen für alle Abenteuer unverändert über die bewährte Infrastruktur. Die Beispielklasse 9R erhält die neuen Abenteuer direkt mit Schreibrechten; bestehende Installationen bekommen alles idempotent über den Migrator.
+
 ## [0.23.0] - 2026-11-13
 
 ### InfoBook: Präsentation mit Einblend-Schritten, Beispiel-Buchpakete (#191-#194)

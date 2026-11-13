@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.15.0
+ * @version 0.24.0
  */
 declare(strict_types=1);
 
@@ -17,6 +17,7 @@ use Infocraft\Models\SqlTemplate;
 use Infocraft\Models\User;
 use PDO;
 use PDOException;
+use Infocraft\SqlAdventure;
 use Infocraft\SqlWorkshop;
 
 final class SqlWorkshopController
@@ -38,6 +39,42 @@ final class SqlWorkshopController
             'studentsByClass' => $isTeacher ? self::studentsByClass($user) : [],
             'assignments' => $isTeacher ? SqlTemplate::grantsOverview($user->id, $user->role === 'admin') : [],
             'permissions' => SqlWorkshop::PERMISSIONS,
+        ]);
+    }
+
+    /* ===== Abenteuer-Bereich (#195): Quest-Übersicht und Kapitel-Ansicht =====
+     * Erzählte SQL-Abenteuer nutzen dieselbe Infrastruktur wie die anderen
+     * Vorlagen (Grants, Missionen, Lösungskontrolle), bekommen aber eine
+     * eigene Oberfläche: Quest-Karten mit Szenenbild und Fortschritt hier,
+     * die Kapitel-Ansicht steckt in sql_adventure.php. */
+
+    /** Quest-Übersicht: alle Abenteuer als Karten mit Szenenbild und Fortschritt. */
+    public static function adventures(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        $isTeacher = Auth::isTeacher();
+        $adventures = [];
+        foreach (SqlTemplate::adventures() as $template) {
+            $grant = SqlTemplate::grantFor($template->id, $user->id);
+            $total = count(SqlTemplate::missions($template->id));
+            $solved = $grant !== null ? count(SqlTemplate::solvedMissionIds($grant['grantId'])) : 0;
+            $adventures[] = [
+                'template' => $template,
+                'meta' => SqlAdventure::meta($template->slug),
+                'total' => $total,
+                'solved' => $solved,
+                'available' => $grant !== null || $isTeacher,
+            ];
+        }
+        render('sql_adventures', [
+            'title' => 'SQL-Abenteuer',
+            'active' => 'module-sql',
+            'adventures' => $adventures,
+            'isTeacher' => $isTeacher,
+            'user' => $user,
         ]);
     }
 
@@ -63,7 +100,7 @@ final class SqlWorkshopController
         }
 
         $pdo = SqlWorkshop::workspacePdo($template->slug, $user->id, $grant['permission']);
-        render('sql_workspace', [
+        render($template->isAdventure ? 'sql_adventure' : 'sql_workspace', [
             'title' => $template->title,
             'active' => 'module-sql',
             'template' => $template,
@@ -77,6 +114,7 @@ final class SqlWorkshopController
             'result' => $result,
             'lastSql' => $lastSql,
             'user' => $user,
+            'meta' => $template->isAdventure ? SqlAdventure::meta($template->slug) : null,
         ]);
     }
 

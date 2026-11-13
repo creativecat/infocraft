@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.15.0
+ * @version 0.24.0
  */
 declare(strict_types=1);
 
@@ -162,6 +162,9 @@ final class Migrator
             ['adventure', 'Dateninsel-Abenteuer', 'Rette die Insel mit SQL: erzählte Missionen vom SELECT bis zum UPDATE. Für die Aufgaben sind Schreibrechte nötig.', 9, 1],
             ['schule', 'Schule', 'Lehrkräfte, Kurse, Schülerinnen und Schüler und ihre Kursteilnahmen: Noten auswerten mit JOIN und GROUP BY.', 9, 0],
             ['bibliothek', 'Schulbibliothek', 'Bücher, Leserinnen und Leser und Ausleihen: unterwegs mit SELECT, JOIN und IS NULL.', 9, 0],
+            ['raumstation', 'Raumstation Alpha', 'Meteoriten haben die Station getroffen: Finde die Crew, repariere die Tanks und stabilisiere die Systeme mit SQL. Für die Aufgaben sind Schreibrechte nötig.', 9, 1],
+            ['museum', 'Das Museum des verschwundenen Meisterwerks', 'Ein Gemälde ist verschwunden: Sortiere die Besucherdaten und schalte die Kameras mit SQL scharf. Für die Aufgaben sind Schreibrechte nötig.', 9, 1],
+            ['festival', 'Festival der jungen Bühnen', 'Das Festival steht vor der Tür, aber Auftritte und Technik sind durcheinander: Stelle das Programm mit SQL wieder zusammen. Für die Aufgaben sind Schreibrechte nötig.', 9, 1],
         ];
         /* Bestehende Installationen: alte Vorlage hieß mal anders (#45
          * Nacharbeit), Zeile umbenennen, damit Grants und Missionen erhalten
@@ -237,6 +240,48 @@ final class Migrator
                 ['position' => 4, 'kind' => 'query', 'title' => 'Stammleserinnen', 'story' => 'Wie viele Ausleihen hat jede Leserin und jeder Leser? Zeige Name und Anzahl.', 'hint' => 'JOIN ausleihen mit leser, dann GROUP BY name.', 'solution_sql' => 'SELECT l.name, COUNT(*) FROM ausleihen a JOIN leser l ON l.id = a.leser_id GROUP BY l.name ORDER BY l.name'],
             ];
         }
+        if ($slug === 'raumstation') {
+            return [
+                ['position' => 1, 'kind' => 'query', 'title' => 'Ankunft auf der Brücke', 'story' => 'Der Zubringer hat dich an der Raumstation Alpha abgesetzt. Kommandantin Kira schiebt dir die Konsole herüber: Sieh dich erst einmal um. Zeige alle Spalten aller Module der Station.', 'hint' => 'SELECT * FROM module zeigt alle Spalten und Zeilen.', 'solution_sql' => 'SELECT * FROM module'],
+                ['position' => 2, 'kind' => 'query', 'title' => 'Die Crew-Liste', 'story' => 'Kira braucht eine schnelle Übersicht für die Rollcall-Prüfung. Zeige Name und Rolle aller Crew-Mitglieder.', 'hint' => 'SELECT name, rolle FROM crew', 'solution_sql' => 'SELECT name, rolle FROM crew'],
+                ['position' => 3, 'kind' => 'query', 'title' => 'Wo steckt wer?', 'story' => 'Für die Rettungsplanung muss klar sein, wo jede Person arbeitet. Zeige den Namen jedes Crew-Mitglieds zusammen mit dem Namen seines Moduls.', 'hint' => 'JOIN crew mit module über die modul_id: erst der Personenname, dann der Modulname.', 'solution_sql' => 'SELECT c.name, m.name FROM crew c JOIN module m ON m.id = c.modul_id'],
+                ['position' => 4, 'kind' => 'query', 'title' => 'Vermisst nach dem Einschlag', 'story' => 'Der Meteoritenschauer hat den Wohnring beschädigt. Zwei Crew-Mitglieder melden sich nicht mehr. Zeige ihre Namen.', 'hint' => "WHERE status = 'vermisst' findet die beiden.", 'solution_sql' => "SELECT name FROM crew WHERE status = 'vermisst'"],
+                ['position' => 5, 'kind' => 'query', 'title' => 'Undichte Tanks', 'story' => 'Die Leitwarte meldet leckende Sauerstofftanks. Wie viele Tanks sind defekt? Zeige nur die Anzahl.', 'hint' => 'SELECT COUNT(*) mit WHERE defekt = 1 zählt die betroffenen Tanks.', 'solution_sql' => 'SELECT COUNT(*) FROM tanks WHERE defekt = 1'],
+                ['position' => 6, 'kind' => 'action', 'title' => 'Die Reparaturdrohnen', 'story' => 'Ingenieurin Ilka gibt dir die Drohnenfernsteuerung: Markiere alle defekten Tanks als repariert (defekt = 0).', 'hint' => 'UPDATE tanks SET defekt = 0 WHERE defekt = 1', 'solution_sql' => 'UPDATE tanks SET defekt = 0 WHERE defekt = 1', 'check_sql' => 'SELECT COUNT(*) FROM tanks WHERE defekt = 1', 'check_expected' => '0'],
+                ['position' => 7, 'kind' => 'query', 'title' => 'Sauerstoff je Modul', 'story' => 'Wie viel Sauerstoff liegt je Modul? Zeige den Modulnamen und die Summe der Füllstände, sortiert nach Modulname.', 'hint' => 'JOIN tanks mit module, dann GROUP BY Modulname mit SUM(fuellstand) und ORDER BY.', 'solution_sql' => 'SELECT m.name, SUM(t.fuellstand) FROM tanks t JOIN module m ON m.id = t.modul_id GROUP BY m.name ORDER BY m.name'],
+                ['position' => 8, 'kind' => 'action', 'title' => 'Aufwecken aus dem Kälteschlaf', 'story' => 'Der Notfallplan der Station ist eindeutig: Hole alle Crew-Mitglieder aus dem Kälteschlaf zurück in den Einsatz (status = einsatzbereit).', 'hint' => "UPDATE crew SET status = 'einsatzbereit' WHERE status = 'kalt'", 'solution_sql' => "UPDATE crew SET status = 'einsatzbereit' WHERE status = 'kalt'", 'check_sql' => "SELECT COUNT(*) FROM crew WHERE status = 'kalt'", 'check_expected' => '0'],
+                ['position' => 9, 'kind' => 'query', 'title' => 'Schwerste Fracht', 'story' => 'Für die Hüllenreparatur braucht Techniker Tarek die drei schwersten Frachtstücke. Zeige Name und Gewicht, schwerstes zuerst.', 'hint' => 'ORDER BY gewicht DESC LIMIT 3 zeigt die drei schwersten.', 'solution_sql' => 'SELECT name, gewicht FROM fracht ORDER BY gewicht DESC LIMIT 3'],
+                ['position' => 10, 'kind' => 'query', 'title' => 'Energiebericht ans Kontrollzentrum', 'story' => 'Zum Abschluss braucht das Kontrollzentrum auf der Erde einen Bericht von dir: Wie hoch ist die durchschnittliche Energie je Sektor? Zeige Sektor und Durchschnitt, sortiert nach Sektor.', 'hint' => 'GROUP BY sektor mit AVG(energie), dann ORDER BY sektor.', 'solution_sql' => 'SELECT sektor, AVG(energie) FROM module GROUP BY sektor ORDER BY sektor'],
+            ];
+        }
+        if ($slug === 'museum') {
+            return [
+                ['position' => 1, 'kind' => 'query', 'title' => 'Das Inventar', 'story' => 'Ermittlerin Mara Klar schiebt dir ihren Laptop hin: Das berühmte Gemälde \"Der Morgen\" ist in der Nacht verschwunden. Zeige Titel und Künstlerin aller Werke.', 'hint' => 'SELECT titel, kuenstlerin FROM werke', 'solution_sql' => 'SELECT titel, kuenstlerin FROM werke'],
+                ['position' => 2, 'kind' => 'query', 'title' => 'Der Grundriss', 'story' => 'Zuerst brauchst du den Überblick über das Haus. Zeige Name und Flügel aller Räume.', 'hint' => 'SELECT name, fluegel FROM raeume', 'solution_sql' => 'SELECT name, fluegel FROM raeume'],
+                ['position' => 3, 'kind' => 'query', 'title' => 'Besuche am Tatabend', 'story' => 'Der Einbruch geschah am Abend des 30. Oktober. Zeige alle Besucherinnen und Besucher mit Uhrzeit, die nach 20:00 Uhr ins Haus kamen, sortiert nach Uhrzeit.', 'hint' => "WHERE uhrzeit > '20:00' vergleicht die Uhrzeit als Text, ORDER BY uhrzeit sortiert.", 'solution_sql' => "SELECT name, uhrzeit FROM besuche WHERE uhrzeit > '20:00' ORDER BY uhrzeit"],
+                ['position' => 4, 'kind' => 'query', 'title' => 'Das Verliehen-Alibi', 'story' => 'Nicht jedes Werk hing überhaupt im Haus: Manche sind verliehen. Zeige Titel und Leihgeber aller verliehenen Werke.', 'hint' => 'WHERE verliehen_an IS NOT NULL findet Zeilen mit Wert.', 'solution_sql' => 'SELECT titel, verliehen_an FROM werke WHERE verliehen_an IS NOT NULL'],
+                ['position' => 5, 'kind' => 'query', 'title' => 'Der Ostflügel', 'story' => 'Die erste Spur führt in den Ostflügel. Zeige alle Werke des Ostflügels mit ihrem Raum, sortiert nach Titel.', 'hint' => "JOIN werke mit raeume und WHERE r.fluegel = 'Ost'.", 'solution_sql' => "SELECT w.titel, r.name FROM werke w JOIN raeume r ON r.id = w.raum_id WHERE r.fluegel = 'Ost' ORDER BY w.titel"],
+                ['position' => 6, 'kind' => 'query', 'title' => 'Kameras je Flügel', 'story' => 'Wie viele Kameras sind je Flügel aktiv? Zeige Flügel und Anzahl, sortiert nach Flügel.', 'hint' => 'JOIN kameras mit raeume, WHERE aktiv = 1, dann GROUP BY fluegel mit COUNT(*).', 'solution_sql' => "SELECT r.fluegel, COUNT(*) FROM kameras k JOIN raeume r ON r.id = k.raum_id WHERE k.aktiv = 1 GROUP BY r.fluegel ORDER BY r.fluegel"],
+                ['position' => 7, 'kind' => 'action', 'title' => 'Kameras scharfschalten', 'story' => 'Mara Klar lässt keine Zeit verstreichen: Schalte mit einer einzigen Anweisung alle ausgeschalteten Kameras scharf (aktiv = 1).', 'hint' => 'UPDATE kameras SET aktiv = 1 WHERE aktiv = 0', 'solution_sql' => 'UPDATE kameras SET aktiv = 1 WHERE aktiv = 0', 'check_sql' => 'SELECT COUNT(*) FROM kameras WHERE aktiv = 0', 'check_expected' => '0'],
+                ['position' => 8, 'kind' => 'query', 'title' => 'Die Wege von Vera Nacht', 'story' => 'Vera Nacht war den ganzen Abend im Haus unterwegs. Zeige ihre Räume mit Uhrzeiten, sortiert nach Uhrzeit.', 'hint' => "JOIN besuche mit raeume und WHERE b.name = 'Vera Nacht'.", 'solution_sql' => "SELECT r.name, b.uhrzeit FROM besuche b JOIN raeume r ON r.id = b.raum_id WHERE b.name = 'Vera Nacht' ORDER BY b.uhrzeit"],
+                ['position' => 9, 'kind' => 'query', 'title' => 'Vielbesuchte Räume', 'story' => 'Welche Räume hatten am Tatabend mehr als zwei Besuche? Zeige Raum und Anzahl, sortiert nach Raumname.', 'hint' => 'HAVING COUNT(*) > 2 filtert ganze Gruppen nach der Aggregation.', 'solution_sql' => 'SELECT r.name, COUNT(*) FROM besuche b JOIN raeume r ON r.id = b.raum_id GROUP BY r.name HAVING COUNT(*) > 2 ORDER BY r.name'],
+                ['position' => 10, 'kind' => 'query', 'title' => 'Die letzte Person im Raum', 'story' => 'Alle Spuren laufen zusammen: Wer war die letzte Person im Raum des verschwundenen Gemäldes? Zeige nur den Namen. Eine Unterabfrage findet den passenden Raum.', 'hint' => "WHERE raum_id = (SELECT raum_id FROM werke WHERE titel = 'Der Morgen'), dann ORDER BY uhrzeit DESC LIMIT 1.", 'solution_sql' => "SELECT name FROM besuche WHERE raum_id = (SELECT raum_id FROM werke WHERE titel = 'Der Morgen') ORDER BY uhrzeit DESC LIMIT 1"],
+            ];
+        }
+        if ($slug === 'festival') {
+            return [
+                ['position' => 1, 'kind' => 'query', 'title' => 'Das Line-up', 'story' => 'Festivalchefin Jule blättert zwischen Kabeltrommeln und Kassenplan: Zeige Name und Genre aller Bands.', 'hint' => 'SELECT name, genre FROM bands', 'solution_sql' => 'SELECT name, genre FROM bands'],
+                ['position' => 2, 'kind' => 'query', 'title' => 'Die Bühnen', 'story' => 'Zeige Name und Größe aller Bühnen des Festivalgeländes.', 'hint' => 'SELECT name, groesse FROM buehnen', 'solution_sql' => 'SELECT name, groesse FROM buehnen'],
+                ['position' => 3, 'kind' => 'query', 'title' => 'Der rote Faden', 'story' => 'Welche Band spielt wann? Zeige Bandname, Tag und Uhrzeit aller Auftritte, sortiert erst nach Tag, dann nach Uhrzeit.', 'hint' => 'JOIN auftritte mit bands über die band_id, ORDER BY tag, uhrzeit.', 'solution_sql' => 'SELECT b.name, a.tag, a.uhrzeit FROM auftritte a JOIN bands b ON b.id = a.band_id ORDER BY a.tag, a.uhrzeit'],
+                ['position' => 4, 'kind' => 'query', 'title' => 'Unklare Auftritte', 'story' => 'Zwei Auftritte sind noch unklar. Zeige Band und Uhrzeit dieser Auftritte, sortiert nach Uhrzeit.', 'hint' => "WHERE a.status = 'unklar' findet die offenen Fälle.", 'solution_sql' => "SELECT b.name, a.uhrzeit FROM auftritte a JOIN bands b ON b.id = a.band_id WHERE a.status = 'unklar' ORDER BY a.uhrzeit"],
+                ['position' => 5, 'kind' => 'query', 'title' => 'Auslastung der Bühnen', 'story' => 'Wie viele Auftritte sind je Bühne eingeplant? Zeige Bühne und Anzahl, sortiert nach Bühnenname.', 'hint' => 'JOIN auftritte mit buehnen über die buehne_id, GROUP BY Bühnenname mit COUNT(*).', 'solution_sql' => 'SELECT b.name, COUNT(*) FROM auftritte a JOIN buehnen b ON b.id = a.buehne_id GROUP BY b.name ORDER BY b.name'],
+                ['position' => 6, 'kind' => 'action', 'title' => 'Auftritte bestätigen', 'story' => 'Jule gibt dir Vollmacht: Bestätige mit einer einzigen Anweisung alle noch unklaren Auftritte (status = bestaetigt).', 'hint' => "UPDATE auftritte SET status = 'bestaetigt' WHERE status = 'unklar'", 'solution_sql' => "UPDATE auftritte SET status = 'bestaetigt' WHERE status = 'unklar'", 'check_sql' => "SELECT COUNT(*) FROM auftritte WHERE status = 'unklar'", 'check_expected' => '0'],
+                ['position' => 7, 'kind' => 'query', 'title' => 'Technik für die Waldbühne', 'story' => 'Die Toncrew will nicht suchen: Zeige Name und Kategorie der gesamten Technik der Waldbühne, sortiert nach Name.', 'hint' => "JOIN technik mit buehnen und WHERE b.name = 'Waldbühne'.", 'solution_sql' => "SELECT t.name, t.kategorie FROM technik t JOIN buehnen b ON b.id = t.buehne_id WHERE b.name = 'Waldbühne' ORDER BY t.name"],
+                ['position' => 8, 'kind' => 'query', 'title' => 'Timeplan Samstag', 'story' => 'Der Samstag muss gut getaktet sein: Zeige alle Bands des Samstags mit ihrer Uhrzeit, sortiert nach Uhrzeit.', 'hint' => "WHERE a.tag = 'Samstag' und ORDER BY uhrzeit.", 'solution_sql' => "SELECT b.name, a.uhrzeit FROM auftritte a JOIN bands b ON b.id = a.band_id WHERE a.tag = 'Samstag' ORDER BY a.uhrzeit"],
+                ['position' => 9, 'kind' => 'query', 'title' => 'Das Programmheft', 'story' => 'Für das Programmheft fehlt die große Übersicht: Zeige Band, Bühne, Tag und Uhrzeit aller Auftritte, sortiert erst nach Tag, dann nach Uhrzeit.', 'hint' => 'Zwei JOINs verbinden auftritte mit bands und buehnen.', 'solution_sql' => 'SELECT b.name, s.name, a.tag, a.uhrzeit FROM auftritte a JOIN bands b ON b.id = a.band_id JOIN buehnen s ON s.id = a.buehne_id ORDER BY a.tag, a.uhrzeit'],
+                ['position' => 10, 'kind' => 'action', 'title' => 'Wetterrettung', 'story' => 'Der Wetterbericht meldet ein Gewitter für Sonntag: Verschiebe mit einer einzigen Anweisung alle Auftritte der Wiese auf die Waldbühne.', 'hint' => 'UPDATE mit zwei Unterabfragen: SET buehne_id = (SELECT id von der Waldbühne) und WHERE buehne_id = (SELECT id von der Wiese).', 'solution_sql' => "UPDATE auftritte SET buehne_id = (SELECT id FROM buehnen WHERE name = 'Waldbühne') WHERE buehne_id = (SELECT id FROM buehnen WHERE name = 'Wiese')", 'check_sql' => "SELECT COUNT(*) FROM auftritte WHERE buehne_id = (SELECT id FROM buehnen WHERE name = 'Wiese')", 'check_expected' => '0'],
+            ];
+        }
         // adventure (Dateninsel)
         return [
             ['position' => 1, 'kind' => 'query', 'title' => 'Ankunft im Hafen', 'story' => 'Der Sturm hat die Dateninsel verwüstet. Der Lotse sagt: Sieh dich erst einmal um. Zeige alle Orte der Insel.', 'hint' => 'SELECT * FROM orte zeigt alle Spalten und Zeilen.', 'solution_sql' => 'SELECT * FROM orte'],
@@ -277,13 +322,19 @@ final class Migrator
             $grant->execute([$templateId, $claudiaId, 'admin']);
         }
 
-        // 9R arbeitet am Shop (schreiben), InstaCraft (lesen) und am Abenteuer (schreiben)
+        // 9R arbeitet am Shop (schreiben), InstaCraft (lesen) und an den
+        // Abenteuern (schreiben): Insel, Raumstation, Museum und Festival.
         $students = $pdo->query("SELECT u.id FROM users u JOIN classes c ON c.id = u.class_id WHERE c.name = '9R' AND u.role = 'student'")->fetchAll();
         foreach ($students as $row) {
             $studentId = (int) $row['id'];
             $grant->execute([$templateIds['shop'], $studentId, 'write']);
             $grant->execute([$templateIds['instacraft'], $studentId, 'read']);
             $grant->execute([$templateIds['adventure'], $studentId, 'write']);
+            foreach (['raumstation', 'museum', 'festival'] as $abenteuer) {
+                if (isset($templateIds[$abenteuer])) {
+                    $grant->execute([$templateIds[$abenteuer], $studentId, 'write']);
+                }
+            }
         }
     }
 

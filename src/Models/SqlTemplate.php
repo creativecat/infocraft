@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.15.0
+ * @version 0.24.0
  */
 declare(strict_types=1);
 
@@ -59,6 +59,17 @@ final class SqlTemplate
         $stmt->execute([$slug]);
         $row = $stmt->fetch();
         return $row === false ? null : self::fromRow($row);
+    }
+
+    /** Abenteuer-Vorlagen für die Quest-Übersicht (#195): alle is_adventure-Templates. @return list<self> */
+    public static function adventures(): array
+    {
+        $rows = Database::pdo()->query('SELECT * FROM sql_templates WHERE is_adventure = 1 ORDER BY id')->fetchAll();
+        $list = [];
+        foreach ($rows as $row) {
+            $list[] = self::fromRow($row);
+        }
+        return $list;
     }
 
     public static function findById(int $id): ?self
