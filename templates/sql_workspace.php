@@ -2,7 +2,7 @@
    Datei: SQL-Werkstatt: Arbeitsfläche
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.15.0 */ ?>
+   Version: 0.25.0 */ ?>
 <?php $sqlTableNames = array_map(static fn (array $t): string => (string) $t['name'], $tables); ?>
 <section class="panel">
     <div class="panel-head">
@@ -103,10 +103,18 @@
             <?= csrf_field() ?>
             <label class="field">
                 <span>Deine SQL-Anweisung<?= ($mission['kind'] ?? 'query') === 'action' ? ' (verändert die Daten, Schreibrechte nötig)' : '' ?></span>
-                <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="mission_sql" rows="3" class="mono" placeholder="SELECT ..."></textarea></div>
+                <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="mission_sql" rows="3" class="mono" placeholder="SELECT ..."><?= e($attempt !== null && (int) $attempt['id'] === (int) $mission['id'] ? $attempt['sql'] : '') ?></textarea></div>
             </label>
             <div class="btn-row"><button class="btn btn-primary" type="submit" title="Prüfen">✅</button></div>
         </form>
+        <?php if ($attempt !== null && (int) $attempt['id'] === (int) $mission['id'] && $attempt['sql'] !== ''): ?>
+        <div class="adv-feedback">
+            <strong>🔍 Hinweis zu deinem letzten Versuch</strong>
+            <p class="muted">Deine letzte Eingabe ist erhalten:</p>
+            <pre class="code"><code class="language-sql"><?= e($attempt['sql']) ?></code></pre>
+            <p><?= e($attempt['feedback']) ?></p>
+        </div>
+        <?php endif; ?>
         <details>
             <summary class="muted">💡 Tipp anzeigen</summary>
             <p><?= e($mission['hint']) ?></p>

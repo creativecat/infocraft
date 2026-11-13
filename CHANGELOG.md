@@ -5,6 +5,16 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.25.0] - 2026-11-13
+
+### SQL-Werkstatt: Kapitel-Weg mit Szenenbildern, echte Tipps und erhaltene Eingaben (#197-#199)
+
+- Der Cursor im SQL-Bereich sitzt jetzt exakt auf dem farbig hervorgehobenen Text (#197): Das Overlay, das die Syntaxfarben zeichnet, übernimmt beim Anlegen alle schriftrelevanten Einstellungen direkt aus dem Eingabefeld, statt auf parallele CSS-Regeln zu vertrauen. Die beiden Regeln für die SQL-Schriftgröße sind zu einer zusammengefasst, sodass Cursor-Metrik und farbiger Text nicht mehr auseinanderlaufen können.
+- Die Tipps der Abenteuer-Kapitel verraten die Lösung nicht mehr (#198): Jedes der 42 Kapitel hat einen pädagogischen Hinweis, der die Richtung weist (etwa „bündele die Zeilen je Gruppe“), und zusätzlich fein abgestimmte Varianten für typische Fehlversuche, z. B. fehlendes WHERE, vergessene Sortierung, falsche Spaltenzahl oder ein UPDATE ohne Begrenzung.
+- Fehlversuche bleiben erhalten (#198): Nach einem nicht gelösten Versuch steht die eingegebene Anweisung weiter im Feld und zusätzlich in einer roten Hinweis-Karte unter der Aufgabe, zusammen mit einer gezielten Rückmeldung, was daran noch nicht passt. Nicht ausführbare Anweisungen bekommen einen Hinweis zu Schreibweise und Aufbau. Die Analyse vergleicht Tabelle, Spalten und Zeilenzahl mit der Musterlösung und wählt daraus den passenden Hinweistext.
+- Die Kapitel eines Abenteuers liegen jetzt als Weg mit Stationen (#199): Statt breiter Vollzeilen-Karten stehen die Kapitel in einem versetzten, zwei Spalten mäandernden Layout mit Nummern-Stationen und gestrichelter Verbindungslinie. Jedes Kapitel beginnt mit einem eigenen Szenenbild (Raumbrücke, Inventarliste, Festivalplakat, Schatzkarte ...), erzählt zuerst die Geschichte und hebt dann die konkrete Aufgabe in einem eigenen Kasten hervor. Verschlossene Kapitel zeigen ihr Bild gedimmt.
+- Bestehende Installationen bekommen alle neuen Texte, Tipps und Bilder automatisch über den Migrator; gelöste Kapitel bleiben gelöst, da Lösungen und Prüfungen unverändert bleiben.
+
 ## [0.24.0] - 2026-11-13
 
 ### SQL-Werkstatt: Abenteuer-Bereich mit Quest-Übersicht und drei neuen Abenteuern (#195, #196)

@@ -2,7 +2,7 @@
    Datei: SQL-Werkstatt: Abenteuer-Arbeitsfläche (Kapitel-Ansicht)
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.24.0 */ ?>
+   Version: 0.25.0 */ ?>
 <?php $sqlTableNames = array_map(static fn (array $t): string => (string) $t['name'], $tables); ?>
 <?php
 $solvedCount = 0;
@@ -122,52 +122,60 @@ $percent = $total > 0 ? (int) round($solvedCount * 100 / $total) : 0;
         <p class="muted">Du kannst die Musterlösungen noch einmal ansehen oder in der Konsole weiterexperimentieren.</p>
     </div>
     <?php endif; ?>
+    <div class="adv-path">
     <?php foreach ($missions as $mission): ?>
     <?php $isSolved = in_array((int) $mission['id'], $solved, true); ?>
     <?php $isCurrent = (int) $mission['id'] === $currentId; ?>
-    <?php if ($isSolved): ?>
-    <div class="mission adv-chapter adv-solved">
-        <div class="mission-head">
-            <span class="adv-chapter-badge">Kapitel <?= (int) $mission['position'] ?></span>
-            <strong><?= e($mission['title']) ?></strong>
-            <span class="badge-solved">✅ gelöst</span>
+    <?php $scene = \Infocraft\SqlAdventure::chapterScene($template->slug, (int) $mission['position']); ?>
+    <article class="adv-station <?= $isSolved ? 'adv-solved' : ($isCurrent ? 'adv-current' : 'adv-locked') ?>"<?= $isSolved || $isCurrent ? '' : ' title="Dieses Kapitel öffnet sich, sobald du Kapitel ' . $currentPosition . ' gelöst hast"' ?>>
+        <div class="adv-rail">
+            <span class="adv-dot<?= $isSolved ? ' adv-dot-solved' : ($isCurrent ? ' adv-dot-now' : ' adv-dot-locked') ?>"><?= $isSolved ? '✅' : ($isCurrent ? (int) $mission['position'] : '🔒') ?></span>
         </div>
-        <p class="muted"><?= e($mission['story']) ?></p>
-        <details>
-            <summary class="muted">Musterlösung ansehen</summary>
-            <pre class="code"><code class="language-sql"><?= e($mission['solution_sql']) ?></code></pre>
-        </details>
-    </div>
-    <?php elseif ($isCurrent): ?>
-    <div class="mission adv-chapter adv-current">
-        <div class="mission-head">
-            <span class="adv-chapter-badge adv-chapter-now">Kapitel <?= (int) $mission['position'] ?></span>
-            <strong><?= e($mission['title']) ?></strong>
+        <div class="adv-station-body">
+            <div class="adv-moment<?= $isCurrent || $isSolved ? '' : ' adv-moment-dim' ?>"><?= $scene ?></div>
+            <div class="mission-head">
+                <span class="adv-chapter-badge<?= $isCurrent ? ' adv-chapter-now' : '' ?>">Kapitel <?= (int) $mission['position'] ?></span>
+                <strong><?= e($mission['title']) ?></strong>
+                <?php if ($isSolved): ?><span class="badge-solved">✅ gelöst</span><?php endif; ?>
+            </div>
+            <p class="adv-story"><?= e($mission['story']) ?></p>
+            <?php if ($isCurrent): ?>
+            <div class="adv-task">
+                <strong>🎯 Deine Aufgabe</strong>
+                <p><?= e((string) ($mission['task'] ?? '')) ?></p>
+            </div>
+            <form method="post" action="<?= url('werkstatt/sql/' . $template->slug . '/mission/' . (int) $mission['id']) ?>" class="form">
+                <?= csrf_field() ?>
+                <label class="field">
+                    <span>Deine SQL-Anweisung<?= ($mission['kind'] ?? 'query') === 'action' ? ' (verändert die Daten, Schreibrechte nötig)' : '' ?></span>
+                    <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="mission_sql" rows="3" class="mono" placeholder="SELECT ..."><?= e($attempt !== null && (int) $attempt['id'] === (int) $mission['id'] ? $attempt['sql'] : '') ?></textarea></div>
+                </label>
+                <div class="btn-row"><button class="btn btn-primary" type="submit" title="Prüfen">✅</button></div>
+            </form>
+            <?php if ($attempt !== null && (int) $attempt['id'] === (int) $mission['id'] && $attempt['sql'] !== ''): ?>
+            <div class="adv-feedback">
+                <strong>🔍 Hinweis zu deinem letzten Versuch</strong>
+                <p class="muted">Deine letzte Eingabe ist erhalten:</p>
+                <pre class="code"><code class="language-sql"><?= e($attempt['sql']) ?></code></pre>
+                <p><?= e($attempt['feedback']) ?></p>
+            </div>
+            <?php endif; ?>
+            <details>
+                <summary class="muted">💡 Tipp anzeigen</summary>
+                <p><?= e($mission['hint']) ?></p>
+            </details>
+            <?php elseif ($isSolved): ?>
+            <details>
+                <summary class="muted">Musterlösung ansehen</summary>
+                <pre class="code"><code class="language-sql"><?= e($mission['solution_sql']) ?></code></pre>
+            </details>
+            <?php else: ?>
+            <p class="muted">Noch verschlossen: Löse zuerst Kapitel <?= $currentPosition ?>, dann geht es hier weiter.</p>
+            <?php endif; ?>
         </div>
-        <p><?= e($mission['story']) ?></p>
-        <form method="post" action="<?= url('werkstatt/sql/' . $template->slug . '/mission/' . (int) $mission['id']) ?>" class="form">
-            <?= csrf_field() ?>
-            <label class="field">
-                <span>Deine SQL-Anweisung<?= ($mission['kind'] ?? 'query') === 'action' ? ' (verändert die Daten, Schreibrechte nötig)' : '' ?></span>
-                <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="mission_sql" rows="3" class="mono" placeholder="SELECT ..."></textarea></div>
-            </label>
-            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Prüfen">✅</button></div>
-        </form>
-        <details>
-            <summary class="muted">💡 Tipp anzeigen</summary>
-            <p><?= e($mission['hint']) ?></p>
-        </details>
-    </div>
-    <?php else: ?>
-    <div class="mission adv-chapter adv-locked" title="Dieses Kapitel öffnet sich, sobald du Kapitel <?= $currentPosition ?> gelöst hast">
-        <div class="mission-head">
-            <span class="adv-chapter-badge">Kapitel <?= (int) $mission['position'] ?></span>
-            <strong>🔒 <?= e($mission['title']) ?></strong>
-        </div>
-        <p class="muted">Noch verschlossen: Löse zuerst Kapitel <?= $currentPosition ?>, dann geht es hier weiter.</p>
-    </div>
-    <?php endif; ?>
+    </article>
     <?php endforeach; ?>
+    </div>
 </section>
 
 <p><a class="btn btn-ghost" href="<?= url('werkstatt/sql/abenteuer') ?>">🗺️ Zurück zur Abenteuer-Übersicht</a></p>

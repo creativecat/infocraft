@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.15.0
+ * @version 0.25.0
  */
 declare(strict_types=1);
 
@@ -194,6 +194,91 @@ final class SqlWorkshop
             return false;
         }
         return self::valuesOnly($studentRows) === self::valuesOnly($solutionRows);
+    }
+
+    /**
+     * Runde 25 (#198): Gezielter Hinweis auf einen Fehlversuch, ohne die
+     * Loesung selbst zu verraten. Bevorzugt werden die Tipp-Varianten der
+     * Mission, sonst greift die allgemeine Formulierung.
+     *
+     * @param array<string, string> $variants Tipp-Varianten (Schluessel s. unten)
+     */
+    public static function attemptFeedback(PDO $pristine, string $enteredSql, string $solutionSql, bool $isAction, array $variants): string
+    {
+        $pick = static function (string $key, string $fallback) use ($variants): string {
+            $text = trim((string) ($variants[$key] ?? ''));
+            return $text !== '' ? $text : $fallback;
+        };
+        $entered = strtoupper(trim($enteredSql));
+        $solution = strtoupper(trim($solutionSql));
+        $enteredTables = self::sqlTables($enteredSql);
+        $solutionTables = self::sqlTables($solutionSql);
+        sort($enteredTables);
+        sort($solutionTables);
+        if ($enteredTables !== [] && $solutionTables !== [] && $enteredTables !== $solutionTables) {
+            return $pick('table', 'Schau noch einmal genau hin: Gesucht sind Daten aus anderen Tabellen.');
+        }
+        if ($isAction) {
+            if (str_starts_with($solution, 'UPDATE') && str_starts_with($entered, 'SELECT')) {
+                return $pick('generic', 'Hier ist ein ändernder Befehl gefragt, keine reine Abfrage.');
+            }
+            if (!str_contains($entered, 'WHERE') && str_contains($solution, 'WHERE')) {
+                return $pick('scope', 'Ohne WHERE trifft dein Befehl jede Zeile. Schränke ihn auf die gemeinten Zeilen ein.');
+            }
+            return $pick('value', 'Fast: Prüfe noch einmal, welche Werte du setzt und welche Zeilen du triffst.');
+        }
+        if (str_contains($entered, 'SELECT *') && !str_contains($solution, 'SELECT *')) {
+            return $pick('star', 'Mit SELECT * holst du alle Spalten auf einmal. Gesucht sind nur bestimmte.');
+        }
+        if (str_contains($solution, 'JOIN') && !str_contains($entered, 'JOIN')) {
+            return $pick('join', 'Die Antwort steckt in mehreren Tabellen. Verbinde sie mit einem JOIN.');
+        }
+        if (str_contains($solution, 'GROUP BY') && !str_contains($entered, 'GROUP BY')) {
+            return $pick('groupby', 'Gesucht ist ein Ergebnis je Gruppe. GROUP BY bündelt die Zeilen.');
+        }
+        if (str_contains($solution, 'HAVING') && !str_contains($entered, 'HAVING')) {
+            return $pick('having', 'Nach dem Bündeln kannst du Gruppen mit HAVING ausfiltern.');
+        }
+        if (str_contains($solution, 'WHERE') && !str_contains($entered, 'WHERE')) {
+            return $pick('where', 'Gesucht sind nicht alle Zeilen. Schränke das Ergebnis mit WHERE ein.');
+        }
+        if (str_contains($solution, 'ORDER BY') && !str_contains($entered, 'ORDER BY')) {
+            return $pick('orderby', 'Die Reihenfolge der Zeilen gehört zur Aufgabe. ORDER BY sortiert.');
+        }
+        if (str_contains($solution, 'LIMIT') && !str_contains($entered, 'LIMIT')) {
+            return $pick('limit', 'Gesucht sind nur einige der Zeilen. LIMIT schneidet den Rest ab.');
+        }
+        if (str_contains($solution, '(SELECT') && !str_contains($entered, '(SELECT')) {
+            return $pick('subquery', 'Ein Teil der Antwort steckt in einer eigenen Abfrage. Eine Unterabfrage in Klammern hilft weiter.');
+        }
+        if (str_starts_with($entered, 'SELECT')) {
+            $studentRows = self::fetchRows($pristine, $enteredSql);
+            $solutionRows = self::fetchRows($pristine, $solutionSql);
+            if ($studentRows !== null && $solutionRows !== null && $studentRows !== [] && $solutionRows !== []) {
+                $studentCols = substr_count(self::valuesOnly($studentRows)[0], '|') + 1;
+                $solutionCols = substr_count(self::valuesOnly($solutionRows)[0], '|') + 1;
+                if ($studentCols !== $solutionCols) {
+                    return $pick('columns', 'Deine Abfrage liefert andere Spalten als gesucht.');
+                }
+                if (count($studentRows) !== count($solutionRows)) {
+                    return $pick('rows', 'Deine Abfrage liefert andere Zeilen als gesucht.');
+                }
+            }
+        }
+        return $pick('generic', 'Noch nicht ganz. Vergleiche dein Ergebnis noch einmal mit der Aufgabe.');
+    }
+
+    /** Tabellennamen aus FROM/JOIN/UPDATE/INTO, kleingeschrieben und ohne Dubletten. @return list<string> */
+    private static function sqlTables(string $sql): array
+    {
+        if (preg_match_all('/\b(?:FROM|JOIN|UPDATE|INTO)\s+([a-zA-Z_][a-zA-Z0-9_]*)/i', $sql, $matches) === 0) {
+            return [];
+        }
+        $names = [];
+        foreach ($matches[1] as $name) {
+            $names[strtolower($name)] = true;
+        }
+        return array_keys($names);
     }
 
     /** Ergebnis einer Kontrollabfrage (erste Spalte der ersten Zeile) als String. */

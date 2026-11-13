@@ -1234,6 +1234,16 @@
     var code = document.createElement('code');
     code.className = 'language-' + lang;
     pre.appendChild(code);
+    /* Runde 25 (#197): Der Browser zeichnet den Cursor mit der Schriftmetrik
+     * der Textarea. Damit der farbige Text im pre exakt an derselben Stelle
+     * liegt wie der Cursor, uebernehmen wir alle schriftrelevanten Styles der
+     * Textarea ins pre, statt auf identische CSS-Regeln zu vertrauen. */
+    var areaStyle = window.getComputedStyle(area);
+    ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight',
+     'letterSpacing', 'fontVariant', 'fontFeatureSettings', 'tabSize'
+    ].forEach(function (prop) {
+      if (areaStyle[prop]) { pre.style[prop] = areaStyle[prop]; }
+    });
     wrap.appendChild(pre);
     wrap.classList.add('hl-active');
     var sync = function () {

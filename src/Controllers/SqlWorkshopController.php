@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.24.0
+ * @version 0.25.0
  */
 declare(strict_types=1);
 
@@ -99,6 +99,17 @@ final class SqlWorkshopController
             unset($_SESSION['sql_result']);
         }
 
+        // Runde 25 (#198): Erhaltene Eingabe und gezielter Hinweis aus einem Fehlversuch.
+        $attempt = null;
+        if (isset($_SESSION['mission_attempt']) && is_array($_SESSION['mission_attempt']) && ($_SESSION['mission_attempt']['slug'] ?? '') === $template->slug) {
+            $attempt = [
+                'id' => (int) ($_SESSION['mission_attempt']['id'] ?? 0),
+                'sql' => (string) ($_SESSION['mission_attempt']['sql'] ?? ''),
+                'feedback' => (string) ($_SESSION['mission_attempt']['feedback'] ?? ''),
+            ];
+            unset($_SESSION['mission_attempt']);
+        }
+
         $pdo = SqlWorkshop::workspacePdo($template->slug, $user->id, $grant['permission']);
         render($template->isAdventure ? 'sql_adventure' : 'sql_workspace', [
             'title' => $template->title,
@@ -113,6 +124,7 @@ final class SqlWorkshopController
             'solved' => SqlTemplate::solvedMissionIds($grant['grantId']),
             'result' => $result,
             'lastSql' => $lastSql,
+            'attempt' => $attempt,
             'user' => $user,
             'meta' => $template->isAdventure ? SqlAdventure::meta($template->slug) : null,
         ]);
@@ -160,14 +172,22 @@ final class SqlWorkshopController
         $sql = (string) ($_POST['mission_sql'] ?? '');
         $pdo = SqlWorkshop::workspacePdo($template->slug, $user->id, $grant['permission']);
         $run = SqlWorkshop::run($grant['permission'], $sql, $pdo);
+        $pristine = SqlWorkshop::pristinePdo($template->slug);
         if (!$run['ok']) {
-            flash('error', 'Die Anweisung war nicht ausführbar: ' . $run['error']);
+            // Runde 25 (#198): Eingabe erhalten und mit Syntax-Hinweis zurückmelden.
+            $_SESSION['mission_attempt'] = [
+                'slug' => $template->slug,
+                'id' => (int) $mission['id'],
+                'sql' => $sql,
+                'feedback' => 'Die Anweisung ist so noch nicht ausführbar: ' . (string) $run['error'] . ' Prüfe Schreibweise der Schlüsselwörter, Kommas zwischen den Spalten und das Semikolon am Ende.',
+            ];
+            flash('error', 'Die Anweisung war nicht ausführbar. Deine Eingabe ist erhalten.');
             redirect('/werkstatt/sql/' . $template->slug . '#aufgaben');
         }
 
         $solved = false;
         if (($mission['kind'] ?? 'query') === 'query') {
-            $solved = SqlWorkshop::matchesSolution($sql, $pdo, SqlWorkshop::pristinePdo($template->slug), (string) $mission['solution_sql']);
+            $solved = SqlWorkshop::matchesSolution($sql, $pdo, $pristine, (string) $mission['solution_sql']);
         } else {
             $value = SqlWorkshop::checkValue($pdo, (string) $mission['check_sql']);
             $solved = $value !== null && trim($value) === trim((string) ($mission['check_expected'] ?? ''));
@@ -177,11 +197,22 @@ final class SqlWorkshopController
             SqlTemplate::solve($grant['grantId'], (int) $mission['id']);
             flash('success', 'Aufgabe gelöst: ' . (string) $mission['title'] . ' 🎉');
         } else {
-            $message = 'Noch nicht gelöst. Dein Ergebnis passt noch nicht zur Aufgabe.';
-            if (($mission['kind'] ?? 'query') === 'action') {
-                $message = 'Anweisung ausgeführt, aber die Kontrolle ist noch nicht erfüllt.';
-            }
-            flash('error', $message . ' Tipp: ' . (string) $mission['hint']);
+            // Runde 25 (#198): Eingabe erhalten und gezielt erklären, was noch fehlt.
+            $variants = json_decode((string) ($mission['hint_variants'] ?? ''), true);
+            $feedback = SqlWorkshop::attemptFeedback(
+                $pristine,
+                $sql,
+                (string) $mission['solution_sql'],
+                ($mission['kind'] ?? 'query') === 'action',
+                is_array($variants) ? $variants : []
+            );
+            $_SESSION['mission_attempt'] = [
+                'slug' => $template->slug,
+                'id' => (int) $mission['id'],
+                'sql' => $sql,
+                'feedback' => $feedback,
+            ];
+            flash('error', 'Noch nicht gelöst. Deine Eingabe ist erhalten, schau dir den Hinweis unter der Aufgabe an.');
         }
         redirect('/werkstatt/sql/' . $template->slug . '#aufgaben');
     }

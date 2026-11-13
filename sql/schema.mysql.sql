@@ -252,6 +252,8 @@ CREATE TABLE IF NOT EXISTS sql_missions (
     solution_sql TEXT NOT NULL,
     check_sql TEXT NOT NULL,
     check_expected VARCHAR(200) NULL,
+    task TEXT NULL,
+    hint_variants TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_missions_template (template_id),

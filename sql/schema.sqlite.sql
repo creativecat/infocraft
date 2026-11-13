@@ -203,6 +203,8 @@ CREATE TABLE IF NOT EXISTS sql_missions (
     solution_sql TEXT NOT NULL,
     check_sql TEXT NOT NULL DEFAULT '',
     check_expected TEXT NULL,
+    task TEXT NULL,
+    hint_variants TEXT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

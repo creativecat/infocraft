@@ -4296,6 +4296,102 @@ setTimeout(function () {
                     && advMeta128.indexOf('sql-island') === -1 && advMig128.indexOf('queryquest') === -1
                     && advHub128.indexOf('queryquest') === -1 && advStory128.indexOf('queryquest') === -1,
                     'T128n die Abenteuer nennen keine Vorbild-Projekte (#195, #196)');
+
+                  /* T129 (#197-#199): Runde 25. Cursor deckungsgleich zum
+                   * Overlay, echte Tipps statt Loesungen, erhaltene Eingaben
+                   * mit gezielter Rueckmeldung, Kapitel als Weg mit Bildern. */
+                  var appJs129 = advRead128('../public/assets/js/app.js');
+                  ok(appJs129.indexOf('window.getComputedStyle(area)') !== -1
+                    && appJs129.indexOf("'fontFamily', 'fontSize'") !== -1
+                    && appJs129.indexOf('pre.style[prop]') !== -1,
+                    'T129 das Highlight-Overlay uebernimmt die Schrift-Metrik der Textarea (#197)');
+                  var cssMerged129 = advCss128.split('\n').some(function (line) {
+                    return line.trim() === '.hlwrap.sql > textarea, .hlwrap.sql > pre { font-size: 0.95rem; }';
+                  });
+                  var cssOldAlone129 = advCss128.split('\n').some(function (line) {
+                    return line.trim() === '.hlwrap.sql > pre { font-size: 0.95rem; }';
+                  });
+                  ok(cssMerged129 && !cssOldAlone129,
+                    'T129b die SQL-Schriftgroesse gilt fuer Feld und Overlay in einer gemeinsamen Regel (#197)');
+                  var schemaLite129 = advRead128('../sql/schema.sqlite.sql');
+                  var schemaMy129 = advRead128('../sql/schema.mysql.sql');
+                  ok(schemaLite129.indexOf('task TEXT NULL') !== -1 && schemaLite129.indexOf('hint_variants TEXT NULL') !== -1
+                    && schemaMy129.indexOf('task TEXT NULL') !== -1 && schemaMy129.indexOf('hint_variants TEXT NULL') !== -1
+                    && advMig128.indexOf('private static function ensureMissionTextColumns') !== -1
+                    && advMig128.indexOf('private static function refreshSeedMissionTexts') !== -1,
+                    'T129c Missionen bekommen Aufgabe und Tipp-Varianten als Spalten, Bestandsinstallationen werden nachgezogen (#198)');
+                  ok(advMig128.indexOf('(template_id, position, kind, title, story, task, hint, hint_variants, solution_sql, check_sql, check_expected)') !== -1,
+                    'T129d das INSERT der Missionen schreibt Aufgabe und Tipp-Varianten mit (#198)');
+                  var advTaskRows129 = advMig128.split('\n').filter(function (line) {
+                    return line.indexOf("'task' =>") !== -1 && line.indexOf("'solution_sql' =>") !== -1;
+                  });
+                  var advVal129 = function (line, key) {
+                    var i = line.indexOf("'" + key + "' => ");
+                    if (i === -1) { return null; }
+                    var rest = line.slice(i + key.length + 6);
+                    var q = rest.charAt(0);
+                    if (q !== "'" && q !== '"') { return null; }
+                    var out = '';
+                    for (var k = 1; k < rest.length; k++) {
+                      if (rest.charAt(k) === '\\') { out += rest.charAt(k + 1); k++; continue; }
+                      if (rest.charAt(k) === q) { break; }
+                      out += rest.charAt(k);
+                    }
+                    return out;
+                  };
+                  ok(advTaskRows129.length === 42,
+                    'T129e alle 42 Abenteuer-Kapitel haben eine konkrete Aufgabe (#198, #199)');
+                  var advHintsOk129 = true;
+                  advTaskRows129.forEach(function (line) {
+                    var hint = advVal129(line, 'hint');
+                    var solution = advVal129(line, 'solution_sql');
+                    if (hint === null || solution === null || hint === solution) { advHintsOk129 = false; }
+                    if (line.indexOf("'hints' =>") === -1) { advHintsOk129 = false; }
+                  });
+                  ok(advHintsOk129,
+                    'T129f kein Tipp verrraet die Loesung, jede Mission hat Tipp-Varianten fuer Fehlversuche (#198)');
+                  var wsSrc129 = advRead128('../src/SqlWorkshop.php');
+                  ok(wsSrc129.indexOf('public static function attemptFeedback') !== -1
+                    && wsSrc129.indexOf("'groupby'") !== -1 && wsSrc129.indexOf("'having'") !== -1
+                    && wsSrc129.indexOf("'subquery'") !== -1 && wsSrc129.indexOf("'scope'") !== -1
+                    && wsSrc129.indexOf("'value'") !== -1 && wsSrc129.indexOf("'rows'") !== -1,
+                    'T129g die Versuchs-Analyse erkennt typische Fehler und waehlt passende Hinweise (#198)');
+                  ok(advCtrl128.indexOf("$_SESSION['mission_attempt']") !== -1
+                    && advCtrl128.indexOf('SqlWorkshop::attemptFeedback(') !== -1
+                    && advCtrl128.indexOf("'attempt' => $attempt") !== -1,
+                    'T129h Fehlversuche bleiben mit gezieltem Hinweis in der Session und im View erhalten (#198)');
+                  ok(advStory128.indexOf('adv-path') !== -1
+                    && advStory128.indexOf('adv-station') !== -1
+                    && advStory128.indexOf('adv-dot') !== -1
+                    && advStory128.indexOf('adv-task') !== -1
+                    && advStory128.indexOf('adv-feedback') !== -1
+                    && advStory128.indexOf('chapterScene(') !== -1
+                    && advStory128.indexOf("$attempt['sql']") !== -1,
+                    'T129i die Kapitel liegen als Weg mit Stationen, Kapitelbild, Aufgaben-Kasten und erhaltenem Versuch (#199)');
+                  var wsTpl129 = advRead128('../templates/sql_workspace.php');
+                  ok(wsTpl129.indexOf('adv-feedback') !== -1
+                    && wsTpl129.indexOf("$attempt['sql']") !== -1,
+                    'T129j auch die klassischen Aufgaben erhalten die Eingabe und den Hinweis (#198)');
+                  ok(advMeta128.indexOf('public static function chapterScene') !== -1
+                    && advMeta128.split('<svg').length - 1 >= 47,
+                    'T129k jedes Kapitel hat ein eigenes Szenenbild in allen vier Abenteuern (#199)');
+                  ok(advCss128.indexOf('.adv-path { display: grid') !== -1
+                    && advCss128.indexOf('.adv-dot-now') !== -1
+                    && advCss128.indexOf('.adv-task {') !== -1
+                    && advCss128.indexOf('.adv-feedback {') !== -1
+                    && advCss128.indexOf('min-width: 900px') !== -1,
+                    'T129l Weg-Layout, Stationen, Aufgaben- und Hinweis-Kasten liegen im Stylesheet (#199)');
+                  var support129 = advRead128('../src/Support.php');
+                  var changelog129 = advRead128('../CHANGELOG.md');
+                  ok(support129.indexOf("APP_VERSION = '0.25.0'") !== -1
+                    && support129.indexOf("ASSET_VERSION = '81'") !== -1
+                    && changelog129.indexOf('## [0.25.0]') !== -1,
+                    'T129m Version 0.25.0 mit Asset-Stand 81 und Changelog-Eintrag');
+                  ok(advMeta128.indexOf('—') === -1 && wsSrc129.indexOf('—') === -1
+                    && advMig128.indexOf('—') === -1 && advCss128.indexOf('—') === -1
+                    && advStory128.indexOf('—') === -1 && wsTpl129.indexOf('—') === -1
+                    && wsSrc129.indexOf('queryquest') === -1 && wsTpl129.indexOf('queryquest') === -1,
+                    'T129n neue Inhalte kommen ohne lange Gedankenstriche und ohne Vorbild-Namen aus (#198, #199)');
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;
 
