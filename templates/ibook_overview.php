@@ -2,8 +2,11 @@
    Datei: InfoBook: Übersicht
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.15.0 */ ?>
-<?php /* InfoBook-Übersicht (#62): eigene Bücher + Klassen-InfoBooks. */ ?>
+   Version: 0.27.0 */ ?>
+<?php /* InfoBook-Übersicht (#62): eigene Bücher + Klassen-InfoBooks.
+   #205: Auch Schülerinnen und Schüler sehen diese Übersicht: ihre eigenen
+   Bücher (selbst angelegt und verwaltet) und das Klassen-InfoBook ihrer
+   Klasse; Teilen bleibt Lehrkräften vorbehalten. */ ?>
 <section class="hero">
     <div class="hero-emoji">📓</div>
     <h1>InfoBook</h1>
@@ -35,12 +38,17 @@
         </div>
         <div class="praes-actions">
             <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation') ?>" title="Seiten dieses Buchs als Präsentation anzeigen">🎬 Anzeigen</a>
-            <?php if ($book->ownerId === $user->id): ?>
+            <?php /* #205: Teilen unter Lehrkraeften nur fuer Lehrkraefte. */ ?>
+            <?php if (\Infocraft\Auth::isTeacher() && $book->ownerId === $user->id): ?>
             <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/teilen') ?>" class="inline-form">
                 <?= csrf_field() ?>
                 <input type="hidden" name="shared" value="<?= $book->shared ? '0' : '1' ?>">
                 <button class="btn btn-ghost" type="submit" title="<?= $book->shared ? 'Teilen zurücknehmen' : 'Für alle Lehrkräfte sichtbar teilen' ?>"><?= $book->shared ? '🔒 Privat machen' : '🤝 Mit Lehrkräften teilen' ?></button>
             </form>
+            <?php endif; ?>
+            <?php /* #205: Das eigene Buch duerfen Schuelerinnen und
+                 * Schueler selbst loeschen. */ ?>
+            <?php if ($book->ownerId === $user->id): ?>
             <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/loeschen') ?>" class="inline-form" data-confirm="InfoBook wirklich löschen? Alle Seiten und Medien verschwinden mit.">
                 <?= csrf_field() ?>
                 <button class="btn btn-danger" type="submit" title="InfoBook löschen">🗑</button>
@@ -53,7 +61,7 @@
 <?php else: ?>
 <div class="notice">
     <strong>Noch keine InfoBooks</strong>
-    <p>Lege oben dein erstes InfoBook an: Abschnitte strukturieren den Stoff, Seiten tragen Text, Bilder, Audio, Videos und Zeichnungen. Klassen-InfoBooks entstehen automatisch, sobald du sie unten öffnest.</p>
+    <p>Lege oben dein erstes InfoBook an: Abschnitte strukturieren den Stoff, Seiten tragen Text, Bilder, Audio, Videos und Zeichnungen.<?php if (\Infocraft\Auth::isTeacher()): ?> Klassen-InfoBooks entstehen automatisch, sobald du sie unten öffnest.<?php endif; ?></p>
 </div>
 <?php endif; ?>
 
@@ -61,7 +69,11 @@
 <?php if ($classBooks === []): ?>
 <div class="notice">
     <strong>Noch keine Klassen</strong>
+    <?php if (\Infocraft\Auth::isTeacher()): ?>
     <p>Ordne deinem Konto unter <a href="<?= url('unterricht/klassen') ?>">Meine Klassen</a> eine Klasse zu, dann erscheint hier das zugehörige Klassen-InfoBook.</p>
+    <?php else: ?>
+    <p>Für dein Konto ist keine Klasse hinterlegt. Sobald eine Klasse hinterlegt ist, erscheint hier das Klassen-InfoBook deiner Klasse.</p>
+    <?php endif; ?>
 </div>
 <?php endif; ?>
 <?php foreach ($classBooks as $entry): ?>
@@ -79,7 +91,8 @@
         <div class="praes-actions">
             <?php if ($entry['book'] !== null): ?>
             <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $entry['book']->id . '/praesentation') ?>" title="Seiten als Präsentation anzeigen">🎬 Anzeigen</a>
-            <?php else: ?>
+            <?php /* #205: Klassen-InfoBooks legen nur Lehrkraefte an. */ ?>
+            <?php elseif (\Infocraft\Auth::isTeacher()): ?>
             <a class="btn btn-primary" href="<?= url('infobuecher/klasse/' . (int) $entry['class']->id) ?>" title="Klassen-InfoBook anlegen und öffnen">Anlegen &amp; öffnen</a>
             <?php endif; ?>
         </div>

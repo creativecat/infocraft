@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.22.0
+ * @version 0.27.0
  */
 declare(strict_types=1);
 
@@ -46,12 +46,26 @@ final class InfoBookController
             redirect('/login');
         }
         if (!Auth::isTeacher()) {
-            if ($user->classId === null) {
-                flash('error', 'Für dein Konto ist keine Klasse hinterlegt.');
-                redirect('/');
+            /* #205: Schuelerinnen und Schueler bekommen dieselbe Uebersicht
+             * wie Lehrkraefte: ihr Klassen-InfoBook (falls eine Klasse
+             * hinterlegt ist) und ihre eigenen, selbst angelegten Buecher. */
+            $classBooks = [];
+            if ($user->classId !== null) {
+                $class = SchoolClass::find($user->classId);
+                if ($class !== null) {
+                    $classBooks[] = [
+                        'class' => $class,
+                        'book' => InfoBook::classBook($class->id),
+                    ];
+                }
             }
-            $book = InfoBook::ensureClassBook($user->classId, $user->id);
-            redirect('/infobuecher/' . $book->id);
+            render('ibook_overview', [
+                'title' => 'InfoBook',
+                'active' => 'module-infobuecher',
+                'personal' => InfoBook::personalBooks($user->id, false),
+                'classBooks' => $classBooks,
+                'user' => $user,
+            ]);
             return;
         }
         $personal = InfoBook::personalBooks($user->id);
@@ -72,16 +86,12 @@ final class InfoBookController
         ]);
     }
 
-    /** Persoenliches Buch anlegen (nur Lehrkraefte). */
+    /** Persoenliches Buch anlegen (Lehrkraefte und Schuelerinnen und Schueler). */
     public static function create(array $params): void
     {
         $user = Auth::user();
         if ($user === null) {
             redirect('/login');
-        }
-        if (!Auth::isTeacher()) {
-            flash('error', 'Eigene InfoBooks können nur Lehrkräfte anlegen.');
-            redirect('/infobuecher');
         }
         csrf_validate();
         $title = trim((string) ($_POST['title'] ?? ''));
@@ -120,6 +130,12 @@ final class InfoBookController
         $user = Auth::user();
         if ($user === null) {
             redirect('/login');
+        }
+        /* #205: Das Teilen unter Lehrkraeften bleibt Lehrkraeften
+         * vorbehalten; Schuelerbuecher sind rein privat. */
+        if (!Auth::isTeacher()) {
+            flash('error', 'Nur Lehrkräfte können InfoBooks teilen.');
+            redirect('/infobuecher');
         }
         csrf_validate();
         $book = InfoBook::find((int) ($params['id'] ?? 0));
@@ -243,7 +259,8 @@ final class InfoBookController
         ]);
     }
 
-    /** Abschnitt anlegen: Lehrkraefte in allen Bereichen, Schueler nur 'gemeinsam'. */
+    /** Abschnitt anlegen: Lehrkraefte in allen Bereichen, Schueler im
+     * Klassenbuch nur 'gemeinsam', im eigenen Buch Lernbereich und Zusammenarbeit (#205). */
     public static function createSection(array $params): void
     {
         $user = Auth::user();
@@ -263,11 +280,16 @@ final class InfoBookController
         }
         $area = (string) ($_POST['area'] ?? 'lernbereich');
         if ($user->role === 'student') {
-            if ($book->classId === null || $book->classId !== $user->classId) {
+            if ($book->classId !== null && $book->classId === $user->classId) {
+                $area = 'gemeinsam';
+            } elseif ($book->classId === null && $book->ownerId === $user->id) {
+                /* #205: Im eigenen Buch duerfen Schuelerinnen und Schueler
+                 * Lernbereich und Zusammenarbeit anlegen. */
+                $area = $area === 'gemeinsam' ? 'gemeinsam' : 'lernbereich';
+            } else {
                 flash('error', 'Hier kannst du nichts anlegen.');
                 redirect('/infobuecher');
             }
-            $area = 'gemeinsam';
         } elseif ($book->classId !== null && $area === 'eigen') {
             $area = 'lernbereich';
         }
@@ -300,6 +322,94 @@ final class InfoBookController
         InfoBook::deleteSection((int) $section['id']);
         flash('success', 'Abschnitt gelöscht.');
         redirect('/infobuecher/' . $book->id);
+    }
+
+    /** #207: Abschnitt umbenennen (Verwaltung, private Bereiche ausgenommen). */
+    public static function renameSection(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $book = InfoBook::find((int) ($params['id'] ?? 0));
+        $section = InfoBook::findSection((int) ($params['sid'] ?? 0));
+        if ($book === null || $section === null || (int) $section['book_id'] !== $book->id) {
+            flash('error', 'Dieser Abschnitt gibt es nicht.');
+            redirect('/infobuecher');
+        }
+        if (!self::canManage($book, $user)) {
+            flash('error', 'Das können nur Verwalterinnen und Verwalter des InfoBooks.');
+            redirect('/infobuecher/' . $book->id);
+        }
+        if ((string) $section['area'] === 'eigen') {
+            flash('error', 'Private Bereiche von Schülerinnen und Schülern werden nicht umbenannt.');
+            redirect('/infobuecher/' . $book->id);
+        }
+        $title = trim((string) ($_POST['title'] ?? ''));
+        if ($title === '') {
+            flash('error', 'Bitte einen Titel angeben.');
+            redirect('/infobuecher/' . $book->id . '?abschnitt=' . (int) $section['id']);
+        }
+        InfoBook::renameSection((int) $section['id'], mb_substr($title, 0, 160));
+        flash('success', 'Abschnitt umbenannt.');
+        redirect('/infobuecher/' . $book->id . '?abschnitt=' . (int) $section['id']);
+    }
+
+    /** #207: Abschnitt teilen: markierte Seiten wandern in einen neuen
+     * Abschnitt mit eigenem Titel, gleicher Bereich, direkt dahinter. */
+    public static function splitSection(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        csrf_validate();
+        $book = InfoBook::find((int) ($params['id'] ?? 0));
+        $section = InfoBook::findSection((int) ($params['sid'] ?? 0));
+        if ($book === null || $section === null || (int) $section['book_id'] !== $book->id) {
+            flash('error', 'Dieser Abschnitt gibt es nicht.');
+            redirect('/infobuecher');
+        }
+        if (!self::canManage($book, $user)) {
+            flash('error', 'Das können nur Verwalterinnen und Verwalter des InfoBooks.');
+            redirect('/infobuecher/' . $book->id);
+        }
+        if ((string) $section['area'] === 'eigen') {
+            flash('error', 'Private Bereiche von Schülerinnen und Schülern werden nicht geteilt.');
+            redirect('/infobuecher/' . $book->id);
+        }
+        $title = trim((string) ($_POST['title'] ?? ''));
+        if ($title === '') {
+            flash('error', 'Bitte einen Titel für den neuen Abschnitt angeben.');
+            redirect('/infobuecher/' . $book->id . '?abschnitt=' . (int) $section['id']);
+        }
+        /* Nur Seiten dieses Abschnitts ziehen, Reihenfolge bleibt erhalten. */
+        $wanted = [];
+        foreach (array_map('intval', (array) ($_POST['page_ids'] ?? [])) as $pageId) {
+            if ($pageId > 0) {
+                $wanted[$pageId] = true;
+            }
+        }
+        $moving = [];
+        $staying = [];
+        foreach (InfoBook::pages((int) $section['id']) as $page) {
+            if (isset($wanted[(int) $page['id']])) {
+                $moving[] = (int) $page['id'];
+            } else {
+                $staying[] = (int) $page['id'];
+            }
+        }
+        if ($moving === []) {
+            flash('error', 'Bitte mindestens eine Seite für den neuen Abschnitt markieren.');
+            redirect('/infobuecher/' . $book->id . '?abschnitt=' . (int) $section['id']);
+        }
+        $newId = InfoBook::createSectionAfter($book->id, (int) $section['position'], (string) $section['area'], mb_substr($title, 0, 160));
+        InfoBook::movePagesToSection($moving, $newId);
+        InfoBook::reorderSectionPages((int) $section['id'], $staying);
+        InfoBook::reorderSectionPages($newId, $moving);
+        flash('success', count($moving) . ' Seite' . (count($moving) === 1 ? '' : 'n') . ' in den neuen Abschnitt verschoben.');
+        redirect('/infobuecher/' . $book->id . '?abschnitt=' . $newId);
     }
 
     // ---------------- Seiten ----------------
@@ -972,7 +1082,8 @@ final class InfoBookController
 
     // ---------------- Rechte ----------------
 
-    /** Lesezugriff: Lehrkraft (eigenes Buch, Klassenbuch, geteiltes Buch), Schueler ueber ihre Klasse. */
+    /** Lesezugriff: Lehrkraft (eigenes Buch, Klassenbuch, geteiltes Buch),
+     * Schueler ueber ihre Klasse und eigene Buecher (#205). */
     private static function canRead(InfoBook $book, User $user): bool
     {
         if ($user->role === 'admin') {
@@ -990,14 +1101,21 @@ final class InfoBookController
             }
             return false;
         }
+        if ($book->classId === null && $book->ownerId === $user->id) {
+            return true;
+        }
         return $book->classId !== null && $user->classId === $book->classId;
     }
 
-    /** Volle Verwaltung (Abschnitte, Verteilen, Loeschen): Lehrkraefte und Administration. */
+    /** Volle Verwaltung (Abschnitte, Verteilen, Loeschen): Lehrkraefte,
+     * Administration und Schuelerinnen und Schueler in eigenen Buechern (#205). */
     private static function canManage(InfoBook $book, User $user): bool
     {
         if ($user->role === 'admin') {
             return true;
+        }
+        if ($user->role === 'student') {
+            return $book->classId === null && $book->ownerId === $user->id;
         }
         if ($user->role !== 'teacher') {
             return false;

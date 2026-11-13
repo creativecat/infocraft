@@ -4383,9 +4383,9 @@ setTimeout(function () {
                     'T129l Weg-Layout, Stationen, Aufgaben- und Hinweis-Kasten liegen im Stylesheet (#199)');
                   var support129 = advRead128('../src/Support.php');
                   var changelog129 = advRead128('../CHANGELOG.md');
-                  ok(changelog129.indexOf('## [0.25.0]') !== -1
-                    && changelog129.indexOf('## [0.26.0]') !== -1,
-                    'T129m der Changelog haelt die Eintraege zu 0.25.0 und 0.26.0 fest (Versionsstand selbst prueft T130r)');
+                  ok(changelog129.indexOf('## [0.26.0]') !== -1
+                    && changelog129.indexOf('## [0.27.0]') !== -1,
+                    'T129m der Changelog haelt die Eintraege zu 0.26.0 und 0.27.0 fest (Versionsstand selbst prueft T130r)');
                   ok(advMeta128.indexOf('—') === -1 && wsSrc129.indexOf('—') === -1
                     && advMig128.indexOf('—') === -1 && advCss128.indexOf('—') === -1
                     && advStory128.indexOf('—') === -1 && wsTpl129.indexOf('—') === -1
@@ -4421,9 +4421,9 @@ setTimeout(function () {
                     'T130e die klassische Werkstatt hat denselben Sprung zu ihren Aufgaben oben (#200)');
                   var tplBook130 = advRead130('../templates/ibook_book.php');
                   var tplPage130 = advRead130('../templates/ibook_page.php');
-                  ok(tplBook130.indexOf('← Buch-Start') !== -1 && tplPage130.indexOf('← Buch-Start') !== -1
+                  ok(tplBook130.indexOf('← Alle InfoBooks') !== -1 && tplPage130.indexOf('← Alle InfoBooks') !== -1
                     && tplBook130.indexOf('Auth::isTeacher()') !== -1 && tplPage130.indexOf('Auth::isTeacher()') !== -1,
-                    'T130f der InfoBooks-Knopf fuehrt Schuelerinnen und Schueler zum Buch-Start statt ins Leere (#201)');
+                    'T130f der InfoBooks-Knopf verzweigt je Rolle und fuehrt Lehrkraefte auf die Uebersicht (#201, Runde 27: alle Rollen)');
                   var ctrl130 = advRead130('../src/Controllers/InfoBookController.php');
                   ok(ctrl130.indexOf('resolveDistributeTarget') !== -1
                     && ctrl130.indexOf('function distributeSection') !== -1
@@ -4465,14 +4465,70 @@ setTimeout(function () {
                     'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
-                  ok(support130.indexOf("APP_VERSION = '0.26.0'") !== -1
-                    && support130.indexOf("ASSET_VERSION = '82'") !== -1
-                    && changelog130.indexOf('## [0.26.0]') !== -1,
-                    'T130r Version 0.26.0 mit Asset-Stand 82 und Changelog-Eintrag');
+                  ok(support130.indexOf("APP_VERSION = '0.27.0'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '83'") !== -1
+                    && changelog130.indexOf('## [0.27.0]') !== -1,
+                    'T130r Version 0.27.0 mit Asset-Stand 83 und Changelog-Eintrag');
                   ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
                     && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
                     && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
                     'T130s neue Inhalte kommen ohne lange Gedankenstriche aus (#200-#204)');
+
+                  /* T131 (#205-#207): Runde 27. InfoBooks-Uebersicht und
+                   * eigene Buecher fuer Schuelerinnen und Schueler, keine
+                   * doppelte Lernbereich-Ueberschrift mehr, Abschnitte
+                   * umbenennen und teilen. */
+                  var tplNav131 = advRead130('../templates/ibook_nav.php');
+                  var tplOverview131 = advRead130('../templates/ibook_overview.php');
+                  var routes131 = advRead130('../public/index.php');
+                  ok(ctrl130.indexOf('personalBooks($user->id, false)') !== -1
+                    && ctrl130.indexOf('InfoBook::classBook($class->id)') !== -1,
+                    'T131 die Uebersicht rendert fuer Schuelerinnen und Schueler eigene und Klassen-Buecher (#205)');
+                  ok(ctrl130.indexOf('if ($book->classId === null && $book->ownerId === $user->id) {') !== -1,
+                    'T131b Lesen und Verwalten eigener Buecher: Schuelerinnen und Schueler haben Zugriff (#205)');
+                  ok(ctrl130.indexOf('return $book->classId === null && $book->ownerId === $user->id;') !== -1,
+                    'T131c eigene Buecher werden von ihren Besitzerinnen und Besitzern vollstaendig verwaltet (#205)');
+                  ok(ctrl130.indexOf('Eigene InfoBooks können nur Lehrkräfte anlegen.') === -1,
+                    'T131d Schuelerinnen und Schueler duerfen eigene InfoBooks anlegen, auch mehrere (#205)');
+                  ok(ctrl130.indexOf('elseif ($book->classId === null && $book->ownerId === $user->id)') !== -1
+                    && ctrl130.indexOf("$area = $area === 'gemeinsam' ? 'gemeinsam' : 'lernbereich';") !== -1,
+                    'T131e im eigenen Buch duerfen Schuelerinnen und Schueler Lernbereich und Zusammenarbeit anlegen (#205)');
+                  ok(ctrl130.indexOf('Nur Lehrkräfte können InfoBooks teilen.') !== -1
+                    && ctrl130.indexOf('Nur Lehrkräfte verteilen Seiten.') !== -1,
+                    'T131f Teilen und Verteilen bleiben Lehrkraeften vorbehalten (#205)');
+                  ok(tplBook130.indexOf('← Deine InfoBooks') !== -1 && tplPage130.indexOf('← Deine InfoBooks') !== -1,
+                    'T131g der Knopf heisst fuer Schuelerinnen und Schueler Deine InfoBooks und fuehrt dorthin (#205)');
+                  ok(tplNav131.indexOf('elseif ($book->classId === null && $book->ownerId === $user->id)') !== -1
+                    && tplNav131.indexOf('<input type="hidden" name="area" value="gemeinsam">') !== -1,
+                    'T131h die Bereichs-Auswahl im eigenen Buch zeigt Lernbereich und Zusammenarbeit (#205)');
+                  ok(tplOverview131.indexOf('Für dein Konto ist keine Klasse hinterlegt.') !== -1
+                    && tplOverview131.indexOf('Klassen-InfoBooks legen nur Lehrkraefte an') !== -1,
+                    'T131i die Uebersicht passt ihre Hinweise der Rolle an (#205)');
+                  ok(tplNav131.indexOf('$navShowArea') !== -1
+                    && tplNav131.indexOf('if (!empty($navShowArea[$navAreaKey]))') !== -1,
+                    'T131j das Bereichs-Label in der Navigation steht nur bei abweichend benannten Abschnitten (#206)');
+                  ok(tplBook130.indexOf('$secTitleIsArea') !== -1
+                    && tplBook130.indexOf('title="Bereich: <?= e($secAreaName) ?>"') !== -1,
+                    'T131k die Abschnittsansicht wiederholt den Bereichsnamen nicht doppelt (#206)');
+                  ok(ctrl130.indexOf('function renameSection') !== -1
+                    && model130.indexOf('function renameSection') !== -1
+                    && routes131.indexOf('/infobuecher/{id}/abschnitt/{sid}/umbenennen') !== -1,
+                    'T131l Abschnitte lassen sich ueber Route, Controller und Modell umbenennen (#207)');
+                  ok(ctrl130.indexOf('function splitSection') !== -1
+                    && model130.indexOf('function createSectionAfter') !== -1
+                    && model130.indexOf('function movePagesToSection') !== -1
+                    && routes131.indexOf('/infobuecher/{id}/abschnitt/{sid}/teilen') !== -1,
+                    'T131m Teilen verschiebt markierte Seiten in einen neuen Abschnitt hinter dem alten (#207)');
+                  ok(tplBook130.indexOf('✏️ Abschnitt umbenennen') !== -1
+                    && tplBook130.indexOf('✂️ Abschnitt teilen') !== -1
+                    && tplBook130.indexOf('name="page_ids[]"') !== -1,
+                    'T131n die Verwaltungsleiste der Abschnittsansicht bietet Umbenennen und Teilen an (#207)');
+                  ok(tplNav131.indexOf('—') === -1 && tplOverview131.indexOf('—') === -1
+                    && routes131.indexOf('—') === -1 && changelog130.indexOf('—') === -1,
+                    'T131o neue Inhalte kommen ohne lange Gedankenstriche aus (#205-#207)');
+                  ok(ctrl130.indexOf('Private Bereiche von Schülerinnen und Schülern werden nicht umbenannt.') !== -1
+                    && ctrl130.indexOf('Private Bereiche von Schülerinnen und Schülern werden nicht geteilt.') !== -1,
+                    'T131p private Mein-Bereich-Abschnitte bleiben vom Umbenennen und Teilen ausgespart (#207)');
 
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;

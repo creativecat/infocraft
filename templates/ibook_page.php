@@ -2,7 +2,7 @@
    Datei: InfoBook: Seite
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.26.0 */ ?>
+   Version: 0.27.0 */ ?>
 <?php /* InfoBook: Seite bearbeiten/ansehen (#62). Bloecke: Text, Bild, Audio, Video, Einbettung, Zeichnung (Apple Pencil). */ ?>
 <?php /* #67: Autospeichern statt Speichern-Button, rechts Vorschau/Lesemodus
  * und kleines aufklappbares Verteilen. */ ?>
@@ -21,13 +21,13 @@
         <?php /* #82/#100/#185: Schmaler Icon-Knopf klappt die Seitenleiste
          * ein und aus, Zustand bleibt im Browser gespeichert (app.js). */ ?>
         <button type="button" class="ibook-navtoggle" id="ibook-pagenav-fold" aria-expanded="true" aria-label="Inhaltsnavigation ein- und ausklappen" title="Inhaltsnavigation einklappen"></button>
-        <?php /* #201: Fuer Schuelerinnen und Schueler fuehrt die InfoBook-
-         * Uebersicht sofort zurueck aufs eigene Klassenbuch, der Knopf
-         * waere ins Leere gelaufen: Er zeigt deshalb auf den Buch-Start. */ ?>
+        <?php /* #205: Der Knopf fuehrt fuer alle Rollen auf die Uebersicht;
+         * Schuelerinnen und Schueler sehen dort ihre eigenen und das
+         * Klassen-InfoBook. */ ?>
         <?php if (\Infocraft\Auth::isTeacher()): ?>
         <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht aller InfoBooks">← Alle InfoBooks</a>
         <?php else: ?>
-        <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id) ?>" title="Zurück zum Start deines InfoBooks">← Buch-Start</a>
+        <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht deiner InfoBooks">← Deine InfoBooks</a>
         <?php endif; ?>
         <?php /* #185: Breadcrumb als Standort-Anzeige: Buch startet auf der
          * zuletzt besuchten Seite, der Abschnitt fuehrt in die Abschnitts-

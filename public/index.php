@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.26.0
+ * @version 0.27.0
  */
 declare(strict_types=1);
 
@@ -216,6 +216,9 @@ $router->post('/infobuecher/{id}/teilen', [InfoBookController::class, 'share']);
 $router->post('/infobuecher/{id}/loeschen', [InfoBookController::class, 'deleteBook']);
 $router->post('/infobuecher/{id}/abschnitt', [InfoBookController::class, 'createSection']);
 $router->post('/infobuecher/{id}/abschnitt/{sid}/loeschen', [InfoBookController::class, 'deleteSection']);
+/* #207: Abschnitte umbenennen und teilen (Seiten in einen neuen Abschnitt ziehen). */
+$router->post('/infobuecher/{id}/abschnitt/{sid}/umbenennen', [InfoBookController::class, 'renameSection']);
+$router->post('/infobuecher/{id}/abschnitt/{sid}/teilen', [InfoBookController::class, 'splitSection']);
 $router->post('/infobuecher/{id}/seite', [InfoBookController::class, 'createPage']);
 $router->post('/infobuecher/{id}/seiten-reihenfolge', [InfoBookController::class, 'reorderPages']);
 $router->get('/infobuecher/{id}/seite/{pid}', [InfoBookController::class, 'page']);

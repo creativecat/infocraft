@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.26.0
+ * @version 0.27.0
  */
 declare(strict_types=1);
 
@@ -30,7 +30,7 @@ function url(string $path = ''): string
  * Zeitstempel erhalten (rsync --times, Docker-Layer): Browser laden dann garantiert
  * die neue Datei statt einer alten Version aus dem Cache.
  */
-const ASSET_VERSION = '82';
+const ASSET_VERSION = '83';
 
 /**
  * Programmversion nach Semantic Versioning (#145): MAJOR.MINOR.PATCH.
@@ -38,7 +38,7 @@ const ASSET_VERSION = '82';
  * bleibt fuer inkompatible Umstiege reserviert. Die Entwicklungshistorie
  * steht in CHANGELOG.md im Wurzelverzeichnis.
  */
-const APP_VERSION = '0.26.0';
+const APP_VERSION = '0.27.0';
 
 /**
  * Projekt-Icon (#169): passendes Emoji je Projektart. Frueher stand die

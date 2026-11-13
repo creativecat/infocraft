@@ -5,6 +5,19 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.27.0] - 2026-11-13
+
+### InfoBooks: eigene Bücher für Schülerinnen und Schüler (#205)
+
+- Die InfoBook-Übersicht funktioniert jetzt auch für Schülerinnen und Schüler (#205): Sie zeigt ihr Klassen-InfoBook und ihre eigenen Bücher. Der Knopf in der Kopfzeile heißt für sie „Deine InfoBooks" und führt dorthin; vorher zeigte er als „Buch-Start" scheinbar ins Leere, weil die Übersicht Schüler sofort auf ihr Klassenbuch umleitete.
+- Schülerinnen und Schüler können eigene InfoBooks anlegen, auch mehrere (#205), und sie selbst verwalten: Abschnitte im Lernbereich und in der Zusammenarbeit anlegen, umbenennen und löschen, Seiten pflegen, Präsentationen anzeigen und ganze Bücher löschen. Das Teilen unter Lehrkräften bleibt Lehrkräften vorbehalten, private „Mein Bereich"-Abschnitte gibt es nur im Klassen-InfoBook.
+
+### InfoBooks: Aufräumen bei den Abschnitts-Überschriften und neue Abschnitts-Verwaltung (#206, #207)
+
+- Die doppelte „Lernbereich"-Überschrift ist verschwunden (#206): Stand ein Abschnitt genau wie sein Bereich da (Standardabschnitte heißen wie ihre Bereiche), erschien der Bereich doppelt untereinander, in der Navigation und in der Abschnittsansicht. Das Bereichs-Label erscheint jetzt nur noch, wenn ein Abschnitt des Bereichs anders benannt ist; sonst reicht eine Überschrift mit Bereichs-Icon.
+- Abschnitte lassen sich jetzt umbenennen (#207): Titel in der Verwaltungsleiste der Abschnittsansicht ändern, ohne den Abschnitt neu anzulegen und Seiten umzuziehen. Private „Mein Bereich"-Abschnitte bleiben ausgespart.
+- Abschnitte lassen sich jetzt teilen (#207): Markierte Seiten wandern in einen neuen Abschnitt mit eigenem Titel, gleicher Bereich, direkt hinter dem alten in der Reihenfolge. Die Reihenfolge der Seiten bleibt in beiden Abschnitten erhalten. Löschen gab es bereits.
+
 ## [0.26.0] - 2026-11-13
 
 ### SQL-Werkstatt: Cursor deckungsgleich auch bei langen Anweisungen, Sprung zu den Aufgaben oben (#200)

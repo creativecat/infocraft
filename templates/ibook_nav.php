@@ -2,7 +2,7 @@
    Datei: InfoBook: gemeinsame Seitennavigation (Partial für Buch- und Seitenansicht)
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.22.0 */ ?>
+   Version: 0.27.0 */ ?>
 <?php /* #185: Buchansicht (Abschnittsansicht) und Seitenansicht teilen sich
  * diese Navigation, damit die beiden im Kern gleichen Ansichten nicht wieder
  * auseinanderlaufen. Inhalt: Bereiche mit Abschnitten, genau ein
@@ -17,6 +17,15 @@
  * Erwartet: $book, $nav, $activeSectionId, $activePageId, $canWrite,
  * $canManage, $navNewSection, $preview. */ ?>
 <?php $navAreas = ['lernbereich' => ['📖', 'Lernbereich'], 'gemeinsam' => ['🤝', 'Zusammenarbeit'], 'eigen' => ['🔒', 'Mein Bereich']]; ?>
+<?php /* #206: Das Bereichs-Label ueber dem ersten Abschnitt seines Bereichs
+ * steht nur, wenn mindestens ein Abschnitt des Bereichs anders heisst als
+ * der Bereich selbst. Heisst ein Abschnitt genau wie sein Bereich, traegt
+ * seine Zusammenfassung das Bereichs-Icon als Praefix. */ ?>
+<?php $navShowArea = []; ?>
+<?php foreach ($nav as $navPre): ?>
+<?php $navPreKey = (string) $navPre['section']['area']; ?>
+<?php if (($navPre['section']['title'] ?? '') !== ($navAreas[$navPreKey][1] ?? $navPreKey)) { $navShowArea[$navPreKey] = true; } ?>
+<?php endforeach; ?>
 <?php /* #70: Im Lesemodus (?lesen=1) behalten alle Seiten-Links das Suffix,
  * Abschnitts-Links fuehren in die Abschnittsansicht. */ ?>
 <?php $navLesen = $preview ? '?lesen=1' : ''; ?>
@@ -35,7 +44,9 @@
             $navIcon = $navAreas[$navAreaKey][0] ?? '📄';
             $navName = $navAreas[$navAreaKey][1] ?? $navAreaKey;
     ?>
+    <?php if (!empty($navShowArea[$navAreaKey])): ?>
     <div class="ibook-pagenav-area"><?= $navIcon ?> <?= e($navName) ?></div>
+    <?php endif; ?>
     <?php endif; ?>
     <?php /* #184/#185/#186: Der Abschnittstitel klappt seine Seiten auf
      * und zu; der aktive Abschnitt traegt die bekannte Aktiv-Klasse und
@@ -43,7 +54,7 @@
      * details/summary bedienbar. */ ?>
     <?php $navIsActive = (int) $navSec['id'] === (int) $activeSectionId; ?>
     <details class="ibook-pagenav-secdetails<?= $navIsActive ? ' ibook-pagenav-secdetails-active' : '' ?>" data-secid="<?= (int) $navSec['id'] ?>"<?= $navIsActive ? ' open' : '' ?>>
-    <summary class="ibook-pagenav-section<?= $navIsActive ? ' ibook-pagenav-section-active' : '' ?>" title="Seiten dieses Abschnitts ein- und ausklappen"<?= $navIsActive ? ' aria-current="true"' : '' ?>><?= e($navSec['title']) ?></summary>
+    <summary class="ibook-pagenav-section<?= $navIsActive ? ' ibook-pagenav-section-active' : '' ?>" title="Seiten dieses Abschnitts ein- und ausklappen"<?= $navIsActive ? ' aria-current="true"' : '' ?>><?= empty($navShowArea[$navAreaKey]) && (string) $navSec['title'] === ($navAreas[$navAreaKey][1] ?? $navAreaKey) ? $navIcon . ' ' : '' ?><?= e($navSec['title']) ?></summary>
     <?php /* #101/#184/#186: Seiten des Abschnitts; Drag&Drop-Sortieren
      * bleibt dem aktiven Abschnitt mit Schreibrecht vorbehalten,
      * app.js schickt die neue Reihenfolge an /seiten-reihenfolge. */ ?>
@@ -88,11 +99,19 @@
             <?= csrf_field() ?>
             <label class="field"><span>Neuer Abschnitt</span>
                 <input type="text" name="title" maxlength="160" placeholder="z. B. Schleifen">
+                <?php /* #205: Lehrkraefte waehlen den Bereich; Schuelerinnen
+                     * und Schueler bekommen die Auswahl in ihrem eigenen
+                     * Buch, im Klassenbuch bleibt es Zusammenarbeit. */ ?>
                 <?php if (\Infocraft\Auth::isTeacher()): ?>
                 <select name="area">
                     <option value="lernbereich">📖 Lernbereich</option>
                     <option value="gemeinsam">🤝 Zusammenarbeit</option>
                     <option value="eigen">🔒 Mein Bereich</option>
+                </select>
+                <?php elseif ($book->classId === null && $book->ownerId === $user->id): ?>
+                <select name="area">
+                    <option value="lernbereich">📖 Lernbereich</option>
+                    <option value="gemeinsam">🤝 Zusammenarbeit</option>
                 </select>
                 <?php else: ?>
                 <input type="hidden" name="area" value="gemeinsam">

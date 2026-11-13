@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.15.0
+ * @version 0.27.0
  */
 declare(strict_types=1);
 
@@ -59,13 +59,14 @@ final class InfoBook
         return $row === false ? null : self::fromRow($row);
     }
 
-    /** Persoenliche Buecher einer Lehrkraft (eigene und an alle geteilte). @return list<self> */
-    public static function personalBooks(int $teacherId): array
+    /** Persoenliche Buecher (eigene und optional an alle geteilte). @return list<self> */
+    public static function personalBooks(int $userId, bool $includeShared = true): array
     {
         $stmt = Database::pdo()->prepare(
-            'SELECT id, owner_id, class_id, title, shared, created_at FROM ibooks WHERE class_id IS NULL AND (owner_id = ? OR shared = 1) ORDER BY owner_id = ? DESC, title'
+            'SELECT id, owner_id, class_id, title, shared, created_at FROM ibooks WHERE class_id IS NULL AND (owner_id = ?'
+            . ($includeShared ? ' OR shared = 1' : '') . ') ORDER BY owner_id = ? DESC, title'
         );
-        $stmt->execute([$teacherId, $teacherId]);
+        $stmt->execute([$userId, $userId]);
         $list = [];
         foreach ($stmt->fetchAll() as $row) {
             $list[] = self::fromRow($row);
@@ -155,6 +156,46 @@ final class InfoBook
     public static function deleteSection(int $sectionId): void
     {
         Database::pdo()->prepare('DELETE FROM ibook_sections WHERE id = ?')->execute([$sectionId]);
+    }
+
+    /** #207: Titel eines Abschnitts nachtraeglich aendern. */
+    public static function renameSection(int $sectionId, string $title): void
+    {
+        Database::pdo()->prepare('UPDATE ibook_sections SET title = ? WHERE id = ?')->execute([$title, $sectionId]);
+    }
+
+    /** #207: Neuen Abschnitt direkt hinter einem Quell-Abschnitt anlegen
+     * (gleicher Bereich, keine Privatperson). Die folgenden Abschnitte
+     * rutschen eine Position nach hinten; Transaktion haelt beides zusammen. */
+    public static function createSectionAfter(int $bookId, int $afterPosition, string $area, string $title): int
+    {
+        $pdo = Database::pdo();
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('UPDATE ibook_sections SET position = position + 1 WHERE book_id = ? AND position > ?')
+                ->execute([$bookId, $afterPosition]);
+            $pdo->prepare('INSERT INTO ibook_sections (book_id, area, owner_user_id, title, position) VALUES (?, ?, NULL, ?, ?)')
+                ->execute([$bookId, $area, $title, $afterPosition + 1]);
+            $newId = (int) $pdo->lastInsertId();
+            $pdo->commit();
+            return $newId;
+        } catch (\Throwable $eSplit) {
+            $pdo->rollBack();
+            throw $eSplit;
+        }
+    }
+
+    /** #207: Seiten in einen anderen Abschnitt verschieben (Teilen).
+     * Die Reihenfolge je Abschnitt zieht der Aufrufer mit
+     * reorderSectionPages fuer beide Beteiligten nach. */
+    public static function movePagesToSection(array $pageIds, int $targetSectionId): void
+    {
+        if ($pageIds === []) {
+            return;
+        }
+        $placeholders = implode(',', array_fill(0, count($pageIds), '?'));
+        Database::pdo()->prepare('UPDATE ibook_pages SET section_id = ? WHERE id IN (' . $placeholders . ')')
+            ->execute(array_merge([$targetSectionId], $pageIds));
     }
 
     /** @return list<array{id: int, section_id: int, title: string, content: string, position: int}> */
