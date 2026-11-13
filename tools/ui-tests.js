@@ -4178,9 +4178,9 @@ setTimeout(function () {
                     'T127h die Bereinigung behaelt Schritt und Animation je Element, mit Obergrenze (#191)');
                   var ctrl127 = require('fs').readFileSync(require.resolve('../src/Controllers/InfoBookController.php'), 'utf8');
                   ok(ctrl127.indexOf('data-step') !== -1 && ctrl127.indexOf('data-anim') !== -1
-                    && ctrl127.indexOf("renderBlock($block, (int) $book->id, $linkPages, 'present')") !== -1
+                    && ctrl127.indexOf("renderBlock($block, (int) $book->id, $slideLinks, 'present')") !== -1
                     && ctrl127.indexOf('66vh') !== -1,
-                    'T127i der Präsentationsmodus rendert Schrittnummer, Animation und Flaechen-Anpassung (#191)');
+                    'T127i der Präsentationsmodus rendert Schrittnummer, Animation und Flaechen-Anpassung (#191, #203: Folien waehlen ihre Link-Ziele je Bereich)');
                   var js127 = require('fs').readFileSync(presPath123, 'utf8');
                   ok(js127.indexOf('icv-ctx-step') !== -1 && js127.indexOf('refreshStepBadge') !== -1
                     && js127.indexOf('icv-stepbadge') !== -1 && js127.indexOf('e.step = item.step') !== -1
@@ -4383,15 +4383,97 @@ setTimeout(function () {
                     'T129l Weg-Layout, Stationen, Aufgaben- und Hinweis-Kasten liegen im Stylesheet (#199)');
                   var support129 = advRead128('../src/Support.php');
                   var changelog129 = advRead128('../CHANGELOG.md');
-                  ok(support129.indexOf("APP_VERSION = '0.25.0'") !== -1
-                    && support129.indexOf("ASSET_VERSION = '81'") !== -1
-                    && changelog129.indexOf('## [0.25.0]') !== -1,
-                    'T129m Version 0.25.0 mit Asset-Stand 81 und Changelog-Eintrag');
+                  ok(changelog129.indexOf('## [0.25.0]') !== -1
+                    && changelog129.indexOf('## [0.26.0]') !== -1,
+                    'T129m der Changelog haelt die Eintraege zu 0.25.0 und 0.26.0 fest (Versionsstand selbst prueft T130r)');
                   ok(advMeta128.indexOf('—') === -1 && wsSrc129.indexOf('—') === -1
                     && advMig128.indexOf('—') === -1 && advCss128.indexOf('—') === -1
                     && advStory128.indexOf('—') === -1 && wsTpl129.indexOf('—') === -1
                     && wsSrc129.indexOf('queryquest') === -1 && wsTpl129.indexOf('queryquest') === -1,
                     'T129n neue Inhalte kommen ohne lange Gedankenstriche und ohne Vorbild-Namen aus (#198, #199)');
+
+                  /* T130 (#200-#204): Runde 26. Cursor deckungsgleich auch bei
+                   * langem SQL (kein weicher Umbruch mehr), Sprung zu den
+                   * Aufgaben oben, InfoBook-Verteilen mit Ziel-Abschnitt-
+                   * Auswahl, Schueler-Knopf repariert, ehrlicher Lese-Hinweis
+                   * und Links nur auf gemeinschaftlich lesbare Seiten. */
+                  var advRead130 = function (p) {
+                    return advFs128.readFileSync(require.resolve(p), 'utf8');
+                  };
+                  var advCount130 = function (hay, needle) {
+                    return hay.split(needle).length - 1;
+                  };
+                  var tplAdv130 = advRead130('../templates/sql_adventure.php');
+                  var tplWs130 = advRead130('../templates/sql_workspace.php');
+                  var app130 = advRead130('../public/assets/js/app.js');
+                  var css130 = advRead130('../public/assets/css/style.css');
+                  ok(advCount130(tplAdv130, 'wrap="off"') === 2 && advCount130(tplWs130, 'wrap="off"') === 2,
+                    'T130 SQL-Eingabefelder brechen nicht mehr weich um, Cursor und Overlay laufen nicht auseinander (#200)');
+                  ok(css130.indexOf('.hlwrap.sql > pre { white-space: pre; overflow-wrap: normal; }') !== -1,
+                    'T130b das Overlay der SQL-Felder bricht genauso wenig um wie die Felder (#200)');
+                  ok(app130.indexOf('fontKerning') !== -1 && app130.indexOf('fontVariantLigatures') !== -1
+                    && app130.indexOf('textRendering') !== -1 && app130.indexOf('wordSpacing') !== -1,
+                    'T130c das Overlay uebernimmt Kerning-, Ligaturen- und Breiten-Eigenschaften (#200)');
+                  ok(tplAdv130.indexOf('href="#aufgaben"') !== -1 && tplAdv130.indexOf('🗺️ Abenteuer-Übersicht') !== -1
+                    && tplAdv130.indexOf('📖 Zu den Kapiteln') !== -1,
+                    'T130d die Abenteuer-Seite springt oben direkt zu den Kapiteln und zur Übersicht (#200)');
+                  ok(tplWs130.indexOf('🎯 Zu den Aufgaben') !== -1 && tplWs130.indexOf('href="#aufgaben"') !== -1,
+                    'T130e die klassische Werkstatt hat denselben Sprung zu ihren Aufgaben oben (#200)');
+                  var tplBook130 = advRead130('../templates/ibook_book.php');
+                  var tplPage130 = advRead130('../templates/ibook_page.php');
+                  ok(tplBook130.indexOf('← Buch-Start') !== -1 && tplPage130.indexOf('← Buch-Start') !== -1
+                    && tplBook130.indexOf('Auth::isTeacher()') !== -1 && tplPage130.indexOf('Auth::isTeacher()') !== -1,
+                    'T130f der InfoBooks-Knopf fuehrt Schuelerinnen und Schueler zum Buch-Start statt ins Leere (#201)');
+                  var ctrl130 = advRead130('../src/Controllers/InfoBookController.php');
+                  ok(ctrl130.indexOf('resolveDistributeTarget') !== -1
+                    && ctrl130.indexOf('function distributeSection') !== -1
+                    && ctrl130.indexOf('function distributeBook') !== -1,
+                    'T130g Verteilen loest das Ziel auf: Abschnitt waehlbar oder neu, ganzes Buch verteilt mit (#202)');
+                  var routes130 = advRead130('../public/index.php');
+                  ok(routes130.indexOf('/infobuecher/{id}/abschnitt/{sid}/verteilen') !== -1
+                    && routes130.indexOf('/infobuecher/{id}/buch/verteilen') !== -1,
+                    'T130h die Routen fuer Abschnitt- und Buch-Verteilen stehen (#202)');
+                  var panel130 = advRead130('../templates/ibook_distribute_panel.php');
+                  ok(panel130.indexOf('name="section_id"') !== -1
+                    && panel130.indexOf('value="-1"') !== -1
+                    && panel130.indexOf('name="new_section_title"') !== -1,
+                    'T130i das Verteilen-Panel waehlt den Ziel-Abschnitt oder legt einen neuen mit Titel an (#202)');
+                  ok(tplBook130.indexOf('Abschnitt an Klasse verteilen') !== -1
+                    && tplBook130.indexOf('Ganzes Buch an Klasse verteilen') !== -1
+                    && tplBook130.indexOf('ibook_distribute_panel.php') !== -1,
+                    'T130j Abschnittsansicht verteilt Abschnitte und ganze Buecher (#202)');
+                  var model130 = advRead130('../src/Models/InfoBook.php');
+                  ok(model130.indexOf('savePage(int $pageId, string $title, array $blocks, bool $sharedContext = false)') !== -1
+                    && model130.indexOf("in_array((string) $linkSection['area'], ['lernbereich', 'gemeinsam'], true)") !== -1,
+                    'T130k Zusammenarbeit-Seiten speichern nur Links auf gemeinschaftlich lesbare Seiten (#203)');
+                  ok(ctrl130.indexOf("(string) $section['area'] === 'gemeinsam'") !== -1,
+                    'T130l der Controller uebergibt den Zusammenarbeit-Kontext ans Speichern (#203)');
+                  ok(model130.indexOf('$blocks[$i][\'items\'][$j][\'link\'] = 0;') !== -1,
+                    'T130m beim Buchuebergang verlieren Kopien ihre alten Seiten-Links (#202, #203)');
+                  ok(ctrl130.indexOf('$sharedContext = (string) $section[\'area\'] === \'gemeinsam\';') !== -1
+                    && ctrl130.indexOf('linkPagesShared') !== -1,
+                    'T130n Editor-Link-Ziele und Präsentationsfolien filtern private Seiten im Zusammenarbeit-Bereich (#203)');
+                  ok(tplPage130.indexOf('Vorschau deiner Seite') !== -1
+                    && tplPage130.indexOf('Bereich Zusammenarbeit') !== -1,
+                    'T130o der Lese-Hinweis unterscheidet Vorschau, Zusammenarbeit und Lernbereich (#203)');
+                  ok(tplBook130.indexOf('Wer sieht was?') !== -1
+                    && tplBook130.indexOf('ausschließlich Abschnitte dieses einen Buchs') !== -1,
+                    'T130p die Abschnittsansicht erklaert der Lehrkraft, wer was sieht (#204)');
+                  ok(ctrl130.indexOf('navSectionsFor') !== -1
+                    && ctrl130.indexOf('visibleSectionForStudent') !== -1
+                    && ctrl130.indexOf('InfoBook::sections($book->id)') !== -1,
+                    'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
+                  var support130 = advRead130('../src/Support.php');
+                  var changelog130 = advRead130('../CHANGELOG.md');
+                  ok(support130.indexOf("APP_VERSION = '0.26.0'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '82'") !== -1
+                    && changelog130.indexOf('## [0.26.0]') !== -1,
+                    'T130r Version 0.26.0 mit Asset-Stand 82 und Changelog-Eintrag');
+                  ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
+                    && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
+                    && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
+                    'T130s neue Inhalte kommen ohne lange Gedankenstriche aus (#200-#204)');
+
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;
 

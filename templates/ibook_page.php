@@ -2,7 +2,7 @@
    Datei: InfoBook: Seite
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.23.0 */ ?>
+   Version: 0.26.0 */ ?>
 <?php /* InfoBook: Seite bearbeiten/ansehen (#62). Bloecke: Text, Bild, Audio, Video, Einbettung, Zeichnung (Apple Pencil). */ ?>
 <?php /* #67: Autospeichern statt Speichern-Button, rechts Vorschau/Lesemodus
  * und kleines aufklappbares Verteilen. */ ?>
@@ -21,7 +21,14 @@
         <?php /* #82/#100/#185: Schmaler Icon-Knopf klappt die Seitenleiste
          * ein und aus, Zustand bleibt im Browser gespeichert (app.js). */ ?>
         <button type="button" class="ibook-navtoggle" id="ibook-pagenav-fold" aria-expanded="true" aria-label="Inhaltsnavigation ein- und ausklappen" title="Inhaltsnavigation einklappen"></button>
+        <?php /* #201: Fuer Schuelerinnen und Schueler fuehrt die InfoBook-
+         * Uebersicht sofort zurueck aufs eigene Klassenbuch, der Knopf
+         * waere ins Leere gelaufen: Er zeigt deshalb auf den Buch-Start. */ ?>
+        <?php if (\Infocraft\Auth::isTeacher()): ?>
         <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht aller InfoBooks">← Alle InfoBooks</a>
+        <?php else: ?>
+        <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id) ?>" title="Zurück zum Start deines InfoBooks">← Buch-Start</a>
+        <?php endif; ?>
         <?php /* #185: Breadcrumb als Standort-Anzeige: Buch startet auf der
          * zuletzt besuchten Seite, der Abschnitt fuehrt in die Abschnitts-
          * ansicht, die Seite ist das aktuelle Element (aria-current). */ ?>
@@ -44,30 +51,15 @@
             <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id']) ?>" title="Zurück zur Bearbeitung">✏️ Bearbeiten</a>
             <?php endif; ?>
             <?php if (\Infocraft\Auth::isTeacher() && $canWrite): ?>
-            <details class="ibook-distribute-details">
-                <summary class="btn btn-ghost">📤 An Klasse verteilen</summary>
-                <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/verteilen') ?>" class="form ibook-distribute-panel">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="page_id" value="<?= (int) $page['id'] ?>">
-                    <div class="form-row form">
-                        <label class="field"><span>Klasse</span>
-                            <select name="class_id" required>
-                                <?php $classes = \Infocraft\Models\SchoolClass::forTeacher($user->id, $user->role === 'admin'); ?>
-                                <?php foreach ($classes as $class): ?>
-                                <option value="<?= (int) $class->id ?>">Klasse <?= e($class->name) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </label>
-                        <label class="field"><span>Zielbereich</span>
-                            <select name="bereich">
-                                <option value="lernbereich">📖 Lernbereich (Schülerinnen und Schüler lesen)</option>
-                                <option value="gemeinsam">🤝 Zusammenarbeit (alle schreiben mit)</option>
-                            </select>
-                        </label>
-                    </div>
-                    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Kopiert diese Seite mit allen Medien ins Klassen-InfoBook">📤 Seite verteilen</button></div>
-                </form>
-            </details>
+            <?php /* #202: Gemeinsames Verteilen-Panel mit Ziel-Abschnitt-Auswahl
+                 * und Option auf einen neuen Abschnitt mit eigenem Titel. */ ?>
+            <?php
+            $distAction = url('infobuecher/' . (int) $book->id . '/verteilen');
+            $distLabel = 'Seite an Klasse verteilen';
+            $distTitle = 'Kopiert diese Seite mit allen Medien ins Klassen-InfoBook';
+            $distHidden = [['page_id', (int) $page['id']]];
+            ?>
+            <?php include __DIR__ . '/ibook_distribute_panel.php'; ?>
             <?php endif; ?>
         </div>
     </div>
@@ -81,7 +73,17 @@
 <?php if (!$canWrite): ?>
 <section class="panel">
     <h3>Seite lesen</h3>
+    <?php /* #203: Der Hinweis sagt jetzt der Wahrheit: In der eigenen
+         * Vorschau (Lesemodus) fuehrt "Bearbeiten" oben rechts zurueck in
+         * den Editor, der alte Lernbereich-Text liess die Bearbeitung
+         * dagegen verloren wirken. */ ?>
+    <?php if ($preview): ?>
+    <p class="muted">Du liest gerade die Vorschau deiner Seite. Oben rechts führt ✏️ Bearbeiten zurück in den Editor.</p>
+    <?php elseif ((string) $section['area'] === 'gemeinsam'): ?>
+    <p class="muted">Diese Seite gehört in den Bereich Zusammenarbeit: Schülerinnen und Schüler der Klasse schreiben hier gemeinsam.</p>
+    <?php else: ?>
     <p class="muted">Diese Seite gehört zum Lernbereich: Lesen ist frei, Änderungen macht die Lehrkraft.</p>
+    <?php endif; ?>
 </section>
 <?php foreach ($blocks as $block): ?>
 <?= (string) $block['html'] ?>

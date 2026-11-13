@@ -1237,10 +1237,15 @@
     /* Runde 25 (#197): Der Browser zeichnet den Cursor mit der Schriftmetrik
      * der Textarea. Damit der farbige Text im pre exakt an derselben Stelle
      * liegt wie der Cursor, uebernehmen wir alle schriftrelevanten Styles der
-     * Textarea ins pre, statt auf identische CSS-Regeln zu vertrauen. */
+     * Textarea ins pre, statt auf identische CSS-Regeln zu vertrauen.
+     * Runde 26 (#200): Ergaenzt um Kerning-, Ligaturen- und Breiten-Eigen-
+     * schaften: Ohne sie driften Cursor und Farbtext mit jedem Zeichen
+     * weiter auseinander, je laenger der Text. */
     var areaStyle = window.getComputedStyle(area);
     ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight',
-     'letterSpacing', 'fontVariant', 'fontFeatureSettings', 'tabSize'
+     'letterSpacing', 'fontVariant', 'fontFeatureSettings', 'tabSize',
+     'fontKerning', 'fontVariantLigatures', 'fontOpticalSizing',
+     'textRendering', 'wordSpacing', 'textTransform'
     ].forEach(function (prop) {
       if (areaStyle[prop]) { pre.style[prop] = areaStyle[prop]; }
     });

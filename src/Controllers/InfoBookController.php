@@ -424,10 +424,16 @@ final class InfoBookController
         }
         /* #73: Seiten des Buchs als Link-Ziele fuer den Editor und zur
          * Pruefung im Lesemodus: gerendert werden nur Links innerhalb
-         * desselben Buchs. */
+         * desselben Buchs. #203: Auf einer Seite im Bereich Zusammenarbeit
+         * stehen nur Seiten aus Lernbereich und Zusammenarbeit als Ziele
+         * bereit, private Bereiche bleiben draussen. */
         $navPages = [];
         $linkPages = [];
+        $sharedContext = (string) $section['area'] === 'gemeinsam';
         foreach ($nav as $navEntry) {
+            if ($sharedContext && !in_array((string) $navEntry['section']['area'], ['lernbereich', 'gemeinsam'], true)) {
+                continue;
+            }
             foreach ($navEntry['pages'] as $navPage) {
                 $navPages[] = ['id' => (int) $navPage['id'], 't' => (string) $navPage['title'], 's' => (string) $navEntry['section']['title']];
                 $linkPages[(int) $navPage['id']] = true;
@@ -535,7 +541,10 @@ final class InfoBookController
         if (!is_array($blocks)) {
             $blocks = [];
         }
-        InfoBook::savePage((int) $page['id'], $title, $blocks);
+        /* #203: Seiten im Bereich Zusammenarbeit duerfen nur auf Seiten
+         * verlinken, die der ganzen Klasse mindestens lesbar zur Verfuegung
+         * stehen; die Filterung uebernimmt savePage im Model. */
+        InfoBook::savePage((int) $page['id'], $title, $blocks, (string) $section['area'] === 'gemeinsam');
         /* #67: Autospeichern aus dem Editor antwortet mit JSON statt Redirect. */
         if (($_SERVER['HTTP_X_IC_AUTOSAVE'] ?? '') === '1') {
             header('Content-Type: application/json; charset=utf-8');
@@ -694,6 +703,70 @@ final class InfoBookController
      * Seite aus diesem Buch in ein Klassen-InfoBook verteilen (#62): Ziel ist
      * der Lernbereich (Schüler lesen) oder die Zusammenarbeit (alle schreiben).
      */
+    /**
+     * Seite aus diesem Buch in ein Klassen-InfoBook verteilen (#62): Ziel ist
+     * der Lernbereich (Schüler lesen) oder die Zusammenarbeit (alle schreiben).
+     * #202: Der Ziel-Abschnitt laesst sich direkt waehlen oder mit eigenem
+     * Titel neu anlegen; ohne Auswahl bleibt es beim ersten Abschnitt des
+     * Zielbereichs. Gilt fuer Seite, Abschnitt und ganzes Buch.
+     * @return array{0: InfoBook, 1: array<string, mixed>}|null
+     */
+    private static function resolveDistributeTarget(InfoBook $sourceBook, User $user): ?array
+    {
+        $classId = (int) ($_POST['class_id'] ?? 0);
+        $bereich = (string) ($_POST['bereich'] ?? 'lernbereich');
+        if (!in_array($bereich, ['lernbereich', 'gemeinsam'], true)) {
+            $bereich = 'lernbereich';
+        }
+        $wantedSectionId = (int) ($_POST['section_id'] ?? 0);
+        $newTitle = trim((string) ($_POST['new_section_title'] ?? ''));
+        $targetBook = null;
+        $targetSection = null;
+        /* Fall 1 (#202): konkreter Ziel-Abschnitt einer Zielklasse. Das
+         * Klassenbuch ergibt sich aus dem Abschnitt; die Klassen-Angabe
+         * wird nur fuer die anderen Faelle gebraucht. */
+        if ($wantedSectionId > 0) {
+            $wanted = InfoBook::findSection($wantedSectionId);
+            if ($wanted !== null) {
+                $wantedBook = InfoBook::find((int) $wanted['book_id']);
+                if ($wantedBook !== null && $wantedBook->classId !== null && self::canManage($wantedBook, $user)) {
+                    $targetBook = $wantedBook;
+                    $targetSection = $wanted;
+                }
+            }
+        }
+        /* Fall 2: neuen Abschnitt mit eigenem Titel anlegen. */
+        if ($targetBook === null && $wantedSectionId === -1 && $newTitle !== '') {
+            $targetBook = InfoBook::ensureClassBook($classId, $user->id);
+            $sectionId = InfoBook::createSection($targetBook->id, $bereich, null, mb_substr($newTitle, 0, 160));
+            $targetSection = InfoBook::findSection($sectionId);
+        }
+        /* Fall 3 (bisheriges Verhalten): passenden Abschnitt im Zielbereich
+         * waehlen, ersten vorhandenen nehmen, sonst neu anlegen. */
+        if ($targetBook === null) {
+            $targetBook = InfoBook::ensureClassBook($classId, $user->id);
+            foreach (InfoBook::sections($targetBook->id) as $section) {
+                if ((string) $section['area'] === $bereich) {
+                    $targetSection = $section;
+                    break;
+                }
+            }
+            if ($targetSection === null) {
+                $sectionId = InfoBook::createSection($targetBook->id, $bereich, null, $bereich === 'lernbereich' ? 'Lernbereich' : 'Zusammenarbeit');
+                $targetSection = InfoBook::findSection($sectionId);
+            }
+        }
+        if ($targetBook === null || $targetSection === null) {
+            flash('error', 'Der Zielbereich konnte nicht angelegt werden.');
+            return null;
+        }
+        if ((int) $targetSection['book_id'] !== $targetBook->id) {
+            flash('error', 'Der Zielbereich konnte nicht angelegt werden.');
+            return null;
+        }
+        return [$targetBook, $targetSection];
+    }
+
     public static function distribute(array $params): void
     {
         $user = Auth::user();
@@ -707,35 +780,103 @@ final class InfoBookController
         csrf_validate();
         $book = InfoBook::find((int) ($params['id'] ?? 0));
         $page = InfoBook::findPage((int) ($_POST['page_id'] ?? 0));
-        $classId = (int) ($_POST['class_id'] ?? 0);
-        $bereich = (string) ($_POST['bereich'] ?? 'lernbereich');
         if ($book === null || $page === null || !self::canRead($book, $user)) {
             flash('error', 'Diese Seite gibt es nicht.');
             redirect('/infobuecher');
         }
+        $resolved = self::resolveDistributeTarget($book, $user);
+        if ($resolved === null) {
+            redirect('/infobuecher/' . $book->id);
+            return;
+        }
+        [$targetBook, $targetSection] = $resolved;
+        InfoBook::copyPage((int) $page['id'], (int) $targetSection['id'], '', (string) $targetSection['area'] === 'gemeinsam');
+        flash('success', 'Seite verteilt: Sie liegt jetzt im Abschnitt "' . (string) $targetSection['title'] . '" der Klasse.');
+        redirect('/infobuecher/' . $book->id . '/seite/' . (int) $page['id']);
+    }
+
+    /**
+     * #202: Ganzen Abschnitt an eine Klasse verteilen: alle Seiten landen
+     * als Kopien im gewaehlten Ziel-Abschnitt des Klassen-InfoBooks.
+     */
+    public static function distributeSection(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Nur Lehrkräfte verteilen Abschnitte.');
+            redirect('/infobuecher');
+        }
+        csrf_validate();
+        $book = InfoBook::find((int) ($params['id'] ?? 0));
+        $section = InfoBook::findSection((int) ($params['sid'] ?? 0));
+        if ($book === null || $section === null || (int) $section['book_id'] !== $book->id || !self::canManage($book, $user)) {
+            flash('error', 'Dieser Abschnitt gehört nicht zu deinem Konto.');
+            redirect('/infobuecher');
+        }
+        $resolved = self::resolveDistributeTarget($book, $user);
+        if ($resolved === null) {
+            redirect('/infobuecher/' . $book->id . '?abschnitt=' . (int) $section['id']);
+            return;
+        }
+        [$targetBook, $targetSection] = $resolved;
+        $sharedTarget = (string) $targetSection['area'] === 'gemeinsam';
+        $count = 0;
+        foreach (array_slice(InfoBook::pages((int) $section['id']), 0, 200) as $page) {
+            if (InfoBook::copyPage((int) $page['id'], (int) $targetSection['id'], '', $sharedTarget) > 0) {
+                $count++;
+            }
+        }
+        flash('success', 'Abschnitt verteilt: ' . $count . ' Seite(n) liegen jetzt im Abschnitt "' . (string) $targetSection['title'] . '" der Klasse.');
+        redirect('/infobuecher/' . $book->id . '?abschnitt=' . (int) $section['id']);
+    }
+
+    /**
+     * #202: Ganzes Buch an eine Klasse verteilen: Fuer jeden Abschnitt mit
+     * Seiten (Lernbereich und Zusammenarbeit, private Bereiche bleiben aus)
+     * entsteht ein Abschnitt im Klassen-InfoBook, alle Seiten werden kopiert.
+     */
+    public static function distributeBook(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher()) {
+            flash('error', 'Nur Lehrkräfte verteilen Bücher.');
+            redirect('/infobuecher');
+        }
+        csrf_validate();
+        $book = InfoBook::find((int) ($params['id'] ?? 0));
+        if ($book === null || !self::canManage($book, $user)) {
+            flash('error', 'Dieses InfoBook gehört nicht zu deinem Konto.');
+            redirect('/infobuecher');
+        }
+        $classId = (int) ($_POST['class_id'] ?? 0);
         $targetBook = InfoBook::ensureClassBook($classId, $user->id);
-        $sectionId = (int) ($_POST['section_id'] ?? 0);
-        $targetSection = $sectionId > 0 ? InfoBook::findSection($sectionId) : null;
-        if ($targetSection === null || (int) $targetSection['book_id'] !== $targetBook->id) {
-            // Passenden Abschnitt im Zielbereich waehlen (erster vorhanden, sonst neu anlegen).
-            foreach (InfoBook::sections($targetBook->id) as $section) {
-                if ((string) $section['area'] === $bereich) {
-                    $targetSection = $section;
-                    break;
+        $sectionsCopied = 0;
+        $pagesCopied = 0;
+        foreach (array_slice(InfoBook::sections($book->id), 0, 20) as $section) {
+            $area = (string) $section['area'];
+            if ($area !== 'lernbereich' && $area !== 'gemeinsam') {
+                continue;
+            }
+            $pages = InfoBook::pages((int) $section['id']);
+            if ($pages === []) {
+                continue;
+            }
+            $targetSectionId = InfoBook::createSection($targetBook->id, $area, null, (string) $section['title']);
+            foreach (array_slice($pages, 0, 100) as $page) {
+                if (InfoBook::copyPage((int) $page['id'], $targetSectionId, '', $area === 'gemeinsam') > 0) {
+                    $pagesCopied++;
                 }
             }
-            if ($targetSection === null) {
-                $sectionId = InfoBook::createSection($targetBook->id, $bereich, null, $bereich === 'lernbereich' ? 'Lernbereich' : 'Zusammenarbeit');
-                $targetSection = InfoBook::findSection($sectionId);
-            }
+            $sectionsCopied++;
         }
-        if ($targetSection === null) {
-            flash('error', 'Der Zielbereich konnte nicht angelegt werden.');
-            redirect('/infobuecher/' . $book->id);
-        }
-        InfoBook::copyPage((int) $page['id'], (int) $targetSection['id']);
-        flash('success', 'Seite verteilt: Sie liegt jetzt im ' . ((string) $targetSection['area'] === 'lernbereich' ? 'Lernbereich' : 'Bereich Zusammenarbeit') . ' der Klasse.');
-        redirect('/infobuecher/' . $book->id . '/seite/' . (int) $page['id']);
+        flash('success', 'Buch verteilt: ' . $sectionsCopied . ' Abschnitt(e) mit ' . $pagesCopied . ' Seite(n) liegen jetzt im Klassen-InfoBook.');
+        redirect('/infobuecher/' . $book->id);
     }
 
     /**
@@ -792,14 +933,19 @@ final class InfoBookController
         $wanted = (int) ($_GET['abschnitt'] ?? 0);
         $slides = [];
         $linkPages = [];
+        $linkPagesShared = [];
         foreach ($sections as $section) {
             if ($wanted > 0 && (int) $section['id'] !== $wanted) {
                 continue;
             }
             foreach (InfoBook::pages((int) $section['id']) as $page) {
                 $linkPages[(int) $page['id']] = true; /* #73: verlinkbare Seiten */
+                if (in_array((string) $section['area'], ['lernbereich', 'gemeinsam'], true)) {
+                    $linkPagesShared[(int) $page['id']] = true; /* #203: Ziele fuer Zusammenarbeit */
+                }
                 $slides[] = [
                     'section' => (string) $section['title'],
+                    'area' => (string) $section['area'],
                     'title' => (string) $page['title'],
                     'blocks' => InfoBook::pageBlocks($page),
                 ];
@@ -807,8 +953,11 @@ final class InfoBookController
         }
         foreach ($slides as $i => $slide) {
             $html = '';
+            /* #203: Folien aus dem Bereich Zusammenarbeit verlinken nur
+             * gemeinschaftlich lesbare Seiten (Lernbereich, Zusammenarbeit). */
+            $slideLinks = (string) ($slide['area'] ?? '') === 'gemeinsam' ? $linkPagesShared : $linkPages;
             foreach ($slide['blocks'] as $block) {
-                $html .= self::renderBlock($block, (int) $book->id, $linkPages, 'present');
+                $html .= self::renderBlock($block, (int) $book->id, $slideLinks, 'present');
             }
             $slides[$i]['html'] = $html;
         }

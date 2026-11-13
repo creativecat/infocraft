@@ -338,6 +338,10 @@ body.sidebar-mini .nav-item { justify-content: center; padding: 10px 8px; }
  * laufen. Zusaetzlich kopiert app.js beim Anlegen des pre die berechneten
  * Schrift-Styles der Textarea hinein. */
 .hlwrap.sql > textarea, .hlwrap.sql > pre { font-size: 0.95rem; }
+/* Runde 26 (#200): SQL-Felder brechen nicht weich um (wrap="off" im Template),
+ * das Overlay darf es deshalb auch nicht: Ein Umbruch nur auf einer Seite
+ * laesst Cursor und Farbtext pro Zeile weiter auseinanderlaufen. */
+.hlwrap.sql > pre { white-space: pre; overflow-wrap: normal; }
 /* Transparent wird der Text erst, wenn das farbige Overlay wirklich da ist (hl-active). */
 .hlwrap.hl-active > textarea { color: transparent; }
 /* Objektkonsole (#112): #java-repl-in setzt color per ID-Spezifitaet und

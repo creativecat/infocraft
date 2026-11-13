@@ -2,7 +2,7 @@
    Datei: SQL-Werkstatt: Abenteuer-Arbeitsfläche (Kapitel-Ansicht)
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.25.0 */ ?>
+   Version: 0.26.0 */ ?>
 <?php $sqlTableNames = array_map(static fn (array $t): string => (string) $t['name'], $tables); ?>
 <?php
 $solvedCount = 0;
@@ -36,6 +36,10 @@ $percent = $total > 0 ? (int) round($solvedCount * 100 / $total) : 0;
         <?php if ($permission === 'read'): ?>
         <p class="muted">Dieses Abenteuer lebt von Änderungen an den Daten. Deine Lehrkraft kann dir Schreibrechte geben.</p>
         <?php endif; ?>
+        <div class="btn-row">
+            <a class="btn btn-ghost" href="#aufgaben" title="Direkt zu den Kapiteln dieser Reise springen">📖 Zu den Kapiteln</a>
+            <a class="btn btn-ghost" href="<?= url('werkstatt/sql/abenteuer') ?>" title="Zur Übersicht aller Abenteuer">🗺️ Abenteuer-Übersicht</a>
+        </div>
     </div>
 </section>
 
@@ -46,7 +50,7 @@ $percent = $total > 0 ? (int) round($solvedCount * 100 / $total) : 0;
         <?= csrf_field() ?>
         <label class="field">
             <span>SQL-Anweisung (Strg + Enter führt aus)</span>
-            <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="sql" rows="5" class="mono sql-input" data-tables="<?= e(implode(',', $sqlTableNames)) ?>" placeholder="SELECT * FROM ..."><?= e($lastSql) ?></textarea></div>
+            <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="sql" rows="5" wrap="off" class="mono sql-input" data-tables="<?= e(implode(',', $sqlTableNames)) ?>" placeholder="SELECT * FROM ..."><?= e($lastSql) ?></textarea></div>
         </label>
         <div class="btn-row"><button class="btn btn-primary" type="submit" title="Ausführen">▶</button></div>
     </form>
@@ -148,7 +152,7 @@ $percent = $total > 0 ? (int) round($solvedCount * 100 / $total) : 0;
                 <?= csrf_field() ?>
                 <label class="field">
                     <span>Deine SQL-Anweisung<?= ($mission['kind'] ?? 'query') === 'action' ? ' (verändert die Daten, Schreibrechte nötig)' : '' ?></span>
-                    <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="mission_sql" rows="3" class="mono" placeholder="SELECT ..."><?= e($attempt !== null && (int) $attempt['id'] === (int) $mission['id'] ? $attempt['sql'] : '') ?></textarea></div>
+                    <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="mission_sql" rows="3" wrap="off" class="mono" placeholder="SELECT ..."><?= e($attempt !== null && (int) $attempt['id'] === (int) $mission['id'] ? $attempt['sql'] : '') ?></textarea></div>
                 </label>
                 <div class="btn-row"><button class="btn btn-primary" type="submit" title="Prüfen">✅</button></div>
             </form>

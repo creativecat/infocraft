@@ -5,6 +5,22 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.26.0] - 2026-11-13
+
+### SQL-Werkstatt: Cursor deckungsgleich auch bei langen Anweisungen, Sprung zu den Aufgaben oben (#200)
+
+- Der Cursor im SQL-Bereich läuft nicht mehr vor dem farbigen Text davon, egal wie lang die Anweisung wird (#200): Die SQL-Eingabefelder brechen lange Zeilen jetzt nicht mehr weich um, sondern scrollen horizontal wie ein Code-Editor, und das farbige Overlay bricht genauso wenig um. Der Versatz kam daher, dass das Eingabefeld am Zeilenende umbroch, das Overlay aber geradeaus lief, und mit jeder umbrochenen Zeile weiter auseinanderdriftete. Zusätzlich übernimmt das Overlay jetzt auch Kerning-, Ligaturen- und Breiteneigenschaften aus dem Eingabefeld.
+- Oben auf der Abenteuer-Seite gibt es jetzt zwei Knöpfe: direkt zu den Kapiteln und zur Abenteuer-Übersicht, ohne an der Konsole vorbei zu scrollen. Die klassische Werkstatt bekommt denselben Sprung zu ihren Aufgaben (#200).
+
+### InfoBooks: Verteilen mit Ziel-Auswahl, reparierte Knöpfe und ehrliche Hinweise (#201-#204)
+
+- Der Knopf „Alle InfoBooks" funktioniert für Schülerinnen und Schüler wieder (#201): Er zeigte auf die Übersicht, die sie sofort auf ihr Klassen-InfoBook zurückleitet, sodass nichts passierte. Für sie zeigt er jetzt auf den Buch-Start, für Lehrkräfte bleibt alles wie bisher.
+- Beim Verteilen einer Seite lässt sich jetzt der Ziel-Abschnitt der Klasse direkt auswählen oder ein neuer Abschnitt mit eigenem Titel anlegen (#202), statt automatisch im ersten Abschnitt des Zielbereichs zu landen. Ganze Abschnitte lassen sich an eine Klasse verteilen: alle Seiten landen als Kopien im gewählten Ziel-Abschnitt. Und ein ganzes Buch lässt sich an eine Klasse verteilen: Für jeden Abschnitt mit Seiten (Lernbereich und Zusammenarbeit, private Bereiche bleiben aus) entsteht ein eigener Abschnitt im Klassen-InfoBook.
+- Beim Kopieren in ein anderes Buch werden Seiten-Links sicher entfernt (#202): Link-IDs gelten nur innerhalb eines Buchs, eine übernommene ID hätte im Ziel auf eine ganz andere Seite gezeigt.
+- Der Hinweis im Lesemodus sagt jetzt der Wahrheit (#203): In der eigenen Vorschau steht deutlich, dass „Bearbeiten" oben rechts zurück in den Editor führt; der bisherige Lernbereich-Text („Änderungen macht die Lehrkraft") ließ die Bearbeitung von Zusammenarbeit-Seiten verloren wirken.
+- Links im Bereich Zusammenarbeit zeigen nur noch auf Seiten, die der ganzen Klasse mindestens zum Lesen zur Verfügung stehen (#203): Beim Speichern, im Editor und beim Anzeigen bleiben private „Mein Bereich"-Seiten als Link-Ziele draußen.
+- Die Abschnittsansicht für Lehrkräfte erklärt die Sichtbarkeit (#204): Ein Hinweiskasten macht transparent, dass die Ansicht ausschließlich Abschnitte dieses einen Buchs zeigt und was die Klasse jeweils sieht (Lernbereich und Zusammenarbeit für alle, private Bereiche nur für ihre Besitzerin oder ihren Besitzer).
+
 ## [0.25.0] - 2026-11-13
 
 ### SQL-Werkstatt: Kapitel-Weg mit Szenenbildern, echte Tipps und erhaltene Eingaben (#197-#199)

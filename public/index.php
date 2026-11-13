@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.24.0
+ * @version 0.26.0
  */
 declare(strict_types=1);
 
@@ -224,6 +224,9 @@ $router->post('/infobuecher/{id}/seite/{pid}/loeschen', [InfoBookController::cla
 $router->post('/infobuecher/{id}/medium', [InfoBookController::class, 'uploadMedia']);
 $router->post('/infobuecher/{id}/zeichnung', [InfoBookController::class, 'saveDrawing']);
 $router->post('/infobuecher/{id}/verteilen', [InfoBookController::class, 'distribute']);
+/* #202: Abschnitte und ganze Bücher an Klassen-InfoBooks verteilen. */
+$router->post('/infobuecher/{id}/abschnitt/{sid}/verteilen', [InfoBookController::class, 'distributeSection']);
+$router->post('/infobuecher/{id}/buch/verteilen', [InfoBookController::class, 'distributeBook']);
 $router->post('/infobuecher/{id}/import', [InfoBookController::class, 'import']);
 $router->get('/infobuecher/{id}/praesentation', [InfoBookController::class, 'present']);
 

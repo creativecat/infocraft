@@ -467,14 +467,20 @@ final class InfoBook
     }
 
     /** Seite speichern: Titel und Bloecke (JSON wird serverseitig bereinigt). */
-    public static function savePage(int $pageId, string $title, array $blocks): void
+    public static function savePage(int $pageId, string $title, array $blocks, bool $sharedContext = false): void
     {
-        /* Seiten-Link-Ziele (#73): erlaubt sind alle Seiten desselben Buchs. */
+        /* Seiten-Link-Ziele (#73): erlaubt sind alle Seiten desselben Buchs.
+         * #203: Im Bereich Zusammenarbeit duerfen Links nur auf Seiten zeigen,
+         * die der ganzen Klasse mindestens zum Lesen zur Verfuegung stehen,
+         * private "Mein Bereich"-Seiten bleiben als Ziel draussen. */
         $bookPageIds = [];
         $pageRow = self::findPage($pageId);
         $pageSection = $pageRow !== null ? self::findSection((int) $pageRow['section_id']) : null;
         if ($pageSection !== null) {
             foreach (self::sections((int) $pageSection['book_id']) as $linkSection) {
+                if ($sharedContext && !in_array((string) $linkSection['area'], ['lernbereich', 'gemeinsam'], true)) {
+                    continue;
+                }
                 foreach (self::pages((int) $linkSection['id']) as $linkPage) {
                     $bookPageIds[(int) $linkPage['id']] = true;
                 }
@@ -679,7 +685,7 @@ final class InfoBook
      * dupliziert und die Block-Referenzen auf die neuen Medien-IDs umgebogen,
      * damit das Ziel unabhaengig ist.
      */
-    public static function copyPage(int $pageId, int $targetSectionId, string $titleSuffix = ''): int
+    public static function copyPage(int $pageId, int $targetSectionId, string $titleSuffix = '', bool $sharedContext = false): int
     {
         $page = self::findPage($pageId);
         $target = self::findSection($targetSectionId);
@@ -702,6 +708,20 @@ final class InfoBook
                 }
                 $copy = self::addMedia($targetBook, (string) $media['kind'], (string) $media['name'], (string) $media['mime'], $data);
                 $copies[$mediaId] = $copy['id'];
+            }
+            /* #202/#203: Seiten-Links sind buchintern. Beim Kopieren in ein
+             * anderes Buch wuerde eine uebernommene Link-ID auf eine ganz
+             * andere Seite des Zielbuchs zeigen; die Links werden deshalb
+             * beim Buchuebergang entfernt und muessen im Ziel neu gesetzt
+             * werden. */
+            foreach ($blocks as $i => $block) {
+                if (is_array($block) && (string) ($block['type'] ?? '') === 'canvas') {
+                    foreach (($block['items'] ?? []) as $j => $item) {
+                        if (is_array($item) && (int) ($item['link'] ?? 0) > 0) {
+                            $blocks[$i]['items'][$j]['link'] = 0;
+                        }
+                    }
+                }
             }
         }
         foreach ($blocks as $i => $block) {
@@ -726,7 +746,7 @@ final class InfoBook
         }
         $title = (string) $page['title'] . ($titleSuffix !== '' ? ' ' . $titleSuffix : '');
         $newId = self::createPage($targetSectionId, $title);
-        self::savePage($newId, $title, $blocks);
+        self::savePage($newId, $title, $blocks, $sharedContext);
         return $newId;
     }
 

@@ -2,7 +2,7 @@
    Datei: SQL-Werkstatt: Arbeitsfläche
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.25.0 */ ?>
+   Version: 0.26.0 */ ?>
 <?php $sqlTableNames = array_map(static fn (array $t): string => (string) $t['name'], $tables); ?>
 <section class="panel">
     <div class="panel-head">
@@ -14,12 +14,15 @@
         <?php if (in_array($template->slug, ['shop', 'instacraft'], true)): ?>
         <a class="btn btn-ghost" href="<?= url('werkstatt/sql/' . e($template->slug) . '/app') ?>" title="Mobil-Frontend auf derselben Datenbank: Bestellungen, Likes und Kommentare landen in den Tabellen der Werkstatt - und umgekehrt.">📱 App-Ansicht</a>
         <?php endif; ?>
+        <?php /* #200: Direkter Sprung zu den Aufgaben, ohne an der Konsole
+             vorbei zu scrollen. */ ?>
+        <a class="btn btn-ghost" href="#aufgaben" title="Zu den Aufgaben dieser Datenbank springen">🎯 Zu den Aufgaben</a>
     </div>
     <form method="post" action="<?= url('werkstatt/sql/' . $template->slug) ?>" class="form" id="sql-form">
         <?= csrf_field() ?>
         <label class="field">
             <span>SQL-Anweisung (Strg + Enter führt aus)</span>
-            <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="sql" rows="5" class="mono sql-input" data-tables="<?= e(implode(',', $sqlTableNames)) ?>" placeholder="SELECT * FROM ..."><?= e($lastSql) ?></textarea></div>
+            <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="sql" rows="5" wrap="off" class="mono sql-input" data-tables="<?= e(implode(',', $sqlTableNames)) ?>" placeholder="SELECT * FROM ..."><?= e($lastSql) ?></textarea></div>
         </label>
         <div class="btn-row"><button class="btn btn-primary" type="submit" title="Ausführen">▶</button></div>
     </form>
@@ -103,7 +106,7 @@
             <?= csrf_field() ?>
             <label class="field">
                 <span>Deine SQL-Anweisung<?= ($mission['kind'] ?? 'query') === 'action' ? ' (verändert die Daten, Schreibrechte nötig)' : '' ?></span>
-                <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="mission_sql" rows="3" class="mono" placeholder="SELECT ..."><?= e($attempt !== null && (int) $attempt['id'] === (int) $mission['id'] ? $attempt['sql'] : '') ?></textarea></div>
+                <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="mission_sql" rows="3" wrap="off" class="mono" placeholder="SELECT ..."><?= e($attempt !== null && (int) $attempt['id'] === (int) $mission['id'] ? $attempt['sql'] : '') ?></textarea></div>
             </label>
             <div class="btn-row"><button class="btn btn-primary" type="submit" title="Prüfen">✅</button></div>
         </form>
