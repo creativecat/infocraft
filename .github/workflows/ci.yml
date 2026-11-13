@@ -331,7 +331,7 @@ jobs:
           grep -Fq "← Deine InfoBooks" templates/ibook_book.php && grep -Fq "← Deine InfoBooks" templates/ibook_page.php && R27BTN_OK=1 || R27BTN_OK=0
           grep -Fq 'personalBooks($user->id, false)' src/Controllers/InfoBookController.php && grep -Fq 'return $book->classId === null && $book->ownerId === $user->id;' src/Controllers/InfoBookController.php && R27STUBK_OK=1 || R27STUBK_OK=0
           grep -Fq 'elseif ($book->classId === null && $book->ownerId === $user->id)' src/Controllers/InfoBookController.php && grep -Fq 'elseif ($book->classId === null && $book->ownerId === $user->id)' templates/ibook_nav.php && R27SECT_OK=1 || R27SECT_OK=0
-          grep -q "navShowArea" templates/ibook_nav.php && grep -q "if (!empty($navShowArea[$navAreaKey]))" templates/ibook_nav.php && R27NAV_OK=1 || R27NAV_OK=0
+          grep -q "navShowArea" templates/ibook_nav.php && grep -q 'if (!empty($navShowArea[$navAreaKey]))' templates/ibook_nav.php && R27NAV_OK=1 || R27NAV_OK=0
           grep -q "secTitleIsArea" templates/ibook_book.php && grep -Fq 'title="Bereich: <?= e($secAreaName) ?>"' templates/ibook_book.php && R27DUP_OK=1 || R27DUP_OK=0
           grep -q "function renameSection" src/Controllers/InfoBookController.php && grep -q "function splitSection" src/Controllers/InfoBookController.php && grep -Fq "/infobuecher/{id}/abschnitt/{sid}/umbenennen" public/index.php && grep -Fq "/infobuecher/{id}/abschnitt/{sid}/teilen" public/index.php && R27MGMT_OK=1 || R27MGMT_OK=0
           grep -q "function renameSection" src/Models/InfoBook.php && grep -q "function createSectionAfter" src/Models/InfoBook.php && grep -q "function movePagesToSection" src/Models/InfoBook.php && R27MODEL_OK=1 || R27MODEL_OK=0
@@ -816,7 +816,7 @@ jobs:
           grep -q 'slide-stepinfo' ibkpres.html && grep -q 'slide-stepinfo' ibkcvpres.html && IBK_PRESSTEPRO_OK=1 || IBK_PRESSTEPRO_OK=0
           grep -q 'data-step="2"' ibkcvpres.html && grep -q 'data-anim="up"' ibkcvpres.html && grep -q 'calc(66vh' ibkcvpres.html && IBK_STEPRESRO_OK=1 || IBK_STEPRESRO_OK=0
           CODE_IBKEMOV=$(curl -sS -o ibkemmaov.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt http://127.0.0.1:8080/infobuecher)
-          grep -q "Deine InfoBooks" ibkemmaov.html && IBK_EM_OVER_OK=1 || IBK_EM_OVER_OK=0
+          grep -q "Neues InfoBook anlegen" ibkemmaov.html && grep -q "Klassen-InfoBooks" ibkemmaov.html && IBK_EM_OVER_OK=1 || IBK_EM_OVER_OK=0
           IBKID9=$(sqlite3 "$DB" "SELECT id FROM ibooks WHERE class_id = (SELECT id FROM classes WHERE name = '9R') LIMIT 1")
           CODE_IBKEM=$(curl -sS -L -o ibkemma.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt "http://127.0.0.1:8080/infobuecher/$IBKID9")
           grep -q "Mein Bereich - Emma" ibkemma.html && IBK_EM_OWN_OK=1 || IBK_EM_OWN_OK=0
