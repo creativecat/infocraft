@@ -331,7 +331,7 @@ jobs:
           grep -Fq "← Deine InfoBooks" templates/ibook_book.php && grep -Fq "← Deine InfoBooks" templates/ibook_page.php && R27BTN_OK=1 || R27BTN_OK=0
           grep -Fq 'personalBooks($user->id, false)' src/Controllers/InfoBookController.php && grep -Fq 'return $book->classId === null && $book->ownerId === $user->id;' src/Controllers/InfoBookController.php && R27STUBK_OK=1 || R27STUBK_OK=0
           grep -Fq 'elseif ($book->classId === null && $book->ownerId === $user->id)' src/Controllers/InfoBookController.php && grep -Fq 'elseif ($book->classId === null && $book->ownerId === $user->id)' templates/ibook_nav.php && R27SECT_OK=1 || R27SECT_OK=0
-          grep -q "navShowArea" templates/ibook_nav.php && grep -q 'if (!empty($navShowArea[$navAreaKey]))' templates/ibook_nav.php && R27NAV_OK=1 || R27NAV_OK=0
+          grep -q "navShowArea" templates/ibook_nav.php && grep -Fq 'if (!empty($navShowArea[$navAreaKey]))' templates/ibook_nav.php && R27NAV_OK=1 || R27NAV_OK=0
           grep -q "secTitleIsArea" templates/ibook_book.php && grep -Fq 'title="Bereich: <?= e($secAreaName) ?>"' templates/ibook_book.php && R27DUP_OK=1 || R27DUP_OK=0
           grep -q "function renameSection" src/Controllers/InfoBookController.php && grep -q "function splitSection" src/Controllers/InfoBookController.php && grep -Fq "/infobuecher/{id}/abschnitt/{sid}/umbenennen" public/index.php && grep -Fq "/infobuecher/{id}/abschnitt/{sid}/teilen" public/index.php && R27MGMT_OK=1 || R27MGMT_OK=0
           grep -q "function renameSection" src/Models/InfoBook.php && grep -q "function createSectionAfter" src/Models/InfoBook.php && grep -q "function movePagesToSection" src/Models/InfoBook.php && R27MODEL_OK=1 || R27MODEL_OK=0
