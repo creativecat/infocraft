@@ -4482,7 +4482,7 @@ setTimeout(function () {
                   var tplOverview131 = advRead130('../templates/ibook_overview.php');
                   var routes131 = advRead130('../public/index.php');
                   ok(ctrl130.indexOf('personalBooks($user->id, false)') !== -1
-                    && ctrl130.indexOf('InfoBook::classBook($class->id)') !== -1,
+                    && ctrl130.indexOf('ensureClassBook($class->id, $user->id)') !== -1,
                     'T131 die Uebersicht rendert fuer Schuelerinnen und Schueler eigene und Klassen-Buecher (#205)');
                   ok(ctrl130.indexOf('if ($book->classId === null && $book->ownerId === $user->id) {') !== -1,
                     'T131b Lesen und Verwalten eigener Buecher: Schuelerinnen und Schueler haben Zugriff (#205)');

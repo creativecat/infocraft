@@ -48,14 +48,15 @@ final class InfoBookController
         if (!Auth::isTeacher()) {
             /* #205: Schuelerinnen und Schueler bekommen dieselbe Uebersicht
              * wie Lehrkraefte: ihr Klassen-InfoBook (falls eine Klasse
-             * hinterlegt ist) und ihre eigenen, selbst angelegten Buecher. */
+             * hinterlegt ist, es entsteht beim ersten Besuch) und ihre
+             * eigenen, selbst angelegten Buecher. */
             $classBooks = [];
             if ($user->classId !== null) {
                 $class = SchoolClass::find($user->classId);
                 if ($class !== null) {
                     $classBooks[] = [
                         'class' => $class,
-                        'book' => InfoBook::classBook($class->id),
+                        'book' => InfoBook::ensureClassBook($class->id, $user->id),
                     ];
                 }
             }
