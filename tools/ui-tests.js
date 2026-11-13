@@ -4202,6 +4202,100 @@ setTimeout(function () {
                     && pkgVb127.indexOf('sections') !== -1 && pkgVb127.indexOf('"step"') !== -1
                     && pkgIf127.indexOf('"anim"') !== -1 && pkgVb127.indexOf('"anim"') !== -1,
                     'T127n die Beispiel-Buchpakete liegen im Import-Format mit Schritten und Animationen (#194)');
+
+                  /* T128 (#195, #196): Runde 24. SQL-Abenteuer: Quest-Übersicht
+                   * mit Szenenbild-Karten, Kapitel-Ansicht mit Lösungssperre
+                   * und drei neue Abenteuer mit Seed-Datenbanken. */
+                  var advFs128 = require('fs');
+                  var advRead128 = function (p) {
+                    return advFs128.readFileSync(require.resolve(p), 'utf8');
+                  };
+                  var advMeta128 = advRead128('../src/SqlAdventure.php');
+                  var advHub128 = advRead128('../templates/sql_adventures.php');
+                  var advStory128 = advRead128('../templates/sql_adventure.php');
+                  var advCtrl128 = advRead128('../src/Controllers/SqlWorkshopController.php');
+                  var advRoutes128 = advRead128('../public/index.php');
+                  var advOverview128 = advRead128('../templates/sql_overview.php');
+                  var advMig128 = advRead128('../src/Migrator.php');
+                  var advCss128 = advRead128('../public/assets/css/style.css');
+                  ok(advMeta128.indexOf("'adventure' =>") !== -1
+                    && advMeta128.indexOf("'raumstation' =>") !== -1
+                    && advMeta128.indexOf("'museum' =>") !== -1
+                    && advMeta128.indexOf("'festival' =>") !== -1
+                    && advMeta128.split('<svg').length - 1 >= 5
+                    && advMeta128.indexOf('teaser') !== -1 && advMeta128.indexOf('finale') !== -1,
+                    'T128 jedes Abenteuer hat Teaser, Intro, Finale und ein eigenes Szenenbild (#195, #196)');
+                  ok(advHub128.indexOf('SQL-Abenteuer') !== -1
+                    && advHub128.indexOf('adv-card') !== -1
+                    && advHub128.indexOf('adv-progress-fill') !== -1
+                    && advHub128.indexOf('Noch nicht zugeteilt') !== -1
+                    && advHub128.indexOf("url('werkstatt/sql/abenteuer')") === -1,
+                    'T128b die Quest-Übersicht zeigt Karten mit Szenenbild, Fortschritt und Sperre (#195)');
+                  ok(advStory128.indexOf('adv-hero') !== -1
+                    && advStory128.indexOf('adv-chapter') !== -1
+                    && advStory128.indexOf('adv-current') !== -1
+                    && advStory128.indexOf('adv-locked') !== -1
+                    && advStory128.indexOf('Noch verschlossen') !== -1
+                    && advStory128.indexOf('adv-finale') !== -1
+                    && advStory128.indexOf('id="aufgaben"') !== -1,
+                    'T128c die Kapitel-Ansicht kennt gelöst, aktuell, verschlossen und das Finale (#195)');
+                  ok(advCtrl128.indexOf('public static function adventures()') !== -1
+                    && advCtrl128.indexOf("'sql_adventure'") !== -1
+                    && advCtrl128.indexOf("'sql_workspace'") !== -1
+                    && advCtrl128.indexOf('SqlAdventure::meta(') !== -1,
+                    'T128d der Controller rendert Abenteuer in der Kapitel-Ansicht mit Metadaten (#195)');
+                  ok(advRoutes128.indexOf("'/werkstatt/sql/abenteuer'") !== -1
+                    && advRoutes128.indexOf("'/werkstatt/sql/abenteuer'") < advRoutes128.indexOf("'/werkstatt/sql/{slug}'"),
+                    'T128e die Abenteuer-Route liegt vor dem Platzhalter {slug} (#195)');
+                  ok(advOverview128.indexOf('werkstatt/sql/abenteuer') !== -1
+                    && advOverview128.indexOf('Zu den Abenteuern') !== -1,
+                    'T128f die Werkstatt-Übersicht verlinkt auf die Abenteuer-Übersicht (#195)');
+                  ok(advMig128.indexOf("'raumstation', 'Raumstation Alpha'") !== -1
+                    && advMig128.indexOf("'museum', 'Das Museum des verschwundenen Meisterwerks'") !== -1
+                    && advMig128.indexOf("'festival', 'Festival der jungen Bühnen'") !== -1,
+                    'T128g der Migrator sät drei neue Abenteuer-Vorlagen (#196)');
+                  var advCount128 = function (seg, needle) { return seg.split(needle).length - 1; };
+                  var advSeg128 = function (slug) {
+                    var start = advMig128.indexOf("if ($slug === '" + slug + "')");
+                    var rest = advMig128.slice(start + 10);
+                    var nextIf = rest.indexOf("if ($slug ===");
+                    var stop = advMig128.indexOf('// adventure (Dateninsel)', start);
+                    var end = start + 10 + (nextIf !== -1 && start + 10 + nextIf < stop ? nextIf : stop - start - 10);
+                    return advMig128.slice(start, end);
+                  };
+                  ['raumstation', 'museum', 'festival'].forEach(function (slug) {
+                    ok(advCount128(advSeg128(slug), "'position' =>") === 10
+                      && advCount128(advSeg128(slug), "'kind' => 'action'") >= 1,
+                      'T128h ' + slug + ' hat zehn Kapitel-Missionen inklusive Schreibaufgaben (#196)');
+                  });
+                  var advRaumSql128 = advRead128('../sql/templates/raumstation.sql');
+                  var advMusSql128 = advRead128('../sql/templates/museum.sql');
+                  var advFesSql128 = advRead128('../sql/templates/festival.sql');
+                  ok(advCount128(advRaumSql128, 'CREATE TABLE') === 4 && advCount128(advRaumSql128, 'INSERT INTO') === 4
+                    && advCount128(advMusSql128, 'CREATE TABLE') === 4 && advCount128(advMusSql128, 'INSERT INTO') === 4
+                    && advCount128(advFesSql128, 'CREATE TABLE') === 4 && advCount128(advFesSql128, 'INSERT INTO') === 4,
+                    'T128i jede Seed-Datenbank bringt vier Tabellen mit Daten (#196)');
+                  ok(advRaumSql128.indexOf('defekt') !== -1 && advRaumSql128.indexOf('Meteorit') !== -1
+                    && advMusSql128.indexOf('verliehen_an') !== -1 && advMusSql128.indexOf('Der Morgen') !== -1
+                    && advFesSql128.indexOf('unklar') !== -1 && advFesSql128.indexOf('Waldbühne') !== -1,
+                    'T128j die Seed-Datenbanken tragen die Story-Details ihrer Abenteuer (#196)');
+                  ok(advMig128.indexOf("['raumstation', 'museum', 'festival']") !== -1
+                    && advMig128.indexOf('$abenteuer') !== -1,
+                    'T128k die Beispielklasse erhält die neuen Abenteuer mit Schreibrechten (#196)');
+                  ok(advCss128.indexOf('.adv-progress-fill') !== -1
+                    && advCss128.indexOf('.adv-chapter-badge') !== -1
+                    && advCss128.indexOf('.adv-current') !== -1
+                    && advCss128.indexOf('.adv-finale') !== -1,
+                    'T128l Quest-Karten, Fortschritt und Kapitel liegen im Stylesheet (#195)');
+                  ok(advStory128.indexOf('adv-tools') !== -1
+                    && advStory128.indexOf('Tabellen der Datenbank') !== -1
+                    && advStory128.indexOf('ER-Diagramm') !== -1
+                    && advStory128.indexOf('data-hl="sql"') !== -1,
+                    'T128m Konsole, Tabellen und ER-Diagramm bleiben in der Kapitel-Ansicht erreichbar (#195)');
+                  ok(advMeta128.indexOf('queryquest') === -1 && advMeta128.indexOf('knightlab') === -1
+                    && advMeta128.indexOf('sql-island') === -1 && advMig128.indexOf('queryquest') === -1
+                    && advHub128.indexOf('queryquest') === -1 && advStory128.indexOf('queryquest') === -1,
+                    'T128n die Abenteuer nennen keine Vorbild-Projekte (#195, #196)');
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;
 

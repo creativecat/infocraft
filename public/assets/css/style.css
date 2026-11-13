@@ -2566,3 +2566,62 @@ table.delta { border-collapse: collapse; font-family: var(--font-mono, monospace
 /* Schritt-Feld im Kontextbereich: schmal, mit Beschriftung davor. */
 .icv-ctx-steplabel { font-size: 0.78rem; font-weight: 600; color: #334155; }
 .icv-ctx-step { width: 64px; text-align: center; }
+
+/* ===== SQL-Abenteuer (#195, #196): Quest-Karten, Szenenbilder, Kapitel ===== */
+
+/* Quest-Karten der Abenteuer-Übersicht: Szenenbild oben, Inhalt darunter.
+ * Die Karten nutzen das normale .cards-Raster, geben ihren Innenraum aber
+ * an das randlose Szenenbild ab. */
+.adv-card { padding: 0; overflow: hidden; }
+.adv-scene { line-height: 0; background: #f1f5f9; }
+.adv-scene svg { width: 100%; height: auto; display: block; }
+.adv-card-body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.adv-card-locked { opacity: 0.72; }
+.adv-card-locked:hover { transform: none; }
+
+/* Fortschrittsbalken: schmale Spur mit grünem Füllstand, überall gleich. */
+.adv-progress {
+    height: 8px; border-radius: 999px; background: rgba(15, 23, 42, 0.12);
+    overflow: hidden; flex: 1; min-width: 90px;
+}
+.adv-progress-fill {
+    height: 100%; background: linear-gradient(90deg, #4ade80, #16a34a);
+    border-radius: 999px; transition: width 0.25s ease;
+}
+
+/* Kopfbereich der Kapitel-Ansicht: Szenenbild neben Intro und Fortschritt. */
+.adv-hero { display: flex; gap: 18px; align-items: stretch; }
+.adv-hero-scene { width: 260px; flex: none; border-radius: 10px; overflow: hidden; }
+.adv-hero-body { display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+.adv-hero-body h3 { margin: 0; }
+.adv-progress-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* Kapitel: Nummern-Badge, hervorgehobenes aktuelles Kapitel, gedimmte
+ * verschlossene Kapitel. */
+.adv-chapter-badge {
+    background: #e2e8f0; color: #334155; border-radius: 999px; padding: 3px 10px;
+    font-size: 0.78rem; font-weight: 700; white-space: nowrap;
+}
+.adv-chapter-now { background: #7c3aed; color: #ffffff; }
+.adv-current { border: 2px solid #7c3aed; }
+.adv-locked { opacity: 0.66; }
+.adv-locked .mission-head strong { color: var(--muted); }
+
+/* Abschluss-Banner, wenn alle Kapitel gelöst sind. */
+.adv-finale {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    border: 2px solid #22c55e; border-radius: var(--radius);
+    padding: 16px 18px; margin-bottom: 14px;
+}
+.adv-finale h3 { margin: 0 0 6px; }
+
+/* Werkzeugkasten der Kapitel-Ansicht: Standard-Panel als aufklappbarer
+ * Kasten (Summary braucht eigenen Pfeil, weil .panel Padding hat). */
+details.adv-tools { padding: 12px 22px; }
+details.adv-tools > summary { cursor: pointer; }
+details.adv-tools[open] > summary { margin-bottom: 6px; }
+
+@media (max-width: 720px) {
+    .adv-hero { flex-direction: column; }
+    .adv-hero-scene { width: 100%; }
+}
