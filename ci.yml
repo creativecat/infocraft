@@ -1052,10 +1052,10 @@ jobs:
           grep -q "Ankündigung gespeichert" anncwin.html && ANNC_WIN_OK=1 || ANNC_WIN_OK=0
           ANNC_WIN_DB=$(sqlite3 "$DB" "SELECT setting_value FROM site_settings WHERE setting_key = 'announcement_from'")
           [ "$ANNC_WIN_DB" = "2026-01-01T00:00" ] && ANNC_WIN_DB_OK=1 || ANNC_WIN_DB_OK=0
-          curl -sS -o home_anncwin.html http://127.0.0.1:8080/
+          curl -sS -L -o home_anncwin.html -b cookies.txt http://127.0.0.1:8080/
           grep -q "CI Ankündigung mit Zeitraum" home_anncwin.html && ANNC_WIN_SHOW_OK=1 || ANNC_WIN_SHOW_OK=0
           curl -sS -L -o anncpast.html -b cookies.txt -c cookies.txt -d "csrf=$CSRF12" --data-urlencode "announcement=CI Ankündigung mit Zeitraum" -d "announcement_from=2020-01-01T00:00" -d "announcement_until=2020-12-31T23:59" http://127.0.0.1:8080/admin/einstellungen/ankuendigung
-          curl -sS -o home_anncpast.html http://127.0.0.1:8080/
+          curl -sS -L -o home_anncpast.html -b cookies.txt http://127.0.0.1:8080/
           grep -q "CI Ankündigung mit Zeitraum" home_anncpast.html && ANNC_PAST_OK=0 || ANNC_PAST_OK=1
           curl -sS -o admhome.html -b cookies.txt http://127.0.0.1:8080/
           grep -q "Morgen: Klassenarbeit in 9R" admhome.html && grep -q "ic-annc" admhome.html && ANNC_ADM_OK=1 || ANNC_ADM_OK=0
