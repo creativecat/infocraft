@@ -124,6 +124,7 @@ $router->get('/quiz/{id}/ergebnis', [QuizController::class, 'result']);
 
 // Prüfungen & Schularbeiten: Vorbereitung, Durchführung mit Sperre, Korrektur, Herausgabe
 $router->get('/pruefungen', [ExamController::class, 'index']);
+$router->get('/pruefungen/lock-status', [ExamController::class, 'lockStatus']);
 $router->post('/pruefungen/anlegen', [ExamController::class, 'create']);
 $router->get('/pruefungen/{id}', [ExamController::class, 'manage']);
 $router->post('/pruefungen/{id}/gruppe', [ExamController::class, 'addGroup']);
@@ -132,6 +133,9 @@ $router->post('/pruefungen/{id}/vorlage', [ExamController::class, 'setTemplate']
 $router->post('/pruefungen/{id}/aufgabe', [ExamController::class, 'addTask']);
 $router->post('/pruefungen/{id}/start', [ExamController::class, 'start']);
 $router->post('/pruefungen/{id}/ende', [ExamController::class, 'end']);
+$router->post('/pruefungen/{id}/code', [ExamController::class, 'saveCode']);
+$router->post('/pruefungen/{id}/gruppen-uebernehmen', [ExamController::class, 'adoptGroups']);
+$router->post('/pruefungen/gruppenschalter', [ExamController::class, 'examGroupToggle']);
 $router->get('/pruefungen/{id}/korrektur', [ExamController::class, 'correction']);
 $router->get('/pruefungen/{id}/korrektur/{userId}', [ExamController::class, 'correct']);
 $router->post('/pruefungen/{id}/bewertung', [ExamController::class, 'saveGrading']);

@@ -5,6 +5,25 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.28.0] - 2026-11-15
+
+### Prüfungsmodus: Gruppen A/B, Start je Gruppe und Live-Sperre ohne Reload (#209, #210)
+
+- Jedes Schülerkonto hat einen festen Gruppen-Schalter A oder B (#209), der über alle Prüfungen hinweg stehen bleibt. Lehrkräfte setzen ihn in der Prüfungsvorbereitung; mit einem Klick auf „Gruppen A/B übernehmen“ landen beide Gruppen samt Mitgliedern in der Prüfung. Vorhandene Gruppen werden dabei nicht doppelt angelegt.
+- Prüfungen starten jetzt gezielt je Gruppe (#210): Nur Gruppe A, nur Gruppe B oder beide gleichzeitig, auch zeitversetzt. Der Start-Dialog bietet pro Gruppe eine Auswahl, und im Live-Monitor lässt sich eine noch nicht laufende Gruppe mit einem Klick nachstarten, während die Prüfung bereits läuft. Für Schülerinnen und Schüler, deren Gruppe noch nicht dran ist, erscheint ein Hinweis statt einer Arbeit.
+- Die Prüfungs-Sperre greift jetzt ohne eigenes Reload (#210): Die Schülerseite fragt regelmäßig den Sperr-Status ab und leitet automatisch auf die Prüfung um, sobald die eigene Gruppe startet. Endet die Prüfung, springen geöffnete Arbeitsprojekte von selbst zurück.
+- In der Korrekturphase bleibt das eigene Arbeitsprojekt gesperrt (#210): Die Abgabe kann weder eingesehen noch verändert werden, alle anderen Bereiche sind wieder frei.
+
+### Ankündigungen: Anzeige-Zeitraum (#208)
+
+- Ankündigungen auf der Startseite lassen sich zeitlich begrenzen (#208): Von wann bis wann sie erscheinen, stellen Admins im Admin-Bereich fest; außerhalb des Zeitraums verschwindet die Ankündigung von selbst, ohne dass jemand sie löscht.
+
+### Korrektur: Code der Lehrkraft und farbige Herausgabe (#211, #212)
+
+- Beim Ende der Durchführung friert InfoCraft die abgegebene Fassung jedes Arbeitsprojekts ein (#211): Der Stand der Abgabe bleibt unverändert erhalten.
+- In der Korrekturphase verbessert die Lehrkraft den Code jeder Arbeit direkt im Korrektur-Fenster (#211), ohne die Werkstatt der Schülerinnen und Schüler öffnen zu müssen. Die Bewertung je Teilaufgabe inklusive Feedback wird wie bisher gespeichert, erreichte BE summieren sich automatisch.
+- In der Herausgabe sehen Schülerinnen und Schülern ihre Arbeit mit den Korrekturen der Lehrkraft (#212): Zeilenweise farbig markiert, grün verbessert, rot die abgegebene Fassung, dazu die BE je Teilaufgabe und insgesamt samt Note. Ohne Korrektur am Code bleibt die Ansicht wie bisher.
+
 ## [0.27.0] - 2026-11-13
 
 ### InfoBooks: eigene Bücher für Schülerinnen und Schüler (#205)

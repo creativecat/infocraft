@@ -16,8 +16,24 @@
 
 <?php if ($projectContent !== null): ?>
 <section class="panel">
-    <h3>Eingereichtes Projekt (Arbeitskopie)</h3>
+    <h3>Arbeitscode <?= $exam->phase === 'korrektur' ? 'verbessern' : '(Arbeitskopie)' ?></h3>
+    <?php if ($exam->phase === 'korrektur'): ?>
+    <p class="muted">Verbessere den Code direkt hier: Die abgegebene Fassung bleibt als Vergleich erhalten, deine Änderungen sind in der Herausgabe farblich markiert.</p>
+    <form method="post" action="<?= url('pruefungen/' . $exam->id . '/code') ?>" class="form">
+        <?= csrf_field() ?>
+        <input type="hidden" name="user_id" value="<?= e($student->id) ?>">
+        <label class="field"><span>Code der Arbeit</span>
+            <textarea name="content" rows="14" class="work-code" spellcheck="false" style="width:100%;font-family:monospace;white-space:pre;"><?= e($projectContent) ?></textarea>
+        </label>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Korrigierte Fassung speichern">💾 Code korrigiert speichern</button></div>
+    </form>
+    <?php else: ?>
     <pre class="work-code"><?= e($projectContent) ?></pre>
+    <?php endif; ?>
+    <?php if ($submittedContent !== null && $submittedContent !== $projectContent): ?>
+    <p class="muted" style="margin-top:10px;">Abgegebene Fassung (unverändert):</p>
+    <pre class="work-code"><?= e($submittedContent) ?></pre>
+    <?php endif; ?>
 </section>
 <?php endif; ?>
 

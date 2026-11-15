@@ -50,7 +50,7 @@ $navView = $user !== null ? \Infocraft\Models\UserPref::navView($user->id) : 'fu
     <link rel="stylesheet" href="<?= asset_url('assets/css/style.css') ?>">
     <link rel="icon" href="<?= url('assets/img/favicon.svg') ?>" type="image/svg+xml">
 </head>
-<body data-csrf="<?= e(csrf_token()) ?>"<?= $examLock !== null ? ' data-exam-lock="1"' : '' ?><?= $navView === 'mini' ? ' class="sidebar-mini"' : '' ?>>
+<body data-csrf="<?= e(csrf_token()) ?>"<?= $examLock !== null ? ' data-exam-lock="1"' : '' ?><?= $user !== null && $user->role === 'student' ? ' data-exam-poll="' . e(url('pruefungen/lock-status')) . '"' : '' ?><?= $navView === 'mini' ? ' class="sidebar-mini"' : '' ?>>
 <div class="app">
     <aside class="sidebar" id="sidebar">
         <a class="brand" href="<?= url('/') ?>" title="InfoCraft">

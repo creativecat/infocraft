@@ -150,6 +150,8 @@ final class AdminController
             'legal' => self::legalValues(),
             'demo' => ic_demo_mode(),
             'announcement' => SiteSetting::get('announcement', ''),
+            'announcementFrom' => SiteSetting::get('announcement_from', ''),
+            'announcementUntil' => SiteSetting::get('announcement_until', ''),
             'user' => $user,
         ]);
     }
@@ -201,8 +203,29 @@ final class AdminController
         csrf_validate();
         $text = trim((string) ($_POST['announcement'] ?? ''));
         SiteSetting::set('announcement', $text);
-        flash('success', $text === '' ? 'Ankündigung entfernt.' : 'Ankündigung gespeichert. Sie erscheint jetzt auf der Startseite.');
+        /* #208: Optionaler Anzeige-Zeitraum (datetime-local, Format YYYY-MM-DDTHH:MM).
+         * Leer = unbegrenzt sichtbar; nur syntaktisch korrekte Werte werden gespeichert. */
+        $from = self::cleanWindowField((string) ($_POST['announcement_from'] ?? ''));
+        $until = self::cleanWindowField((string) ($_POST['announcement_until'] ?? ''));
+        if ($from !== '' && $until !== '' && $from > $until) {
+            flash('error', 'Der Anzeige-Zeitraum kann nicht enden, bevor er beginnt. Bitte "von" und "bis" prüfen.');
+            redirect('/admin/einstellungen');
+        }
+        SiteSetting::set('announcement_from', $from);
+        SiteSetting::set('announcement_until', $until);
+        $fenster = $from !== '' || $until !== '' ? ' Sie erscheint im eingestellten Zeitraum.' : ' Sie erscheint jetzt auf der Startseite.';
+        flash('success', $text === '' ? 'Ankündigung entfernt.' : 'Ankündigung gespeichert.' . $fenster);
         redirect('/admin/einstellungen');
+    }
+
+    /** #208: Zeitfenster-Feld pruefen: nur YYYY-MM-DDTHH:MM akzeptieren. */
+    private static function cleanWindowField(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+        return preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', $value) === 1 ? $value : '';
     }
 
     /**

@@ -25,6 +25,7 @@ final class User
         public readonly ?string $externalId,
         public readonly ?string $loginName,
         public readonly ?string $passwordHash,
+        public readonly string $examGroup = '',
     ) {
     }
 
@@ -39,6 +40,7 @@ final class User
             self::nullableString($row['external_id'] ?? null),
             self::nullableString($row['login_name'] ?? null),
             self::nullableString($row['password_hash'] ?? null),
+            ($row['exam_group'] ?? '') === 'A' || ($row['exam_group'] ?? '') === 'B' ? (string) $row['exam_group'] : '',
         );
     }
 
@@ -159,6 +161,21 @@ final class User
     }
 
     /** @return array<string, int> */
+    /** #209: Prüfungsgruppe A/B am Konto setzen (persistenter Schalter,
+     * wird beim Anlegen neuer Prüfungen übernommen). Nur Schülerkonten. */
+    public static function setExamGroup(int $id, string $group): void
+    {
+        $group = $group === 'A' || $group === 'B' ? $group : '';
+        $pdo = Database::pdo();
+        $stmt = $pdo->prepare("SELECT role FROM users WHERE id = ?");
+        $stmt->execute([$id]);
+        $role = (string) $stmt->fetchColumn();
+        if ($role !== 'student') {
+            return;
+        }
+        $pdo->prepare('UPDATE users SET exam_group = ? WHERE id = ?')->execute([$group, $id]);
+    }
+
     public static function countByRole(): array
     {
         $stats = ['student' => 0, 'teacher' => 0, 'admin' => 0];

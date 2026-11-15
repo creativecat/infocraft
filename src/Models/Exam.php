@@ -101,14 +101,17 @@ final class Exam
 
     /**
      * Aktive Pruefungssperre fuer eine Schuelerin/einen Schueler (sonst null).
-     * @return array{id: int, title: string, projectId: int|null}|null
+     * Ab dem Start der eigenen Gruppe gilt: durchfuehrung sperrt alle anderen
+     * Bereiche, korrektur sperrt nur noch das eigene Arbeitsprojekt (die
+     * Arbeit darf nicht eingesehen oder veraendert werden).
+     * @return array{id: int, title: string, phase: string, projectId: int|null}|null
      */
     public static function lockForUser(int $userId): ?array
     {
         $stmt = Database::pdo()->prepare(
-            'SELECT e.id, e.title, w.project_id FROM exams e JOIN exam_groups g ON g.exam_id = e.id JOIN exam_members m ON m.group_id = g.id LEFT JOIN exam_works w ON w.exam_id = e.id AND w.user_id = ? WHERE m.user_id = ? AND e.phase = \'durchfuehrung\' AND e.kind = \'pruefung\' ORDER BY e.id DESC LIMIT 1'
+            "SELECT e.id, e.title, e.phase, w.project_id FROM exams e JOIN exam_works w ON w.exam_id = e.id AND w.user_id = ? WHERE e.phase IN ('durchfuehrung', 'korrektur') AND e.kind = 'pruefung' ORDER BY e.id DESC LIMIT 1"
         );
-        $stmt->execute([$userId, $userId]);
+        $stmt->execute([$userId]);
         $row = $stmt->fetch();
         if ($row === false) {
             return null;
@@ -116,8 +119,25 @@ final class Exam
         return [
             'id' => (int) $row['id'],
             'title' => (string) $row['title'],
+            'phase' => (string) $row['phase'],
             'projectId' => $row['project_id'] === null ? null : (int) $row['project_id'],
         ];
+    }
+
+    /**
+     * Gruppen-IDs dieser Pruefung mit mindestens einer angelegten Arbeit,
+     * d. h. alle Gruppen, die bereits gestartet wurden.
+     * @return array<int, bool>
+     */
+    public static function startedGroups(int $examId): array
+    {
+        $stmt = Database::pdo()->prepare('SELECT DISTINCT group_id FROM exam_works WHERE exam_id = ? AND group_id IS NOT NULL');
+        $stmt->execute([$examId]);
+        $map = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $map[(int) $row['group_id']] = true;
+        }
+        return $map;
     }
 
     /** @return list<self> */
@@ -244,7 +264,7 @@ final class Exam
         ];
     }
 
-    /** @return array{id: int, user_id: int, group_id: int|null, project_id: int|null, started_at: string|null, submitted_at: string|null}|null */
+    /** @return array{id: int, user_id: int, group_id: int|null, project_id: int|null, started_at: string|null, submitted_at: string|null, submitted_content: string|null}|null */
     public static function workFor(int $examId, int $userId): ?array
     {
         $stmt = Database::pdo()->prepare('SELECT * FROM exam_works WHERE exam_id = ? AND user_id = ? LIMIT 1');
@@ -260,7 +280,14 @@ final class Exam
             'project_id' => $row['project_id'] === null ? null : (int) $row['project_id'],
             'started_at' => $row['started_at'] === null ? null : (string) $row['started_at'],
             'submitted_at' => $row['submitted_at'] === null ? null : (string) $row['submitted_at'],
+            'submitted_content' => $row['submitted_content'] === null ? null : (string) $row['submitted_content'],
         ];
+    }
+
+    /** Eingereichte Fassung des Arbeitsprojekts sichern (Diff-Basis). */
+    public static function saveSubmittedContent(int $examId, int $userId, string $content): void
+    {
+        Database::pdo()->prepare('UPDATE exam_works SET submitted_content = ? WHERE exam_id = ? AND user_id = ?')->execute([$content, $examId, $userId]);
     }
 
     public static function createWork(int $examId, int $userId, ?int $groupId, ?int $projectId): void
@@ -372,6 +399,51 @@ final class Exam
             return 5;
         }
         return 6;
+    }
+
+    /**
+     * Zeilenweiser Vergleich (LCS) zwischen eingereichter Fassung und
+     * korrigierter Fassung. Ergibt HTML mit ins/del-Markierungen; bei sehr
+     * langen Inhalten wird auf eine schlanke Gesamtansicht ausgewichen.
+     */
+    public static function diffHtml(string $old, string $new): string
+    {
+        $old = str_replace("\r\n", "\n", $old);
+        $new = str_replace("\r\n", "\n", $new);
+        $maxLines = 600;
+        $oldLines = explode("\n", $old);
+        $newLines = explode("\n", $new);
+        if (count($oldLines) > $maxLines || count($newLines) > $maxLines) {
+            return '<div class="exdiff"><span class="exdiff-del">' . e(mb_substr($old, 0, 4000))
+                . '</span><span class="exdiff-ins">' . e(mb_substr($new, 0, 4000)) . '</span></div>';
+        }
+        $n = count($oldLines);
+        $m = count($newLines);
+        $lcs = array_fill(0, $n + 1, array_fill(0, $m + 1, 0));
+        for ($i = $n - 1; $i >= 0; $i--) {
+            for ($j = $m - 1; $j >= 0; $j--) {
+                $lcs[$i][$j] = $oldLines[$i] === $newLines[$j]
+                    ? $lcs[$i + 1][$j + 1] + 1
+                    : max($lcs[$i + 1][$j], $lcs[$i][$j + 1]);
+            }
+        }
+        $html = '<div class="exdiff">';
+        $i = 0;
+        $j = 0;
+        while ($i < $n || $j < $m) {
+            if ($i < $n && $j < $m && $oldLines[$i] === $newLines[$j]) {
+                $html .= e($oldLines[$i]) . "\n";
+                $i++;
+                $j++;
+            } elseif ($j < $m && ($i >= $n || $lcs[$i + 1][$j] <= $lcs[$i][$j + 1])) {
+                $html .= '<span class="exdiff-ins">' . e($newLines[$j]) . "</span>\n";
+                $j++;
+            } else {
+                $html .= '<span class="exdiff-del">' . e($oldLines[$i]) . "</span>\n";
+                $i++;
+            }
+        }
+        return $html . '</div>';
     }
 
     public static function gradeLabel(int $note): string

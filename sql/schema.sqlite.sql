@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS classes (
     name TEXT NOT NULL UNIQUE,
     diagram_auto INTEGER NOT NULL DEFAULT 1,
     db_panel INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    exam_group TEXT NULL
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -19,7 +20,8 @@ CREATE TABLE IF NOT EXISTS users (
     class_id INTEGER NULL REFERENCES classes (id) ON DELETE SET NULL,
     external_id TEXT NULL UNIQUE,
     active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    exam_group TEXT NULL
 );
 
 -- Zuordnung Lehrkraft zu Klasse (wer darf Passwörter zurücksetzen und Inhalte austeilen)
@@ -313,6 +315,7 @@ CREATE TABLE IF NOT EXISTS exam_works (
     project_id INTEGER NULL REFERENCES projects (id) ON DELETE SET NULL,
     started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     submitted_at TEXT NULL,
+    submitted_content TEXT NULL,
     UNIQUE (exam_id, user_id)
 );
 

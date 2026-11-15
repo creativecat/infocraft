@@ -46,11 +46,17 @@
 
 <section class="panel">
     <h3>📣 Ankündigung auf der Startseite</h3>
-    <p class="muted">Eine kurze Nachricht für alle Konten, prominent über den Arbeitsbereichen der Startseite. Leer lassen oder leeren, um die Ankündigung zu entfernen.</p>
+    <p class="muted">Eine kurze Nachricht für alle Konten, prominent über den Arbeitsbereichen der Startseite. Leer lassen oder leeren, um die Ankündigung zu entfernen. Optional dazu ein Anzeige-Zeitraum: Ohne Zeitangaben erscheint die Ankündigung sofort und bleibt dauerhaft.</p>
     <form method="post" action="<?= url('admin/einstellungen/ankuendigung') ?>" class="form">
         <?= csrf_field() ?>
         <label class="field"><span>Text der Ankündigung</span>
             <textarea name="announcement" rows="3" placeholder="z. B. Morgen fällt der Unterricht der 9. Klassen aus."><?= e($announcement) ?></textarea></label>
+        <div class="two-col">
+            <label class="field"><span>Sichtbar von (optional)</span>
+                <input type="datetime-local" name="announcement_from" value="<?= e($announcementFrom) ?>"></label>
+            <label class="field"><span>Sichtbar bis (optional)</span>
+                <input type="datetime-local" name="announcement_until" value="<?= e($announcementUntil) ?>"></label>
+        </div>
         <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾 Ankündigung speichern</button></div>
     </form>
 </section>

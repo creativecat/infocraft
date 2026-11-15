@@ -55,6 +55,8 @@ final class Migrator
         self::ensureFolderParentColumn($pdo, $driver);
         self::ensureSiteSettingsTable($pdo, $driver);
         self::ensureUserPrefsTable($pdo, $driver);
+        self::ensureUserExamGroupColumn($pdo, $driver);
+        self::ensureExamSubmittedColumn($pdo, $driver);
         self::ensureProjectStateTable($pdo, $driver);
 
         // Live-Abstimmung während der Präsentation (Issue #3): Tabellen
@@ -1400,6 +1402,49 @@ final class Migrator
                 PRIMARY KEY (user_id, pref_key)
             )');
         }
+    }
+
+    /**
+     * Fester Pruefungsgruppenschalter (A/B) am Schuelerkonto. Er bleibt
+     * ueber mehrere Prüfungen hinweg stehen und kann in der Vorbereitung
+     * per Klick in die Prüfungsgruppen übernommen werden.
+     */
+    private static function ensureUserExamGroupColumn(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $exists = $pdo->query("SHOW COLUMNS FROM users LIKE 'exam_group'")->fetchColumn();
+            if ($exists === false || $exists === null) {
+                $pdo->exec('ALTER TABLE users ADD COLUMN exam_group VARCHAR(1) NULL');
+            }
+            return;
+        }
+        foreach ($pdo->query('PRAGMA table_info(users)')->fetchAll() as $column) {
+            if ((string) ($column['name'] ?? '') === 'exam_group') {
+                return;
+            }
+        }
+        $pdo->exec('ALTER TABLE users ADD COLUMN exam_group TEXT NULL');
+    }
+
+    /**
+     * Eingereichte Fassung des Arbeitsprojekts (Stand zum Ende der
+     * Durchfuehrung). Basis fuer den Korrektur-Diff in der Herausgabe.
+     */
+    private static function ensureExamSubmittedColumn(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $exists = $pdo->query("SHOW COLUMNS FROM exam_works LIKE 'submitted_content'")->fetchColumn();
+            if ($exists === false || $exists === null) {
+                $pdo->exec('ALTER TABLE exam_works ADD COLUMN submitted_content LONGTEXT NULL');
+            }
+            return;
+        }
+        foreach ($pdo->query('PRAGMA table_info(exam_works)')->fetchAll() as $column) {
+            if ((string) ($column['name'] ?? '') === 'submitted_content') {
+                return;
+            }
+        }
+        $pdo->exec('ALTER TABLE exam_works ADD COLUMN submitted_content TEXT NULL');
     }
 
     /**

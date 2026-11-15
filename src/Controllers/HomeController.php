@@ -18,6 +18,24 @@ use Infocraft\SsoM365;
 
 final class HomeController
 {
+    /**
+     * #208: Liegt "jetzt" im Anzeige-Zeitraum der Ankündigung? Ohne
+     * gespeichertes Fenster (oder nur einseitig begrenzt) gilt: sichtbar.
+     */
+    private static function announcementVisible(): bool
+    {
+        $now = date('Y-m-d\TH:i');
+        $from = SiteSetting::get('announcement_from', '');
+        $until = SiteSetting::get('announcement_until', '');
+        if ($from !== '' && $now < $from) {
+            return false;
+        }
+        if ($until !== '' && $now > $until) {
+            return false;
+        }
+        return true;
+    }
+
     public static function index(): void
     {
         $user = Auth::user();
@@ -29,8 +47,10 @@ final class HomeController
             'active' => 'home',
             'modules' => ModuleController::visible($user),
             /* Ankündigung der Administration (#183): kurzer Hinweis, der
-             * auf der Startseite für alle Konten prominent erscheint. */
-            'announcement' => SiteSetting::get('announcement', ''),
+             * auf der Startseite für alle Konten prominent erscheint.
+             * #208: Optionaler Anzeige-Zeitraum - außerhalb des Fensters
+             * erscheint nichts (leere Felder = immer sichtbar). */
+            'announcement' => self::announcementVisible() ? SiteSetting::get('announcement', '') : '',
             'system' => [
                 'driver' => Database::driver(),
                 /* Demo-Modus (#180): Seiteneinstellung gewinnt, Fallback ist

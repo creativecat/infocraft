@@ -26,10 +26,12 @@ use Infocraft\Models\User;
 final class ExamController
 {
     /**
-     * Pruefungssperre: Schueler mit laufender Pruefung duerfen nur die
-     * Pruefungsseiten, Anmeldung/Abmeldung und genau ihr eigenes
-     * Arbeitsprojekt oeffnen. Wird in public/index.php vor dem Dispatch
-     * aufgerufen.
+     * Pruefungssperre, phasenabhaengig: In der Durchfuehrung duerfen
+     * Schuelerinnen und Schueler nur die Pruefungsseiten, Anmeldung und
+     * genau ihr eigenes Arbeitsprojekt oeffnen. In der Korrektur ist alles
+     * wieder frei, nur das eigene Arbeitsprojekt bleibt gesperrt, damit die
+     * Arbeit weder eingesehen noch veraendert werden kann. Wird in
+     * public/index.php vor dem Dispatch aufgerufen.
      */
     public static function guard(string $path): void
     {
@@ -41,13 +43,20 @@ final class ExamController
         if ($lock === null) {
             return;
         }
-        $allowed = $path === '/' || $path === '/login' || $path === '/logout'
-            || str_starts_with($path, '/auth/') || str_starts_with($path, '/pruefungen');
-        if (!$allowed && (str_starts_with($path, '/werkstatt/code/') || str_starts_with($path, '/werkstatt/html/'))) {
-            if (preg_match('#^/werkstatt/(?:code|html)/(\d+)#', $path, $matches) === 1) {
-                $allowed = $lock['projectId'] !== null && (int) $matches[1] === $lock['projectId'];
-            }
+        $ownProject = false;
+        if (preg_match('#^/werkstatt/(?:code|html)/(\d+)#', $path, $matches) === 1) {
+            $ownProject = $lock['projectId'] !== null && (int) $matches[1] === $lock['projectId'];
         }
+        if ($lock['phase'] === 'korrektur') {
+            if ($ownProject) {
+                flash('error', 'Prüfungsmodus: Deine Arbeit wird gerade korrigiert und ist deshalb gesperrt.');
+                redirect('/pruefungen');
+            }
+            return;
+        }
+        $allowed = $path === '/' || $path === '/login' || $path === '/logout'
+            || str_starts_with($path, '/auth/') || str_starts_with($path, '/pruefungen')
+            || ($ownProject && (str_starts_with($path, '/werkstatt/code/') || str_starts_with($path, '/werkstatt/html/')));
         if (!$allowed) {
             flash('error', 'Prüfungsmodus: Während der Prüfung sind alle anderen Bereiche gesperrt.');
             redirect('/pruefungen');
@@ -132,7 +141,109 @@ final class ExamController
             'tasks' => Exam::tasks($exam->id),
             'totalBe' => Exam::totalBe($exam->id),
             'works' => Exam::works($exam->id),
+            'startedGroups' => Exam::startedGroups($exam->id),
+            'abStudents' => self::abStudents($user),
         ]);
+    }
+
+    /**
+     * Fester A/B-Schalter am Schuelerkonto (bleibt ueber mehrere
+     * Prüfungen hinweg stehen). Lehrkraefte stellen ihn in der
+     * Prüfungsvorbereitung, Admins überall.
+     */
+    public static function examGroupToggle(): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        if (!Auth::isTeacher() && $user->role !== 'admin') {
+            flash('error', 'Nur Lehrkräfte können den Gruppen-Schalter setzen.');
+            redirect('/');
+        }
+        csrf_validate();
+        $student = User::find((int) ($_POST['user_id'] ?? 0));
+        $group = (string) ($_POST['exam_group'] ?? '');
+        if ($group !== '' && $group !== 'A' && $group !== 'B') {
+            flash('error', 'Der Gruppen-Schalter kennt nur A, B oder aus.');
+            redirect('/pruefungen');
+        }
+        if ($student === null || $student->role !== 'student') {
+            flash('error', 'Bitte eine Schülerin oder einen Schüler auswählen.');
+            redirect('/pruefungen');
+        }
+        if ($user->role !== 'admin' && !isset(self::abStudents($user)[$student->id])) {
+            flash('error', 'Der Schalter gilt für Schülerinnen und Schüler der eigenen Klassen.');
+            redirect('/pruefungen');
+        }
+        User::setExamGroup($student->id, $group);
+        flash('success', $group === ''
+            ? $student->fullName() . ': Gruppen-Schalter zurückgesetzt.'
+            : $student->fullName() . ': Gruppen-Schalter ' . $group . ' gesetzt.');
+        $back = (string) ($_POST['back'] ?? '/pruefungen');
+        if (preg_match('#^/[A-Za-z0-9/_\-]*$#', $back) !== 1 || str_contains($back, '//')) {
+            $back = '/pruefungen';
+        }
+        redirect($back);
+    }
+
+    /**
+     * Gruppen A und B aus den festen Schaltern der Schuelerkonten in diese
+     * Pruefung uebernehmen: Fehlende Gruppen werden angelegt, Mitglieder
+     * werden eingeschrieben (nur in der Vorbereitung).
+     */
+    public static function adoptGroups(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        $exam = self::requireOwner($user, (int) ($params['id'] ?? 0));
+        csrf_validate();
+        if ($exam->phase !== 'vorbereitung') {
+            flash('error', 'Gruppen können nur in der Vorbereitung übernommen werden.');
+            redirect('/pruefungen/' . $exam->id);
+        }
+        $groupIds = [];
+        foreach (['A' => 'Gruppe A', 'B' => 'Gruppe B'] as $key => $name) {
+            $groupIds[$key] = null;
+            foreach (Exam::groups($exam->id) as $group) {
+                if ($group['name'] === $name) {
+                    $groupIds[$key] = $group['id'];
+                    break;
+                }
+            }
+            if ($groupIds[$key] === null) {
+                $groupIds[$key] = Exam::addGroup($exam->id, $name);
+            }
+        }
+        $counts = ['A' => 0, 'B' => 0];
+        foreach (self::abStudents($user) as $student) {
+            if ($student->examGroup !== 'A' && $student->examGroup !== 'B') {
+                continue;
+            }
+            Exam::addMember($groupIds[$student->examGroup], $student->id);
+            $counts[$student->examGroup]++;
+        }
+        $total = $counts['A'] + $counts['B'];
+        if ($total === 0) {
+            flash('error', 'Niemand hat einen A/B-Schalter gesetzt. Erst die Schalter bei den Schülerinnen und Schülern festlegen.');
+            redirect('/pruefungen/' . $exam->id);
+        }
+        flash('success', 'Übernommen: ' . $counts['A'] . ' in Gruppe A, ' . $counts['B'] . ' in Gruppe B.');
+        redirect('/pruefungen/' . $exam->id);
+    }
+
+    /** @return array<int, User> userId => Schuelerin/Schueler der eigenen Klassen */
+    private static function abStudents(User $user): array
+    {
+        $map = [];
+        foreach (self::studentsByClass($user) as $students) {
+            foreach ($students as $student) {
+                $map[$student->id] = $student;
+            }
+        }
+        return $map;
     }
 
     public static function addGroup(array $params): void
@@ -249,21 +360,40 @@ final class ExamController
         }
         $exam = self::requireOwner($user, (int) ($params['id'] ?? 0));
         csrf_validate();
-        if ($exam->phase !== 'vorbereitung') {
-            flash('error', 'Die Prüfung wurde bereits gestartet.');
+        if ($exam->phase !== 'vorbereitung' && $exam->phase !== 'durchfuehrung') {
+            flash('error', 'Die Prüfung läuft nicht mehr, ein Start ist nicht möglich.');
             redirect('/pruefungen/' . $exam->id);
         }
         if (Exam::tasks($exam->id) === []) {
             flash('error', 'Ohne Teilaufgaben kann die Prüfung nicht starten.');
             redirect('/pruefungen/' . $exam->id);
         }
+        // Auswahl: eine Gruppe, mehrere Gruppen oder (ohne Angabe) alle.
+        $selected = array_map('intval', (array) ($_POST['groups'] ?? []));
+        $groupIds = [];
+        foreach (Exam::groups($exam->id) as $group) {
+            if ($selected === [] || in_array($group['id'], $selected, true)) {
+                $groupIds[] = $group['id'];
+            }
+        }
+        $firstStart = $exam->phase === 'vorbereitung';
         $count = 0;
         foreach (Exam::groups($exam->id) as $group) {
+            if (!in_array($group['id'], $groupIds, true)) {
+                continue;
+            }
+            // Bereits gestartete Gruppen nicht erneut bestuecken.
+            if (isset(Exam::startedGroups($exam->id)[$group['id']])) {
+                continue;
+            }
             if ($group['members'] === []) {
                 continue;
             }
             $template = $group['templateProjectId'] !== null ? Project::find($group['templateProjectId']) : null;
             foreach ($group['members'] as $member) {
+                if (Exam::workFor($exam->id, $member->id) !== null) {
+                    continue;
+                }
                 $projectId = null;
                 if ($template !== null) {
                     $projectId = Project::create($member->id, null, $exam->title, $template->type, $template->language, $template->content, $user->id)->id;
@@ -273,11 +403,15 @@ final class ExamController
             }
         }
         if ($count === 0) {
-            flash('error', 'Es gibt keine Gruppe mit Mitgliedern. Ohne Teilnehmer kein Start.');
+            flash('error', $firstStart
+                ? 'Es gibt keine Gruppe mit Mitgliedern. Ohne Teilnehmer kein Start.'
+                : 'Diese Gruppe(n) laufen bereits oder haben keine Mitglieder.');
             redirect('/pruefungen/' . $exam->id);
         }
-        Exam::setPhase($exam->id, 'durchfuehrung');
-        Exam::markTimestamp($exam->id, 'started_at');
+        if ($firstStart) {
+            Exam::setPhase($exam->id, 'durchfuehrung');
+            Exam::markTimestamp($exam->id, 'started_at');
+        }
         $message = $exam->kind === 'pruefung'
             ? 'Die Prüfung läuft: ' . $count . ' Arbeiten ausgeteilt. Für die Schülerinnen und Schüler sind jetzt alle anderen Bereiche gesperrt.'
             : 'Die Schularbeit läuft: ' . $count . ' Arbeiten ausgeteilt.';
@@ -296,6 +430,18 @@ final class ExamController
         if ($exam->phase !== 'durchfuehrung') {
             flash('error', 'Nur eine laufende Prüfung kann beendet werden.');
             redirect('/pruefungen/' . $exam->id);
+        }
+        // Stand der Projekte einfrieren: Das ist die Fassung, die die
+        // Schuelerinnen und Schuelern abgegeben haben und die Grundlage
+        // fuer den Korrektur-Diff.
+        foreach (Exam::works($exam->id) as $work) {
+            if ($work['projectId'] === null) {
+                continue;
+            }
+            $project = Project::find($work['projectId']);
+            if ($project !== null) {
+                Exam::saveSubmittedContent($exam->id, $work['userId'], $project->content);
+            }
         }
         Exam::setPhase($exam->id, 'korrektur');
         flash('info', 'Abgabe beendet, die Sperre ist aufgehoben. Die Korrektur kann jetzt starten.');
@@ -320,7 +466,14 @@ final class ExamController
         if ($exam->phase === 'herausgegeben') {
             redirect('/pruefungen/' . $exam->id . '/ergebnis');
         }
-        $work = self::ensureWork($exam, $user);
+        $work = Exam::workFor($exam->id, $user->id);
+        if ($work === null) {
+            if ($exam->kind === 'pruefung') {
+                flash('info', 'Deine Gruppe ist noch nicht dran. Sobald deine Gruppe startet, erscheint die Prüfung hier.');
+                redirect('/pruefungen');
+            }
+            $work = self::ensureWork($exam, $user);
+        }
         $project = $work['project_id'] !== null ? Project::find($work['project_id']) : null;
         render('exam_work', [
             'title' => $exam->title,
@@ -381,10 +534,42 @@ final class ExamController
             flash('error', 'Die Prüfung läuft nicht.');
             redirect('/pruefungen');
         }
-        self::ensureWork($exam, $user);
+        if (Exam::workFor($exam->id, $user->id) === null) {
+            if ($exam->kind === 'pruefung') {
+                flash('info', 'Deine Gruppe ist noch nicht dran.');
+                redirect('/pruefungen');
+            }
+            self::ensureWork($exam, $user);
+        }
         Exam::submit($exam->id, $user->id);
         flash('success', 'Deine Arbeit ist abgegeben. Viel Erfolg!');
         redirect('/pruefungen');
+    }
+
+    /**
+     * Sperr-Status als JSON, damit die Schueler-Seite ohne eigenes Reload
+     * auf Start und Ende der Pruefung reagieren kann (Polling in app.js).
+     */
+    public static function lockStatus(): void
+    {
+        $user = Auth::user();
+        header('Content-Type: application/json; charset=utf-8');
+        if ($user === null || $user->role !== 'student') {
+            echo json_encode(['locked' => false, 'phase' => null]);
+            exit;
+        }
+        $lock = Exam::lockForUser($user->id);
+        if ($lock === null) {
+            echo json_encode(['locked' => false, 'phase' => null, 'examId' => null, 'projectId' => null]);
+            exit;
+        }
+        echo json_encode([
+            'locked' => true,
+            'phase' => $lock['phase'],
+            'examId' => $lock['id'],
+            'projectId' => $lock['projectId'],
+        ]);
+        exit;
     }
 
     /** Ergebnis fuer Schuelerinnen und Schueler nach der Herausgabe. */
@@ -401,16 +586,30 @@ final class ExamController
         }
         $totals = Exam::totalsFor($exam->id, $user->id);
         $percent = $totals['total'] > 0 ? $totals['reached'] / $totals['total'] * 100.0 : 0.0;
+        $work = Exam::workFor($exam->id, $user->id);
+        $projectContent = null;
+        $codeDiff = null;
+        if ($work !== null && $work['project_id'] !== null) {
+            $project = Project::find($work['project_id']);
+            if ($project !== null) {
+                $projectContent = $project->content;
+                if ($work['submitted_content'] !== null && $work['submitted_content'] !== $project->content) {
+                    $codeDiff = Exam::diffHtml($work['submitted_content'], $project->content);
+                }
+            }
+        }
         render('exam_result', [
             'title' => 'Ergebnis: ' . $exam->title,
             'active' => 'module-pruefung',
             'exam' => $exam,
-            'work' => Exam::workFor($exam->id, $user->id),
+            'work' => $work,
             'tasks' => Exam::tasks($exam->id),
             'answers' => Exam::answersFor($exam->id, $user->id),
             'gradings' => Exam::gradingsFor($exam->id, $user->id),
             'totals' => $totals,
             'note' => Exam::gradeFor($percent),
+            'projectContent' => $projectContent,
+            'codeDiff' => $codeDiff,
         ]);
     }
 
@@ -478,7 +677,9 @@ final class ExamController
         }
         $work = Exam::workFor($exam->id, $student->id);
         $projectContent = null;
+        $projectId = null;
         if ($work !== null && $work['project_id'] !== null) {
+            $projectId = $work['project_id'];
             $project = Project::find($work['project_id']);
             if ($project !== null) {
                 $projectContent = $project->content;
@@ -494,6 +695,8 @@ final class ExamController
             'answers' => Exam::answersFor($exam->id, $student->id),
             'gradings' => Exam::gradingsFor($exam->id, $student->id),
             'projectContent' => $projectContent,
+            'projectId' => $projectId,
+            'submittedContent' => $work !== null ? $work['submitted_content'] : null,
         ]);
     }
 
@@ -528,6 +731,46 @@ final class ExamController
             $saved++;
         }
         flash($saved > 0 ? 'success' : 'error', $saved > 0 ? 'Bewertung gespeichert und als geprüft markiert.' : 'Keine Bewertung übernommen.');
+        redirect('/pruefungen/' . $exam->id . '/korrektur/' . $student->id);
+    }
+
+    /**
+     * Korrigierte Fassung des Arbeitscodes in der Korrekturphase sichern.
+     * Die eingereichte Fassung bleibt unangetastet (submitted_content),
+     * dadurch kann die Herausgabe beide Fassungen farblich gegenueberstellen.
+     */
+    public static function saveCode(array $params): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            redirect('/login');
+        }
+        $exam = self::requireOwner($user, (int) ($params['id'] ?? 0));
+        csrf_validate();
+        if ($exam->phase !== 'korrektur') {
+            flash('error', 'Der Code kann nur in der Korrekturphase verbessert werden.');
+            redirect('/pruefungen/' . $exam->id . '/korrektur');
+        }
+        $student = User::find((int) ($_POST['user_id'] ?? 0));
+        if ($student === null || !Exam::isMember($exam->id, $student->id)) {
+            self::notFound();
+        }
+        $work = Exam::workFor($exam->id, $student->id);
+        if ($work === null || $work['project_id'] === null) {
+            flash('error', 'Diese Arbeit hat kein Projekt.');
+            redirect('/pruefungen/' . $exam->id . '/korrektur');
+        }
+        $project = Project::find($work['project_id']);
+        if ($project === null) {
+            flash('error', 'Das Projekt existiert nicht mehr.');
+            redirect('/pruefungen/' . $exam->id . '/korrektur');
+        }
+        $content = (string) ($_POST['content'] ?? '');
+        if (mb_strlen($content) > 200000) {
+            $content = mb_substr($content, 0, 200000);
+        }
+        $project->save($project->title, $content);
+        flash('success', 'Korrigierte Fassung gespeichert. In der Herausgabe ist sie farblich gegen die Abgabe markiert.');
         redirect('/pruefungen/' . $exam->id . '/korrektur/' . $student->id);
     }
 

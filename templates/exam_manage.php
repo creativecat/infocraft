@@ -20,6 +20,40 @@
 <?php if ($exam->phase === 'vorbereitung'): ?>
 
 <section class="panel">
+    <h3>Gruppen A/B übernehmen</h3>
+    <p class="muted">Jedes Schülerkonto hat einen festen Schalter A oder B (bleibt über alle Prüfungen hinweg stehen). Setze ihn hier und übernimm die Gruppen mit einem Klick in diese Prüfung.</p>
+    <?php if ($abStudents === []): ?>
+    <div class="notice"><strong>Keine Schülerinnen und Schüler</strong><p>In deinen Klassen sind noch keine Schülerinnen und Schüler angelegt.</p></div>
+    <?php else: ?>
+    <table>
+        <thead><tr><th>Name</th><th>Gruppe</th></tr></thead>
+        <tbody>
+        <?php foreach ($abStudents as $abStudent): ?>
+            <tr>
+                <td><?= e($abStudent->fullName()) ?></td>
+                <td>
+                    <?php foreach (['', 'A', 'B'] as $abKey): ?>
+                    <form method="post" action="<?= url('pruefungen/gruppenschalter') ?>" style="display:inline;">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="user_id" value="<?= e($abStudent->id) ?>">
+                        <input type="hidden" name="exam_group" value="<?= e($abKey) ?>">
+                        <input type="hidden" name="back" value="/pruefungen/<?= e($exam->id) ?>">
+                        <button class="btn <?= $abStudent->examGroup === $abKey ? 'btn-primary' : 'btn-ghost' ?>" type="submit" title="Gruppen-Schalter <?= $abKey === '' ? 'aus' : $abKey ?>"><?= $abKey === '' ? '–' : e($abKey) ?></button>
+                    </form>
+                    <?php endforeach; ?>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    <form method="post" action="<?= url('pruefungen/' . $exam->id . '/gruppen-uebernehmen') ?>" style="margin-top:12px;">
+        <?= csrf_field() ?>
+        <button class="btn btn-primary" type="submit" title="Gruppen A und B aus den Schaltern übernehmen">Gruppen A/B übernehmen</button>
+    </form>
+    <?php endif; ?>
+</section>
+
+<section class="panel">
     <h3>Gruppen &amp; Vorlagen</h3>
     <p class="muted">Jede Gruppe arbeitet mit ihrer eigenen Vorlage. Beim Start bekommt jedes Gruppenmitglied eine persönliche Kopie in die Werkstatt gelegt.</p>
     <?php if ($groups === []): ?>
@@ -122,10 +156,15 @@
 <section class="panel">
     <h3>Start der <?= $exam->kind === 'pruefung' ? 'Prüfung' : 'Schularbeit' ?></h3>
     <?php if ($exam->kind === 'pruefung'): ?>
-    <p class="muted">Beim Start werden die Arbeitskopien ausgeteilt. Für alle teilnehmenden Schülerinnen und Schüler sind dann alle anderen Bereiche gesperrt: Sie können nur noch in der Prüfung und in ihrem eigenen Prüfungsprojekt arbeiten.</p>
+    <p class="muted">Beim Start werden die Arbeitskopien ausgeteilt. Für alle startenden Schülerinnen und Schüler sind dann alle anderen Bereiche gesperrt: Sie können nur noch in der Prüfung und in ihrem eigenen Prüfungsprojekt arbeiten.</p>
     <?php endif; ?>
+    <p class="muted">Gruppen auswählen: nur die angehakten Gruppen starten jetzt (Rest später per Klick im Live-Monitor). Ohne Auswahl starten alle Gruppen.</p>
     <form method="post" action="<?= url('pruefungen/' . $exam->id . '/start') ?>">
         <?= csrf_field() ?>
+        <?php foreach ($groups as $group): ?>
+        <?php if ($group['members'] === []) { continue; } ?>
+        <label style="display:block;margin:4px 0;"><input type="checkbox" name="groups[]" value="<?= e($group['id']) ?>" checked> <?= e($group['name']) ?> (<?= count($group['members']) ?>)</label>
+        <?php endforeach; ?>
         <button class="btn btn-primary" type="submit" title="Jetzt starten und austeilen">▶</button>
     </form>
 </section>
@@ -135,6 +174,16 @@
 <section class="panel">
     <h3>Live-Monitor</h3>
     <p class="muted">Die <?= $exam->kind === 'pruefung' ? 'Prüfung' : 'Schularbeit' ?> läuft. Diese Personen haben angefangen:</p>
+    <?php foreach ($groups as $group): ?>
+        <?php if (isset($startedGroups[$group['id']])) { continue; } ?>
+        <?php if ($group['members'] === []) { continue; } ?>
+        <form method="post" action="<?= url('pruefungen/' . $exam->id . '/start') ?>" style="margin-bottom:10px;">
+            <?= csrf_field() ?>
+            <input type="hidden" name="groups[]" value="<?= e($group['id']) ?>">
+            <span class="pill"><?= e($group['name']) ?></span>
+            <button class="btn btn-primary" type="submit" title="Diese Gruppe jetzt starten">▶ <?= e($group['name']) ?> jetzt starten (<?= count($group['members']) ?>)</button>
+        </form>
+    <?php endforeach; ?>
     <?php if ($works === []): ?>
     <div class="notice"><strong>Noch keine Teilnehmer auf der Arbeitsseite</strong><p>Die Ausgeteilten sehen die Prüfung auf ihrer Übersicht und öffnen sie dort.</p></div>
     <?php else: ?>

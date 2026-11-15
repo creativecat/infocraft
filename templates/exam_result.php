@@ -43,3 +43,16 @@
     <?php endif; ?>
 </section>
 <?php endforeach; ?>
+
+<?php if ($codeDiff !== null): ?>
+<section class="panel">
+    <h3>Dein Code mit den Korrekturen der Lehrkraft</h3>
+    <p class="muted"><span class="exdiff-ins">Grün: Verbesserung der Lehrkraft</span> · <span class="exdiff-del">Rot: deine abgegebene Fassung</span></p>
+    <?= $codeDiff ?>
+</section>
+<?php elseif ($projectContent !== null): ?>
+<section class="panel">
+    <h3>Dein eingereichter Code</h3>
+    <pre class="work-code"><?= e($projectContent) ?></pre>
+</section>
+<?php endif; ?>
