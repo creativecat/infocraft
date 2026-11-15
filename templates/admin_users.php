@@ -46,6 +46,16 @@
                     <input type="hidden" name="user_id" value="<?= (int) $u->id ?>">
                     <button class="btn btn-ghost" type="submit" title="Neues OTP">🔑</button>
                 </form>
+                <form method="post" action="<?= url('pruefungen/gruppenschalter') ?>" class="form-inline" title="Feste Prüfungsgruppe">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="user_id" value="<?= (int) $u->id ?>">
+                    <input type="hidden" name="back" value="/admin/users">
+                    <select name="exam_group" onchange="this.form.submit()">
+                        <option value=""<?= $u->examGroup === '' ? ' selected' : '' ?>>–</option>
+                        <option value="A"<?= $u->examGroup === 'A' ? ' selected' : '' ?>>A</option>
+                        <option value="B"<?= $u->examGroup === 'B' ? ' selected' : '' ?>>B</option>
+                    </select>
+                </form>
                 <?php else: ?>
                 <span class="muted">-</span>
                 <?php endif; ?>
