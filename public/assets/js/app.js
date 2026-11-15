@@ -465,6 +465,43 @@
     }
   });
 })();
+
+// ===== Prüfungsmodus: Live-Sperre ohne eigenes Reload =====
+// Schülerinnen und Schüler pollen den Sperr-Status; Start und Ende der
+// Prüfung wirken dadurch sofort, ohne dass jemand selbst neu laden muss.
+(function () {
+  'use strict';
+  var body = document.body;
+  var pollUrl = body ? body.getAttribute('data-exam-poll') : null;
+  if (!pollUrl) {
+    return;
+  }
+  var examUrl = pollUrl.substring(0, pollUrl.indexOf('lock-status'));
+  function leave() {
+    location.href = examUrl;
+  }
+  function check() {
+    fetch(pollUrl, { credentials: 'same-origin' })
+      .then(function (res) { return res.json(); })
+      .then(function (json) {
+        if (!json) { return; }
+        var path = location.pathname;
+        var ownProject = json.projectId !== null && json.projectId !== undefined
+          && (path.indexOf('/werkstatt/code/' + json.projectId) === 0 || path.indexOf('/werkstatt/html/' + json.projectId) === 0);
+        if (json.locked && json.phase === 'durchfuehrung') {
+          var allowed = path === '/' || path === '/login' || path === '/logout'
+            || path.indexOf('/auth/') === 0 || path.indexOf('/pruefungen') === 0 || ownProject;
+          if (!allowed) { leave(); }
+        } else if (json.locked && json.phase === 'korrektur') {
+          if (ownProject || /\/pruefungen\/\d+\/arbeit$/.test(path)) { leave(); }
+        } else if (!json.locked && /\/pruefungen\/\d+\/arbeit$/.test(path)) {
+          leave();
+        }
+      })
+      .catch(function () {});
+  }
+  setInterval(check, 15000);
+})();
 // Automatisches Speichern der Teilaufgaben-Antworten (Prüfungen und Schularbeiten).
 // Der Endpunkt inklusive Prüfungs-ID steht am Aufgabenbereich (data-exam-save).
 (function () {
