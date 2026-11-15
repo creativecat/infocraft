@@ -4465,10 +4465,10 @@ setTimeout(function () {
                     'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
-                  ok(support130.indexOf("APP_VERSION = '0.27.0'") !== -1
-                    && support130.indexOf("ASSET_VERSION = '83'") !== -1
-                    && changelog130.indexOf('## [0.27.0]') !== -1,
-                    'T130r Version 0.27.0 mit Asset-Stand 83 und Changelog-Eintrag');
+                  ok(support130.indexOf("APP_VERSION = '0.28.0'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '84'") !== -1
+                    && changelog130.indexOf('## [0.28.0]') !== -1,
+                    'T130r Version 0.28.0 mit Asset-Stand 84 und Changelog-Eintrag');
                   ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
                     && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
                     && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
@@ -4529,6 +4529,57 @@ setTimeout(function () {
                   ok(ctrl130.indexOf('Private Bereiche von Schülerinnen und Schülern werden nicht umbenannt.') !== -1
                     && ctrl130.indexOf('Private Bereiche von Schülerinnen und Schülern werden nicht geteilt.') !== -1,
                     'T131p private Mein-Bereich-Abschnitte bleiben vom Umbenennen und Teilen ausgespart (#207)');
+
+                  // ===== T132: Prüfungsmodus Runde (#208-#212) =====
+                  var examCtrl132 = advRead130('../src/Controllers/ExamController.php');
+                  var examModel132 = advRead130('../src/Models/Exam.php');
+                  var examTplManage132 = advRead130('../templates/exam_manage.php');
+                  var examTplCorrect132 = advRead130('../templates/exam_correct.php');
+                  var examTplResult132 = advRead130('../templates/exam_result.php');
+                  var examLayout132 = advRead130('../templates/layout.php');
+                  var examAppJs132 = advRead130('../public/assets/js/app.js');
+                  var examStyle132 = advRead130('../public/assets/css/style.css');
+                  var examMigrator132 = advRead130('../src/Migrator.php');
+                  var examUser132 = advRead130('../src/Models/User.php');
+                  ok(examCtrl132.indexOf('lockStatus') !== -1
+                    && examLayout132.indexOf('data-exam-poll') !== -1
+                    && examAppJs132.indexOf('lock-status') !== -1
+                    && examAppJs132.indexOf("body.getAttribute('data-exam-poll')") !== -1,
+                    'T132a Sperr-Status-Endpunkt und Schüler-Polling sind verdrahtet (#210)');
+                  ok(examModel132.indexOf("phase IN ('durchfuehrung', 'korrektur')") !== -1
+                    && examCtrl132.indexOf("lock['phase'] === 'korrektur'") !== -1
+                    && examCtrl132.indexOf('Deine Arbeit wird gerade korrigiert') !== -1,
+                    'T132b die Korrekturphase sperrt nur noch das eigene Arbeitsprojekt (#210)');
+                  ok(examCtrl132.indexOf("in_array($group['id'], $selected, true)") !== -1
+                    && examCtrl132.indexOf('startedGroups') !== -1,
+                    'T132c der Start wählt Gruppen gezielt und startet laufende Gruppen nicht erneut (#210)');
+                  ok(examCtrl132.indexOf('adoptGroups') !== -1
+                    && examCtrl132.indexOf("'A' => 'Gruppe A', 'B' => 'Gruppe B'") !== -1
+                    && examCtrl132.indexOf('examGroupToggle') !== -1
+                    && examUser132.indexOf('setExamGroup') !== -1,
+                    'T132d A/B-Schalter am Konto und Übernahme in Prüfungsgruppen (#209)');
+                  ok(examMigrator132.indexOf('ensureUserExamGroupColumn') !== -1
+                    && examMigrator132.indexOf('ensureExamSubmittedColumn') !== -1,
+                    'T132e Migrationen ergänzen users.exam_group und exam_works.submitted_content (#209, #211)');
+                  ok(examCtrl132.indexOf('saveSubmittedContent') !== -1
+                    && examCtrl132.indexOf('saveCode') !== -1
+                    && examTplCorrect132.indexOf('Code korrigiert speichern') !== -1,
+                    'T132f Ende friert die Abgabe ein, Lehrkraft verbessert den Code in der Korrektur (#211)');
+                  ok(examModel132.indexOf('diffHtml') !== -1
+                    && examModel132.indexOf('exdiff-ins') !== -1
+                    && examTplResult132.indexOf('Korrekturen der Lehrkraft') !== -1
+                    && examStyle132.indexOf('.exdiff') !== -1,
+                    'T132g Herausgabe zeigt den Zeilen-Diff und BE je Teilaufgabe (#212)');
+                  ok(examTplManage132.indexOf('Gruppen A/B übernehmen') !== -1
+                    && examTplManage132.indexOf('gruppenschalter') !== -1
+                    && examTplManage132.indexOf('jetzt starten') !== -1
+                    && examTplManage132.indexOf('groups[]') !== -1,
+                    'T132h Vorbereitung und Live-Monitor bieten Schalter, Übernahme und Gruppen-Start (#209, #210)');
+                  ok(examCtrl132.indexOf('Deine Gruppe ist noch nicht dran') !== -1,
+                    'T132i nicht gestartete Gruppen bekommen einen Hinweis statt einer Arbeit (#210)');
+                  ok(advRead130('../src/Controllers/AdminController.php').indexOf('cleanWindowField') !== -1
+                    && advRead130('../src/Controllers/HomeController.php').indexOf('announcementVisible') !== -1,
+                    'T132j Ankündigungen tragen einen Anzeige-Zeitraum von/bis (#208)');
 
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;
