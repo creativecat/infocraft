@@ -101,6 +101,24 @@ jobs:
           grep -q "adv-feedback" sqladvtry.html && grep -Fq "SELECT * FROM crew" sqladvtry.html && grep -q "Hinweis zu deinem letzten Versuch" sqladvtry.html && R25TRYRO_OK=1 || R25TRYRO_OK=0
           R25_VDB=$(php -r '$pdo = new PDO("sqlite:database/infocraft.sqlite"); echo $pdo->query("SELECT COUNT(*) FROM sql_missions WHERE hint_variants IS NOT NULL")->fetchColumn();')
           [ "$R25_VDB" = "42" ] && R25VDB_OK=1 || R25VDB_OK=0
+          # Netzwerk-Werkstatt (#220-#226): Seite, Aktion, Stand-Polling, Export (Lehrkraft-Session cookies.txt)
+          CODE_NETW=$(curl -sS -o netw.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/netzwerk)
+          grep -q "net-svg" netw.html && grep -q "Netzwerk-Werkstatt" netw.html && grep -q "net-boot" netw.html && NET_PAGE_OK=1 || NET_PAGE_OK=0
+          NETCSRF=$(grep -o 'data-csrf="[a-f0-9]*"' netw.html | head -n1 | cut -d'"' -f2)
+          curl -sS -b cookies.txt -o netact.json -d "aktion=addDevice" --data-urlencode 'params={"type":"webserver","name":"CI Webserver"}' -d "csrf=$NETCSRF" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netact.json && grep -q '192.168.0.2' netact.json && grep -q 'CI Webserver' netact.json && NET_ADD_OK=1 || NET_ADD_OK=0
+          curl -sS -b cookies.txt -o netpub.json --data-urlencode 'params={"server":"n1","title":"CI Zeitung","domain":"ci-zeitung.test","html":"<h1>CI</h1>"}' -d "csrf=$NETCSRF" -d "aktion=savePage" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          NETPGID=$(php -r '$n = json_decode((new PDO("sqlite:database/infocraft.sqlite"))->query("SELECT content FROM net_networks WHERE class_id IS NULL AND owner_id = 1")->fetchColumn(), true); foreach ($n["pages"] as $p) { if ($p["title"] === "CI Zeitung") { echo $p["id"]; } }')
+          curl -sS -b cookies.txt -o netpub2.json --data-urlencode "params={\"id\":\"$NETPGID\"}" -d "csrf=$NETCSRF" -d "aktion=publishPage" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netpub.json && grep -q '"ok":true' netpub2.json && NET_PAGEACT_OK=1 || NET_PAGEACT_OK=0
+          curl -sS -o netstand.json -b cookies.txt http://127.0.0.1:8080/werkstatt/netzwerk/stand
+          grep -q '192.168.0.2' netstand.json && grep -q 'ci-zeitung.test' netstand.json && NET_STAND_OK=1 || NET_STAND_OK=0
+          CODE_NETEXP=$(curl -sS -o netexp.json -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/netzwerk/export)
+          grep -q '"devices"' netexp.json && grep -q 'CI Zeitung' netexp.json && NET_EXPORT_OK=1 || NET_EXPORT_OK=0
+          NETDB=$(sqlite3 "$DB" "SELECT COUNT(*) FROM net_networks")
+          [ "$NETDB" = "1" ] && NET_DB_OK=1 || NET_DB_OK=0
+          curl -sS -b cookies.txt -o netreset.json --data-urlencode 'params={}' -d "csrf=$NETCSRF" -d "aktion=reset" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netreset.json && grep -q '192.168.0.2' netreset.json && NET_RESET_DB_OK=0 || NET_RESET_DB_OK=1
           CODE_HTML=$(curl -sS -o html.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/html)
           # Navigation: HTML-Werkstatt steht ganz oben (#57)
           NAVPOS_H=$(grep -bo "HTML-Werkstatt" home.html | head -n1 | cut -d: -f1)
@@ -226,7 +244,7 @@ jobs:
           grep -q "blk-dragging" public/assets/js/block-editor.js && grep -q "T111 beim Ziehen" tools/ui-tests.js && BLK_DRAGVIS_OK=1 || BLK_DRAGVIS_OK=0
           grep -q "Einfuege-Linie" public/assets/js/block-editor.js && grep -q "T111b die Einfuege-Linie" tools/ui-tests.js && BLK_INS_OK=1 || BLK_INS_OK=0
           grep -q "blk-hint-pulse" public/assets/css/style.css && grep -q "blk-mode-btn" public/assets/css/style.css && BLK_STYLE_OK=1 || BLK_STYLE_OK=0
-          grep -q "letima development" src/Support.php && grep -q "APP_VERSION = '0.28.0'" src/Support.php && grep -q "Keep a Changelog" CHANGELOG.md && grep -q "APP_VERSION" templates/layout.php && BLK_HEAD_OK=1 || BLK_HEAD_OK=0
+          grep -q "letima development" src/Support.php && grep -q "APP_VERSION = '0.29.0'" src/Support.php && grep -q "Keep a Changelog" CHANGELOG.md && grep -q "APP_VERSION" templates/layout.php && BLK_HEAD_OK=1 || BLK_HEAD_OK=0
           grep -q "drag.ghost.style.transform = 'translate('" public/assets/js/block-editor.js && grep -q "_bubW" public/assets/js/block-editor.js && grep -q "children.length > 200" public/assets/js/block-editor.js && grep -q "T113 der gezogene Block folgt" tools/ui-tests.js && BLK_OPT_OK=1 || BLK_OPT_OK=0
           grep -q "switchMode" public/assets/js/block-editor.js && grep -q "blk-switch-btn" templates/code_project.php && grep -q "T109m die Moduswahl" tools/ui-tests.js && BLK_SWITCH_OK=1 || BLK_SWITCH_OK=0
           grep -q "pro: true" public/assets/js/block-editor.js && grep -q "T109e im Lernmodus fehlt die Variablen-Kategorie" tools/ui-tests.js && BLK_LEARN_OK=1 || BLK_LEARN_OK=0
@@ -337,6 +355,15 @@ jobs:
           grep -q "function renameSection" src/Models/InfoBook.php && grep -q "function createSectionAfter" src/Models/InfoBook.php && grep -q "function movePagesToSection" src/Models/InfoBook.php && R27MODEL_OK=1 || R27MODEL_OK=0
           grep -q "Nur Lehrkräfte können InfoBooks teilen" src/Controllers/InfoBookController.php && grep -q "Für dein Konto ist keine Klasse hinterlegt" templates/ibook_overview.php && R27SHARE_OK=1 || R27SHARE_OK=0
           grep -q "T131" tools/ui-tests.js && grep -q "advRead130" tools/ui-tests.js && grep -q "T132" tools/ui-tests.js && grep -q '## \[0.27.0\]' CHANGELOG.md && grep -q '## \[0.28.0\]' CHANGELOG.md && R27TEST_OK=1 || R27TEST_OK=0
+          grep -q "nextIp" src/Models/Network.php && grep -q "MAX_DEVICES" src/Models/Network.php && grep -q "publishDns" src/Models/Network.php && grep -Fq 'Falsches WLAN-Passwort' src/Models/Network.php && grep -Fq '192.168.0.' src/Models/Network.php && NET_MODEL_OK=1 || NET_MODEL_OK=0
+          grep -q "function index" src/Controllers/NetworkController.php && grep -q "function stand" src/Controllers/NetworkController.php && grep -q "function aktion" src/Controllers/NetworkController.php && grep -q "function export" src/Controllers/NetworkController.php && grep -Fq "class_id IS NULL AND owner_id = ?" src/Models/Network.php && NET_CTRL_OK=1 || NET_CTRL_OK=0
+          grep -Fq "/werkstatt/netzwerk/aktion" public/index.php && grep -Fq "/werkstatt/netzwerk/stand" public/index.php && grep -Fq "/werkstatt/netzwerk/export" public/index.php && NET_ROUTES_OK=1 || NET_ROUTES_OK=0
+          grep -q "net-svg" templates/network_workshop.php && grep -q "net-boot" templates/network_workshop.php && grep -q "network.js" templates/network_workshop.php && grep -q "net-missions" templates/network_workshop.php && grep -q "net-teacher-card" templates/network_workshop.php && NET_TPL_OK=1 || NET_TPL_OK=0
+          grep -q "setInterval(poll, 5000)" public/assets/js/network.js && grep -q "DNS-Server antwortet nicht" public/assets/js/network.js && grep -Fq 'Webseiten für' public/assets/js/network.js && grep -q "joinWlan" public/assets/js/network.js && grep -q "srcdoc" public/assets/js/network.js && NET_JS_OK=1 || NET_JS_OK=0
+          grep -q ".net-device" public/assets/css/style.css && grep -q ".net-link-off" public/assets/css/style.css && grep -q ".net-mission-done" public/assets/css/style.css && grep -q ".net-urlbar" public/assets/css/style.css && NET_CSS_OK=1 || NET_CSS_OK=0
+          grep -q "ensureNetNetworksTable" src/Migrator.php && grep -q "net_networks" sql/schema.sqlite.sql && grep -q "net_networks" sql/schema.mysql.sql && NET_MIG_OK=1 || NET_MIG_OK=0
+          grep -q "'netzwerk'" src/Controllers/ModuleController.php && grep -q "Netzwerk-Werkstatt" src/Controllers/ModuleController.php && grep -q "'level' => 7" src/Controllers/ModuleController.php && NET_MODULE_OK=1 || NET_MODULE_OK=0
+          grep -q "T133" tools/ui-tests.js && grep -q "netSample" tools/ui-tests.js && grep -q '## \[0.29.0\]' CHANGELOG.md && grep -q "Netzwerk-Werkstatt" README.md && NET_TEST_OK=1 || NET_TEST_OK=0
           grep -q "icv-linkbadge" public/assets/js/app.js && IBK_LINK_OK=1 || IBK_LINK_OK=0
           grep -q "data-nav" templates/ibook_page.php && IBK_LINKTPL_OK=1 || IBK_LINKTPL_OK=0
           grep -q "'link'" src/Models/InfoBook.php && IBK_LINKPHP_OK=1 || IBK_LINKPHP_OK=0
@@ -345,7 +372,7 @@ jobs:
           grep -q "ibook-page-layout" public/assets/css/style.css && IBK_CSS_OK=1 || IBK_CSS_OK=0
           grep -q "href=\"/infobuecher\"" home.html && IBK_NAV_OK=1 || IBK_NAV_OK=0
           [ -f public/assets/vendor/highlight.min.js ] && [ -f public/assets/vendor/mermaid.min.js ] && VENDOR_OK=1 || VENDOR_OK=0
-          grep -q "'84'" src/Support.php && ASSETV_OK=1 || ASSETV_OK=0
+          grep -q "'85'" src/Support.php && ASSETV_OK=1 || ASSETV_OK=0
           CSRFAPP=$(grep -o 'value="[a-f0-9]*"' wsapp.html | head -n1 | cut -d'"' -f2)
           curl -sS -L -b cookies.txt -c cookies.txt -o shopbuy.html --data-urlencode "csrf=$CSRFAPP" --data-urlencode "action=kaufen" --data-urlencode "produkt_id=1" --data-urlencode "menge=2" http://127.0.0.1:8080/werkstatt/sql/shop/app
           grep -q "Bestellung gespeichert" shopbuy.html && SQLAPP_BUY_OK=1 || SQLAPP_BUY_OK=0
@@ -501,3 +528,21 @@ jobs:
           curl -sS -o lockstat_yes.json -b cookies6.txt http://127.0.0.1:8080/pruefungen/lock-status
           grep -q '"locked":true' lockstat_yes.json && grep -q '"phase":"durchfuehrung"' lockstat_yes.json && EX_LOCKSTAT_OK=1 || EX_LOCKSTAT_OK=0
           CODE_AWORK=$(curl -sS -L -o awork.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/pruefungen/$EXID2/arbeit)
+          grep -q "Deine Gruppe ist noch nicht dran" awork.html && EX_GWORK_OK=1 || EX_GWORK_OK=0
+          # Runde 29 (#228): Auswertung aller Marker. Die ci.yml endete zuvor mitten
+          # im A/B-Flow; die *_OK-Marker wurden nirgends geprüft.
+          NET_MARKER_EXPECT0=" LENA_SQL SQLNEST_BAD "
+          FAILED=0
+          DIAGLINE=""
+          for MVAR in $(compgen -v | grep -E '^[A-Z][A-Z0-9_]*_OK$' | sort); do
+            MVAL="${!MVAR}"
+            MEXP=1
+            case "$MVAR" in LENA_SQL|SQLNEST_BAD) MEXP=0 ;; esac
+            DIAGLINE="$DIAGLINE/$MVAR=$MVAL"
+            if [ "$MVAL" != "$MEXP" ]; then
+              echo "::error file=ci.yml::Marker $MVAR=$MVAL (erwartet $MEXP)"
+              FAILED=1
+            fi
+          done
+          echo "::notice::DIAG$DIAGLINE"
+          if [ "$FAILED" = "1" ]; then exit 1; fi
