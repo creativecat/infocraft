@@ -4465,10 +4465,11 @@ setTimeout(function () {
                     'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
-                  ok(support130.indexOf("APP_VERSION = '0.28.0'") !== -1
-                    && support130.indexOf("ASSET_VERSION = '84'") !== -1
+                  ok(support130.indexOf("APP_VERSION = '0.29.0'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '85'") !== -1
+                    && changelog130.indexOf('## [0.29.0]') !== -1
                     && changelog130.indexOf('## [0.28.0]') !== -1,
-                    'T130r Version 0.28.0 mit Asset-Stand 84 und Changelog-Eintrag');
+                    'T130r Version 0.29.0 mit Asset-Stand 85 und Changelog-Eintrag (Historie bleibt)');
                   ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
                     && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
                     && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
@@ -4580,6 +4581,153 @@ setTimeout(function () {
                   ok(advRead130('../src/Controllers/AdminController.php').indexOf('cleanWindowField') !== -1
                     && advRead130('../src/Controllers/HomeController.php').indexOf('announcementVisible') !== -1,
                     'T132j Ankündigungen tragen einen Anzeige-Zeitraum von/bis (#208)');
+
+
+                  // ===== T133: Netzwerk-Werkstatt (#220 bis #226) =====
+                  var netMod = require('../public/assets/js/network.js');
+                  var netSample = {
+                    v: 1,
+                    router: { name: 'Testrouter', ssid: 'Schulnetz', pass: 'geheim' },
+                    devices: [
+                      { id: 'n1', type: 'pc', name: 'HP', ip: '192.168.0.2', wifi: false, owner: 1 },
+                      { id: 'n2', type: 'webserver', name: 'Web1', ip: '192.168.0.3', wifi: false, owner: 1 },
+                      { id: 'n3', type: 'dns', name: 'DNS1', ip: '192.168.0.4', wifi: false, owner: 1 },
+                      { id: 'n4', type: 'phone', name: 'Handy', ip: '192.168.0.5', wifi: false, owner: 1 }
+                    ],
+                    pages: [
+                      { id: 'p1', server: 'n2', title: 'Schulzeitung', domain: 'schulzeitung.net', html: '<h1>Schulzeitung</h1>', published: true }
+                    ],
+                    dns: [{ id: 'e1', domain: 'schulzeitung.net', ip: '192.168.0.3' }],
+                    logs: [{ t: '08:00', msg: 'HP ruft schulzeitung.net auf' }]
+                  };
+                  ok(netMod.defaultNet && netMod.defaultNet().devices.length === 0
+                    && netMod.TYPES.pc && netMod.TYPES.dns,
+                    'T133a Standard-Netz und Gerätetypen sind definiert (#220)');
+                  var resIp = netMod.resolve(netSample, 'http://192.168.0.3/');
+                  ok(resIp.kind === 'page' && resIp.page.title === 'Schulzeitung'
+                    && resIp.server.name === 'Web1' && !resIp.viaDns,
+                    'T133b Seitenaufruf über die IP liefert die freigeschaltete Seite (#221)');
+                  var noDns = JSON.parse(JSON.stringify(netSample));
+                  noDns.devices = noDns.devices.filter(function (d) { return d.type !== 'dns'; });
+                  var resNoDns = netMod.resolve(noDns, 'schulzeitung.net');
+                  ok(resNoDns.kind === 'error' && resNoDns.code === 'nodns'
+                    && resNoDns.message.indexOf('DNS-Server antwortet nicht') !== -1,
+                    'T133c ohne DNS-Server kommt die echte DNS-Fehlermeldung (#221, #223)');
+                  var resDom = netMod.resolve(netSample, 'schulzeitung.net');
+                  var missEntry = JSON.parse(JSON.stringify(netSample));
+                  missEntry.dns = [];
+                  var resMiss = netMod.resolve(missEntry, 'gibtsnicht.net');
+                  ok(resDom.kind === 'page' && resDom.viaDns === true && resDom.ip === '192.168.0.3'
+                    && resMiss.kind === 'error' && resMiss.code === 'dns',
+                    'T133d Domain-Auflösung über die DNS-Tabelle, unbekannte Domain meldet DNS-Fehler (#223)');
+                  var notPub = JSON.parse(JSON.stringify(netSample));
+                  notPub.pages[0].published = false;
+                  var res404 = netMod.resolve(notPub, '192.168.0.3');
+                  var resNoHost = netMod.resolve(netSample, '192.168.0.99');
+                  ok(res404.kind === 'error' && res404.code === 404
+                    && res404.message.indexOf('404') !== -1
+                    && resNoHost.kind === 'error' && resNoHost.code === 'nohost',
+                    'T133e 404 ohne freigeschaltete Seite, Verbindungsfehler ohne Webserver (#221)');
+                  ok(netMod.wlanSsids(netSample).indexOf('Schulnetz') !== -1
+                    && netMod.isIp('192.168.0.3') && !netMod.isIp('schulzeitung.net')
+                    && netMod.pageDocument({ html: '<b>Hi</b>' }).indexOf('<b>Hi</b>') !== -1
+                    && netMod.pageDocument({ html: '' }).indexOf('sandbox') === -1,
+                    'T133f WLANs, IP-Erkennung und abgeschottetes Seitendokument (#220, #224)');
+                  var missionState = netMod.missionsState(netSample, ['browse-ip']);
+                  var m1 = missionState.filter(function (m) { return m.id === 'm1'; })[0];
+                  var m2 = missionState.filter(function (m) { return m.id === 'm2'; })[0];
+                  var m4 = missionState.filter(function (m) { return m.id === 'm4'; })[0];
+                  ok(m1.done === true && m2.done === true && m4.done === false
+                    && missionState.length === 8,
+                    'T133g Missionen prüfen Zustand und Fortschritts-Flags (#226)');
+                  var netRead = function (f) { return require('fs').readFileSync(require.resolve(f), 'utf8'); };
+                  var netModelPhp = netRead('../src/Models/Network.php');
+                  var netCtrlPhp = netRead('../src/Controllers/NetworkController.php');
+                  var netTpl = netRead('../templates/network_workshop.php');
+                  var netJs = netRead('../public/assets/js/network.js');
+                  var netCss = netRead('../public/assets/css/style.css');
+                  var netIndex = netRead('../public/index.php');
+                  ok(netModelPhp.indexOf('nextIp') !== -1
+                    && netModelPhp.indexOf('MAX_DEVICES') !== -1
+                    && netModelPhp.indexOf('publishDns') !== -1
+                    && netModelPhp.indexOf('Falsches WLAN-Passwort') !== -1,
+                    'T133h Netz-Modell vergibt IPs, deckelt und erzwingt das WLAN-Passwort (#220, #223, #224)');
+                  ok(netIndex.indexOf('netzwerk/aktion') !== -1
+                    && netIndex.indexOf('netzwerk/stand') !== -1
+                    && netIndex.indexOf('netzwerk/export') !== -1,
+                    'T133i Routen für Stand, Aktionen und Export sind registriert (#225)');
+                  ok(netTpl.indexOf('net-boot') !== -1
+                    && netTpl.indexOf('network.js') !== -1
+                    && netTpl.indexOf('net-teacher-card') !== -1,
+                    'T133j Werkstatt-Template lädt network.js und bietet den Lehrkraft-Manager (#225)');
+                  ok(netJs.indexOf('setInterval(poll, 5000)') !== -1
+                    && netJs.indexOf('DNS-Server antwortet nicht') !== -1
+                    && netJs.indexOf('Webseiten für') !== -1
+                    && netJs.indexOf('net-teacher') === -1,
+                    'T133k Frontend pollt das Klassennetz und trägt Browser-, Webserver-UI (#221, #222, #225)');
+                  ok(netCss.indexOf('.net-device') !== -1
+                    && netCss.indexOf('.net-link-off') !== -1
+                    && netCss.indexOf('.net-mission-done') !== -1,
+                    'T133l Stylesheet: Topologie, Offline-Leitungen, erledigte Missionen (#220, #226)');
+                  /* UI-Attach: frisches Fake-DOM wie das Werkstatt-Template. */
+                  var netDoc = new FakeDoc();
+                  var netSavedDoc = global.document;
+                  var netSavedWindow = global.window;
+                  global.document = netDoc;
+                  global.window = {};
+                  var mkNetEl = function (tag, id) { var e = new FakeEl(tag); if (id) { netDoc.register(e, id); } return e; };
+                  var bootEl = mkNetEl('script', 'net-boot');
+                  bootEl.setAttribute('data-csrf', 'tok');
+                  bootEl.setAttribute('data-stand', '');
+                  bootEl.setAttribute('data-aktion', '/werkstatt/netzwerk/aktion');
+                  bootEl.setAttribute('data-ist-lehrkraft', '0');
+                  bootEl.setAttribute('data-net', JSON.stringify(netSample));
+                  var svg133 = mkNetEl('svg', 'net-svg');
+                  var modal133 = mkNetEl('div', 'net-modal');
+                  modal133.setAttribute('hidden', '');
+                  var modalBox133 = mkNetEl('div', 'net-modal-box');
+                  mkNetEl('span', 'net-router-name');
+                  mkNetEl('span', 'net-router-ssid');
+                  mkNetEl('div', 'net-netinfo');
+                  var missions133 = mkNetEl('ul', 'net-missions');
+                  mkNetEl('button', 'net-add-btn');
+                  mkNetEl('select', 'net-add-type');
+                  mkNetEl('input', 'net-add-name');
+                  var netFetchCalls = [];
+                  global.fetch = function (action, opts) {
+                    netFetchCalls.push({ action: action, body: String(opts && opts.body) });
+                    return Promise.resolve({ json: function () { return Promise.resolve({ ok: true, net: netSample }); } });
+                  };
+                  netMod.attach(netDoc);
+                  var svgLines = svg133.children.filter(function (c) { return c.tagName === 'LINE'; }).length;
+                  var svgGroups = svg133.children.filter(function (c) { return c.tagName === 'G'; }).length;
+                  ok(svgLines === 4 && svgGroups === 5,
+                    'T133m Topologie zeichnet alle Geräte und den Router mit Leitungen (#220)');
+                  ok(missions133.children.length === 8,
+                    'T133n die Missionsliste zeigt alle acht Missionen (#226)');
+                  var routerG133 = svg133.children.filter(function (c) { return c.tagName === 'G'; })[0];
+                  routerG133.handlers.click[0]();
+                  var findById133 = function (root, id) {
+                    for (var i = 0; i < root.children.length; i++) {
+                      var c = root.children[i];
+                      if (c.getAttribute('id') === id) { return c; }
+                      var deep = findById133(c, id);
+                      if (deep) { return deep; }
+                    }
+                    return null;
+                  };
+                  var ssidIn133 = findById133(modalBox133, 'net-w-ssid');
+                  ok(!modal133.hasAttribute('hidden') && ssidIn133 !== null
+                    && ssidIn133.getAttribute('value') === 'Schulnetz',
+                    'T133o Router-Fenster: WLAN-Name und Passwort sind pflegbar (#224)');
+                  ssidIn133.setAttribute('value', 'KlassenWLAN');
+                  var saveWlanBtn133 = modalBox133.children[0].children.filter(function (c) { return c.tagName === 'BUTTON'; })[0];
+                  saveWlanBtn133.handlers.click[0]();
+                  var setWlanCall = netFetchCalls.filter(function (c) { return c.body.indexOf('setWlan') !== -1; });
+                  ok(setWlanCall.length === 1 && setWlanCall[0].body.indexOf('csrf=tok') !== -1,
+                    'T133p WLAN speichern sendet die Aktion mit CSRF an den Server (#224, #225)');
+                  global.document = netSavedDoc;
+                  global.window = netSavedWindow;
 
                   global.document = blkDocSaved;
                   global.fetch = blkFetchSaved;

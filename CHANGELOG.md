@@ -5,6 +5,17 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.29.0] - 2026-11-16
+
+### Netzwerk-Werkstatt: ein Netz bauen und verstehen (#220 bis #226)
+
+- Neue Werkstatt für die 7. Jahrgangsstufe (#220): ein simuliertes Klassennetz mit Router in der Mitte, Geräte (Computer, Smartphone, Drucker, Webserver, DNS-Server, Access Point) werden an freie Ports gehängt und bekommen automatisch eine IP (192.168.0.x). Die Topologie zeichnet sich live als Schaltbild mit grünen Leitungen.
+- Browser-Simulation (#221): Computer und Smartphone haben einen Browser, der Seiten über die IP oder eine Domain aufruft. Fehlt der DNS-Server, kommt "DNS-Server antwortet nicht"; unbekannte Adressen melden den DNS-Fehler, Webserver ohne freigeschaltete Seite den 404. Jeder Aufruf landet im Router-Log.
+- Webserver mit eigenen Webseiten (#222): die Vorlage Schulzeitung oder eigenes HTML, freischalten per Klick, Zugriffs-Logs am Webserver. Freigeschaltete Seiten mit Domain erscheinen automatisch in der DNS-Tabelle (#223), die sich am DNS-Server auch von Hand pflegen lässt.
+- WLAN (#224): Router und Access Points tragen Namen und Passwort; Smartphones verbinden sich erst nach Eingabe des richtigen WLAN-Passworts.
+- Gemeinsames Klassennetz (#225): die ganze Klasse arbeitet im selben Netz, Änderungen erscheinen über Polling bei allen. Lehrkräfte sichern das Netz als JSON, stellen es wieder her oder setzen es zurück.
+- Missionen (#226): acht kleine, abhakbare Aufgaben führen durch Router, WLAN, Webserver und DNS, passend zum LehrplanPLUS der 7. Jahrgangsstufe.
+
 ## [0.28.0] - 2026-11-15
 
 ### Prüfungsmodus: Gruppen A/B, Start je Gruppe und Live-Sperre ohne Reload (#209, #210)

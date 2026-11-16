@@ -58,6 +58,8 @@ final class Migrator
         self::ensureUserExamGroupColumn($pdo, $driver);
         self::ensureExamSubmittedColumn($pdo, $driver);
         self::ensureProjectStateTable($pdo, $driver);
+        // Netzwerk-Werkstatt (#220): Tabellen in Bestehensinstallationen idempotent anlegen.
+        self::ensureNetNetworksTable($pdo, $driver);
 
         // Live-Abstimmung während der Präsentation (Issue #3): Tabellen
         // fehlen evtl. noch in Bestehensinstallationen, idempotent anlegen.
@@ -1310,6 +1312,31 @@ final class Migrator
                 repl_text TEXT NOT NULL,
                 db_sql TEXT NOT NULL,
                 PRIMARY KEY (project_id)
+            )');
+        }
+    }
+
+    /** Netzwerk-Werkstatt (#220): Tabelle net_networks idempotent anlegen. */
+    private static function ensureNetNetworksTable(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS net_networks (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                class_id INT UNSIGNED NULL,
+                owner_id INT UNSIGNED NULL,
+                content MEDIUMTEXT NOT NULL,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uniq_net_class (class_id),
+                KEY idx_net_owner (owner_id)
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+        } else {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS net_networks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                class_id INTEGER UNIQUE,
+                owner_id INTEGER,
+                content TEXT NOT NULL DEFAULT \'{}\',
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )');
         }
     }

@@ -1,0 +1,519 @@
+<?php
+/**
+ * InfoCraft - offene Lernplattform für Informatik
+ * Datei: Netzwerk-Werkstatt: simuliertes Klassennetz (JSON-Zustand)
+ *
+ * @author  Matthias Glienke, letima development
+ * @license CC BY-NC-SA 4.0
+ * @version 0.29.0
+ */
+declare(strict_types=1);
+
+namespace Infocraft\Models;
+
+use Infocraft\Auth;
+use Infocraft\Database;
+use PDO;
+use RuntimeException;
+
+/**
+ * Ein simuliertes Netz (Router, Geräte, Webseiten, DNS, Log) wird als
+ * JSON-Dokument gespeichert: je Klasse eins (Schülerinnen und Schüler
+ * derselben Klasse teilen sich das Netz), ohne Klasse je Person.
+ * Alle Änderungen laufen als kleine Aktionen über apply(), damit
+ * gleichzeitige Bearbeitungen im Unterricht nicht gegenseitig
+ * Überschreiben (kein Komplett-Schreiben vom Client).
+ */
+final class Network
+{
+    public const MAX_DEVICES = 12;
+    public const MAX_PAGES = 60;
+    public const MAX_DNS = 100;
+    public const MAX_LOGS = 40;
+    public const MAX_HTML = 20000;
+
+    public const TYPES = ['pc', 'phone', 'printer', 'webserver', 'dns', 'ap'];
+
+    /** Standard-Netz: ein Router, noch keine Geräte. */
+    public static function empty(): array
+    {
+        return [
+            'v' => 1,
+            'router' => ['name' => 'Router', 'ssid' => '', 'pass' => ''],
+            'devices' => [],
+            'pages' => [],
+            'dns' => [],
+            'logs' => [],
+        ];
+    }
+
+    /** Zeile für die Klasse (Schüler) bzw. die eigene Person laden, notfalls anlegen. */
+    public static function rowFor(?int $classId, int $userId): array
+    {
+        $pdo = Database::pdo();
+        if ($classId !== null) {
+            $stmt = $pdo->prepare('SELECT * FROM net_networks WHERE class_id = ?');
+            $stmt->execute([$classId]);
+        } else {
+            $stmt = $pdo->prepare('SELECT * FROM net_networks WHERE class_id IS NULL AND owner_id = ?');
+            $stmt->execute([$userId]);
+        }
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row !== false) {
+            return $row;
+        }
+        $content = json_encode(self::empty(), JSON_UNESCAPED_UNICODE) ?: '';
+        if ($classId !== null) {
+            $stmt = $pdo->prepare('INSERT INTO net_networks (class_id, owner_id, content, updated_at) VALUES (?, NULL, ?, CURRENT_TIMESTAMP)');
+            $stmt->execute([$classId, $content]);
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO net_networks (class_id, owner_id, content, updated_at) VALUES (NULL, ?, ?, CURRENT_TIMESTAMP)');
+            $stmt->execute([$userId, $content]);
+        }
+        return [
+            'id' => (int) $pdo->lastInsertId(),
+            'class_id' => $classId,
+            'owner_id' => $userId,
+            'content' => $content,
+        ];
+    }
+
+    /** Parsedes Netz für eine Person (Schüler: Klasse, Lehrkraft: wählbare Klasse). */
+    public static function forUser(User $user, ?int $classId = null): array
+    {
+        if ($classId === null && (int) $user->class_id > 0) {
+            $classId = (int) $user->class_id;
+        }
+        $row = self::rowFor($classId, $user->id);
+        $net = json_decode((string) $row['content'], true);
+        if (!is_array($net) || !isset($net['devices'])) {
+            $net = self::empty();
+        }
+        return $net;
+    }
+
+    /** Netz einer Klasse DIREKT laden (Lehrkraft-Manager, ohne eigenen Kontext). */
+    public static function forClass(int $classId): array
+    {
+        $row = self::rowFor($classId, 0);
+        $net = json_decode((string) $row['content'], true);
+        return is_array($net) && isset($net['devices']) ? $net : self::empty();
+    }
+
+    /** Netz speichern (Klasse oder eigene Person). */
+    public static function save(array $net, ?int $classId, int $userId): void
+    {
+        $json = json_encode($net, JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            throw new RuntimeException('Netz konnte nicht gespeichert werden.');
+        }
+        $pdo = Database::pdo();
+        self::rowFor($classId, $userId); // Existenz sicherstellen
+        if ($classId !== null) {
+            $stmt = $pdo->prepare('UPDATE net_networks SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE class_id = ?');
+            $stmt->execute([$json, $classId]);
+        } else {
+            $stmt = $pdo->prepare('UPDATE net_networks SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE class_id IS NULL AND owner_id = ?');
+            $stmt->execute([$json, $userId]);
+        }
+    }
+
+    /* ==================================================================
+     * Aktionen: apply() führt eine Mutation am Netz aus und gibt das
+     * aktualisierte Netz zurück. Alles wird hier validiert, der Client
+     * darf nichts Ungeprüftes einbringen.
+     * ================================================================== */
+
+    /**
+     * @param array<string, mixed> $params
+     * @return array{net: array, error: ?string}
+     */
+    public static function apply(array $net, string $action, array $params, int $userId, bool $isTeacher): array
+    {
+        $err = static function (?string $msg): array {
+            return ['net' => null, 'error' => $msg];
+        };
+        $net = self::normalize($net);
+
+        switch ($action) {
+            case 'addDevice':
+                $type = (string) ($params['type'] ?? '');
+                if (!in_array($type, self::TYPES, true)) {
+                    return $err('Diesen Gerätetyp gibt es nicht.');
+                }
+                if (count($net['devices']) >= self::MAX_DEVICES) {
+                    return $err('Am Router sind alle Ports belegt (maximal ' . self::MAX_DEVICES . ' Geräte).');
+                }
+                $name = self::cleanName((string) ($params['name'] ?? ''), $type);
+                $device = [
+                    'id' => self::nextId($net['devices']),
+                    'type' => $type,
+                    'name' => $name,
+                    'ip' => self::nextIp($net),
+                    'owner' => $userId,
+                    'wifi' => false, // Kabelgeräte hängen direkt, Smartphones per WLAN
+                ];
+                if ($type === 'ap') {
+                    // Access Point: Name ist zugleich die SSID des eigenen WLANs.
+                    $device['pass'] = '';
+                }
+                $net['devices'][] = $device;
+                self::log($net, 'angeschlossen: ' . $name . ' (' . $type . ')');
+                break;
+
+            case 'removeDevice':
+                $net['devices'] = self::removeById($net['devices'], (string) ($params['id'] ?? ''));
+                // Webseiten und DNS-Einträge des Geräts mit entfernen
+                $net['pages'] = array_values(array_filter($net['pages'], static fn (array $p): bool => $p['server'] !== ($params['id'] ?? '')));
+                break;
+
+            case 'renameDevice':
+                foreach ($net['devices'] as $i => $d) {
+                    if ($d['id'] === (string) ($params['id'] ?? '')) {
+                        $net['devices'][$i]['name'] = self::cleanName((string) ($params['name'] ?? ''), $d['type']);
+                    }
+                }
+                break;
+
+            case 'setAp':
+                foreach ($net['devices'] as $i => $d) {
+                    if ($d['id'] === (string) ($params['id'] ?? '') && $d['type'] === 'ap') {
+                        $net['devices'][$i]['name'] = self::cleanName((string) ($params['name'] ?? ''), 'ap');
+                        $net['devices'][$i]['pass'] = self::cleanText((string) ($params['pass'] ?? ''), 32);
+                    }
+                }
+                break;
+
+            case 'setWlan':
+                $net['router']['ssid'] = self::cleanText((string) ($params['ssid'] ?? ''), 32);
+                $net['router']['pass'] = self::cleanText((string) ($params['pass'] ?? ''), 32);
+                break;
+
+            case 'joinWlan':
+                $dev = self::device($net, (string) ($params['id'] ?? ''));
+                if ($dev === null || $dev['type'] !== 'phone') {
+                    return $err('Nur Smartphones verbinden sich über WLAN.');
+                }
+                $ssid = (string) ($params['ssid'] ?? '');
+                $pass = (string) ($params['pass'] ?? '');
+                $networks = self::wlanNetworks($net);
+                if (!in_array($ssid, $networks, true)) {
+                    return $err('Dieses WLAN gibt es im Netz nicht.');
+                }
+                $expected = self::wlanPass($net, $ssid);
+                if ($expected === null || $expected === '' || $pass !== $expected) {
+                    return $err('Falsches WLAN-Passwort.');
+                }
+                foreach ($net['devices'] as $i => $d) {
+                    if ($d['id'] === $dev['id']) {
+                        $net['devices'][$i]['wifi'] = true;
+                        $net['devices'][$i]['ssid'] = $ssid;
+                    }
+                }
+                self::log($net, $dev['name'] . ' ist jetzt im WLAN "' . $ssid . '"');
+                break;
+
+            case 'savePage':
+                $server = self::device($net, (string) ($params['server'] ?? ''));
+                if ($server === null || $server['type'] !== 'webserver') {
+                    return $err('Webseiten gehören auf einen Webserver.');
+                }
+                $title = self::cleanText((string) ($params['title'] ?? 'Meine Seite'), 60);
+                $domain = self::cleanDomain((string) ($params['domain'] ?? ''));
+                $html = mb_substr((string) ($params['html'] ?? ''), 0, self::MAX_HTML);
+                if ($html === '') {
+                    return $err('Die Seite braucht Inhalt (HTML).');
+                }
+                $id = (string) ($params['id'] ?? '');
+                $found = false;
+                foreach ($net['pages'] as $i => $p) {
+                    if ($p['id'] === $id && $p['server'] === $server['id']) {
+                        $net['pages'][$i] = ['id' => $p['id'], 'server' => $server['id'], 'title' => $title, 'domain' => $domain, 'html' => $html, 'published' => $p['published']];
+                        $found = true;
+                    }
+                }
+                if (!$found) {
+                    if (count($net['pages']) >= self::MAX_PAGES) {
+                        return $err('Zu viele Webseiten im Netz.');
+                    }
+                    $net['pages'][] = ['id' => self::nextId($net['pages']), 'server' => $server['id'], 'title' => $title, 'domain' => $domain, 'html' => $html, 'published' => false];
+                }
+                break;
+
+            case 'deletePage':
+                $net['pages'] = self::removeById($net['pages'], (string) ($params['id'] ?? ''));
+                break;
+
+            case 'publishPage':
+                foreach ($net['pages'] as $i => $p) {
+                    if ($p['id'] === (string) ($params['id'] ?? '')) {
+                        $net['pages'][$i]['published'] = true;
+                        self::publishDns($net, $net['pages'][$i]);
+                        self::log($net, 'freigeschaltet: ' . $p['title'] . ($p['domain'] !== '' ? ' (' . $p['domain'] . ')' : ''));
+                    }
+                }
+                break;
+
+            case 'unpublishPage':
+                foreach ($net['pages'] as $i => $p) {
+                    if ($p['id'] === (string) ($params['id'] ?? '')) {
+                        $net['pages'][$i]['published'] = false;
+                    }
+                }
+                break;
+
+            case 'saveDns':
+                $domain = self::cleanDomain((string) ($params['domain'] ?? ''));
+                $ip = self::cleanIp((string) ($params['ip'] ?? ''));
+                if ($domain === '' || $ip === '') {
+                    return $err('DNS-Eintrag braucht Domain und IP.');
+                }
+                $id = (string) ($params['id'] ?? '');
+                $found = false;
+                foreach ($net['dns'] as $i => $e) {
+                    if ($e['domain'] === $domain) {
+                        $net['dns'][$i]['ip'] = $ip;
+                        $found = true;
+                    }
+                    if ($id !== '' && $e['id'] === $id) {
+                        $net['dns'][$i] = ['id' => $e['id'], 'domain' => $domain, 'ip' => $ip];
+                        $found = true;
+                    }
+                }
+                if (!$found) {
+                    if (count($net['dns']) >= self::MAX_DNS) {
+                        return $err('Die DNS-Tabelle ist voll.');
+                    }
+                    $net['dns'][] = ['id' => self::nextId($net['dns']), 'domain' => $domain, 'ip' => $ip];
+                }
+                break;
+
+            case 'deleteDns':
+                $net['dns'] = self::removeById($net['dns'], (string) ($params['id'] ?? ''));
+                break;
+
+            case 'browse':
+                // Nur Protokollieren: der Browser simuliert lokal, der Weg
+                // landet aber im gemeinsamen Router-Log der Klasse.
+                $who = self::cleanText((string) ($params['who'] ?? 'Browser'), 60);
+                $url = self::cleanText((string) ($params['url'] ?? ''), 120);
+                if ($url !== '') {
+                    self::log($net, $who . ' ruft ' . $url . ' auf');
+                }
+                break;
+
+            case 'clearLogs':
+                $net['logs'] = [];
+                break;
+
+            case 'reset':
+                if (!$isTeacher) {
+                    return $err('Nur die Lehrkraft setzt das Netz zurück.');
+                }
+                $net = self::empty();
+                break;
+
+            case 'import':
+                if (!$isTeacher) {
+                    return $err('Nur die Lehrkraft stellt ein Netz wieder her.');
+                }
+                $import = json_decode((string) ($params['content'] ?? ''), true);
+                if (!is_array($import) || !isset($import['devices'])) {
+                    return $err('Das ist kein gespeichertes Netz.');
+                }
+                $net = self::normalize($import);
+                break;
+
+            default:
+                return $err('Unbekannte Aktion.');
+        }
+
+        return ['net' => self::normalize($net), 'error' => null];
+    }
+
+    /* ==================================================================
+     * Helfer (auch vom Controller für den Export genutzt)
+     * ================================================================== */
+
+    /** Struktur auffrischen und Deckel erzwingen (unabhängig vom Client). */
+    public static function normalize(array $net): array
+    {
+        $net = array_merge(self::empty(), $net);
+        $net['router'] = array_merge(self::empty()['router'], is_array($net['router'] ?? null) ? $net['router'] : []);
+        $net['devices'] = array_slice(array_values(array_filter($net['devices'], 'is_array')), 0, self::MAX_DEVICES);
+        $net['pages'] = array_slice(array_values(array_filter($net['pages'], 'is_array')), 0, self::MAX_PAGES);
+        $net['dns'] = array_slice(array_values(array_filter($net['dns'], 'is_array')), 0, self::MAX_DNS);
+        $net['logs'] = array_slice(array_values(array_filter($net['logs'], 'is_array')), -self::MAX_LOGS);
+        foreach ($net['devices'] as $i => $d) {
+            $net['devices'][$i]['id'] = (string) ($d['id'] ?? self::nextId($net['devices']));
+            $net['devices'][$i]['type'] = in_array($d['type'] ?? '', self::TYPES, true) ? $d['type'] : 'pc';
+            $net['devices'][$i]['name'] = self::cleanText((string) ($d['name'] ?? 'Gerät'), 40);
+            $net['devices'][$i]['ip'] = self::cleanIp((string) ($d['ip'] ?? '')) ?: '192.168.0.2';
+            $net['devices'][$i]['wifi'] = ($d['wifi'] ?? false) === true;
+            $net['devices'][$i]['owner'] = (int) ($d['owner'] ?? 0);
+            if (($d['ssid'] ?? '') !== '') {
+                $net['devices'][$i]['ssid'] = self::cleanText((string) $d['ssid'], 32);
+            }
+            if ($net['devices'][$i]['type'] === 'ap') {
+                $net['devices'][$i]['pass'] = self::cleanText((string) ($d['pass'] ?? ''), 32);
+            }
+        }
+        foreach ($net['pages'] as $i => $p) {
+            $net['pages'][$i]['id'] = (string) ($p['id'] ?? self::nextId($net['pages']));
+            $net['pages'][$i]['server'] = (string) ($p['server'] ?? '');
+            $net['pages'][$i]['title'] = self::cleanText((string) ($p['title'] ?? 'Seite'), 60);
+            $net['pages'][$i]['domain'] = self::cleanDomain((string) ($p['domain'] ?? ''));
+            $net['pages'][$i]['html'] = mb_substr((string) ($p['html'] ?? ''), 0, self::MAX_HTML);
+            $net['pages'][$i]['published'] = ($p['published'] ?? false) === true;
+        }
+        foreach ($net['dns'] as $i => $e) {
+            $net['dns'][$i]['id'] = (string) ($e['id'] ?? self::nextId($net['dns']));
+            $net['dns'][$i]['domain'] = self::cleanDomain((string) ($e['domain'] ?? ''));
+            $net['dns'][$i]['ip'] = self::cleanIp((string) ($e['ip'] ?? ''));
+        }
+        foreach ($net['logs'] as $i => $l) {
+            $net['logs'][$i] = ['t' => self::cleanText((string) ($l['t'] ?? ''), 12), 'msg' => self::cleanText((string) ($l['msg'] ?? ''), 200)];
+        }
+        return $net;
+    }
+
+    private static function device(array $net, string $id): ?array
+    {
+        foreach ($net['devices'] as $d) {
+            if ((string) $d['id'] === $id) {
+                return $d;
+            }
+        }
+        return null;
+    }
+
+    private static function nextId(array $list): string
+    {
+        $max = 0;
+        foreach ($list as $item) {
+            $n = (int) preg_replace('/\D/', '', (string) ($item['id'] ?? ''));
+            if ($n > $max) {
+                $max = $n;
+            }
+        }
+        return 'n' . (string) ($max + 1);
+    }
+
+    private static function nextIp(array $net): string
+    {
+        $used = ['192.168.0.1' => true];
+        foreach ($net['devices'] as $d) {
+            $used[(string) $d['ip']] = true;
+        }
+        for ($i = 2; $i < 255; $i++) {
+            if (!isset($used['192.168.0.' . $i])) {
+                return '192.168.0.' . $i;
+            }
+        }
+        return '192.168.0.254';
+    }
+
+    private static function wlanNetworks(array $net): array
+    {
+        $out = [];
+        if (($net['router']['ssid'] ?? '') !== '') {
+            $out[] = (string) $net['router']['ssid'];
+        }
+        foreach ($net['devices'] as $d) {
+            if ($d['type'] === 'ap' && !in_array($d['name'], $out, true)) {
+                $out[] = $d['name'];
+            }
+        }
+        return $out;
+    }
+
+    private static function wlanPass(array $net, string $ssid): ?string
+    {
+        if ($ssid === (string) ($net['router']['ssid'] ?? '')) {
+            return (string) ($net['router']['pass'] ?? '');
+        }
+        foreach ($net['devices'] as $d) {
+            if ($d['type'] === 'ap' && $d['name'] === $ssid) {
+                return (string) ($d['pass'] ?? '');
+            }
+        }
+        return null;
+    }
+
+    /** Beim Freischalten: Domain automatisch in die DNS-Tabelle eintragen. */
+    private static function publishDns(array &$net, array $page): void
+    {
+        if ($page['domain'] === '' || $page['server'] === '') {
+            return;
+        }
+        $serverIp = '';
+        foreach ($net['devices'] as $d) {
+            if ((string) $d['id'] === (string) $page['server']) {
+                $serverIp = (string) $d['ip'];
+            }
+        }
+        if ($serverIp === '') {
+            return;
+        }
+        foreach ($net['devices'] as $d) {
+            if ($d['type'] !== 'dns') {
+                continue;
+            }
+            $found = false;
+            foreach ($net['dns'] as $i => $e) {
+                if ($e['domain'] === $page['domain']) {
+                    $net['dns'][$i]['ip'] = $serverIp;
+                    $found = true;
+                }
+            }
+            if (!$found) {
+                if (count($net['dns']) >= self::MAX_DNS) {
+                    return;
+                }
+                $net['dns'][] = ['id' => self::nextId($net['dns']), 'domain' => $page['domain'], 'ip' => $serverIp];
+            }
+            return;
+        }
+    }
+
+    private static function log(array &$net, string $msg): void
+    {
+        $net['logs'][] = ['t' => date('H:i'), 'msg' => $msg];
+        $net['logs'] = array_slice($net['logs'], -self::MAX_LOGS);
+    }
+
+    private static function removeById(array $list, string $id): array
+    {
+        return array_values(array_filter($list, static fn (array $item): bool => (string) ($item['id'] ?? '') !== $id));
+    }
+
+    private static function cleanText(string $value, int $max): string
+    {
+        $value = trim(preg_replace('/[\p{C}]/u', '', $value) ?? '');
+        return mb_substr($value, 0, $max);
+    }
+
+    private static function cleanName(string $value, string $type): string
+    {
+        $fallback = ['pc' => 'Computer', 'phone' => 'Smartphone', 'printer' => 'Drucker', 'webserver' => 'Webserver', 'dns' => 'DNS-Server', 'ap' => 'Access Point'][$type] ?? 'Gerät';
+        $name = self::cleanText($value, 40);
+        return $name === '' ? $fallback : $name;
+    }
+
+    private static function cleanDomain(string $value): string
+    {
+        $value = mb_strtolower(trim($value));
+        if (preg_match('/^[a-z0-9][a-z0-9.-]{0,38}[a-z0-9]$/', $value) !== 1) {
+            return '';
+        }
+        return $value;
+    }
+
+    private static function cleanIp(string $value): string
+    {
+        if (preg_match('/^(?:\d{1,3}\.){3}\d{1,3}$/', $value) !== 1) {
+            return '';
+        }
+        return $value;
+    }
+}

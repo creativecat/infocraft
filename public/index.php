@@ -28,6 +28,7 @@ use Infocraft\Controllers\HomeController;
 use Infocraft\Controllers\HtmlController;
 use Infocraft\Controllers\InfoBookController;
 use Infocraft\Controllers\ModuleController;
+use Infocraft\Controllers\NetworkController;
 use Infocraft\Controllers\PresentationController;
 use Infocraft\Controllers\QuizController;
 use Infocraft\Controllers\SqlWorkshopController;
@@ -73,6 +74,11 @@ $router->get('/werkstatt/sql/{slug}/app', [SqlWorkshopController::class, 'appVie
 $router->post('/werkstatt/sql/{slug}/app', [SqlWorkshopController::class, 'appAction']);
 
 // Code-Werkstatt
+$router->get('/werkstatt/netzwerk', [NetworkController::class, 'index']);
+$router->get('/werkstatt/netzwerk/stand', [NetworkController::class, 'stand']);
+$router->post('/werkstatt/netzwerk/aktion', [NetworkController::class, 'aktion']);
+$router->get('/werkstatt/netzwerk/export', [NetworkController::class, 'export']);
+
 $router->get('/werkstatt/code', [CodeController::class, 'index']);
 $router->post('/werkstatt/code/projekt', [CodeController::class, 'createProject']);
 $router->post('/werkstatt/code/ordner', [CodeController::class, 'createFolder']);

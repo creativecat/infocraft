@@ -571,3 +571,14 @@ CREATE TABLE IF NOT EXISTS ibook_media (
     KEY idx_ibmedia_book (book_id),
     CONSTRAINT fk_ibmedia_book FOREIGN KEY (book_id) REFERENCES ibooks (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS net_networks (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    class_id INT UNSIGNED NULL,
+    owner_id INT UNSIGNED NULL,
+    content MEDIUMTEXT NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uniq_net_class (class_id),
+    KEY idx_net_owner (owner_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
