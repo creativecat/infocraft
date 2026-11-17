@@ -261,7 +261,7 @@ jobs:
           grep -q "blk-dragging" public/assets/js/block-editor.js && grep -q "T111 beim Ziehen" tools/ui-tests.js && BLK_DRAGVIS_OK=1 || BLK_DRAGVIS_OK=0
           grep -q "Einfuege-Linie" public/assets/js/block-editor.js && grep -q "T111b die Einfuege-Linie" tools/ui-tests.js && BLK_INS_OK=1 || BLK_INS_OK=0
           grep -q "blk-hint-pulse" public/assets/css/style.css && grep -q "blk-mode-btn" public/assets/css/style.css && BLK_STYLE_OK=1 || BLK_STYLE_OK=0
-          grep -q "letima development" src/Support.php && grep -q "APP_VERSION = '0.30.0'" src/Support.php && grep -q "Keep a Changelog" CHANGELOG.md && grep -q "APP_VERSION" templates/layout.php && BLK_HEAD_OK=1 || BLK_HEAD_OK=0
+          grep -q "letima development" src/Support.php && grep -q "APP_VERSION = '0.31.0'" src/Support.php && grep -q "Keep a Changelog" CHANGELOG.md && grep -q "APP_VERSION" templates/layout.php && BLK_HEAD_OK=1 || BLK_HEAD_OK=0
           grep -q "drag.ghost.style.transform = 'translate('" public/assets/js/block-editor.js && grep -q "_bubW" public/assets/js/block-editor.js && grep -q "children.length > 200" public/assets/js/block-editor.js && grep -q "T113 der gezogene Block folgt" tools/ui-tests.js && BLK_OPT_OK=1 || BLK_OPT_OK=0
           grep -q "switchMode" public/assets/js/block-editor.js && grep -q "blk-switch-btn" templates/code_project.php && grep -q "T109m die Moduswahl" tools/ui-tests.js && BLK_SWITCH_OK=1 || BLK_SWITCH_OK=0
           grep -q "pro: true" public/assets/js/block-editor.js && grep -q "T109e im Lernmodus fehlt die Variablen-Kategorie" tools/ui-tests.js && BLK_LEARN_OK=1 || BLK_LEARN_OK=0
@@ -387,6 +387,12 @@ jobs:
           grep -q "setLevel" src/Models/Network.php && grep -q "net-level-2" templates/network_workshop.php && grep -q "layerTrace" public/assets/js/network.js && grep -q "EXAMPLES" public/assets/js/network.js && NET_LEVEL_OK=1 || NET_LEVEL_OK=0
           grep -q "T134 " tools/ui-tests.js && NET_TEST30_OK=1 || NET_TEST30_OK=0
           grep -q "attach(window.document)" public/assets/js/network.js && NET_BOOT_OK=1 || NET_BOOT_OK=0
+          grep -q "'hint'" src/Support.php && grep -q 'title="<?= e($hint) ?>' templates/layout.php && ! grep -q "net-hero" templates/network_workshop.php && ! grep -q "hero-emoji" templates/sql_overview.php && grep -q "Zu den Abenteuern" templates/sql_overview.php && HERO_OK=1 || HERO_OK=0
+          grep -q "moveDevice" src/Models/Network.php && grep -q "moveDevice" public/assets/js/network.js && grep -q "pointerdown" public/assets/js/network.js && NET_DRAG_OK=1 || NET_DRAG_OK=0
+          grep -q "lastStand" public/assets/js/network.js && grep -q "modal: false" public/assets/js/network.js && grep -q "applyInputs" public/assets/js/network.js && NET_POLL_OK=1 || NET_POLL_OK=0
+          grep -q "net-port-on" public/assets/js/network.js && grep -q ".net-port-on" public/assets/css/style.css && grep -q "font-size: 16px" public/assets/css/style.css && NET_PORTS_OK=1 || NET_PORTS_OK=0
+          grep -q "?netz=1" src/Controllers/NetworkController.php && grep -q "fromNet" src/Controllers/HtmlController.php && grep -q "Zur Netzwerk-Werkstatt" templates/html_editor.php && NET_BACK_OK=1 || NET_BACK_OK=0
+          grep -q "T135 " tools/ui-tests.js && NET_TEST31_OK=1 || NET_TEST31_OK=0
           grep -q "icv-linkbadge" public/assets/js/app.js && IBK_LINK_OK=1 || IBK_LINK_OK=0
           grep -q "data-nav" templates/ibook_page.php && IBK_LINKTPL_OK=1 || IBK_LINKTPL_OK=0
           grep -q "'link'" src/Models/InfoBook.php && IBK_LINKPHP_OK=1 || IBK_LINKPHP_OK=0
