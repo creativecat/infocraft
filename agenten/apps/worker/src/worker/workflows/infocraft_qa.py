@@ -20,9 +20,12 @@ from typing import Literal
 from urllib.parse import quote
 
 import mistralai.workflows as workflows
+import mistralai.workflows.plugins.mistralai as workflows_mistralai
 from mistralai.workflows import activity, workflow
 from mistralai.workflows.plugins.mistralai import (
+    ChatAssistantWorkflowOutput,
     ChatCompletionRequest,
+    TextOutput,
     UserMessage,
     chat_parse_to_model,
 )
@@ -418,7 +421,7 @@ def _bericht_md(
 @workflow.define(name="infocraft_qa_pipeline")
 class InfocraftQaPipeline:
     @workflow.entrypoint
-    async def run(self, data: PipelineInput) -> PipelineOutput:
+    async def run(self, data: PipelineInput) -> workflows_mistralai.ChatAssistantWorkflowOutput:
         dump = await fetch_repo_dump(data.revision)
         lehrplan_text = await load_lehrplan()
         qa = await station_qa(dump, data.schwerpunkt)
@@ -435,7 +438,7 @@ class InfocraftQaPipeline:
             pr_url = await open_report_pr(
                 f"Prüfbericht {stamp}", f"pruefbericht-{stamp}.md", bericht
             )
-        return PipelineOutput(
+        ergebnis = PipelineOutput(
             revision=data.revision,
             qa=qa,
             lehrplan=lp,
@@ -444,4 +447,9 @@ class InfocraftQaPipeline:
             struktur=st,
             bericht_md=bericht,
             pr_url=pr_url,
+        )
+        # Ausgabe als ChatAssistantWorkflowOutput, damit der Workflow in Vibe erscheint
+        return workflows_mistralai.ChatAssistantWorkflowOutput(
+            content=[TextOutput(text=bericht)],
+            structuredContent=ergebnis.model_dump(mode="json"),
         )
