@@ -418,7 +418,14 @@ def _bericht_md(
 # ---------------------------------------------------------------------------
 
 
-@workflow.define(name="infocraft_qa_pipeline")
+@workflow.define(
+    name="infocraft_qa_pipeline",
+    workflow_display_name="InfoCraft QA-Pipeline",
+    workflow_description=(
+        "Prueft InfoCraft in fuenf Stationen (QA/Didaktik, Lehrplan Bayern Informatik, "
+        "Aufgaben, Review, Struktur-Audit) und liefert einen Bericht zurueck."
+    ),
+)
 class InfocraftQaPipeline:
     @workflow.entrypoint
     async def run(self, data: PipelineInput) -> workflows_mistralai.ChatAssistantWorkflowOutput:
