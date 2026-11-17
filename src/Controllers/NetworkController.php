@@ -112,7 +112,7 @@ final class NetworkController
             }
             $project = Project::create((int) $user->id, null, $page['title'], 'html', 'html', (string) $page['html']);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['ok' => true, 'url' => url('werkstatt/html/' . (int) $project->id)], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['ok' => true, 'url' => url('werkstatt/html/' . (int) $project->id)], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             exit;
         }
         if ($action === 'fromHtml') {
