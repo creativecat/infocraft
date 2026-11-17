@@ -4465,11 +4465,12 @@ setTimeout(function () {
                     'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
-                  ok(support130.indexOf("APP_VERSION = '0.30.0'") !== -1
+                  ok(support130.indexOf("APP_VERSION = '0.31.0'") !== -1
                     && support130.indexOf("ASSET_VERSION = '86'") !== -1
+                    && changelog130.indexOf('## [0.31.0]') !== -1
                     && changelog130.indexOf('## [0.30.0]') !== -1
                     && changelog130.indexOf('## [0.29.0]') !== -1,
-                    'T130r Version 0.30.0 mit Asset-Stand 86 und Changelog-Eintrag (Historie bleibt)');
+                    'T130r Version 0.31.0 mit Asset-Stand 86 und Changelog-Eintrag (Historie bleibt)');
                   ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
                     && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
                     && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
@@ -4891,6 +4892,117 @@ setTimeout(function () {
                     'T134l attach() mit kaputtem data-net zeichnet Router und Missionen statt grauer Bühne (#233)');
                   ok(netJs.indexOf('attach(window.document)') !== -1,
                     'T134m network.js startet attach() im Browser selbst, ohne app.js-Referenz (#234)');
+
+                  /* T135 (#235 bis #239): Runde 31. Werkstatt-Seiten ohne
+                   * Hero-Block, Drag & Drop, ruhiges Polling, Router-Ports,
+                   * Rueckweg aus dem HTML-Editor. */
+                  var sup135 = advRead130('../src/Support.php');
+                  var lay135 = advRead130('../templates/layout.php');
+                  var htmlCtrl135 = advRead130('../src/Controllers/HtmlController.php');
+                  var htmlTpl135 = advRead130('../templates/html_editor.php');
+                  var changelog135 = advRead130('../CHANGELOG.md');
+                  var sqlTpl135 = advRead130('../templates/sql_overview.php');
+                  ok(sup135.indexOf("$hint = isset($data['hint'])") !== -1
+                    && lay135.indexOf('title="<?= e($hint) ?>') !== -1
+                    && netTpl.indexOf('net-hero') === -1
+                    && sqlTpl135.indexOf('Zu den Abenteuern') !== -1
+                    && sqlTpl135.indexOf('hero-emoji') === -1
+                    && netCtrlPhp.indexOf("'hint' =>") !== -1,
+                    'T135 Hero-Bloecke weg, Kurzbeschreibung als Tooltip am Titel, Abenteuer-Knopf bleibt (#235)');
+                  var heroPages135 = ['html_overview', 'sql_overview', 'code_overview', 'diagram_overview',
+                    'quiz_overview', 'exam_overview', 'wiki_overview', 'ibook_overview', 'network_workshop'];
+                  var heroFree135 = true;
+                  for (var h135 = 0; h135 < heroPages135.length; h135++) {
+                    if (advRead130('../templates/' + heroPages135[h135] + '.php').indexOf('hero-emoji') !== -1) { heroFree135 = false; }
+                  }
+                  ok(heroFree135
+                    && advRead130('../src/Controllers/QuizController.php').indexOf("'hint' => 'Quiz anlegen") !== -1
+                    && advRead130('../src/Controllers/ExamController.php').indexOf("'hint' => 'Deine Prüfungen") !== -1,
+                    'T135b keine der neun Werkstatt-Uebersichten zaehlt noch den Titel-Block, Hinweise je Rolle (#235)');
+                  ok(netModelPhp.indexOf("case 'moveDevice'") !== -1
+                    && netModelPhp.indexOf("'pos'") !== -1
+                    && netJs.indexOf('moveDevice') !== -1
+                    && netJs.indexOf('pointerdown') !== -1
+                    && netJs.indexOf('pointermove') !== -1,
+                    'T135c moveDevice: Modell sichert Positionen, Buehne zieht Geraete per Zeiger (#236)');
+                  var net4 = JSON.parse(JSON.stringify(netSample));
+                  net4.devices[0].pos = { x: 600, y: 150 };
+                  var netDoc4 = new FakeDoc();
+                  global.document = netDoc4;
+                  var boot4 = new FakeEl('script');
+                  netDoc4.register(boot4, 'net-boot');
+                  boot4.setAttribute('data-csrf', 'tok');
+                  boot4.setAttribute('data-stand', '');
+                  boot4.setAttribute('data-aktion', '/werkstatt/netzwerk/aktion');
+                  boot4.setAttribute('data-ist-lehrkraft', '0');
+                  boot4.setAttribute('data-net', JSON.stringify(net4));
+                  var svg135 = new FakeEl('svg');
+                  netDoc4.register(svg135, 'net-svg');
+                  var modal135 = new FakeEl('div');
+                  modal135.setAttribute('hidden', '');
+                  netDoc4.register(modal135, 'net-modal');
+                  var modalBox135 = new FakeEl('div');
+                  netDoc4.register(modalBox135, 'net-modal-box');
+                  netDoc4.register(new FakeEl('ul'), 'net-missions');
+                  netDoc4.register(new FakeEl('button'), 'net-add-btn');
+                  netDoc4.register(new FakeEl('select'), 'net-add-type');
+                  netDoc4.register(new FakeEl('input'), 'net-add-name');
+                  netMod.attach(netDoc4);
+                  var lines135 = svg135.children.filter(function (c) { return c.tagName === 'LINE'; });
+                  var groups135 = svg135.children.filter(function (c) { return c.tagName === 'G'; });
+                  var routerG135 = groups135[0];
+                  var portRects135 = routerG135.children.filter(function (c) {
+                    return c.tagName === 'RECT' && String(c.getAttribute('class') || '').indexOf('net-port') !== -1;
+                  });
+                  var portsOn135 = portRects135.filter(function (c) {
+                    return String(c.getAttribute('class') || '').indexOf('net-port-on') !== -1;
+                  });
+                  ok(lines135.length === 4
+                    && Number(lines135[0].getAttribute('x2')) === 600 && Number(lines135[0].getAttribute('y2')) === 150
+                    && portRects135.length === 8 && portsOn135.length === 4
+                    && Number(lines135[0].getAttribute('x1')) === 385,
+                    'T135d gespeicherte Position wird gezeichnet, Leitung dockt am eigenen Router-Port an (#236, #238)');
+                  var devG135 = groups135[1];
+                  ok(devG135.handlers.pointerdown && devG135.handlers.pointermove && devG135.handlers.pointerup
+                    && devG135.handlers.click,
+                    'T135e jedes Geraet traegt Zeiger-Handler fuer Drag & Drop und Klick (#236)');
+                  devG135.handlers.pointerdown[0]({});
+                  devG135.handlers.pointerup[0]({});
+                  devG135.handlers.click[0]();
+                  var moveCalls135 = netFetchCalls.filter(function (c) { return c.body.indexOf('moveDevice') !== -1; });
+                  var modalOpen135 = !modal135.hasAttribute('hidden')
+                    && findById133(modalBox135, 'net-url-in') !== null;
+                  ok(moveCalls135.length === 0 && modalOpen135,
+                    'T135f Zeiger ohne Koordinaten zieht nicht, Klick oeffnet weiter das Geraete-Fenster (#236)');
+                  ok(netJs.indexOf('lastStand') !== -1
+                    && netJs.indexOf('modal: false') !== -1
+                    && netJs.indexOf('collectInputs') !== -1
+                    && netJs.indexOf('applyInputs') !== -1,
+                    'T135g Polling vergleicht Staende und lasst offene Fenster in Ruhe, Eingaben ueberstehen Neuaufbauten (#237)');
+                  global.document = netDoc2;
+                  groups134[0].handlers.click[0]();
+                  var ssid135 = findById133(modalBox134, 'net-w-ssid');
+                  ssid135.value = 'KlassenWLAN2';
+                  var routerSave135 = modalBox134.children[0].children.filter(function (c) { return c.tagName === 'BUTTON'; })[0];
+                  routerSave135.handlers.click[0]();
+                  var ssidAfter135 = findById133(modalBox134, 'net-w-ssid');
+                  ok(ssidAfter135 !== null && ssidAfter135.value === 'KlassenWLAN2',
+                    'T135h der WLAN-Name uebersteht den Neuaufbau nach dem Speichern unveraendert (#237)');
+                  ok(netCss.indexOf('.net-port-on') !== -1
+                    && netCss.indexOf('font-size: 16px') !== -1
+                    && netCss.indexOf('cursor: grab') !== -1,
+                    'T135i Ports leuchten, Geraete-Schrift deutlich groesser, Greif-Cursor (#238)');
+                  ok(netCtrlPhp.indexOf('?netz=1') !== -1
+                    && htmlCtrl135.indexOf("fromNet") !== -1
+                    && htmlCtrl135.indexOf("redirect('/werkstatt/netzwerk')") !== -1
+                    && htmlTpl135.indexOf('Zur Netzwerk-Werkstatt') !== -1,
+                    'T135j Rueckweg aus dem HTML-Editor: Knopf im Editor, Redirect nach dem Speichern (#239)');
+                  ok(sup135.indexOf("APP_VERSION = '0.31.0'") !== -1
+                    && changelog135.indexOf('## [0.31.0]') !== -1
+                    && changelog135.indexOf('—') === -1
+                    && changelog135.indexOf('## [0.30.0]') !== -1,
+                    'T135k Version 0.31.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
+
                   global.document = netSavedDoc;
                   global.window = netSavedWindow;
 

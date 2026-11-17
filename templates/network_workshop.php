@@ -3,12 +3,6 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.29.0 */ ?>
-<section class="hero net-hero">
-    <div class="hero-emoji">🌐</div>
-    <h1>Netzwerk-Werkstatt</h1>
-    <p>Baue ein Netz auf: Router, Geräte, Webserver und DNS. Alles, was du hier baust, sehen deine Mitspielerinnen und Mitspieler aus der Klasse sofort.</p>
-</section>
-
 <div class="net-layout">
     <aside class="net-side">
         <div class="net-card net-router-card">

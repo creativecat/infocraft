@@ -37,6 +37,7 @@ final class HtmlController
         $folders = Folder::all($user->id);
         render('html_overview', [
             'title' => 'HTML-Werkstatt',
+            'hint' => 'Webseiten gestalten mit drei Ansichten: Gestalten, Quelltext und Vorschau. Deine Seiten, organisiert in Ordnern.',
             'active' => 'module-html',
             'projects' => $projects,
             'folders' => $folders,
@@ -112,6 +113,7 @@ final class HtmlController
         render('html_editor', [
             'title' => $project->title,
             'active' => 'module-html',
+            'fromNet' => ($_GET['netz'] ?? '') === '1', // Rückkehr-Button aus der Netzwerk-Werkstatt (#237)
             'project' => $project,
             'user' => $user,
             'ownerName' => $owner !== null ? $owner->fullName() : '',
@@ -140,6 +142,10 @@ final class HtmlController
         $title = trim((string) ($_POST['title'] ?? ''));
         $project->save($title !== '' ? $title : $project->title, (string) ($_POST['content'] ?? ''));
         flash('success', 'Gespeichert.');
+        // Aus der Netzwerk-Werkstatt gekommen? Dann nach dem Speichern dorthin zurück (#237)
+        if (($_POST['netz'] ?? '') === '1') {
+            redirect('/werkstatt/netzwerk');
+        }
         redirect('/werkstatt/html/' . $project->id);
     }
 

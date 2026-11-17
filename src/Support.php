@@ -38,7 +38,7 @@ const ASSET_VERSION = '86';
  * bleibt fuer inkompatible Umstiege reserviert. Die Entwicklungshistorie
  * steht in CHANGELOG.md im Wurzelverzeichnis.
  */
-const APP_VERSION = '0.30.0';
+const APP_VERSION = '0.31.0';
 
 /**
  * Projekt-Icon (#169): passendes Emoji je Projektart. Frueher stand die
@@ -255,6 +255,7 @@ function render(string $viewFile, array $data = []): void
     $user = Infocraft\Auth::user();
     extract($data, EXTR_SKIP);
     $title = isset($data['title']) ? (string) $data['title'] : 'InfoCraft';
+    $hint = isset($data['hint']) ? (string) $data['hint'] : '';
     $active = isset($data['active']) ? (string) $data['active'] : '';
     $bare = isset($data['bare']) ? (bool) $data['bare'] : false;
     ob_start();

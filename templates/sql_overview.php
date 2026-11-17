@@ -4,12 +4,9 @@
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.24.0 */ ?>
 <?php $classNames = []; foreach ($classes as $class) { $classNames[$class->id] = $class->name; } ?>
-<section class="hero">
-    <div class="hero-emoji">🗄️</div>
-    <h1>SQL-Werkstatt</h1>
-    <p><?= $isTeacher ? 'Öffne die Beispieldatenbanken direkt oder verteile sie an deine Klassen, mit passenden Rechten: nur lesen, lesen und schreiben oder Tabellen selbst anlegen lassen.' : 'Hier findest du die Datenbanken, die deine Lehrkraft für dich freigeschaltet hat.' ?></p>
-    <p><a class="btn btn-primary" href="<?= url('werkstatt/sql/abenteuer') ?>" title="Erzählte SQL-Abenteuer mit Kapiteln, Szenenbildern und Fortschritt">🗺️ Zu den Abenteuern</a></p>
-</section>
+<div class="btn-row" style="margin-bottom:1rem">
+    <a class="btn btn-primary" href="<?= url('werkstatt/sql/abenteuer') ?>" title="Erzählte SQL-Abenteuer mit Kapiteln, Szenenbildern und Fortschritt">🗺️ Zu den Abenteuern</a>
+</div>
 
 <?php if (!$isTeacher): ?>
 <?php if ($grants === []): ?>

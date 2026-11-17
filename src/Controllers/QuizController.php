@@ -38,6 +38,7 @@ final class QuizController
             }
             render('quiz_overview', [
                 'title' => 'Quiz-Arena',
+                'hint' => 'Quiz anlegen, Fragen hinzufügen und an Klassen oder Einzelne austellen. Die Ergebnisse siehst du pro Quiz.',
                 'active' => 'module-quiz',
                 'isTeacher' => true,
                 'quizzes' => $quizzes,
@@ -48,6 +49,7 @@ final class QuizController
         $level = Auth::levelOf($user) ?? 0;
         render('quiz_overview', [
             'title' => 'Quiz-Arena',
+            'hint' => 'Quiz deiner Lehrkraft: Fragen beantworten, Punkte sammeln, Bestwertung verbessern.',
             'active' => 'module-quiz',
             'isTeacher' => false,
             'quizzes' => Quiz::forStudent($user->id, $user->classId, $level),

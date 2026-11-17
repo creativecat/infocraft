@@ -87,7 +87,7 @@ $navView = $user !== null ? \Infocraft\Models\UserPref::navView($user->id) : 'fu
         <header class="topbar">
             <div class="topbar-left">
                 <button id="sidebar-toggle" class="icon-btn" type="button" title="Navigation: Beschriftung ein/aus" aria-label="Navigation umschalten">☰</button>
-                <h1 class="topbar-title"><?= e($title) ?></h1>
+                <h1 class="topbar-title"<?php if (isset($hint) && $hint !== ''): ?> title="<?= e($hint) ?>"<?php endif; ?>><?= e($title) ?></h1>
             </div>
             <div class="topbar-actions">
                 <?php if ($examLock === null && $isTeacher): ?>

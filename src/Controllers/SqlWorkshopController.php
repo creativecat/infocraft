@@ -31,6 +31,7 @@ final class SqlWorkshopController
         $isTeacher = Auth::isTeacher();
         render('sql_overview', [
             'title' => 'SQL-Werkstatt',
+            'hint' => $isTeacher ? 'Beispieldatenbanken öffnen oder an Klassen verteilen, mit passenden Rechten: nur lesen, lesen und schreiben oder Tabellen selbst anlegen lassen.' : 'Hier findest du die Datenbanken, die deine Lehrkraft für dich freigeschaltet hat.',
             'active' => 'module-sql',
             'grants' => SqlTemplate::grantsFor($user->id),
             'isTeacher' => $isTeacher,

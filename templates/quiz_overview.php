@@ -4,12 +4,6 @@
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
 <?php if ($isTeacher): ?>
-<section class="hero">
-    <div class="hero-emoji">🏆</div>
-    <h1>Quiz-Arena</h1>
-    <p>Quiz anlegen, Fragen hinzufügen und an Klassen oder Einzelne austellen. Die Ergebnisse siehst du pro Quiz.</p>
-</section>
-
 <section class="panel">
     <h3>Neues Quiz anlegen</h3>
     <form method="post" action="<?= url('quiz/anlegen') ?>" class="form">
@@ -51,12 +45,6 @@
 <?php endif; ?>
 
 <?php else: ?>
-<section class="hero">
-    <div class="hero-emoji">🏆</div>
-    <h1>Quiz-Arena</h1>
-    <p>Quiz deiner Lehrkraft: Fragen beantworten, Punkte sammeln, Bestwertung verbessern.</p>
-</section>
-
 <?php if ($quizzes === []): ?>
 <div class="notice">
     <strong>Keine Quiz</strong>

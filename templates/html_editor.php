@@ -6,6 +6,9 @@
 <section class="panel">
     <div class="panel-head">
         <h3>🌐 <?= e($project->title) ?></h3>
+        <?php if (($fromNet ?? false) === true): ?>
+        <a class="btn btn-ghost" href="<?= url('werkstatt/netzwerk') ?>" title="Zurück zur Netzwerk-Werkstatt">🌐 Zur Netzwerk-Werkstatt</a>
+        <?php endif; ?>
         <a class="btn btn-ghost" href="<?= url('werkstatt/html') ?>" title="Zurück">←</a>
         <?php if (($presentationTask ?? null) !== null): ?>
         <span class="pill" title="Präsentationsmodus: Du arbeitest in einer temporären Kopie dieser Aufgabe. Die Aufgabenvorlage und die Materialien bleiben unangetastet, dein Code wird nur hier gespeichert. Mit „Präsentation beenden“ wird die Kopie gelöscht.">🎬 Präsentationsmodus ℹ️</span>
@@ -124,6 +127,7 @@
     </div>
     <?php endif; ?>
     <form method="post" action="<?= url('werkstatt/html/' . (int) $project->id) ?>" class="form" id="html-form">
+        <?php if (($fromNet ?? false) === true): ?><input type="hidden" name="netz" value="1"><?php endif; ?>
         <?= csrf_field() ?>
         <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
 

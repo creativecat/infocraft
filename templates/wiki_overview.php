@@ -3,12 +3,6 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
-<section class="hero">
-    <div class="hero-emoji">📚</div>
-    <h1>Wiki</h1>
-    <p>Nachschlagen und vertiefen: Fachbegriffe und Konzepte aus dem Informatik-Unterricht.</p>
-</section>
-
 <?php if ($isTeacher): ?>
 <section class="panel">
     <h3>Neue Wiki-Seite anlegen</h3>

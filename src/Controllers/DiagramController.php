@@ -39,6 +39,7 @@ final class DiagramController
         }
         render('diagram_overview', [
             'title' => 'Diagramme',
+            'hint' => 'Struktur sichtbar machen: Klassendiagramme, Struktogramme (Nassi-Shneiderman) und Datenflussdiagramme zeichnen oder automatisch aus Java-, Python- und SQL-Skripten erzeugen.',
             'active' => 'module-diagramme',
             'diagrams' => ClassDiagram::all($user->id),
             'diagramAuto' => SchoolClass::diagramAutoForUser($user),

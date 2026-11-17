@@ -7,11 +7,6 @@
    #205: Auch Schülerinnen und Schüler sehen diese Übersicht: ihre eigenen
    Bücher (selbst angelegt und verwaltet) und das Klassen-InfoBook ihrer
    Klasse; Teilen bleibt Lehrkräften vorbehalten. */ ?>
-<section class="hero">
-    <div class="hero-emoji">📓</div>
-    <h1>InfoBook</h1>
-    <p>Notizbücher für den Unterricht: Seiten mit Text, Bildern, Audio, Video, Einbettungen und Freihand-Notizen. Aus jedem InfoBook wird mit einem Klick eine Präsentation.</p>
-</section>
 
 <section class="panel">
     <h3>Neues InfoBook anlegen</h3>

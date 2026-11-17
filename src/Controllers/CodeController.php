@@ -57,6 +57,7 @@ final class CodeController
         $isTeacher = Auth::isTeacher();
         render('code_overview', [
             'title' => 'Code-Werkstatt',
+            'hint' => 'Deine Projekte, organisiert in einem Ordnerbaum mit Unterordnern. Zieh Projekte einfach per Drag & Drop in einen Ordner.',
             'active' => 'module-code',
             'projects' => $projects,
             'folders' => $folders,

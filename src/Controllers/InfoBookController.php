@@ -62,6 +62,7 @@ final class InfoBookController
             }
             render('ibook_overview', [
                 'title' => 'InfoBook',
+                'hint' => 'Notizbücher für den Unterricht: Seiten mit Text, Bildern, Audio, Video, Einbettungen und Freihand-Notizen. Aus jedem InfoBook wird mit einem Klick eine Präsentation.',
                 'active' => 'module-infobuecher',
                 'personal' => InfoBook::personalBooks($user->id, false),
                 'classBooks' => $classBooks,
@@ -80,6 +81,7 @@ final class InfoBookController
         }
         render('ibook_overview', [
             'title' => 'InfoBook',
+            'hint' => 'Notizbücher für den Unterricht: Seiten mit Text, Bildern, Audio, Video, Einbettungen und Freihand-Notizen. Aus jedem InfoBook wird mit einem Klick eine Präsentation.',
             'active' => 'module-infobuecher',
             'personal' => $personal,
             'classBooks' => $classBooks,

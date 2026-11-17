@@ -5,6 +5,16 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.31.0] - 2026-11-17
+
+### Werkstatt-Seiten entrümpelt und Netzwerk-Werkstatt handlicher (#235 bis #239)
+
+- Platz oben auf allen Werkstatt-Seiten (#235): Die großen Titel-Bilder mit Beschreibung sind weg, der Seitentitel steht ohnehin oben in der Leiste. Die Kurzbeschreibung erscheint jetzt als Tooltip am Titel, der Inhalt rückt nach oben.
+- Geräte frei verschieben (#236): Alle Geräte auf der Netzwerk-Bühne lassen sich per Drag & Drop an eine beliebige Stelle ziehen, die Position wird gespeichert.
+- Ruhe beim Arbeiten (#237): Das gemeinsame Klassennetz wird weiter alle paar Sekunden abgefragt, aber die Oberfläche baut sich nur noch auf, wenn sich wirklich etwas geändert hat. Offene Geräte-Fenster und laufende Eingaben werden nicht mehr unterbrochen, auch das Speichern (z. B. Access Point konfigurieren) funktioniert jetzt zuverlässig.
+- Router mit echten Ports (#238): Der Router zeigt acht Anschluss-Ports, belegte Ports leuchten grün, jede Leitung endet am eigenen Port. Die Schrift der Geräte ist deutlich größer.
+- Rückweg aus dem HTML-Editor (#239): Wer eine Webserver-Seite in die HTML-Werkstatt übernommen hat, bekommt dort einen Knopf zurück zur Netzwerk-Werkstatt; nach dem Speichern landet man direkt wieder im Netz.
+
 ## [0.30.0] - 2026-11-17
 
 ### Netzwerk-Werkstatt: Beispielseiten, Drucker flexibel anschließen und OSI-Schichten (#229 bis #232)

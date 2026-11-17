@@ -211,6 +211,17 @@ final class Network
                 }
                 break;
 
+            case 'moveDevice': // Drag & Drop: Position eines Geräts auf der Bühne sichern
+                foreach ($net['devices'] as $i => $d) {
+                    if ($d['id'] === (string) ($params['id'] ?? '')) {
+                        $net['devices'][$i]['pos'] = [
+                            'x' => (int) round(max(0, min(900, (float) ($params['x'] ?? 0)))),
+                            'y' => (int) round(max(0, min(560, (float) ($params['y'] ?? 0)))),
+                        ];
+                    }
+                }
+                break;
+
             case 'setAp':
                 foreach ($net['devices'] as $i => $d) {
                     if ($d['id'] === (string) ($params['id'] ?? '') && $d['type'] === 'ap') {
@@ -450,6 +461,14 @@ final class Network
             $net['devices'][$i]['owner'] = (int) ($d['owner'] ?? 0);
             if (($d['ssid'] ?? '') !== '') {
                 $net['devices'][$i]['ssid'] = self::cleanText((string) $d['ssid'], 32);
+            }
+            // Position auf der Bühne (Drag & Drop): nur gültige Koordinatenpaare übernehmen
+            if (isset($d['pos']) && is_array($d['pos'])
+                && is_numeric($d['pos']['x'] ?? null) && is_numeric($d['pos']['y'] ?? null)) {
+                $net['devices'][$i]['pos'] = [
+                    'x' => (int) round(max(0, min(900, (float) $d['pos']['x']))),
+                    'y' => (int) round(max(0, min(560, (float) $d['pos']['y']))),
+                ];
             }
             if ($net['devices'][$i]['type'] === 'ap') {
                 $net['devices'][$i]['pass'] = self::cleanText((string) ($d['pass'] ?? ''), 32);

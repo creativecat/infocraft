@@ -3,12 +3,6 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
-<section class="hero">
-    <div class="hero-emoji">📐</div>
-    <h1>Diagramme</h1>
-    <p>Struktur sichtbar machen: Klassendiagramme, Struktogramme (Nassi-Shneiderman) und Datenflussdiagramme zeichnen - oder Klassendiagramme automatisch aus Java-, Python- und SQL-Skripten erzeugen. Alles bleibt gespeichert und lässt sich exportieren.</p>
-</section>
-
 <section class="panel">
     <div class="panel-head">
         <h3>➕ Neues Diagramm anlegen</h3>

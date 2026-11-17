@@ -30,6 +30,7 @@ final class NetworkController
         $classId = self::classId($user, $isTeacher);
         render('network_workshop', [
             'title' => 'Netzwerk-Werkstatt',
+            'hint' => 'Baue ein Netz auf: Router, Geräte, Webserver und DNS. Alles, was du hier baust, sehen deine Mitspielerinnen und Mitspieler aus der Klasse sofort.',
             'active' => 'module-netzwerk',
             'isTeacher' => $isTeacher,
             'net' => self::payload($user, $classId),
@@ -112,7 +113,8 @@ final class NetworkController
             }
             $project = Project::create((int) $user->id, null, $page['title'], 'html', 'html', (string) $page['html']);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['ok' => true, 'url' => url('werkstatt/html/' . (int) $project->id)], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            // ?netz=1 schaltet im HTML-Editor den Rückkehr-Button zur Netzwerk-Werkstatt frei (#237)
+            echo json_encode(['ok' => true, 'url' => url('werkstatt/html/' . (int) $project->id) . '?netz=1'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             exit;
         }
         if ($action === 'fromHtml') {

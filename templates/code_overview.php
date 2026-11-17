@@ -30,12 +30,6 @@ function ic_proj_row(object $project): string
         . '</div>';
 }
 ?>
-<section class="hero">
-    <div class="hero-emoji">💻</div>
-    <h1>Code-Werkstatt</h1>
-    <p>Deine Projekte, organisiert in einem Ordnerbaum mit Unterordnern. Zieh Projekte einfach per Drag &amp; Drop in einen Ordner.</p>
-</section>
-
 <div class="code-ov" data-move-url="<?= url('werkstatt/code/move') ?>" data-folder-move-url="<?= url('werkstatt/code/ordner/verschieben') ?>">
     <?php /* #175: Projekt verteilen sitzt wie im InfoBook als aufklappbarer
      * Button oben rechts, nicht mehr als großer Kasten in der Übersicht. */ ?>

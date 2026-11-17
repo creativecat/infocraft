@@ -12,12 +12,6 @@ foreach ($projects as $project) {
     $groupedProjects[(int) ($project->folderId ?? 0)][] = $project;
 }
 ?>
-<section class="hero">
-    <div class="hero-emoji">🎨</div>
-    <h1>HTML-Werkstatt</h1>
-    <p>Webseiten gestalten mit drei Ansichten: Gestalten, Quelltext und Vorschau – deine Seiten, organisiert in Ordnern.</p>
-</section>
-
 <div class="two-col">
     <section class="panel">
         <h3>➕ Neue Seite</h3>

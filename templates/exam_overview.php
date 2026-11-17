@@ -4,12 +4,6 @@
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
 <?php if ($isTeacher): ?>
-<section class="hero">
-    <div class="hero-emoji">📋</div>
-    <h1>Prüfungen &amp; Arbeiten</h1>
-    <p>Prüfungen und Schularbeiten vorbereiten: Gruppen bilden, pro Gruppe eine Vorlage auswählen, Teilaufgaben mit BE und Musterlösung anlegen. Beim Start bekommt jede Schülerin und jeder Schüler eine eigene Kopie.</p>
-</section>
-
 <section class="panel">
     <h3>Neue Prüfung oder Schularbeit anlegen</h3>
     <form method="post" action="<?= url('pruefungen/anlegen') ?>" class="form">
@@ -58,12 +52,6 @@
 <?php endif; ?>
 
 <?php else: ?>
-<section class="hero">
-    <div class="hero-emoji">📋</div>
-    <h1>Prüfungen &amp; Arbeiten</h1>
-    <p>Deine Prüfungen und Schularbeiten: arbeiten, abgeben und nach der Herausgabe das Ergebnis mit Musterlösung im Vergleich sehen.</p>
-</section>
-
 <?php if ($exams === []): ?>
 <div class="notice">
     <strong>Alles erledigt</strong>

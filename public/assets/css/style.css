@@ -2724,15 +2724,18 @@ p .exdiff-ins, p .exdiff-del { display: inline-block; padding: 0 6px; }
 .net-stage-wrap { position: relative; background: var(--paper, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 14px; padding: 8px; }
 .net-svg { width: 100%; height: auto; display: block; background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%); border-radius: 10px; }
 .net-router-box { fill: #0f766e; stroke: #115e59; stroke-width: 2; }
-.net-router-text { fill: #fff; font-size: 14px; font-weight: 600; pointer-events: none; }
-.net-sub { fill: #475569; font-size: 11px; pointer-events: none; }
+.net-router-text { fill: #fff; font-size: 17px; font-weight: 600; pointer-events: none; }
+.net-sub { fill: #475569; font-size: 13px; pointer-events: none; }
 .net-sub-dim { fill: #94a3b8; }
 .net-link { stroke: #16a34a; stroke-width: 2.5; }
 .net-link-off { stroke: #d1d5db; stroke-dasharray: 6 5; }
 .net-device rect { fill: #fff; stroke: #cbd5e1; stroke-width: 1.5; rx: 10; }
-.net-device { cursor: pointer; }
+.net-device { cursor: grab; }
+.net-device:active { cursor: grabbing; }
 .net-device:hover rect { stroke: #0f766e; }
-.net-dev-text { fill: #1f2937; font-size: 12px; font-weight: 600; pointer-events: none; }
+.net-dev-text { fill: #1f2937; font-size: 16px; font-weight: 600; pointer-events: none; }
+.net-port { fill: #e2e8f0; stroke: #94a3b8; stroke-width: 1; }
+.net-port-on { fill: #34d399; stroke: #0f766e; stroke-width: 1; }
 .net-device-off .net-dev-text { fill: #9ca3af; }
 .net-modal { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 30; }
 .net-modal[hidden] { display: none; }

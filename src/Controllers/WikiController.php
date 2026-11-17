@@ -31,6 +31,7 @@ final class WikiController
         $pages = $isTeacher ? WikiPage::all() : WikiPage::visibleFor(Auth::levelOf($user) ?? 0);
         render('wiki_overview', [
             'title' => 'Wiki',
+            'hint' => 'Nachschlagen und vertiefen: Fachbegriffe und Konzepte aus dem Informatik-Unterricht.',
             'active' => 'module-wiki',
             'pages' => $pages,
             'isTeacher' => $isTeacher,

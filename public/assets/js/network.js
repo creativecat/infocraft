@@ -245,6 +245,7 @@
     var net;
     try { net = JSON.parse(boot.getAttribute('data-net') || '{}'); } catch (e) { net = defaultNet(); }
     net = saneNet(net); // kaputte Datenbankstände dürfen attach() nie töten (#233)
+    var lastStand = JSON.stringify(net);
 
     var svg = doc.getElementById('net-svg');
     var modal = doc.getElementById('net-modal');
@@ -278,7 +279,7 @@
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: body
       }).then(function (r) { return r.json(); }).then(function (data) {
-        if (data && data.net) { net = saneNet(data.net); } // (#233)
+        if (data && data.net) { net = saneNet(data.net); lastStand = JSON.stringify(net); } // (#233)
         if (cb) { cb(data || null); }
         render();
       }).catch(function () { if (cb) { cb(null); } });
@@ -286,7 +287,8 @@
 
     /* ---------- Topologie ---------- */
 
-    function render() {
+    function render(opts) {
+      var rebuildModal = !(opts && opts.modal === false);
       if (byId('net-router-name')) { byId('net-router-name').textContent = net.router.name || 'Router'; }
       if (byId('net-router-ssid')) { byId('net-router-ssid').textContent = net.router.ssid || 'noch nicht eingerichtet'; }
       if (byId('net-netinfo')) {
@@ -299,7 +301,10 @@
       if (openId !== null && modal) {
         var d = findDevice(net, openId);
         if (d === null && openId !== 'router') { closeModal(); }
-        else if (typeof openKind === 'string') { openModal(openId, openKind, true); }
+        // Offenes Fenster nur neu aufbauen, wenn die Aktion es will. Das
+        // 5-Sekunden-Polling ruft render({modal:false}): Eingaben und Fokus
+        // im geöffneten Fenster bleiben so unangetastet (#236).
+        else if (rebuildModal && typeof openKind === 'string') { openModal(openId, openKind, true); }
       }
     }
 
@@ -317,44 +322,112 @@
       var cx = 450, cy = 290;
       var n = net.devices.length;
 
-      // Router in der Mitte
+      // Router in der Mitte, mit sichtbaren Ports an der Unterkante (#235):
+      // jedes Gerät hängt an seinem eigenen Anschluss, belegte Ports sind grün.
+      var PORTS = 8;
+      var rw = 180, rh = 64;
       var g = svgEl('g', {});
-      g.appendChild(svgEl('rect', { x: cx - 70, y: cy - 26, rx: 10, width: 140, height: 52, class: 'net-router-box' }));
-      var label = svgEl('text', { x: cx, y: cy + 6, class: 'net-router-text', 'text-anchor': 'middle' });
+      g.appendChild(svgEl('rect', { x: cx - rw / 2, y: cy - rh / 2, rx: 10, width: rw, height: rh, class: 'net-router-box' }));
+      var label = svgEl('text', { x: cx, y: cy - 8, class: 'net-router-text', 'text-anchor': 'middle' });
       label.textContent = '📡 ' + (net.router.name || 'Router');
       g.appendChild(label);
-      var ipText = svgEl('text', { x: cx, y: cy + 42, class: 'net-sub', 'text-anchor': 'middle' });
+      var ipText = svgEl('text', { x: cx, y: cy + 10, class: 'net-sub', 'text-anchor': 'middle' });
       ipText.textContent = '192.168.0.1';
       g.appendChild(ipText);
+      var usedPorts = Math.min(n, PORTS);
+      for (var pi = 0; pi < PORTS; pi++) {
+        var pxx = cx - 72 + pi * 21;
+        g.appendChild(svgEl('rect', {
+          x: pxx, y: cy + rh / 2 - 5, width: 14, height: 9, rx: 2,
+          class: 'net-port' + (pi < usedPorts ? ' net-port-on' : '')
+        }));
+      }
       g.appendChild(svgEl('title', {}));
       (function (routerG) {
         if (routerG.addEventListener) { routerG.addEventListener('click', function () { openModal('router', 'router'); }); }
       })(g);
       svg.appendChild(g);
 
+      // SVG-Punkt aus Mauskoordinaten (Zoom und Größe der Bühne mitrechnen)
+      function stagePoint(ev) {
+        if (!svg.getBoundingClientRect || !ev || typeof ev.clientX !== 'number') { return null; }
+        var rect = svg.getBoundingClientRect();
+        if (!rect || !rect.width || !rect.height) { return null; }
+        return { x: (ev.clientX - rect.left) * (900 / rect.width), y: (ev.clientY - rect.top) * (560 / rect.height) };
+      }
+
       for (var i = 0; i < n; i++) {
         var d = net.devices[i];
-        var angle = (-90 + i * (360 / Math.max(n, 1))) * Math.PI / 180;
-        var dx = cx + Math.cos(angle) * 250;
-        var dy = cy + Math.sin(angle) * 185;
+        var pos = (d.pos && typeof d.pos.x === 'number' && typeof d.pos.y === 'number')
+          ? { x: Math.max(70, Math.min(830, d.pos.x)), y: Math.max(44, Math.min(518, d.pos.y)) }
+          : null;
+        if (!pos) {
+          var angle = (-90 + i * (360 / Math.max(n, 1))) * Math.PI / 180;
+          pos = { x: cx + Math.cos(angle) * 250, y: cy + Math.sin(angle) * 185 };
+        }
+        var dx = pos.x;
+        var dy = pos.y;
         var on = online(d);
-        var line = svgEl('line', { x1: cx, y1: cy, x2: dx, y2: dy, class: on ? 'net-link' : 'net-link net-link-off' });
+        // Leitung vom Router-Port zum Gerät (#235)
+        var portX = cx - 72 + (i % PORTS) * 21 + 7;
+        var line = svgEl('line', { x1: portX, y1: cy + rh / 2, x2: dx, y2: dy, class: on ? 'net-link' : 'net-link net-link-off' });
         svg.appendChild(line);
         var gg = svgEl('g', { class: 'net-device' + (on ? '' : ' net-device-off') });
-        gg.appendChild(svgEl('rect', { x: dx - 62, y: dy - 24, rx: 10, width: 124, height: 68 }));
-        var t1 = svgEl('text', { x: dx, y: dy - 2, class: 'net-dev-text', 'text-anchor': 'middle' });
+        gg.appendChild(svgEl('rect', { x: dx - 74, y: dy - 30, rx: 10, width: 148, height: 84 }));
+        var t1 = svgEl('text', { x: dx, y: dy - 4, class: 'net-dev-text', 'text-anchor': 'middle' });
         t1.textContent = (TYPES[d.type] ? TYPES[d.type].icon : '❓') + ' ' + d.name;
         gg.appendChild(t1);
-        var t2 = svgEl('text', { x: dx, y: dy + 16, class: 'net-sub', 'text-anchor': 'middle' });
+        var t2 = svgEl('text', { x: dx, y: dy + 18, class: 'net-sub', 'text-anchor': 'middle' });
         var state = d.wifi ? ' · im WLAN ' + (d.ssid || '') : (d.cable === false ? ' · offline' : (d.type === 'phone' ? ' · kein WLAN' : ' · per Kabel'));
         t2.textContent = d.ip + state;
         gg.appendChild(t2);
-        var t3 = svgEl('text', { x: dx, y: dy + 32, class: 'net-sub net-sub-dim', 'text-anchor': 'middle' });
+        var t3 = svgEl('text', { x: dx, y: dy + 38, class: 'net-sub net-sub-dim', 'text-anchor': 'middle' });
         t3.textContent = TYPES[d.type] ? TYPES[d.type].label : '';
         gg.appendChild(t3);
-        (function (dev, devG) {
-          if (devG.addEventListener) { devG.addEventListener('click', function () { openModal(dev.id, dev.type); }); }
-        })(d, gg);
+        (function (dev, devG, lineEl, baseX, baseY) {
+          if (!devG.addEventListener) { return; }
+          var dragging = false;
+          var moved = false;
+          var start = null;
+          function down(ev) {
+            var p = stagePoint(ev);
+            if (!p) { return; }
+            dragging = true;
+            moved = false;
+            start = { mx: p.x, my: p.y, ox: baseX, oy: baseY };
+            if (devG.setPointerCapture && ev.pointerId !== undefined) {
+              try { devG.setPointerCapture(ev.pointerId); } catch (e) {}
+            }
+            if (ev.preventDefault) { ev.preventDefault(); }
+          }
+          function moveFn(ev) {
+            if (!dragging || !start) { return; }
+            var p = stagePoint(ev);
+            if (!p) { return; }
+            var nx = Math.max(70, Math.min(830, start.ox + (p.x - start.mx)));
+            var ny = Math.max(44, Math.min(518, start.oy + (p.y - start.my)));
+            if (Math.abs(nx - start.ox) > 3 || Math.abs(ny - start.oy) > 3) { moved = true; }
+            devG.setAttribute('transform', 'translate(' + (nx - baseX) + ',' + (ny - baseY) + ')');
+            lineEl.setAttribute('x2', nx);
+            lineEl.setAttribute('y2', ny);
+            dev._drag = { x: nx, y: ny };
+            if (ev.preventDefault) { ev.preventDefault(); }
+          }
+          function up() {
+            if (!dragging) { return; }
+            dragging = false;
+            if (dev._drag) {
+              dev.pos = { x: Math.round(dev._drag.x), y: Math.round(dev._drag.y) };
+              dev._drag = null;
+              act('moveDevice', { id: dev.id, x: dev.pos.x, y: dev.pos.y }); // Position persistieren
+            }
+          }
+          devG.addEventListener('pointerdown', down);
+          devG.addEventListener('pointermove', moveFn);
+          devG.addEventListener('pointerup', up);
+          devG.addEventListener('pointercancel', up);
+          devG.addEventListener('click', function () { if (!moved) { openModal(dev.id, dev.type); } });
+        })(d, gg, line, dx, dy);
         svg.appendChild(gg);
       }
     }
@@ -411,25 +484,58 @@
       return wrap;
     }
 
+    /** Eingabewerte im Fenster einsammeln, bevor ein Neuaufbau sie wegwischt. */
+    function collectInputs(root) {
+      var out = {};
+      if (!root) { return out; }
+      var stack = [root];
+      while (stack.length > 0) {
+        var node = stack.pop();
+        var kids = node.children || [];
+        for (var k = 0; k < kids.length; k++) {
+          var c = kids[k];
+          if ((c.tagName === 'INPUT' || c.tagName === 'TEXTAREA' || c.tagName === 'SELECT') && c.id && typeof c.value === 'string') {
+            out[c.id] = c.value;
+          }
+          stack.push(c);
+        }
+      }
+      return out;
+    }
+
+    /** Gesammelte Eingabewerte nach dem Neuaufbau wiederherstellen (#236). */
+    function applyInputs(vals) {
+      for (var k in vals) {
+        if (Object.prototype.hasOwnProperty.call(vals, k)) {
+          var e = byId(k);
+          if (e && typeof e.value === 'string') { e.value = vals[k]; }
+        }
+      }
+    }
+
     function openModal(id, kind, isRefresh) {
       openId = id;
       openKind = kind;
       if (!modal || !modalBox) { return; }
-      if (!isRefresh) { modal.removeAttribute('hidden'); }
+      var keep = isRefresh ? collectInputs(modalBox) : null;
       while (modalBox.firstChild) { modalBox.removeChild(modalBox.firstChild); }
+      modalBox.appendChild(buildModal(id, kind));
+      modal.removeAttribute('hidden');
+      if (keep) { applyInputs(keep); }
+    }
 
+    function buildModal(id, kind) {
       if (id === 'router') {
-        modalBox.appendChild(routerWindow());
-        return;
+        return routerWindow();
       }
       var d = findDevice(net, id);
-      if (d === null) { closeModal(); return; }
-      if (d.type === 'pc' || d.type === 'phone') { modalBox.appendChild(browserWindow(d)); return; }
-      if (d.type === 'webserver') { modalBox.appendChild(webserverWindow(d)); return; }
-      if (d.type === 'dns') { modalBox.appendChild(dnsWindow(d)); return; }
-      if (d.type === 'ap') { modalBox.appendChild(apWindow(d)); return; }
-      if (d.type === 'printer') { modalBox.appendChild(printerWindow(d)); return; }
-      modalBox.appendChild(simpleWindow(d));
+      if (d === null) { closeModal(); return el('div', null); }
+      if (d.type === 'pc' || d.type === 'phone') { return browserWindow(d); }
+      if (d.type === 'webserver') { return webserverWindow(d); }
+      if (d.type === 'dns') { return dnsWindow(d); }
+      if (d.type === 'ap') { return apWindow(d); }
+      if (d.type === 'printer') { return printerWindow(d); }
+      return simpleWindow(d);
     }
 
     /* ---------- Router-Fenster ---------- */
@@ -940,7 +1046,15 @@
     function poll() {
       if (!fetchFn) { return; }
       fetchFn(cfg.stand).then(function (r) { return r.json(); }).then(function (data) {
-        if (data && data.devices) { net = saneNet(data); render(); } // (#233)
+        if (!data || !data.devices) { return; }
+        var fresh = saneNet(data); // (#233)
+        var raw = JSON.stringify(fresh);
+        // Nichts Neues? Dann gar nichts anfassen: kein Neuaufbau, der
+        // Eingaben und Fokus im Browser oder in Geräte-Fenstern zerstört (#236).
+        if (raw === lastStand) { return; }
+        lastStand = raw;
+        net = fresh;
+        render({ modal: false });
       }).catch(function () {});
     }
     var win1 = win();

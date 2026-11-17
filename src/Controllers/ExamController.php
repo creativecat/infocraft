@@ -72,6 +72,7 @@ final class ExamController
         if (Auth::isTeacher()) {
             render('exam_overview', [
                 'title' => 'Prüfungen &amp; Arbeiten',
+                'hint' => 'Prüfungen und Schularbeiten vorbereiten: Gruppen bilden, pro Gruppe eine Vorlage auswählen, Teilaufgaben mit BE und Musterlösung anlegen. Beim Start bekommt jede Schülerin und jeder Schüler eine eigene Kopie.',
                 'active' => 'module-pruefung',
                 'isTeacher' => true,
                 'exams' => Exam::forTeacher($user->id),
@@ -90,6 +91,7 @@ final class ExamController
         }
         render('exam_overview', [
             'title' => 'Prüfungen &amp; Arbeiten',
+            'hint' => 'Deine Prüfungen und Schularbeiten: arbeiten, abgeben und nach der Herausgabe das Ergebnis mit Musterlösung im Vergleich sehen.',
             'active' => 'module-pruefung',
             'isTeacher' => false,
             'exams' => $entries,
