@@ -29,6 +29,7 @@ final class Network
     public const MAX_DEVICES = 12;
     public const MAX_PAGES = 60;
     public const MAX_DNS = 100;
+    public const MAX_DEVICE_LOGS = 20; // Webserver-Log je Geraet (#218)
     public const MAX_LOGS = 40;
     public const MAX_HTML = 20000;
 
@@ -195,6 +196,7 @@ final class Network
                 }
                 $net['devices'][] = $device;
                 self::log($net, 'angeschlossen: ' . $name . ' (' . $type . ')');
+                self::log($net, 'IP-Vergabe (DHCP): ' . $name . ' erhaelt ' . $device['ip']); // #218
                 break;
 
             case 'removeDevice':
@@ -396,17 +398,38 @@ final class Network
                 break;
 
             case 'browse':
-                // Nur Protokollieren: der Browser simuliert lokal, der Weg
-                // landet aber im gemeinsamen Router-Log der Klasse.
+                // Protokollieren: der Browser simuliert lokal, der Weg landet im
+                // gemeinsamen Router-Log und im Webserver-Log des Zielgeräts (#218).
                 $who = self::cleanText((string) ($params['who'] ?? 'Browser'), 60);
                 $url = self::cleanText((string) ($params['url'] ?? ''), 120);
+                $code = (int) ($params['code'] ?? 0);
                 if ($url !== '') {
-                    self::log($net, $who . ' ruft ' . $url . ' auf');
+                    self::log($net, $who . ' ruft ' . $url . ' auf' . (in_array($code, [200, 404], true) ? ' (HTTP ' . $code . ')' : ''));
+                    $serverId = (string) ($params['server'] ?? '');
+                    if ($serverId !== '' && in_array($code, [200, 404], true)) {
+                        foreach ($net['devices'] as $i => $d) {
+                            if ($d['id'] === $serverId && $d['type'] === 'webserver') {
+                                $devLog = is_array($d['log'] ?? null) ? $d['log'] : [];
+                                $devLog[] = [
+                                    't' => date('H:i'),
+                                    'ip' => self::cleanIp((string) ($params['ip'] ?? '')),
+                                    'path' => self::cleanText((string) ($params['path'] ?? '/'), 60),
+                                    'code' => $code,
+                                ];
+                                $net['devices'][$i]['log'] = array_slice($devLog, -self::MAX_DEVICE_LOGS);
+                            }
+                        }
+                    }
                 }
                 break;
 
             case 'clearLogs':
                 $net['logs'] = [];
+                foreach ($net['devices'] as $i => $d) { // #218: auch Webserver-Logs leeren
+                    if (is_array($d['log'] ?? null)) {
+                        $net['devices'][$i]['log'] = [];
+                    }
+                }
                 break;
 
             case 'reset':
@@ -461,6 +484,22 @@ final class Network
             $net['devices'][$i]['owner'] = (int) ($d['owner'] ?? 0);
             if (($d['ssid'] ?? '') !== '') {
                 $net['devices'][$i]['ssid'] = self::cleanText((string) $d['ssid'], 32);
+            }
+            // Webserver-Log je Geraet normalisieren (#218)
+            if (is_array($d['log'] ?? null)) {
+                $devLog = [];
+                foreach ($d['log'] as $le) {
+                    if (!is_array($le)) {
+                        continue;
+                    }
+                    $devLog[] = [
+                        't' => self::cleanText((string) ($le['t'] ?? ''), 12),
+                        'ip' => self::cleanIp((string) ($le['ip'] ?? '')),
+                        'path' => self::cleanText((string) ($le['path'] ?? '/'), 60),
+                        'code' => in_array((int) ($le['code'] ?? 0), [200, 404], true) ? (int) $le['code'] : 0,
+                    ];
+                }
+                $net['devices'][$i]['log'] = array_slice($devLog, -self::MAX_DEVICE_LOGS);
             }
             // Position auf der Bühne (Drag & Drop): nur gültige Koordinatenpaare übernehmen
             if (isset($d['pos']) && is_array($d['pos'])

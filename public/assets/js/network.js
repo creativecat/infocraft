@@ -676,12 +676,15 @@
           status.textContent = 'Geladen von ' + res.server.name + ' (' + res.ip + ')'
             + (res.viaDns ? ' · über DNS aufgelöst' : ' · direkt über die IP');
           saveFlag(isIp(String(url).trim().replace(/^https?:\/\//i, '')) ? 'browse-ip' : 'browse-domain');
-          act('browse', { who: d.name, url: String(url).trim() });
+          act('browse', { who: d.name, url: String(url).trim(), server: res.server.id, ip: d.ip, code: 200, path: '/' });
         } else {
           var err = el('div', 'net-error');
           err.textContent = '⚠️ ' + res.message;
           view.appendChild(err);
           status.textContent = 'Fehler · Code ' + res.code;
+          if (res.code === 404 && res.server) { // 404 landet im Webserver-Log (#218)
+            act('browse', { who: d.name, url: String(url).trim(), server: res.server.id, ip: d.ip, code: 404, path: '/' });
+          }
         }
         renderLayers();
       }
@@ -806,7 +809,24 @@
       }
       if (shown === 0) { hits.appendChild(el('p', 'net-muted', 'Noch keine Zugriffe auf diesen Webserver.')); }
       box.appendChild(hits);
+      box.appendChild(serverLogSection(d));
       return box;
+    }
+
+    // Strukturiertes Webserver-Log je Geraet (#218): Zeit, Quell-IP, Pfad, Statuscode
+    function serverLogSection(d) {
+      var entries = (d.log && d.log.length) ? d.log : [];
+      var sec = el('details', 'net-logs');
+      sec.appendChild(el('summary', null, 'Webserver-Log (Anfragen an ' + d.name + ') (' + entries.length + ')'));
+      if (entries.length === 0) {
+        sec.appendChild(el('p', 'net-muted', 'Noch keine Anfragen. Rufe mit einem Browser die IP oder Domain dieses Servers auf.'));
+      }
+      for (var i = 0; i < entries.length; i++) {
+        var e = entries[i];
+        var cls = e.code === 404 ? 'net-log-line net-error' : 'net-log-line';
+        sec.appendChild(el('div', cls, e.t + ' · von ' + e.ip + ' · ' + e.path + ' · HTTP ' + e.code));
+      }
+      return sec;
     }
 
     function pageEditor(d, page) {

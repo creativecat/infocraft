@@ -134,6 +134,11 @@ jobs:
           grep -q '"ok":true' netpr.json && grep -q 'CI Drucker' netpr.json && NET_PRRO_OK=1 || NET_PRRO_OK=0
           curl -sS -b cookies.txt -o netprint.json --data-urlencode 'params={"printer":"n2","url":"zeitung.test"}' -d "csrf=$NETCSRF" -d "aktion=printPage" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
           grep -q '"ok":true' netprint.json && grep -q 'druckt' netprint.json && NET_PRINTRO_OK=1 || NET_PRINTRO_OK=0
+          # Runde 32 (#218): Geraete-Logs, DHCP-Vergabe, Webserver-Log mit Statuscode.
+          curl -sS -b cookies.txt -o netpc.json --data-urlencode 'params={"type":"pc","name":"CI PC"}' -d "csrf=$NETCSRF" -d "aktion=addDevice" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netpc.json && grep -q 'CI PC' netpc.json && grep -q 'IP-Vergabe (DHCP)' netpc.json && NET_PCD_OK=1 || NET_PCD_OK=0
+          curl -sS -b cookies.txt -o netbrow.json --data-urlencode 'params={"who":"CI PC","url":"http://192.168.0.2/","server":"n1","ip":"192.168.0.3","code":"200","path":"/"}' -d "csrf=$NETCSRF" -d "aktion=browse" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netbrow.json && grep -q 'HTTP 200' netbrow.json && grep -q '"code":200' netbrow.json && NET_DLOG_OK=1 || NET_DLOG_OK=0
           curl -sS -b cookies.txt -o netreset.json --data-urlencode 'params={}' -d "csrf=$NETCSRF" -d "aktion=reset" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
           grep -q '"ok":true' netreset.json && grep -q '192.168.0.2' netreset.json && NET_RESET_DB_OK=0 || NET_RESET_DB_OK=1
           CODE_HTML=$(curl -sS -o html.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/html)
