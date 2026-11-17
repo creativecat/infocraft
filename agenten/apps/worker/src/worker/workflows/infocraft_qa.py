@@ -30,7 +30,7 @@ from pydantic import BaseModel, Field
 
 REPO_OWNER = "creativecat"
 REPO_NAME = "infocraft"
-MODEL = "mistral-large-latest"
+MODEL = "mistral-medium-latest"
 GITHUB_TOKEN_ENV = "INFOCRAFT_GITHUB_TOKEN"
 
 # Kuratierte Dateien, die der QA-Tester und der Struktur-Auditor sehen sollen.
