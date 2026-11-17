@@ -10,7 +10,7 @@
  *
  * Node-Tests: module.exports; Browser: window.IC_NET.
  *
- * @version 0.29.0
+ * @version 0.30.0
  * @license CC BY-NC-SA 4.0 (InfoCraft)
  */
 (function () {
@@ -34,10 +34,55 @@
     + '<li>Neuer Informatikraum: 25 Rechner ans Netz</li>'
     + '<li>Wetterbericht: Morgen sonnig</li></ul>';
 
+  /* Beispielseiten für den Webserver (#229): Schlüssel wie im PHP-Katalog. */
+  var EXAMPLES = [
+    { key: 'zeitung', icon: '📰', title: 'Schulzeitung' },
+    { key: 'sport', icon: '⚽', title: 'Sportclub Eichenwald' },
+    { key: 'wetter', icon: '🌤️', title: 'Wetterdienst Schulnet' },
+    { key: 'kochen', icon: '🍝', title: 'Kochblog Klassenküche' }
+  ];
+
+  /* Schichten des OSI-Modells (#232): von oben nach unten. */
+  var LAYERS = [
+    { n: 7, name: 'Anwendungsschicht' },
+    { n: 6, name: 'Darstellungsschicht' },
+    { n: 5, name: 'Sitzungsschicht' },
+    { n: 4, name: 'Transportschicht' },
+    { n: 3, name: 'Vermittlungsschicht' },
+    { n: 2, name: 'Sicherungsschicht' },
+    { n: 1, name: 'Bitübertragungsschicht' }
+  ];
+
   /* =================== Engine (DOM-frei) =================== */
 
   function defaultNet() {
-    return { v: 1, router: { name: 'Router', ssid: '', pass: '' }, devices: [], pages: [], dns: [], logs: [] };
+    return { v: 1, level: 1, router: { name: 'Router', ssid: '', pass: '' }, devices: [], pages: [], dns: [], logs: [], htmlProjects: [] };
+  }
+
+  /** Gerät online: Kabel dran oder im WLAN (#231). Smartphones nur per WLAN. */
+  function online(d) {
+    if (!d) { return false; }
+    if (d.type === 'phone') { return d.wifi === true; }
+    return (d.cable !== false) || d.wifi === true;
+  }
+
+  /**
+   * Schichtenansicht für die Oberstufe (#232): die Reise des Aufrufs durch
+   * das OSI-Modell mit konkreten Werten. Nur im Level 2, sonst [].
+   */
+  function layerTrace(net, device, url, res) {
+    if (!net || (net.level || 1) !== 2 || !res) { return []; }
+    var out = [];
+    var viaDns = res.viaDns === true;
+    var host = String(url || '').trim().replace(/^https?:\/\//i, '');
+    out.push({ n: 7, name: LAYERS[0].name, text: (viaDns ? 'DNS: ' : '') + 'HTTP: GET http://' + host + ' (Port 80)' });
+    out.push({ n: 6, name: LAYERS[1].name, text: res.kind === 'page' ? 'HTML-Dokument als Text' : 'Fehlermeldung (Code ' + res.code + ')' });
+    out.push({ n: 5, name: LAYERS[2].name, text: 'Verbindung: ' + device.name + ' ↔ ' + (res.server ? res.server.name : 'Ziel') });
+    out.push({ n: 4, name: LAYERS[3].name, text: 'TCP an Port 80 von ' + device.ip });
+    out.push({ n: 3, name: LAYERS[4].name, text: 'IP-Paket: ' + device.ip + ' → ' + (res.ip || 'unbekannte IP') + ' · Router 192.168.0.1 leitet weiter' });
+    out.push({ n: 2, name: LAYERS[5].name, text: device.wifi ? 'WLAN-Frames über "' + (device.ssid || net.router.ssid || 'WLAN') + '"' : 'Ethernet-Frames über das Kabel' });
+    out.push({ n: 1, name: LAYERS[6].name, text: 'Signale auf der Leitung: Bits' });
+    return out;
   }
 
   function esc(s) {
@@ -231,6 +276,7 @@
       }
       drawStage();
       renderMissions();
+      renderLevel();
       if (openId !== null && modal) {
         var d = findDevice(net, openId);
         if (d === null && openId !== 'router') { closeModal(); }
@@ -272,16 +318,17 @@
         var angle = (-90 + i * (360 / Math.max(n, 1))) * Math.PI / 180;
         var dx = cx + Math.cos(angle) * 250;
         var dy = cy + Math.sin(angle) * 185;
-        var online = d.type !== 'phone' || d.wifi === true;
-        var line = svgEl('line', { x1: cx, y1: cy, x2: dx, y2: dy, class: online ? 'net-link' : 'net-link net-link-off' });
+        var on = online(d);
+        var line = svgEl('line', { x1: cx, y1: cy, x2: dx, y2: dy, class: on ? 'net-link' : 'net-link net-link-off' });
         svg.appendChild(line);
-        var gg = svgEl('g', { class: 'net-device' + (online ? '' : ' net-device-off') });
+        var gg = svgEl('g', { class: 'net-device' + (on ? '' : ' net-device-off') });
         gg.appendChild(svgEl('rect', { x: dx - 62, y: dy - 24, rx: 10, width: 124, height: 68 }));
         var t1 = svgEl('text', { x: dx, y: dy - 2, class: 'net-dev-text', 'text-anchor': 'middle' });
         t1.textContent = (TYPES[d.type] ? TYPES[d.type].icon : '❓') + ' ' + d.name;
         gg.appendChild(t1);
         var t2 = svgEl('text', { x: dx, y: dy + 16, class: 'net-sub', 'text-anchor': 'middle' });
-        t2.textContent = d.ip + (d.type === 'phone' && !d.wifi ? ' · kein WLAN' : '');
+        var state = d.wifi ? ' · im WLAN ' + (d.ssid || '') : (d.cable === false ? ' · offline' : (d.type === 'phone' ? ' · kein WLAN' : ' · per Kabel'));
+        t2.textContent = d.ip + state;
         gg.appendChild(t2);
         var t3 = svgEl('text', { x: dx, y: dy + 32, class: 'net-sub net-sub-dim', 'text-anchor': 'middle' });
         t3.textContent = TYPES[d.type] ? TYPES[d.type].label : '';
@@ -362,6 +409,7 @@
       if (d.type === 'webserver') { modalBox.appendChild(webserverWindow(d)); return; }
       if (d.type === 'dns') { modalBox.appendChild(dnsWindow(d)); return; }
       if (d.type === 'ap') { modalBox.appendChild(apWindow(d)); return; }
+      if (d.type === 'printer') { modalBox.appendChild(printerWindow(d)); return; }
       modalBox.appendChild(simpleWindow(d));
     }
 
@@ -454,10 +502,46 @@
       go.textContent = '➡︎ Öffnen';
       var view = el('div', 'net-view');
       var status = el('div', 'net-status net-muted', 'Bereit. Gib eine Adresse ein.');
+      var lastRes = null;
+      var lastUrl = '';
+
+      // Netzdrucker im Browser (#231)
+      var printers = [];
+      for (var prI = 0; prI < net.devices.length; prI++) {
+        if (net.devices[prI].type === 'printer' && online(net.devices[prI])) { printers.push(net.devices[prI]); }
+      }
+      if (printers.length > 0) {
+        var printBtn = el('button', 'btn net-btn-sm net-print-btn');
+        printBtn.textContent = '🖨️ Auf ' + printers[0].name + ' drucken';
+        printBtn.addEventListener('click', function () {
+          act('printPage', { printer: printers[0].id, who: d.name, url: lastUrl });
+        });
+        bar.appendChild(printBtn);
+      }
+
+      // Schichtenansicht im Level 2 (#232)
+      var layersBox = null;
+      function renderLayers() {
+        if ((net.level || 1) !== 2) { return; }
+        var trace = layerTrace(net, d, lastUrl, lastRes);
+        if (trace.length === 0) { return; }
+        layersBox = el('details', 'net-layers');
+        layersBox.appendChild(el('summary', null, '🧅 Schichtenansicht (OSI-Modell)'));
+        for (var i = 0; i < trace.length; i++) {
+          var line = el('div', 'net-layer-line');
+          line.textContent = 'Schicht ' + trace[i].n + ' · ' + trace[i].name + ': ' + trace[i].text;
+          layersBox.appendChild(line);
+        }
+        box.appendChild(layersBox);
+      }
+
       function load() {
         var url = input.value;
+        lastUrl = String(url).trim();
         var res = resolve(net, url);
+        lastRes = res;
         view.textContent = '';
+        if (layersBox && layersBox.parentNode) { layersBox.parentNode.removeChild(layersBox); layersBox = null; }
         if (res.kind === 'page') {
           var frame = el('iframe', 'net-frame');
           frame.setAttribute('sandbox', 'allow-scripts allow-forms');
@@ -474,6 +558,7 @@
           view.appendChild(err);
           status.textContent = 'Fehler · Code ' + res.code;
         }
+        renderLayers();
       }
       go.addEventListener('click', load);
       bar.appendChild(input);
@@ -510,15 +595,69 @@
           var del = el('button', 'btn net-btn-sm net-danger');
           del.textContent = '🗑️';
           del.addEventListener('click', function () { act('deletePage', { id: page.id }); });
+          var toHtmlBtn = el('button', 'btn net-btn-sm');
+          toHtmlBtn.textContent = '🧱 → HTML-Werkstatt';
+          toHtmlBtn.addEventListener('click', function () {
+            act('toHtml', { id: page.id }, function (res) {
+              if (res && res.ok && res.url) { win().location.href = res.url; }
+            });
+          });
           row.appendChild(pub);
           row.appendChild(edit);
+          row.appendChild(toHtmlBtn);
           row.appendChild(del);
           box.appendChild(row);
         })(mine[p]);
       }
       if (mine.length === 0) {
-        box.appendChild(el('p', 'net-muted', 'Noch keine Webseiten.'));
+        box.appendChild(el('p', 'net-muted', 'Noch keine Webseiten. Ohne freigeschaltete Seite zeigt der Browser übrigens 404.'));
       }
+
+      // Beispielseiten (#229)
+      var exHead = el('h3', 'net-sec-h', 'Beispielseiten zum Ausprobieren');
+      box.appendChild(exHead);
+      var exRow = el('div', 'net-examples');
+      for (var ex = 0; ex < EXAMPLES.length; ex++) {
+        (function (example) {
+          var b = el('button', 'btn net-btn-sm net-example');
+          b.textContent = example.icon + ' ' + example.title;
+          b.addEventListener('click', function () {
+            act('loadExample', { server: d.id, example: example.key }, function (res) {
+              if (res && res.ok) { saveFlag('example-loaded'); }
+            });
+          });
+          exRow.appendChild(b);
+        })(EXAMPLES[ex]);
+      }
+      box.appendChild(exRow);
+
+      // Brücke zur HTML-Werkstatt (#230)
+      var bridgeHead = el('h3', 'net-sec-h', 'Aus der HTML-Werkstatt übernehmen');
+      box.appendChild(bridgeHead);
+      var projects = net.htmlProjects || [];
+      if (projects.length > 0) {
+        var projSel = el('select', 'net-input');
+        projSel.setAttribute('id', 'net-html-sel');
+        for (var pr = 0; pr < projects.length; pr++) {
+          var popt = el('option', null, projects[pr].title);
+          popt.setAttribute('value', String(projects[pr].id));
+          projSel.appendChild(popt);
+        }
+        var projWrap = el('label', 'net-field');
+        projWrap.appendChild(el('span', null, 'Dein HTML-Projekt'));
+        projWrap.appendChild(projSel);
+        box.appendChild(projWrap);
+        var loadHtml = el('button', 'btn net-btn');
+        loadHtml.textContent = '📥 Auf den Webserver laden';
+        loadHtml.addEventListener('click', function () {
+          var pEl = doc.getElementById('net-html-sel');
+          act('fromHtml', { server: d.id, projectId: pEl ? pEl.value : 0 });
+        });
+        box.appendChild(loadHtml);
+      } else {
+        box.appendChild(el('p', 'net-muted', 'Du hast noch keine HTML-Projekte. Lege eines in der HTML-Werkstatt an, dann erscheint es hier.'));
+      }
+
       var add = el('button', 'btn net-btn');
       add.textContent = '＋ Neue Webseite (Vorlage Schulzeitung)';
       add.addEventListener('click', function () {
@@ -632,7 +771,64 @@
       return box;
     }
 
-    /* ---------- Einfache Geräte (Drucker, Umbenennen) ---------- */
+    /* ---------- Drucker: Kabel oder WLAN (#231) ---------- */
+
+    function printerWindow(d) {
+      var box = el('div', null);
+      box.appendChild(head('🖨️ ' + d.name, d.ip + ' · Drucker' + (online(d) ? '' : ' · offline')));
+      box.appendChild(el('p', 'net-muted', 'Ein Drucker ist flexibel: klassisch per Kabel am Router oder drahtlos per WLAN.'));
+      var cableBtn = el('button', 'btn net-btn');
+      cableBtn.textContent = d.cable === false ? '🔌 Kabel anschließen' : '✂️ Kabel trennen (nur noch WLAN)';
+      cableBtn.addEventListener('click', function () {
+        act('setCable', { id: d.id, cable: d.cable === false ? '1' : '0' });
+      });
+      box.appendChild(cableBtn);
+      if (!d.wifi) {
+        var ssids = wlanSsids(net);
+        var sel = el('select', 'net-input');
+        sel.setAttribute('id', 'net-pr-wlan');
+        if (ssids.length === 0) {
+          var o = el('option', null, 'Kein WLAN eingerichtet');
+          o.setAttribute('value', '');
+          sel.appendChild(o);
+        }
+        for (var s = 0; s < ssids.length; s++) {
+          var opt = el('option', null, ssids[s]);
+          opt.setAttribute('value', ssids[s]);
+          sel.appendChild(opt);
+        }
+        var wrap = el('label', 'net-field');
+        wrap.appendChild(el('span', null, 'WLAN (statt oder zusätzlich zum Kabel)'));
+        wrap.appendChild(sel);
+        box.appendChild(wrap);
+        box.appendChild(field('Passwort', 'input', '', { id: 'net-pr-pass', type: 'password' }));
+        var join = el('button', 'btn net-btn');
+        join.textContent = '📶 Ins WLAN verbinden';
+        join.addEventListener('click', function () {
+          var sEl = doc.getElementById('net-pr-wlan');
+          var pEl = doc.getElementById('net-pr-pass');
+          act('joinWlan', { id: d.id, ssid: sEl ? sEl.value : '', pass: pEl ? pEl.value : '' });
+        });
+        box.appendChild(join);
+      } else {
+        box.appendChild(el('p', 'net-muted', 'im WLAN "' + (d.ssid || '') + '"'));
+      }
+      box.appendChild(field('Name', 'input', d.name, { id: 'net-ren-name', maxlength: '40' }));
+      var ren = el('button', 'btn net-btn');
+      ren.textContent = '💾 Umbenennen';
+      ren.addEventListener('click', function () {
+        var nEl = doc.getElementById('net-ren-name');
+        act('renameDevice', { id: d.id, name: nEl ? nEl.value : '' });
+      });
+      box.appendChild(ren);
+      var del = el('button', 'btn net-btn net-danger');
+      del.textContent = '🗑️ Gerät entfernen';
+      del.addEventListener('click', function () { act('removeDevice', { id: d.id }); closeModal(); });
+      box.appendChild(del);
+      return box;
+    }
+
+    /* ---------- Einfache Geräte (Umbenennen) ---------- */
 
     function simpleWindow(d) {
       var box = el('div', null);
@@ -664,6 +860,24 @@
           if (res && res.ok && nEl) { nEl.value = ''; }
         });
       });
+    }
+    // Stufen-Schalter der Lehrkraft (#232)
+    var lvl1 = byId('net-level-1');
+    var lvl2 = byId('net-level-2');
+    if (lvl1) {
+      lvl1.addEventListener('click', function () { act('setLevel', { level: '1' }); });
+    }
+    if (lvl2) {
+      lvl2.addEventListener('click', function () { act('setLevel', { level: '2' }); });
+    }
+    function renderLevel() {
+      var lvl = (net.level || 1) === 2 ? 2 : 1;
+      var l1 = byId('net-level-1');
+      var l2 = byId('net-level-2');
+      var badge = byId('net-level-badge');
+      if (l1) { l1.setAttribute('class', 'btn net-level-btn' + (lvl === 1 ? ' net-level-active' : '')); }
+      if (l2) { l2.setAttribute('class', 'btn net-level-btn' + (lvl === 2 ? ' net-level-active' : '')); }
+      if (badge) { badge.textContent = lvl === 2 ? 'Stufe 2 · Schichtenansicht (Oberstufe)' : 'Stufe 1 · Basis'; }
     }
     if (modal) {
       modal.addEventListener('click', function (ev) {
@@ -719,7 +933,7 @@
   /* =================== Export =================== */
 
   var api = {
-    version: '0.29.0',
+    version: '0.30.0',
     defaultNet: defaultNet,
     resolve: resolve,
     dnsLookup: dnsLookup,
@@ -728,6 +942,10 @@
     hasDns: hasDns,
     pageDocument: pageDocument,
     missionsState: missionsState,
+    online: online,
+    layerTrace: layerTrace,
+    LAYERS: LAYERS,
+    EXAMPLES: EXAMPLES,
     MISSIONS: MISSIONS,
     NEWSPAPER: NEWSPAPER,
     TYPES: TYPES,

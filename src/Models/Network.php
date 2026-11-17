@@ -34,11 +34,43 @@ final class Network
 
     public const TYPES = ['pc', 'phone', 'printer', 'webserver', 'dns', 'ap'];
 
+    /** Geräte, die per WLAN beitreten können (#231). */
+    public const WLAN_TYPES = ['phone', 'printer'];
+
+    /**
+     * Beispielseiten für den Webserver (#229): pro Knopfdruck landet eine
+     * fertige, lustige Seite auf dem Server (noch nicht freigeschaltet,
+     * damit die 404-Lektion erhalten bleibt).
+     */
+    public const EXAMPLES = [
+        'zeitung' => [
+            'title' => 'Schulzeitung',
+            'domain' => 'schulzeitung.net',
+            'html' => '<h1>Schulzeitung</h1><p style="border-left:4px solid #0f766e;padding-left:8px"><em>Alles, was in der Klasse passiert.</em></p><h2>Ausgabe 1</h2><ul><li>Sportfest: Die 7. Klasse gewinnt den Staffelpokal</li><li>Neuer Informatikraum: 25 Rechner ans Netz</li><li>Wetterbericht: Morgen sonnig</li></ul><p><strong>Tipp:</strong> Diese Seite kannst du hier frei bearbeiten.</p>',
+        ],
+        'sport' => [
+            'title' => 'Sportclub Eichenwald',
+            'domain' => 'eichenwald-sport.net',
+            'html' => '<h1>Sportclub Eichenwald ⚽</h1><table border="1" cellpadding="6"><tr><th>Mannschaft</th><th>Tore</th><th>Punkte</th></tr><tr><td>Eichenwald 1</td><td>12</td><td>9</td></tr><tr><td>Stadt-Team</td><td>7</td><td>6</td></tr><tr><td>River United</td><td>5</td><td>3</td></tr></table><h2>Nächstes Spiel</h2><p>Samstag, 10 Uhr, Sportplatz am Fluss. <strong>Kommt alle!</strong></p>',
+        ],
+        'wetter' => [
+            'title' => 'Wetterdienst Schulnet',
+            'domain' => 'wetterdienst.net',
+            'html' => '<h1>Wetterdienst Schulnet 🌤️</h1><p style="background:#e0f2fe;padding:8px;border-radius:8px">Die Vorhersage für morgen:</p><ul><li>☀️ Vormittag: sonnig, 21 Grad</li><li>⛅ Mittag: leicht bewölkt, 23 Grad</li><li>🌧️ Abend: Schauer, 16 Grad</li></ul><p>Übrigens: Diese Seite hängt auf einem Webserver im Schulnetz.</p>',
+        ],
+        'kochen' => [
+            'title' => 'Kochblog Klassenküche',
+            'domain' => 'klassenkueche.net',
+            'html' => '<h1>Kochblog Klassenküche 🍝</h1><h2>Rezept: Spaghetti für die Pause</h2><ol><li>Wasser kochen (das Netzwerk braucht auch Energie!)</li><li>Nudeln hinein, 9 Minuten</li><li>Soße aus der Kantine dazu</li></ol><p style="color:#b91c1c"><strong>Geheimtipp:</strong> Parmesan macht alles besser.</p>',
+        ],
+    ];
+
     /** Standard-Netz: ein Router, noch keine Geräte. */
     public static function empty(): array
     {
         return [
             'v' => 1,
+            'level' => 1,
             'router' => ['name' => 'Router', 'ssid' => '', 'pass' => ''],
             'devices' => [],
             'pages' => [],
@@ -151,7 +183,8 @@ final class Network
                     'name' => $name,
                     'ip' => self::nextIp($net),
                     'owner' => $userId,
-                    'wifi' => false, // Kabelgeräte hängen direkt, Smartphones per WLAN
+                    'cable' => $type !== 'phone', // Smartphones nur per WLAN, alles andere per Kabel (#231)
+                    'wifi' => false,
                 ];
                 if ($type === 'ap') {
                     // Access Point: Name ist zugleich die SSID des eigenen WLANs.
@@ -191,8 +224,8 @@ final class Network
 
             case 'joinWlan':
                 $dev = self::device($net, (string) ($params['id'] ?? ''));
-                if ($dev === null || $dev['type'] !== 'phone') {
-                    return $err('Nur Smartphones verbinden sich über WLAN.');
+                if ($dev === null || !in_array($dev['type'], self::WLAN_TYPES, true)) {
+                    return $err('Nur Smartphones und Drucker verbinden sich über WLAN.');
                 }
                 $ssid = (string) ($params['ssid'] ?? '');
                 $pass = (string) ($params['pass'] ?? '');
@@ -211,6 +244,62 @@ final class Network
                     }
                 }
                 self::log($net, $dev['name'] . ' ist jetzt im WLAN "' . $ssid . '"');
+                break;
+
+            case 'setCable': // #231: Drucker per Kabel oder WLAN
+                $dev = self::device($net, (string) ($params['id'] ?? ''));
+                if ($dev === null || $dev['type'] !== 'printer') {
+                    return $err('Nur Drucker lassen sich vom Kabel trennen.');
+                }
+                $cable = (string) ($params['cable'] ?? '1') === '1';
+                foreach ($net['devices'] as $i => $d) {
+                    if ($d['id'] === $dev['id']) {
+                        $net['devices'][$i]['cable'] = $cable;
+                    }
+                }
+                self::log($net, $dev['name'] . ': Kabel ' . ($cable ? 'angeschlossen' : 'getrennt'));
+                break;
+
+            case 'loadExample': // #229: fertige Beispielseite auf den Webserver laden
+                $server = self::device($net, (string) ($params['server'] ?? ''));
+                if ($server === null || $server['type'] !== 'webserver') {
+                    return $err('Beispielseiten gehören auf einen Webserver.');
+                }
+                $example = self::EXAMPLES[(string) ($params['example'] ?? '')] ?? null;
+                if ($example === null) {
+                    return $err('Diese Beispielseite gibt es nicht.');
+                }
+                if (count($net['pages']) >= self::MAX_PAGES) {
+                    return $err('Zu viele Webseiten im Netz.');
+                }
+                $net['pages'][] = [
+                    'id' => self::nextId($net['pages']),
+                    'server' => $server['id'],
+                    'title' => $example['title'],
+                    'domain' => $example['domain'],
+                    'html' => $example['html'],
+                    'published' => false, // 404 bleibt sichtbar, bis freigeschaltet wird
+                ];
+                self::log($net, 'Beispielseite "' . $example['title'] . '" auf ' . $server['name'] . ' geladen');
+                break;
+
+            case 'printPage': // #231: Netzdrucker aus dem Browser heraus
+                $printer = self::device($net, (string) ($params['printer'] ?? ''));
+                if ($printer === null || $printer['type'] !== 'printer') {
+                    return $err('Kein Drucker gewählt.');
+                }
+                if ($printer['cable'] === false && $printer['wifi'] !== true) {
+                    return $err('Dieser Drucker ist offline (kein Kabel, kein WLAN).');
+                }
+                $url = self::cleanText((string) ($params['url'] ?? ''), 120);
+                self::log($net, (string) ($params['who'] ?? 'Browser') . ' druckt ' . ($url !== '' ? $url : 'die Seite') . ' auf ' . $printer['name']);
+                break;
+
+            case 'setLevel': // #232: Stufen-Schalter der Lehrkraft
+                if (!$isTeacher) {
+                    return $err('Nur die Lehrkraft schaltet die Stufe um.');
+                }
+                $net['level'] = (string) ($params['level'] ?? '1') === '2' ? 2 : 1;
                 break;
 
             case 'savePage':
@@ -339,6 +428,7 @@ final class Network
     public static function normalize(array $net): array
     {
         $net = array_merge(self::empty(), $net);
+        $net['level'] = (int) ($net['level'] ?? 1) === 2 ? 2 : 1;
         $net['router'] = array_merge(self::empty()['router'], is_array($net['router'] ?? null) ? $net['router'] : []);
         $net['devices'] = array_slice(array_values(array_filter($net['devices'], 'is_array')), 0, self::MAX_DEVICES);
         $net['pages'] = array_slice(array_values(array_filter($net['pages'], 'is_array')), 0, self::MAX_PAGES);
@@ -350,6 +440,10 @@ final class Network
             $net['devices'][$i]['name'] = self::cleanText((string) ($d['name'] ?? 'Gerät'), 40);
             $net['devices'][$i]['ip'] = self::cleanIp((string) ($d['ip'] ?? '')) ?: '192.168.0.2';
             $net['devices'][$i]['wifi'] = ($d['wifi'] ?? false) === true;
+            // Kabel-Standard: alles außer Smartphones (#231)
+            $net['devices'][$i]['cable'] = ($net['devices'][$i]['type'] === 'phone')
+                ? (($d['cable'] ?? false) === true)
+                : (($d['cable'] ?? true) !== false);
             $net['devices'][$i]['owner'] = (int) ($d['owner'] ?? 0);
             if (($d['ssid'] ?? '') !== '') {
                 $net['devices'][$i]['ssid'] = self::cleanText((string) $d['ssid'], 32);

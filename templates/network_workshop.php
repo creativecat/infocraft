@@ -39,6 +39,15 @@
         </div>
 
         <?php if ($isTeacher): ?>
+        <div class="net-card net-level-card">
+            <h2>🎚️ Stufe</h2>
+            <p class="net-muted" id="net-level-badge">Stufe 1 · Basis</p>
+            <div class="net-add-row">
+                <button type="button" class="btn net-level-btn net-level-active" id="net-level-1">1 · Basis</button>
+                <button type="button" class="btn net-level-btn" id="net-level-2">2 · Oberstufe (Schichten)</button>
+            </div>
+            <p class="net-muted">Stufe 2 zeigt im Browser die Reise des Aufrufs durch die Schichten des OSI-Modells.</p>
+        </div>
         <details class="net-card net-teacher-card" id="net-teacher-card">
             <summary><strong>🧑‍🏫 Netzwerk-Manager</strong> (Lehrkraft)</summary>
             <?php if (!empty($classes)): ?>

@@ -4465,11 +4465,11 @@ setTimeout(function () {
                     'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
-                  ok(support130.indexOf("APP_VERSION = '0.29.0'") !== -1
-                    && support130.indexOf("ASSET_VERSION = '85'") !== -1
-                    && changelog130.indexOf('## [0.29.0]') !== -1
-                    && changelog130.indexOf('## [0.28.0]') !== -1,
-                    'T130r Version 0.29.0 mit Asset-Stand 85 und Changelog-Eintrag (Historie bleibt)');
+                  ok(support130.indexOf("APP_VERSION = '0.30.0'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '86'") !== -1
+                    && changelog130.indexOf('## [0.30.0]') !== -1
+                    && changelog130.indexOf('## [0.29.0]') !== -1,
+                    'T130r Version 0.30.0 mit Asset-Stand 86 und Changelog-Eintrag (Historie bleibt)');
                   ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
                     && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
                     && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
@@ -4726,6 +4726,135 @@ setTimeout(function () {
                   var setWlanCall = netFetchCalls.filter(function (c) { return c.body.indexOf('setWlan') !== -1; });
                   ok(setWlanCall.length === 1 && setWlanCall[0].body.indexOf('csrf=tok') !== -1,
                     'T133p WLAN speichern sendet die Aktion mit CSRF an den Server (#224, #225)');
+
+                  /* T134 (#229 bis #232): Runde 30. Beispielseiten,
+                   * HTML-Werkstatt-Bruecke, Drucker per Kabel oder WLAN,
+                   * Stufen-Schalter mit Schichtenansicht. */
+                  ok(netMod.online({ type: 'phone', wifi: false, cable: false }) === false
+                    && netMod.online({ type: 'phone', wifi: true }) === true
+                    && netMod.online({ type: 'printer', cable: false, wifi: false }) === false
+                    && netMod.online({ type: 'printer', cable: false, wifi: true }) === true
+                    && netMod.online({ type: 'printer' }) === true,
+                    'T134 Online-Status: Kabel oder WLAN, Smartphone nur WLAN (#231)');
+                  var levelNet = JSON.parse(JSON.stringify(netSample));
+                  levelNet.level = 2;
+                  var pcNet = levelNet.devices[0];
+                  var trace = netMod.layerTrace(levelNet, pcNet, 'schulzeitung.net', netMod.resolve(levelNet, 'schulzeitung.net'));
+                  levelNet.level = 1;
+                  ok(trace.length === 7
+                    && trace[0].text.indexOf('DNS') !== -1 && trace[0].text.indexOf('HTTP') !== -1
+                    && trace[3].text.indexOf('TCP an Port 80') !== -1
+                    && trace[4].text.indexOf('192.168.0.2') !== -1 && trace[4].text.indexOf('192.168.0.1') !== -1
+                    && trace[5].text.indexOf('Kabel') !== -1
+                    && netMod.layerTrace(levelNet, pcNet, 'x', netMod.resolve(levelNet, '192.168.0.3')).length === 0,
+                    'T134b Schichtenansicht liefert im Level 2 sieben OSI-Schichten, im Level 1 keine (#232)');
+                  ok(netMod.EXAMPLES.length === 4
+                    && netMod.EXAMPLES[3].key === 'kochen'
+                    && netModelPhp.indexOf("'zeitung'") !== -1
+                    && netModelPhp.indexOf('eichenwald-sport.net') !== -1
+                    && netModelPhp.indexOf('wetterdienst.net') !== -1
+                    && netModelPhp.indexOf('klassenkueche.net') !== -1,
+                    'T134c vier Beispielseiten im Frontend und im serverseitigen Katalog (#229)');
+                  ok(netModelPhp.indexOf('loadExample') !== -1
+                    && netModelPhp.indexOf('setCable') !== -1
+                    && netModelPhp.indexOf('setLevel') !== -1
+                    && netModelPhp.indexOf('WLAN_TYPES') !== -1
+                    && netModelPhp.indexOf('printPage') !== -1,
+                    'T134d Modell kennt loadExample, setCable, setLevel, printPage und WLAN-Typen (#229, #231, #232)');
+                  ok(netCtrlPhp.indexOf('toHtml') !== -1
+                    && netCtrlPhp.indexOf('fromHtml') !== -1
+                    && netCtrlPhp.indexOf('htmlProjects') !== -1
+                    && netCtrlPhp.indexOf('Project::create') !== -1,
+                    'T134e Controller brückt Seiten in beide Richtungen zur HTML-Werkstatt (#230)');
+                  ok(netTpl.indexOf('net-level-1') !== -1
+                    && netTpl.indexOf('net-level-2') !== -1
+                    && netTpl.indexOf('net-level-badge') !== -1
+                    && netCss.indexOf('.net-layer-line') !== -1
+                    && netCss.indexOf('.net-examples') !== -1,
+                    'T134f Template hat den Stufen-Schalter, CSS kennt Schichten und Beispiele (#229, #232)');
+                  /* UI-Attach Runde 30: frisches Fake-DOM mit Drucker,
+                   * HTML-Projekten und Stufen-Knoepfen (#229 bis #232). */
+                  var netDoc2 = new FakeDoc();
+                  global.document = netDoc2;
+                  var boot2 = new FakeEl('script');
+                  netDoc2.register(boot2, 'net-boot');
+                  boot2.setAttribute('data-csrf', 'tok');
+                  boot2.setAttribute('data-stand', '');
+                  boot2.setAttribute('data-aktion', '/werkstatt/netzwerk/aktion');
+                  boot2.setAttribute('data-ist-lehrkraft', '1');
+                  var net2 = JSON.parse(JSON.stringify(netSample));
+                  net2.devices.push({ id: 'n5', type: 'printer', name: 'HP Netzdrucker', ip: '192.168.0.6', cable: true, wifi: false, owner: 1 });
+                  net2.htmlProjects = [{ id: 7, title: 'Meine HTML-Seite' }];
+                  boot2.setAttribute('data-net', JSON.stringify(net2));
+                  var svg134 = new FakeEl('svg');
+                  netDoc2.register(svg134, 'net-svg');
+                  var modal134 = new FakeEl('div');
+                  modal134.setAttribute('hidden', '');
+                  netDoc2.register(modal134, 'net-modal');
+                  var modalBox134 = new FakeEl('div');
+                  netDoc2.register(modalBox134, 'net-modal-box');
+                  var badge134 = new FakeEl('span');
+                  netDoc2.register(badge134, 'net-level-badge');
+                  var lvl1Btn = new FakeEl('button');
+                  netDoc2.register(lvl1Btn, 'net-level-1');
+                  var lvl2Btn = new FakeEl('button');
+                  netDoc2.register(lvl2Btn, 'net-level-2');
+                  var missions134 = new FakeEl('ul');
+                  netDoc2.register(missions134, 'net-missions');
+                  netDoc2.register(new FakeEl('button'), 'net-add-btn');
+                  netDoc2.register(new FakeEl('select'), 'net-add-type');
+                  netDoc2.register(new FakeEl('input'), 'net-add-name');
+                  var fakeNet134 = net2;
+                  global.fetch = function (action, opts) {
+                    netFetchCalls.push({ action: action, body: String(opts && opts.body) });
+                    return Promise.resolve({ json: function () {
+                      return Promise.resolve({ ok: true, net: fakeNet134, url: '/werkstatt/html/9' });
+                    } });
+                  };
+                  netMod.attach(netDoc2);
+                  var groups134 = svg134.children.filter(function (c) { return c.tagName === 'G'; });
+                  groups134[2].handlers.click[0]();
+                  var exampleBtns = [];
+                  var collect134 = function (root) {
+                    for (var i = 0; i < root.children.length; i++) {
+                      var c = root.children[i];
+                      if (c.tagName === 'BUTTON' && (c.getAttribute('class') || '').indexOf('net-example') !== -1) { exampleBtns.push(c); }
+                      collect134(c);
+                    }
+                  };
+                  collect134(modalBox134);
+                  var htmlSel134 = findById133(modalBox134, 'net-html-sel');
+                  var toHtml134 = [];
+                  var collectToHtml = function (root) {
+                    for (var i = 0; i < root.children.length; i++) {
+                      var c = root.children[i];
+                      if (c.tagName === 'BUTTON' && String(c.textContent).indexOf('HTML-Werkstatt') !== -1) { toHtml134.push(c); }
+                      collectToHtml(c);
+                    }
+                  };
+                  collectToHtml(modalBox134);
+                  ok(exampleBtns.length === 4 && htmlSel134 !== null
+                    && toHtml134.length === 1,
+                    'T134g Webserver-Fenster: 4 Beispielseiten, Projekt-Auswahl, In-HTML-Werkstatt-Knopf (#229, #230)');
+                  exampleBtns[1].handlers.click[0]();
+                  var loadExCall = netFetchCalls.filter(function (c) { return c.body.indexOf('loadExample') !== -1; });
+                  toHtml134[0].handlers.click[0]();
+                  var toHtmlCall = netFetchCalls.filter(function (c) { return c.body.indexOf('toHtml') !== -1; });
+                  ok(loadExCall.length === 1 && loadExCall[loadExCall.length - 1].body.indexOf('sport') !== -1
+                    && toHtmlCall.length === 1,
+                    'T134h Beispielseite und HTML-Übernahme senden Aktionen mit Parametern (#229, #230)');
+                  groups134[5].handlers.click[0]();
+                  var cableBtn134 = modalBox134.children[0].children.filter(function (c) { return c.tagName === 'BUTTON'; })[0];
+                  ok(cableBtn134 && String(cableBtn134.textContent).indexOf('Kabel trennen') !== -1
+                    && findById133(modalBox134, 'net-pr-wlan') !== null,
+                    'T134i Drucker-Fenster bietet Kabel-Trennen und WLAN-Beitritt (#231)');
+                  cableBtn134.handlers.click[0]();
+                  var setCableCall = netFetchCalls.filter(function (c) { return c.body.indexOf('setCable') !== -1; });
+                  lvl2Btn.handlers.click[0]();
+                  var setLevelCall = netFetchCalls.filter(function (c) { return c.body.indexOf('setLevel') !== -1; });
+                  ok(setCableCall.length === 1 && setCableCall[0].body.indexOf('cable') !== -1
+                    && setLevelCall.length === 1 && setLevelCall[0].body.indexOf('level') !== -1,
+                    'T134j Kabel-Trennen und Stufen-Umschalter senden ihre Aktionen (#231, #232)');
                   global.document = netSavedDoc;
                   global.window = netSavedWindow;
 

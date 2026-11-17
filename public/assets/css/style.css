@@ -2758,3 +2758,16 @@ p .exdiff-ins, p .exdiff-del { display: inline-block; padding: 0 6px; }
 .net-logs summary { cursor: pointer; font-size: 0.85rem; }
 .net-log-line { font-family: ui-monospace, monospace; font-size: 0.75rem; color: #475569; padding: 2px 0; }
 .net-class-pick { margin: 8px 0; }
+
+/* Netzwerk-Werkstatt: Runde 30 (#229 bis #232) */
+.net-level-card h2 { margin: 0 0 4px; }
+.net-level-btn { flex: 1; font-size: 0.8rem; }
+.net-level-btn.net-level-active { border-color: #0f766e; background: #f0fdfa; font-weight: 600; }
+.net-sec-h { margin: 14px 0 6px; font-size: 0.95rem; }
+.net-examples { display: flex; flex-wrap: wrap; gap: 6px; }
+.net-example { background: #f0fdfa; }
+.net-layers { margin-top: 10px; border-top: 1px solid var(--border, #e5e7eb); padding-top: 6px; }
+.net-layers summary { cursor: pointer; font-size: 0.85rem; }
+.net-layer-line { font-family: ui-monospace, monospace; font-size: 0.75rem; color: #475569; padding: 2px 0; }
+.net-layer-line::before { content: '↳ '; color: #0f766e; }
+.net-print-btn { margin-left: 6px; }

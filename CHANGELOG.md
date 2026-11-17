@@ -5,6 +5,15 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.30.0] - 2026-11-17
+
+### Netzwerk-Werkstatt: Beispielseiten, Drucker flexibel anschließen und OSI-Schichten (#229 bis #232)
+
+- Webserver mit Beispielseiten (#229): Neue Webserver starten ohne eigene Inhalte und zeigen im Browser den 404, genau wie im echten Web. Mit einem Klick lässt sich eine von vier fertigen Seiten laden (Schulzeitung, Sport, Wetter, Kochrezepte), die sofort mit eigener Domain freigeschaltet ist.
+- Brücke zur HTML-Werkstatt (#230): Jede Webserver-Seite lässt sich per Klick in die HTML-Werkstatt übernehmen und dort mit eigenem HTML und CSS weiterbauen. Umgekehrt übernimmt der Webserver beliebige eigene HTML-Projekte aus der HTML-Werkstatt in das Klassennetz.
+- Drucker per Kabel oder WLAN (#231): Der Netzwerk-Drucker lässt sich wahlweise per Kabel anschließen oder über das WLAN einbinden, jederzeit umstöpseln oder entfernen. Der Browser kann eine Webserver-Seite an den Drucker schicken, der Druck landet im Router-Log.
+- Stufen-Umschalter mit OSI-Schichten (#232): Lehrkräfte schalten zwischen Unter- und Oberstufe um. In der Oberstufe zeigt der Browser zu jedem Aufruf alle sieben Schichten des OSI-Modells mit den konkreten Werten des eigenen Netzes: Anwendung (HTTP/DNS), Darstellung, Sicherungsschicht (Ethernet/MAC), Transport (TCP-Port 80), Vermittlung (IP), Datenübertragung (Kabel/WLAN) und Physisch.
+
 ## [0.29.0] - 2026-11-16
 
 ### Netzwerk-Werkstatt: ein Netz bauen und verstehen (#220 bis #226)
