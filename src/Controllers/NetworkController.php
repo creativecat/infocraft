@@ -117,7 +117,7 @@ final class NetworkController
         }
         if ($action === 'fromHtml') {
             $project = Project::find((int) ($params['projectId'] ?? 0));
-            if ($project === null || (int) $project->owner_id !== (int) $user->id) {
+            if ($project === null || (int) $project->ownerId !== (int) $user->id) {
                 header('Content-Type: application/json; charset=utf-8');
                 echo json_encode(['ok' => false, 'error' => 'Dieses HTML-Projekt gehört dir nicht.'], JSON_UNESCAPED_UNICODE);
                 exit;
