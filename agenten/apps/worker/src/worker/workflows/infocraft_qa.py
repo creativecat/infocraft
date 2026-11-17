@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import timedelta
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -155,7 +156,7 @@ def _raw_file(revision: str, path: str) -> str:
     return _http_get(url, accept="application/octet-stream").decode("utf-8", "replace")
 
 
-@activity(start_to_close_timeout=120)
+@activity(start_to_close_timeout=timedelta(seconds=120))
 async def fetch_repo_dump(revision: str) -> str:
     """Liest kuratierte InfoCraft-Dateien und Verzeichnislisten von GitHub ein."""
     parts: list[str] = []
@@ -177,7 +178,7 @@ async def fetch_repo_dump(revision: str) -> str:
     return "\n\n".join(parts)
 
 
-@activity(start_to_close_timeout=60)
+@activity(start_to_close_timeout=timedelta(seconds=60))
 async def load_lehrplan() -> str:
     """Liest die Lehrplan-PLUS-Texte aus dem mitgelieferten Ordner lehrplan/."""
     base = Path(__file__).resolve()
@@ -192,7 +193,7 @@ async def load_lehrplan() -> str:
     raise RuntimeError("Lehrplan-Ordner nicht gefunden")
 
 
-@activity(start_to_close_timeout=60, retry_policy_max_attempts=1)
+@activity(start_to_close_timeout=timedelta(seconds=60), retry_policy_max_attempts=1)
 async def open_report_pr(title: str, filename: str, content: str) -> str | None:
     """Legt einen Pull-Request mit dem Bericht an. Ohne Token läuft die Pipeline im Nur-Bericht-Modus."""
     token = os.environ.get(GITHUB_TOKEN_ENV, "").strip()
@@ -270,7 +271,7 @@ def _prompt(auftrag: str, quelle: str) -> ChatCompletionRequest:
     )
 
 
-@activity(start_to_close_timeout=300)
+@activity(start_to_close_timeout=timedelta(seconds=300))
 async def station_qa(dump: str, schwerpunkt: str) -> StationBericht:
     auftrag = (
         "Du bist intensiver QA-Tester einer Lernplattform (InfoCraft, Informatik, Gymnasium Bayern). "
@@ -284,7 +285,7 @@ async def station_qa(dump: str, schwerpunkt: str) -> StationBericht:
     return await chat_parse_to_model(StationBericht, _prompt(auftrag, dump))
 
 
-@activity(start_to_close_timeout=300)
+@activity(start_to_close_timeout=timedelta(seconds=300))
 async def station_lehrplan(dump: str, lehrplan: str) -> StationBericht:
     auftrag = (
         "Du bist Lehrplan-Experte für Informatik am Gymnasium Bayern (Lehrplan PLUS). "
@@ -297,7 +298,7 @@ async def station_lehrplan(dump: str, lehrplan: str) -> StationBericht:
     )
 
 
-@activity(start_to_close_timeout=300)
+@activity(start_to_close_timeout=timedelta(seconds=300))
 async def station_aufgaben(qa: StationBericht, lehrplan: StationBericht, lehrplan_text: str) -> AufgabenEntwurf:
     auftrag = (
         "Du erstellst praxistaugliche Unterrichtsaufgaben für die Plattform InfoCraft, "
@@ -313,7 +314,7 @@ async def station_aufgaben(qa: StationBericht, lehrplan: StationBericht, lehrpla
     return await chat_parse_to_model(AufgabenEntwurf, _prompt(auftrag, quelle))
 
 
-@activity(start_to_close_timeout=300)
+@activity(start_to_close_timeout=timedelta(seconds=300))
 async def station_review(
     aufgaben: AufgabenEntwurf, qa: StationBericht, lehrplan: StationBericht
 ) -> ReviewErgebnis:
@@ -331,7 +332,7 @@ async def station_review(
     return await chat_parse_to_model(ReviewErgebnis, _prompt(auftrag, quelle))
 
 
-@activity(start_to_close_timeout=300)
+@activity(start_to_close_timeout=timedelta(seconds=300))
 async def station_struktur(dump: str) -> StrukturBericht:
     auftrag = (
         "Du bist Struktur-Auditor der Website. Prüfe anhand der Routen, Templates und Skripte: "
