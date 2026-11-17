@@ -973,4 +973,13 @@
   };
   if (typeof window !== 'undefined') { window.IC_NET = api; }
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
+
+  /* Selbststart in der Werkstatt-Seite (#234): Das Template bindet nur das
+   * net-boot-Daten-Element und diese Datei, app.js kennt IC_NET nicht.
+   * attach() muss sich hier selbst ans Dokument hängen, sonst rendert die
+   * Werkstatt im Browser nichts. In Node (ui-tests) gibt es kein
+   * window.document, attach() bleibt dort der manuelle Aufruf. */
+  if (typeof window !== 'undefined' && window.document && window.document.getElementById) {
+    attach(window.document);
+  }
 })();

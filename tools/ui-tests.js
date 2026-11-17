@@ -4889,6 +4889,8 @@ setTimeout(function () {
                   ok(groups134k.length === 1 && missions134k.children.length === 8
                     && String(netinfo134k.textContent).indexOf('0 Geräte im Netz') !== -1,
                     'T134l attach() mit kaputtem data-net zeichnet Router und Missionen statt grauer Bühne (#233)');
+                  ok(netJs.indexOf('attach(window.document)') !== -1,
+                    'T134m network.js startet attach() im Browser selbst, ohne app.js-Referenz (#234)');
                   global.document = netSavedDoc;
                   global.window = netSavedWindow;
 
