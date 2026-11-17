@@ -59,6 +59,24 @@
     return { v: 1, level: 1, router: { name: 'Router', ssid: '', pass: '' }, devices: [], pages: [], dns: [], logs: [], htmlProjects: [] };
   }
 
+  /** Netz gegen kaputte oder historische Stände absichern (#233).
+   * Listen, die keine Arrays sind, oder kaputte Einträge dürfen den
+   * ersten Renderdurchlauf nie töten: die Bühne bleibt nutzbar. */
+  function saneNet(raw) {
+    var src = (raw && typeof raw === 'object') ? raw : {};
+    var out = defaultNet();
+    out.v = typeof src.v === 'number' ? src.v : out.v;
+    out.level = src.level === 2 ? 2 : 1;
+    if (src.router && typeof src.router === 'object') { out.router = src.router; }
+    var lists = ['devices', 'pages', 'dns', 'logs', 'htmlProjects'];
+    for (var i = 0; i < lists.length; i++) {
+      if (Object.prototype.toString.call(src[lists[i]]) === '[object Array]') {
+        out[lists[i]] = src[lists[i]].filter(function (e) { return e && typeof e === 'object'; });
+      }
+    }
+    return out;
+  }
+
   /** Gerät online: Kabel dran oder im WLAN (#231). Smartphones nur per WLAN. */
   function online(d) {
     if (!d) { return false; }
@@ -226,6 +244,7 @@
     };
     var net;
     try { net = JSON.parse(boot.getAttribute('data-net') || '{}'); } catch (e) { net = defaultNet(); }
+    net = saneNet(net); // kaputte Datenbankstände dürfen attach() nie töten (#233)
 
     var svg = doc.getElementById('net-svg');
     var modal = doc.getElementById('net-modal');
@@ -259,7 +278,7 @@
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: body
       }).then(function (r) { return r.json(); }).then(function (data) {
-        if (data && data.net) { net = data.net; }
+        if (data && data.net) { net = saneNet(data.net); } // (#233)
         if (cb) { cb(data || null); }
         render();
       }).catch(function () { if (cb) { cb(null); } });
@@ -921,7 +940,7 @@
     function poll() {
       if (!fetchFn) { return; }
       fetchFn(cfg.stand).then(function (r) { return r.json(); }).then(function (data) {
-        if (data && data.devices) { net = data; render(); }
+        if (data && data.devices) { net = saneNet(data); render(); } // (#233)
       }).catch(function () {});
     }
     var win1 = win();
@@ -942,6 +961,7 @@
     hasDns: hasDns,
     pageDocument: pageDocument,
     missionsState: missionsState,
+    saneNet: saneNet,
     online: online,
     layerTrace: layerTrace,
     LAYERS: LAYERS,

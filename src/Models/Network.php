@@ -119,9 +119,12 @@ final class Network
         $row = self::rowFor($classId, $user->id);
         $net = json_decode((string) $row['content'], true);
         if (!is_array($net) || !isset($net['devices'])) {
-            $net = self::empty();
+            return self::empty();
         }
-        return $net;
+        // (#233) Auch historische oder per Import entstandene Zeilen immer
+        // normalisiert ausliefern: alte Stände (fehlendes level, cable,
+        // Objekte statt Listen) dürfen die Werkstatt im Browser nicht killen.
+        return self::normalize($net);
     }
 
     /** Netz einer Klasse DIREKT laden (Lehrkraft-Manager, ohne eigenen Kontext). */
@@ -129,7 +132,7 @@ final class Network
     {
         $row = self::rowFor($classId, 0);
         $net = json_decode((string) $row['content'], true);
-        return is_array($net) && isset($net['devices']) ? $net : self::empty();
+        return is_array($net) && isset($net['devices']) ? self::normalize($net) : self::empty(); // (#233)
     }
 
     /** Netz speichern (Klasse oder eigene Person). */

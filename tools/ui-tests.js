@@ -4855,6 +4855,40 @@ setTimeout(function () {
                   ok(setCableCall.length === 1 && setCableCall[0].body.indexOf('cable') !== -1
                     && setLevelCall.length === 1 && setLevelCall[0].body.indexOf('level') !== -1,
                     'T134j Kabel-Trennen und Stufen-Umschalter senden ihre Aktionen (#231, #232)');
+                  /* T134k (#233): kaputter Netzstand (Objekte statt Listen,
+                   * Router als String) darf attach() nie töten. */
+                  ok(netMod.saneNet && netMod.saneNet({ pages: { p1: { published: true } } }).pages.length === 0
+                    && netModelPhp.indexOf('return self::normalize($net);') !== -1,
+                    'T134k Modell normalisiert jeden gelesenen Netzstand, saneNet entschärft kaputte Listen (#233)');
+                  var netDoc3 = new FakeDoc();
+                  global.document = netDoc3;
+                  var boot3 = new FakeEl('script');
+                  netDoc3.register(boot3, 'net-boot');
+                  boot3.setAttribute('data-csrf', 'tok');
+                  boot3.setAttribute('data-stand', '');
+                  boot3.setAttribute('data-aktion', '/werkstatt/netzwerk/aktion');
+                  boot3.setAttribute('data-ist-lehrkraft', '0');
+                  boot3.setAttribute('data-net', JSON.stringify({ v: 1, router: 'kaputt', devices: { n1: { type: 'pc' } }, pages: { p1: { published: true } } }));
+                  var svg134k = new FakeEl('svg');
+                  netDoc3.register(svg134k, 'net-svg');
+                  var missions134k = new FakeEl('ul');
+                  netDoc3.register(missions134k, 'net-missions');
+                  var modal134k = new FakeEl('div');
+                  modal134k.setAttribute('hidden', '');
+                  netDoc3.register(modal134k, 'net-modal');
+                  netDoc3.register(new FakeEl('div'), 'net-modal-box');
+                  netDoc3.register(new FakeEl('span'), 'net-router-name');
+                  netDoc3.register(new FakeEl('span'), 'net-router-ssid');
+                  var netinfo134k = new FakeEl('div');
+                  netDoc3.register(netinfo134k, 'net-netinfo');
+                  netDoc3.register(new FakeEl('button'), 'net-add-btn');
+                  netDoc3.register(new FakeEl('select'), 'net-add-type');
+                  netDoc3.register(new FakeEl('input'), 'net-add-name');
+                  netMod.attach(netDoc3);
+                  var groups134k = svg134k.children.filter(function (c) { return c.tagName === 'G'; });
+                  ok(groups134k.length === 1 && missions134k.children.length === 8
+                    && String(netinfo134k.textContent).indexOf('0 Geräte im Netz') !== -1,
+                    'T134l attach() mit kaputtem data-net zeichnet Router und Missionen statt grauer Bühne (#233)');
                   global.document = netSavedDoc;
                   global.window = netSavedWindow;
 
