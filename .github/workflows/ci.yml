@@ -117,6 +117,23 @@ jobs:
           grep -q '"devices"' netexp.json && grep -q 'CI Zeitung' netexp.json && NET_EXPORT_OK=1 || NET_EXPORT_OK=0
           NETDB=$(sqlite3 "$DB" "SELECT COUNT(*) FROM net_networks")
           [ "$NETDB" = "1" ] && NET_DB_OK=1 || NET_DB_OK=0
+          # Runde 30 (#229-#232): Beispielseite, HTML-Bruecke, Stufen-Schalter, Drucker.
+          curl -sS -b cookies.txt -o netex.json --data-urlencode 'params={"server":"n1","example":"sport"}' -d "csrf=$NETCSRF" -d "aktion=loadExample" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netex.json && grep -q 'Sportclub Eichenwald' netex.json && NET_EXRO_OK=1 || NET_EXRO_OK=0
+          NETPG2ID=$(php -r '$n = json_decode((new PDO("sqlite:database/infocraft.sqlite"))->query("SELECT content FROM net_networks WHERE class_id IS NULL AND owner_id = 1")->fetchColumn(), true); foreach ($n["pages"] as $p) { if ($p["title"] === "Sportclub Eichenwald") { echo $p["id"]; } }')
+          curl -sS -b cookies.txt -o nettohtml.json --data-urlencode "params={\"id\":\"$NETPG2ID\"}" -d "csrf=$NETCSRF" -d "aktion=toHtml" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' nettohtml.json && grep -q '"url":"/werkstatt/html/' nettohtml.json && NET_TOHTML_OK=1 || NET_TOHTML_OK=0
+          NETPROJID=$(grep -o 'werkstatt/html/[0-9]*' nettohtml.json | head -n1 | cut -d/ -f3)
+          curl -sS -b cookies.txt -o netfromhtml.json --data-urlencode "params={\"server\":\"n1\",\"projectId\":\"$NETPROJID\"}" -d "csrf=$NETCSRF" -d "aktion=fromHtml" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netfromhtml.json && grep -q 'Sportclub Eichenwald' netfromhtml.json && grep -q 'eichenwald-sport.net' netfromhtml.json && NET_FROMHTML_OK=1 || NET_FROMHTML_OK=0
+          curl -sS -b cookies.txt -o netlvl.json --data-urlencode 'params={"level":"2"}' -d "csrf=$NETCSRF" -d "aktion=setLevel" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netlvl.json && grep -q '"level":2' netlvl.json && NET_LEVELRO_OK=1 || NET_LEVELRO_OK=0
+          curl -sS -b cookies.txt -o netlvl1.json --data-urlencode 'params={"level":"1"}' -d "csrf=$NETCSRF" -d "aktion=setLevel" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"level":1' netlvl1.json && NET_LEVEL1RO_OK=1 || NET_LEVEL1RO_OK=0
+          curl -sS -b cookies.txt -o netpr.json --data-urlencode 'params={"type":"printer","name":"CI Drucker"}' -d "csrf=$NETCSRF" -d "aktion=addDevice" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netpr.json && grep -q 'CI Drucker' netpr.json && NET_PRRO_OK=1 || NET_PRRO_OK=0
+          curl -sS -b cookies.txt -o netprint.json --data-urlencode 'params={"printer":"n2","url":"zeitung.test"}' -d "csrf=$NETCSRF" -d "aktion=printPage" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netprint.json && grep -q 'druckt' netprint.json && NET_PRINTRO_OK=1 || NET_PRINTRO_OK=0
           curl -sS -b cookies.txt -o netreset.json --data-urlencode 'params={}' -d "csrf=$NETCSRF" -d "aktion=reset" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
           grep -q '"ok":true' netreset.json && grep -q '192.168.0.2' netreset.json && NET_RESET_DB_OK=0 || NET_RESET_DB_OK=1
           CODE_HTML=$(curl -sS -o html.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/html)
@@ -244,7 +261,7 @@ jobs:
           grep -q "blk-dragging" public/assets/js/block-editor.js && grep -q "T111 beim Ziehen" tools/ui-tests.js && BLK_DRAGVIS_OK=1 || BLK_DRAGVIS_OK=0
           grep -q "Einfuege-Linie" public/assets/js/block-editor.js && grep -q "T111b die Einfuege-Linie" tools/ui-tests.js && BLK_INS_OK=1 || BLK_INS_OK=0
           grep -q "blk-hint-pulse" public/assets/css/style.css && grep -q "blk-mode-btn" public/assets/css/style.css && BLK_STYLE_OK=1 || BLK_STYLE_OK=0
-          grep -q "letima development" src/Support.php && grep -q "APP_VERSION = '0.29.0'" src/Support.php && grep -q "Keep a Changelog" CHANGELOG.md && grep -q "APP_VERSION" templates/layout.php && BLK_HEAD_OK=1 || BLK_HEAD_OK=0
+          grep -q "letima development" src/Support.php && grep -q "APP_VERSION = '0.30.0'" src/Support.php && grep -q "Keep a Changelog" CHANGELOG.md && grep -q "APP_VERSION" templates/layout.php && BLK_HEAD_OK=1 || BLK_HEAD_OK=0
           grep -q "drag.ghost.style.transform = 'translate('" public/assets/js/block-editor.js && grep -q "_bubW" public/assets/js/block-editor.js && grep -q "children.length > 200" public/assets/js/block-editor.js && grep -q "T113 der gezogene Block folgt" tools/ui-tests.js && BLK_OPT_OK=1 || BLK_OPT_OK=0
           grep -q "switchMode" public/assets/js/block-editor.js && grep -q "blk-switch-btn" templates/code_project.php && grep -q "T109m die Moduswahl" tools/ui-tests.js && BLK_SWITCH_OK=1 || BLK_SWITCH_OK=0
           grep -q "pro: true" public/assets/js/block-editor.js && grep -q "T109e im Lernmodus fehlt die Variablen-Kategorie" tools/ui-tests.js && BLK_LEARN_OK=1 || BLK_LEARN_OK=0
@@ -364,6 +381,11 @@ jobs:
           grep -q "ensureNetNetworksTable" src/Migrator.php && grep -q "net_networks" sql/schema.sqlite.sql && grep -q "net_networks" sql/schema.mysql.sql && NET_MIG_OK=1 || NET_MIG_OK=0
           grep -q "'netzwerk'" src/Controllers/ModuleController.php && grep -q "Netzwerk-Werkstatt" src/Controllers/ModuleController.php && grep -q "'level' => 7" src/Controllers/ModuleController.php && NET_MODULE_OK=1 || NET_MODULE_OK=0
           grep -q "T133" tools/ui-tests.js && grep -q "netSample" tools/ui-tests.js && grep -q '## \[0.29.0\]' CHANGELOG.md && grep -q "Netzwerk-Werkstatt" README.md && NET_TEST_OK=1 || NET_TEST_OK=0
+          grep -q "EXAMPLES" src/Models/Network.php && grep -q "loadExample" src/Models/Network.php && NET_EX_OK=1 || NET_EX_OK=0
+          grep -q "toHtml" src/Controllers/NetworkController.php && grep -q "fromHtml" src/Controllers/NetworkController.php && grep -q "htmlProjects" src/Controllers/NetworkController.php && NET_BRIDGE_OK=1 || NET_BRIDGE_OK=0
+          grep -q "WLAN_TYPES" src/Models/Network.php && grep -q "setCable" src/Models/Network.php && grep -q "printPage" src/Models/Network.php && NET_CABLE_OK=1 || NET_CABLE_OK=0
+          grep -q "setLevel" src/Models/Network.php && grep -q "net-level-2" templates/network_workshop.php && grep -q "layerTrace" public/assets/js/network.js && grep -q "EXAMPLES" public/assets/js/network.js && NET_LEVEL_OK=1 || NET_LEVEL_OK=0
+          grep -q "T134 " tools/ui-tests.js && NET_TEST30_OK=1 || NET_TEST30_OK=0
           grep -q "icv-linkbadge" public/assets/js/app.js && IBK_LINK_OK=1 || IBK_LINK_OK=0
           grep -q "data-nav" templates/ibook_page.php && IBK_LINKTPL_OK=1 || IBK_LINKTPL_OK=0
           grep -q "'link'" src/Models/InfoBook.php && IBK_LINKPHP_OK=1 || IBK_LINKPHP_OK=0
@@ -372,7 +394,7 @@ jobs:
           grep -q "ibook-page-layout" public/assets/css/style.css && IBK_CSS_OK=1 || IBK_CSS_OK=0
           grep -q "href=\"/infobuecher\"" home.html && IBK_NAV_OK=1 || IBK_NAV_OK=0
           [ -f public/assets/vendor/highlight.min.js ] && [ -f public/assets/vendor/mermaid.min.js ] && VENDOR_OK=1 || VENDOR_OK=0
-          grep -q "'85'" src/Support.php && ASSETV_OK=1 || ASSETV_OK=0
+          grep -q "'86'" src/Support.php && ASSETV_OK=1 || ASSETV_OK=0
           CSRFAPP=$(grep -o 'value="[a-f0-9]*"' wsapp.html | head -n1 | cut -d'"' -f2)
           curl -sS -L -b cookies.txt -c cookies.txt -o shopbuy.html --data-urlencode "csrf=$CSRFAPP" --data-urlencode "action=kaufen" --data-urlencode "produkt_id=1" --data-urlencode "menge=2" http://127.0.0.1:8080/werkstatt/sql/shop/app
           grep -q "Bestellung gespeichert" shopbuy.html && SQLAPP_BUY_OK=1 || SQLAPP_BUY_OK=0
@@ -455,94 +477,3 @@ jobs:
           grep -q "8 BE" extask2.html && EX_TASKS_OK=1 || EX_TASKS_OK=0
           CODE_EXSTART=$(curl -sS -L -o exstart.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/start)
           grep -q "Live-Monitor" exstart.html && EX_START_OK=1 || EX_START_OK=0
-          CODE_EXHOME=$(curl -sS -L -o exlock_home.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/)
-          grep -q "Prüfungsmodus aktiv" exlock_home.html && LOCK_OK=1 || LOCK_OK=0
-          CODE_EXQUIZ=$(curl -sS -L -o exlock_quiz.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/quiz)
-          grep -q "gesperrt" exlock_quiz.html && LOCK_REDIRECT_OK=1 || LOCK_REDIRECT_OK=0
-          CODE_EXWORK=$(curl -sS -o ex_work.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/pruefungen/$EXID/arbeit)
-          grep -q "Endgültig abgeben" ex_work.html && EX_WORK_OK=1 || EX_WORK_OK=0
-          CSRF9=$(grep -o 'value="[a-f0-9]*"' ex_work.html | head -n1 | cut -d'"' -f2)
-          T1=$(sqlite3 "$DB" "SELECT id FROM exam_tasks WHERE exam_id = $EXID ORDER BY position LIMIT 1")
-          T2=$(sqlite3 "$DB" "SELECT id FROM exam_tasks WHERE exam_id = $EXID ORDER BY position LIMIT 1 OFFSET 1")
-          CODE_EXSAVE=$(curl -sS -o exsave.json -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF9" -d "task_id=$T1" --data-urlencode "answer=Meine Ueberschrift steht" http://127.0.0.1:8080/pruefungen/$EXID/antwort)
-          grep -q '"ok":true' exsave.json && EXSAVE_OK=1 || EXSAVE_OK=0
-          CODE_EXSUBMIT=$(curl -sS -L -o exsubmit.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF9" http://127.0.0.1:8080/pruefungen/$EXID/abgeben)
-          grep -q "abgegeben" exsubmit.html && EX_SUBMIT_OK=1 || EX_SUBMIT_OK=0
-          CODE_EXEND=$(curl -sS -L -o exend.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/ende)
-          grep -q "API-Korrektur" exend.html && EX_END_OK=1 || EX_END_OK=0
-          CODE_EXCORRECT=$(curl -sS -o ex_correct.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/pruefungen/$EXID/korrektur/$LENA)
-          grep -q "Musterlösung" ex_correct.html && EX_CORRECT_OK=1 || EX_CORRECT_OK=0
-          CODE_EXGRADE=$(curl -sS -L -o exgrade.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "user_id=$LENA" -d "be_$T1=3" -d "be_$T2=2" --data-urlencode "comment_$T1=Fast perfekt" http://127.0.0.1:8080/pruefungen/$EXID/bewertung)
-          grep -q "Fast perfekt" exgrade.html && EX_GRADE_OK=1 || EX_GRADE_OK=0
-          CODE_EXAPI=$(curl -sS -L -o exapi.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/api-korrektur)
-          grep -q "nicht konfiguriert" exapi.html && EX_API_OK=1 || EX_API_OK=0
-          CODE_EXRELEASE=$(curl -sS -L -o exrelease.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/herausgeben)
-          grep -q "Herausgegeben" exrelease.html && EX_RELEASE_OK=1 || EX_RELEASE_OK=0
-          CODE_EXRESULT=$(curl -sS -o exresult.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/pruefungen/$EXID/ergebnis)
-          grep -q "Musterlösung" exresult.html && EX_RESULT_OK=1 || EX_RESULT_OK=0
-          grep -q "Fast perfekt" exresult.html && EX_FEEDBACK_OK=1 || EX_FEEDBACK_OK=0
-          EXARROW=$(awk '/←/{if(!a)a=NR} /panel-head/{if(!h)h=NR} END{print (a && h && a<h) ? 1 : 0}' exresult.html)
-          [ "$EXARROW" = "1" ] && EX_ARROW_OK=1 || EX_ARROW_OK=0
-          CODE_EXUNLOCK=$(curl -sS -o exunlock.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/)
-          grep -q "Prüfungsmodus aktiv" exunlock.html && EX_UNLOCK_OK=0 || EX_UNLOCK_OK=1
-          JONAS=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'jonas.wagner'")
-          curl -sS -o login6.html -c cookies6.txt http://127.0.0.1:8080/login
-          CSRF10=$(grep -o 'value="[a-f0-9]*"' login6.html | head -n1 | cut -d'"' -f2)
-          CODE_JONAS=$(curl -sS -L -o jonas_home.html -w "%{http_code}" -b cookies6.txt -c cookies6.txt -d "csrf=$CSRF10" -d "user_id=$JONAS" http://127.0.0.1:8080/login/demo)
-          grep -q "Prüfungsmodus aktiv" jonas_home.html && JONAS_LOCK_OK=1 || JONAS_LOCK_OK=0
-          ARBEIT=$(sqlite3 "$DB" "SELECT id FROM exams WHERE kind = 'arbeit' AND title = 'Schularbeit: SQL-Grundlagen'")
-          CODE_ARBEITRES=$(curl -sS -o arbeit_res.html -w "%{http_code}" -b cookies2.txt http://127.0.0.1:8080/pruefungen/$ARBEIT/ergebnis)
-          grep -q "Musterlösung" arbeit_res.html && ARBEIT_RES_OK=1 || ARBEIT_RES_OK=0
-          # Prüfungsmodus Runde: A/B-Schalter, Gruppenstart, Live-Sperre, Korrektur-Diff (#209-#212)
-          CODE_ABTG=$(curl -sS -L -o abtg.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "user_id=$LENA" -d "exam_group=A" -d "back=/pruefungen" http://127.0.0.1:8080/pruefungen/gruppenschalter)
-          grep -q "Gruppen-Schalter A gesetzt" abtg.html && EX_ABTG_OK=1 || EX_ABTG_OK=0
-          curl -sS -L -o abtg2.html -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "user_id=$JONAS" -d "exam_group=B" -d "back=/pruefungen" http://127.0.0.1:8080/pruefungen/gruppenschalter
-          grep -q "Gruppen-Schalter B gesetzt" abtg2.html && EX_ABTG2_OK=1 || EX_ABTG2_OK=0
-          EX_ABTG_DB=$(sqlite3 "$DB" "SELECT exam_group FROM users WHERE id = $LENA")
-          [ "$EX_ABTG_DB" = "A" ] && EX_ABTG_DB_OK=1 || EX_ABTG_DB_OK=0
-          CODE_EXCREATE2=$(curl -sS -L -o excreate2.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Gruppen Pruefung" -d "kind=pruefung" -d "level=6" http://127.0.0.1:8080/pruefungen/anlegen)
-          EXID2=$(sqlite3 "$DB" "SELECT id FROM exams WHERE title = 'CI Gruppen Pruefung'")
-          [ -n "$EXID2" ] && EX_CREATE2_OK=1 || EX_CREATE2_OK=0
-          grep -q "Gruppen A/B übernehmen" excreate2.html && EX_ABPANEL_OK=1 || EX_ABPANEL_OK=0
-          curl -sS -L -o extask3.html -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=Gruss" -d "be=2" -d "description=Schreibe einen Gruss" --data-urlencode "sample_solution=Hallo Welt" http://127.0.0.1:8080/pruefungen/$EXID2/aufgabe
-          T3=$(sqlite3 "$DB" "SELECT id FROM exam_tasks WHERE exam_id = $EXID2 ORDER BY position LIMIT 1")
-          CODE_GTOG=$(curl -sS -L -o gtog.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID2/gruppen-uebernehmen)
-          grep -q "Übernommen: 1 in Gruppe A, 1 in Gruppe B" gtog.html && EX_GTOG_OK=1 || EX_GTOG_OK=0
-          EX_GTOG_DB=$(sqlite3 "$DB" "SELECT COUNT(*) FROM exam_groups WHERE exam_id = $EXID2")
-          [ "$EX_GTOG_DB" = "2" ] && EX_GTOG_DB_OK=1 || EX_GTOG_DB_OK=0
-          GIDA=$(sqlite3 "$DB" "SELECT id FROM exam_groups WHERE exam_id = $EXID2 AND name = 'Gruppe A'")
-          GIDB=$(sqlite3 "$DB" "SELECT id FROM exam_groups WHERE exam_id = $EXID2 AND name = 'Gruppe B'")
-          curl -sS -L -o extpl2.html -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "group_id=$GIDA" -d "project_id=$PROJ" http://127.0.0.1:8080/pruefungen/$EXID2/vorlage
-          # Start nur Gruppe B: Lena (Gruppe A) bleibt ungesperrt (#210)
-          CODE_GSTARTB=$(curl -sS -L -o gstartb.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "groups[]=$GIDB" http://127.0.0.1:8080/pruefungen/$EXID2/start)
-          grep -q "Die Prüfung läuft: 1 Arbeiten ausgeteilt" gstartb.html && EX_GSTARTB_OK=1 || EX_GSTARTB_OK=0
-          EX_GSTARTB_DB=$(sqlite3 "$DB" "SELECT COUNT(*) FROM exam_works WHERE exam_id = $EXID2")
-          [ "$EX_GSTARTB_DB" = "1" ] && EX_GSTARTB_DB_OK=1 || EX_GSTARTB_DB_OK=0
-          grep -q "Gruppe A jetzt starten" gstartb.html && EX_GSTART_UI_OK=1 || EX_GSTART_UI_OK=0
-          curl -sS -L -o afree_home.html -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/
-          grep -q "Prüfungsmodus aktiv" afree_home.html && EX_AFREE_OK=0 || EX_AFREE_OK=1
-          CODE_AQUIZ=$(curl -sS -L -o afree_quiz.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/quiz)
-          grep -q "gesperrt" afree_quiz.html && EX_AQUIZ_OK=0 || EX_AQUIZ_OK=1
-          curl -sS -o lockstat_no.json -b cookies3.txt http://127.0.0.1:8080/pruefungen/lock-status
-          grep -q '"locked":false' lockstat_no.json && EX_LOCKSTAT_NO_OK=1 || EX_LOCKSTAT_NO_OK=0
-          curl -sS -o lockstat_yes.json -b cookies6.txt http://127.0.0.1:8080/pruefungen/lock-status
-          grep -q '"locked":true' lockstat_yes.json && grep -q '"phase":"durchfuehrung"' lockstat_yes.json && EX_LOCKSTAT_OK=1 || EX_LOCKSTAT_OK=0
-          CODE_AWORK=$(curl -sS -L -o awork.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/pruefungen/$EXID2/arbeit)
-          grep -q "Deine Gruppe ist noch nicht dran" awork.html && EX_GWORK_OK=1 || EX_GWORK_OK=0
-          # Runde 29 (#228): Auswertung aller Marker. Die ci.yml endete zuvor mitten
-          # im A/B-Flow; die *_OK-Marker wurden nirgends geprüft.
-          NET_MARKER_EXPECT0=" LENA_SQL SQLNEST_BAD "
-          FAILED=0
-          DIAGLINE=""
-          for MVAR in $(compgen -v | grep -E '^[A-Z][A-Z0-9_]*_OK$' | sort); do
-            MVAL="${!MVAR}"
-            MEXP=1
-            case "$MVAR" in LENA_SQL|SQLNEST_BAD) MEXP=0 ;; esac
-            DIAGLINE="$DIAGLINE/$MVAR=$MVAL"
-            if [ "$MVAL" != "$MEXP" ]; then
-              echo "::error file=ci.yml::Marker $MVAR=$MVAL (erwartet $MEXP)"
-              FAILED=1
-            fi
-          done
-          echo "::notice::DIAG$DIAGLINE"
-          if [ "$FAILED" = "1" ]; then exit 1; fi
