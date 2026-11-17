@@ -386,6 +386,7 @@ jobs:
           grep -q "WLAN_TYPES" src/Models/Network.php && grep -q "setCable" src/Models/Network.php && grep -q "printPage" src/Models/Network.php && NET_CABLE_OK=1 || NET_CABLE_OK=0
           grep -q "setLevel" src/Models/Network.php && grep -q "net-level-2" templates/network_workshop.php && grep -q "layerTrace" public/assets/js/network.js && grep -q "EXAMPLES" public/assets/js/network.js && NET_LEVEL_OK=1 || NET_LEVEL_OK=0
           grep -q "T134 " tools/ui-tests.js && NET_TEST30_OK=1 || NET_TEST30_OK=0
+          grep -q "attach(window.document)" public/assets/js/network.js && NET_BOOT_OK=1 || NET_BOOT_OK=0
           grep -q "icv-linkbadge" public/assets/js/app.js && IBK_LINK_OK=1 || IBK_LINK_OK=0
           grep -q "data-nav" templates/ibook_page.php && IBK_LINKTPL_OK=1 || IBK_LINKTPL_OK=0
           grep -q "'link'" src/Models/InfoBook.php && IBK_LINKPHP_OK=1 || IBK_LINKPHP_OK=0
