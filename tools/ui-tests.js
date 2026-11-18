@@ -4467,13 +4467,13 @@ setTimeout(function () {
                     'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
-                  ok(support130.indexOf("APP_VERSION = '0.37.0'") !== -1
-                    && support130.indexOf("ASSET_VERSION = '91'") !== -1
+                  ok(support130.indexOf("APP_VERSION = '0.38.0'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '92'") !== -1
                     && changelog130.indexOf('## [0.33.0]') !== -1
                     && changelog130.indexOf('## [0.31.0]') !== -1
                     && changelog130.indexOf('## [0.30.0]') !== -1
                     && changelog130.indexOf('## [0.36.0]') !== -1,
-                    'T130r Version 0.37.0 mit Asset-Stand 91 und Changelog-Eintrag (Historie bleibt)');
+                    'T130r Version 0.38.0 mit Asset-Stand 92 und Changelog-Eintrag (Historie bleibt)');
                   ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
                     && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
                     && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
@@ -5005,11 +5005,11 @@ setTimeout(function () {
                     && htmlCtrl135.indexOf("redirect('/werkstatt/netzwerk')") !== -1
                     && htmlTpl135.indexOf('Zur Netzwerk-Werkstatt') !== -1,
                     'T135j Rueckweg aus dem HTML-Editor: Knopf im Editor, Redirect nach dem Speichern (#239)');
-                  ok(sup135.indexOf("APP_VERSION = '0.37.0'") !== -1
+                  ok(sup135.indexOf("APP_VERSION = '0.38.0'") !== -1
                     && changelog135.indexOf('## [0.33.0]') !== -1
                     && changelog135.indexOf('—') === -1
                     && changelog135.indexOf('## [0.31.0]') !== -1,
-                    'T135k Version 0.37.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
+                    'T135k Version 0.38.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
 
                   /* T136 (#241): helle Desktop-Optik im Stylesheet:
                    * Design-Sektion, Milchglas, Pill-Knoepfe, Fokus-Ring. */
@@ -5048,7 +5048,7 @@ setTimeout(function () {
                     && sup135.indexOf("'html' => 'ic-embed2'") !== -1
                     && sup135.indexOf("'netzwerk' => 'ic-earth'") !== -1
                     && sup135.indexOf("'infobuecher' => 'ic-book'") !== -1
-                    && sup135.indexOf("ASSET_VERSION = '91'") !== -1,
+                    && sup135.indexOf("ASSET_VERSION = '92'") !== -1,
                     'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 91');
 
 
@@ -5250,6 +5250,43 @@ setTimeout(function () {
                     && netCss138.indexOf('.net-pagerow { flex-wrap: wrap; }') !== -1
                     && netCss138.indexOf('.net-log-line, .net-msg-row, .net-mission-tip { word-break: break-word; overflow-wrap: anywhere; }') !== -1,
                     'T138o browse/printPage bauen das Modal nicht neu, Overflow gebändigt');
+
+                  /* T138p (Runde 38): Performance, Kostuem-Icons, Refactoring, Seeds. */
+                  var netJs138b = fs136.readFileSync(require.resolve('../public/assets/js/block-editor.js'), 'utf8');
+                  var migrator138 = fs136.readFileSync(require.resolve('../src/Migrator.php'), 'utf8');
+                  var dist138 = fs136.readFileSync(require.resolve('../src/Distribution.php'), 'utf8');
+                  var auth138 = fs136.readFileSync(require.resolve('../src/Controllers/AuthController.php'), 'utf8');
+                  var taskStu138 = fs136.readFileSync(require.resolve('../templates/tasks_student.php'), 'utf8');
+                  var presEdit138 = fs136.readFileSync(require.resolve('../templates/praesentation_edit.php'), 'utf8');
+                  ok(netJs138.indexOf('stageSig') !== -1
+                    && netJs138.indexOf('if (sig !== stageSig)') !== -1,
+                    'T138p1 Netzwerk-Buehne zeichnet nur bei Topologie-Aenderung neu (#258)');
+                  ok(netJs138b.indexOf('drawCostumeIcon') !== -1
+                    && netJs138b.indexOf('COSTUME_ICON') !== -1
+                    && netCss138.indexOf('.ic-robot') !== -1
+                    && netCss138.indexOf('.ic-fish') !== -1
+                    && netCss138.indexOf('.ic-ball') !== -1,
+                    'T138p2 Block-Buehne zeichnet Kostueme als Vektor-Icons statt Emoji (#260)');
+                  ok(dist138.indexOf('function targets') !== -1
+                    && dist138.indexOf('class LevelFilter') !== -1
+                    && modCtrl138.indexOf('LevelFilter::allows') !== -1,
+                    'T138p3 Verteil-Logik und Stufen-Filter zentral in Distribution.php (#263)');
+                  ok(auth138.indexOf('csrf_validate') !== -1
+                    && auth138.indexOf('logout') !== -1,
+                    'T138p4 Logout prueft den CSRF-Token (#259)');
+                  ok(taskStu138.indexOf('Zum Quiz') !== -1
+                    && taskStu138.indexOf('Zu den Werkstätten') !== -1,
+                    'T138p5 Aufgaben verlinken direkt auf Quiz und Werkstatt-Uebersicht (#262)');
+                  ok(presEdit138.indexOf('ohne Sprechernotiz') !== -1,
+                    'T138p6 Editor markiert Folien ohne Sprechernotiz (#257)');
+                  ok(migrator138.indexOf('schichten-mac-ports') !== -1
+                    && migrator138.indexOf('informationssicherheit') !== -1
+                    && migrator138.indexOf('rekursion-graphen') !== -1
+                    && migrator138.indexOf('formale-sprachen') !== -1
+                    && migrator138.indexOf('betriebssysteme') !== -1
+                    && migrator138.indexOf('maschinelles-lernen') !== -1
+                    && migrator138.indexOf('softwareentwicklung') !== -1,
+                    'T138p7 Lehrplan-Decks: Schichten/MAC/Ports (Jgst 7), Informationssicherheit (Jgst 10), Rekursion/Graphen, Formale Sprachen, Betriebssysteme, ML, Softwareentwicklung (#246-#255)');
 
 
                   global.document = netSavedDoc;
