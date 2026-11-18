@@ -5,6 +5,14 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.32.0] - 2026-11-18
+
+### Geändert
+- Design-Überarbeitung: helle Desktop-Optik mit Milchglas-Sidebar und Topbar,
+  Pill-Knöpfen, blauen Fokus-Ringen, weichen Schatten und System-Schrift (#241).
+- Neue Icon-Palette als Vektor-Icons (SVG-Masken) für Navigation, Topbar und
+  Startkarten; Modul-Icons zentral über `ic_module_icon()` (#242).
+
 ## [0.31.0] - 2026-11-17
 
 ### Werkstatt-Seiten entrümpelt und Netzwerk-Werkstatt handlicher (#235 bis #239)

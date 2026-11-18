@@ -54,29 +54,29 @@ $navView = $user !== null ? \Infocraft\Models\UserPref::navView($user->id) : 'fu
 <div class="app">
     <aside class="sidebar" id="sidebar">
         <a class="brand" href="<?= url('/') ?>" title="InfoCraft">
-            <span class="brand-mark">🔨</span>
+            <span class="brand-mark icn ic-hammer" aria-hidden="true"></span>
             <span class="brand-name">Info<strong>Craft</strong></span>
         </a>
         <nav class="nav">
             <?php if ($examLock !== null): ?>
             <div class="nav-sep">Prüfung läuft</div>
-            <a href="<?= url('pruefungen') ?>" class="nav-item active" title="Deine Prüfung"><span class="nav-icon">🔒</span><span class="nav-label">Deine Prüfung</span></a>
+            <a href="<?= url('pruefungen') ?>" class="nav-item active" title="Deine Prüfung"><span class="nav-icon icn ic-lock" aria-hidden="true"></span><span class="nav-label">Deine Prüfung</span></a>
             <?php else: ?>
-            <a href="<?= url('/') ?>" class="nav-item<?= $active === 'home' ? ' active' : '' ?>" title="Start"><span class="nav-icon">🏠</span><span class="nav-label">Start</span></a>
+            <a href="<?= url('/') ?>" class="nav-item<?= $active === 'home' ? ' active' : '' ?>" title="Start"><span class="nav-icon icn ic-home" aria-hidden="true"></span><span class="nav-label">Start</span></a>
             <div class="nav-sep">Werkstatt</div>
             <?php foreach ($navModules as $module): ?>
                 <?php if ($module['slug'] === 'tasks' && $isTeacher) { continue; } ?>
                 <?php $label = $module['slug'] === 'tasks' ? 'Meine Aufgaben' : $module['title']; ?>
-                <a href="<?= url($module['route'] ?? 'modul/' . $module['slug']) ?>" class="nav-item<?= $active === 'module-' . $module['slug'] ? ' active' : '' ?>" title="<?= e($label) ?>"><span class="nav-icon"><?= $module['icon'] ?></span><span class="nav-label"><?= e($label) ?></span></a>
+                <a href="<?= url($module['route'] ?? 'modul/' . $module['slug']) ?>" class="nav-item<?= $active === 'module-' . $module['slug'] ? ' active' : '' ?>" title="<?= e($label) ?>"><span class="nav-icon icn <?= ic_module_icon($module['slug']) ?>" aria-hidden="true"></span><span class="nav-label"><?= e($label) ?></span></a>
             <?php endforeach; ?>
             <?php if ($isTeacher): ?>
             <div class="nav-sep">Verwaltung</div>
-            <a href="<?= url('unterricht/klassen') ?>" class="nav-item<?= $active === 'unterricht' ? ' active' : '' ?>" title="Meine Klassen"><span class="nav-icon">🏫</span><span class="nav-label">Meine Klassen</span></a>
-            <a href="<?= url('aufgaben') ?>" class="nav-item<?= $active === 'tasks' ? ' active' : '' ?>" title="Aufgabenpool"><span class="nav-icon">📝</span><span class="nav-label">Aufgabenpool</span></a>
-            <a href="<?= url('admin/users') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="Nutzer"><span class="nav-icon">👥</span><span class="nav-label">Nutzer</span></a>
+            <a href="<?= url('unterricht/klassen') ?>" class="nav-item<?= $active === 'unterricht' ? ' active' : '' ?>" title="Meine Klassen"><span class="nav-icon icn ic-podium" aria-hidden="true"></span><span class="nav-label">Meine Klassen</span></a>
+            <a href="<?= url('aufgaben') ?>" class="nav-item<?= $active === 'tasks' ? ' active' : '' ?>" title="Aufgabenpool"><span class="nav-icon icn ic-pencil2" aria-hidden="true"></span><span class="nav-label">Aufgabenpool</span></a>
+            <a href="<?= url('admin/users') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="Nutzer"><span class="nav-icon icn ic-users" aria-hidden="true"></span><span class="nav-label">Nutzer</span></a>
             <?php if ($isAdmin): ?>
-            <a href="<?= url('admin/import') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="CSV-Import (nur Administration)"><span class="nav-icon">📥</span><span class="nav-label">CSV-Import</span></a>
-            <a href="<?= url('admin/einstellungen') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="Admin-Einstellungen (Standard-Programmiersprache)"><span class="nav-icon">⚙️</span><span class="nav-label">Einstellungen</span></a>
+            <a href="<?= url('admin/import') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="CSV-Import (nur Administration)"><span class="nav-icon icn ic-download2" aria-hidden="true"></span><span class="nav-label">CSV-Import</span></a>
+            <a href="<?= url('admin/einstellungen') ?>" class="nav-item<?= $active === 'admin' ? ' active' : '' ?>" title="Admin-Einstellungen (Standard-Programmiersprache)"><span class="nav-icon icn ic-cog" aria-hidden="true"></span><span class="nav-label">Einstellungen</span></a>
             <?php endif; ?>
             <?php endif; ?>
             <?php endif; ?>
@@ -86,25 +86,25 @@ $navView = $user !== null ? \Infocraft\Models\UserPref::navView($user->id) : 'fu
     <div class="main">
         <header class="topbar">
             <div class="topbar-left">
-                <button id="sidebar-toggle" class="icon-btn" type="button" title="Navigation: Beschriftung ein/aus" aria-label="Navigation umschalten">☰</button>
+                <button id="sidebar-toggle" class="icon-btn" type="button" title="Navigation: Beschriftung ein/aus" aria-label="Navigation umschalten"><span class="icn ic-menu" aria-hidden="true"></span></button>
                 <h1 class="topbar-title"<?php if (isset($hint) && $hint !== ''): ?> title="<?= e($hint) ?>"<?php endif; ?>><?= e($title) ?></h1>
             </div>
             <div class="topbar-actions">
                 <?php if ($examLock === null && $isTeacher): ?>
-                <button id="present-toggle" class="btn btn-ghost" type="button" title="Präsentieren" aria-label="Präsentieren">🖥️</button>
+                <button id="present-toggle" class="btn btn-ghost" type="button" title="Präsentieren" aria-label="Präsentieren"><span class="icn ic-presentation" aria-hidden="true"></span></button>
                 <?php endif; ?>
                 <?php if ($user !== null): ?>
                 <div class="user-chip">
                     <span class="user-name"><?= e($user->fullName()) ?></span>
                     <span class="role role-<?= e($user->role) ?>"><?= e($user->roleLabel()) ?></span>
                 </div>
-                <form method="post" action="<?= url('logout') ?>"><?= csrf_field() ?><button class="btn btn-ghost" type="submit" title="Abmelden">🚪</button></form>
+                <form method="post" action="<?= url('logout') ?>"><?= csrf_field() ?><button class="btn btn-ghost" type="submit" title="Abmelden"><span class="icn ic-exit" aria-hidden="true"></span></button></form>
                 <?php endif; ?>
             </div>
         </header>
         <main class="content">
             <?php if ($examLock !== null): ?>
-            <div class="exam-lock-banner">🔒 <strong>Prüfungsmodus aktiv:</strong> <?= e($examLock['title']) ?>. Alle anderen Bereiche sind gesperrt.</div>
+            <div class="exam-lock-banner"><span class="icn ic-lock" aria-hidden="true"></span> <strong>Prüfungsmodus aktiv:</strong> <?= e($examLock['title']) ?>. Alle anderen Bereiche sind gesperrt.</div>
             <?php endif; ?>
             <?php foreach (flash_all() as $flashMessage): ?>
             <div class="flash flash-<?= e($flashMessage['type']) ?>"><?= e($flashMessage['message']) ?></div>

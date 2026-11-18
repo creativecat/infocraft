@@ -21,7 +21,7 @@
     <?php foreach ($modules as $module): ?>
     <?php $cardTitle = ($user !== null && $user->role === 'student' && $module['slug'] === 'tasks') ? 'Meine Aufgaben' : $module['title']; ?>
     <a class="card" href="<?= url($module['route'] ?? 'modul/' . $module['slug']) ?>">
-        <div class="card-icon"><?= $module['icon'] ?></div>
+        <div class="card-icon"><span class="icn <?= ic_module_icon($module['slug']) ?>" aria-hidden="true"></span></div>
         <h2><?= e($cardTitle) ?></h2>
         <p class="card-desc"><?= e($module['description']) ?></p>
         <div class="card-meta">

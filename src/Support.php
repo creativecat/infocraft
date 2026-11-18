@@ -30,7 +30,7 @@ function url(string $path = ''): string
  * Zeitstempel erhalten (rsync --times, Docker-Layer): Browser laden dann garantiert
  * die neue Datei statt einer alten Version aus dem Cache.
  */
-const ASSET_VERSION = '86';
+const ASSET_VERSION = '87';
 
 /**
  * Programmversion nach Semantic Versioning (#145): MAJOR.MINOR.PATCH.
@@ -38,7 +38,7 @@ const ASSET_VERSION = '86';
  * bleibt fuer inkompatible Umstiege reserviert. Die Entwicklungshistorie
  * steht in CHANGELOG.md im Wurzelverzeichnis.
  */
-const APP_VERSION = '0.31.0';
+const APP_VERSION = '0.32.0';
 
 /**
  * Projekt-Icon (#169): passendes Emoji je Projektart. Frueher stand die
@@ -46,6 +46,28 @@ const APP_VERSION = '0.31.0';
  * Schaltwerk) fielen dabei auf das Python-Icon zurueck. Zentral hier
  * gibt es genau eine Stelle, die alle Arten kennt.
  */
+/**
+ * Icon-Klasse fuer ein Modul (#242): Werkstatt-Slug -> CSS-Klasse des
+ * Vektor-Icon-Systems (.icn .ic-..., IcoMoon-Auswahl, siehe style.css).
+ * Emoji-Icons in der Modulliste bleiben als Datenbestand unberuehrt.
+ */
+function ic_module_icon(string $slug): string
+{
+    return match ($slug) {
+        'html' => 'ic-palette',
+        'sql' => 'ic-database',
+        'netzwerk' => 'ic-earth',
+        'code' => 'ic-terminal',
+        'diagramme' => 'ic-share2',
+        'quiz' => 'ic-clipboard',
+        'pruefung' => 'ic-trophy',
+        'wiki' => 'ic-notebook',
+        'infobuecher' => 'ic-book',
+        'tasks' => 'ic-pencil2',
+        default => 'ic-book',
+    };
+}
+
 function ic_proj_icon(string $type, string $language): string
 {
     if ($type === 'html') {
