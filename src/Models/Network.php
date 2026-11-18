@@ -5,7 +5,7 @@
  *
  * @author  Matthias Glienke, letima development
  * @license CC BY-NC-SA 4.0
- * @version 0.29.0
+ * @version 0.36.0
  */
 declare(strict_types=1);
 
@@ -32,8 +32,13 @@ final class Network
     public const MAX_DEVICE_LOGS = 20; // Webserver-Log je Geraet (#218)
     public const MAX_LOGS = 40;
     public const MAX_HTML = 20000;
+    public const MAX_MESSAGES = 100; // Messenger (#227): Deckel gegen endlose Chats
+    public const MAX_MSG_TEXT = 200;
 
     public const TYPES = ['pc', 'phone', 'printer', 'webserver', 'dns', 'ap'];
+
+    /** Geräte, die beim Provider hängen dürfen (#227 Provider-Netze). */
+    public const WAN_TYPES = ['webserver', 'dns'];
 
     /** Geräte, die per WLAN beitreten können (#231). */
     public const WLAN_TYPES = ['phone', 'printer'];
@@ -73,10 +78,12 @@ final class Network
             'v' => 1,
             'level' => 1,
             'router' => ['name' => 'Router', 'ssid' => '', 'pass' => ''],
+            'provider' => ['name' => 'Schulprovider', 'ip' => '62.153.20.1'],
             'devices' => [],
             'pages' => [],
             'dns' => [],
             'logs' => [],
+            'messages' => [],
         ];
     }
 
@@ -450,6 +457,88 @@ final class Network
                 $net = self::normalize($import);
                 break;
 
+            case 'setZone': // #227: Webserver/DNS zwischen Schulnetz und Provider-Zone umziehen
+                $dev = self::device($net, (string) ($params['id'] ?? ''));
+                if ($dev === null || !in_array($dev['type'], self::WAN_TYPES, true)) {
+                    return $err('Nur Webserver und DNS-Server können zum Provider ziehen.');
+                }
+                $zone = (string) ($params['zone'] ?? 'lan') === 'wan' ? 'wan' : 'lan';
+                foreach ($net['devices'] as $i => $d) {
+                    if ($d['id'] === $dev['id']) {
+                        $net['devices'][$i]['zone'] = $zone;
+                        // Umzug gibt eine passende IP im Zielnetz (LAN 192.168.0.x, WAN 62.153.20.x)
+                        $net['devices'][$i]['ip'] = $zone === 'wan' ? self::nextWanIp($net) : self::nextIp($net);
+                        // Mit umgezogene DNS-Einträge auf die neue IP umschreiben
+                        foreach ($net['dns'] as $di => $entry) {
+                            if ($entry['ip'] === $dev['ip']) {
+                                $net['dns'][$di]['ip'] = $net['devices'][$i]['ip'];
+                            }
+                        }
+                    }
+                }
+                self::log($net, $dev['name'] . ' hängt jetzt ' . ($zone === 'wan'
+                    ? 'beim Provider ' . $net['provider']['name'] . ' (Website-Anbieter)'
+                    : 'wieder im Schulnetz'));
+                break;
+
+            case 'setProvider': // #227: Name des Providers (Lehrkraft)
+                if (!$isTeacher) {
+                    return $err('Nur die Lehrkraft benennt den Provider um.');
+                }
+                $net['provider']['name'] = self::cleanText((string) ($params['name'] ?? 'Schulprovider'), 40);
+                break;
+
+            case 'sendMessage': // #227: Messenger zwischen Geräten
+                $from = self::device($net, (string) ($params['from'] ?? ''));
+                $to = self::device($net, (string) ($params['to'] ?? ''));
+                if ($from === null || $to === null || $from['id'] === $to['id']) {
+                    return $err('Sender und Empfänger müssen zwei verschiedene Geräte sein.');
+                }
+                if (!in_array($from['type'], ['pc', 'phone'], true) || !in_array($to['type'], ['pc', 'phone'], true)) {
+                    return $err('Messenger läuft auf Computern und Smartphones.');
+                }
+                if (($from['cable'] ?? true) !== true && $from['wifi'] !== true) {
+                    return $err($from['name'] . ' ist offline und kann nicht senden.');
+                }
+                if (($to['cable'] ?? true) !== true && $to['wifi'] !== true) {
+                    return $err($to['name'] . ' ist offline und kann keine Nachrichten empfangen.');
+                }
+                $text = self::cleanText((string) ($params['text'] ?? ''), self::MAX_MSG_TEXT);
+                if ($text === '') {
+                    return $err('Die Nachricht ist leer.');
+                }
+                $net['messages'][] = self::messageRow($net, $from['id'], $from['name'], $to['id'], $to['name'], $text, false, '');
+                self::log($net, $from['name'] . ' schickt eine Nachricht an ' . $to['name']);
+                break;
+
+            case 'spoofMessage': // #227: Phishing-Demo (Lehrkraft täuscht die Absender-Identität)
+                if (!$isTeacher) {
+                    return $err('Nur die Lehrkraft darf für die Phishing-Demo eine Identität täuschen.');
+                }
+                $victim = self::device($net, (string) ($params['from'] ?? ''));
+                $to = self::device($net, (string) ($params['to'] ?? ''));
+                if ($victim === null || $to === null || $victim['id'] === $to['id']) {
+                    return $err('Täuschung braucht zwei verschiedene Geräte.');
+                }
+                if (!in_array($victim['type'], ['pc', 'phone'], true) || !in_array($to['type'], ['pc', 'phone'], true)) {
+                    return $err('Messenger läuft auf Computern und Smartphones.');
+                }
+                $text = self::cleanText((string) ($params['text'] ?? ''), self::MAX_MSG_TEXT);
+                if ($text === '') {
+                    return $err('Die Nachricht ist leer.');
+                }
+                $net['messages'][] = self::messageRow($net, $victim['id'], $victim['name'], $to['id'], $to['name'], $text, true, 'Lehrkraft');
+                self::log($net, 'PHISHING-DEMO: Nachricht angeblich von ' . $victim['name'] . ' an ' . $to['name']);
+                break;
+
+            case 'deleteMessage': // #227: Lehrkraft kann Phishing-Nachrichten zurückziehen
+                if (!$isTeacher) {
+                    return $err('Nur die Lehrkraft entfernt Nachrichten.');
+                }
+                $net['messages'] = array_values(array_filter($net['messages'],
+                    static fn (array $m): bool => $m['id'] !== (string) ($params['id'] ?? '')));
+                break;
+
             default:
                 return $err('Unbekannte Aktion.');
         }
@@ -467,10 +556,35 @@ final class Network
         $net = array_merge(self::empty(), $net);
         $net['level'] = (int) ($net['level'] ?? 1) === 2 ? 2 : 1;
         $net['router'] = array_merge(self::empty()['router'], is_array($net['router'] ?? null) ? $net['router'] : []);
+        // Provider-Knoten (#227): Cloud zwischen Schul-Router und Website-Anbietern
+        $net['provider'] = array_merge(self::empty()['provider'], is_array($net['provider'] ?? null) ? $net['provider'] : []);
+        $net['provider']['name'] = self::cleanText((string) ($net['provider']['name'] ?? 'Schulprovider'), 40);
         $net['devices'] = array_slice(array_values(array_filter($net['devices'], 'is_array')), 0, self::MAX_DEVICES);
         $net['pages'] = array_slice(array_values(array_filter($net['pages'], 'is_array')), 0, self::MAX_PAGES);
         $net['dns'] = array_slice(array_values(array_filter($net['dns'], 'is_array')), 0, self::MAX_DNS);
         $net['logs'] = array_slice(array_values(array_filter($net['logs'], 'is_array')), -self::MAX_LOGS);
+        // Messenger (#227): Nachrichten zwischen Geräten, Lehrkraft kann für
+        // Phishing-Szenarien Absender täuschen (spoof = true, realFrom bleibt wahr).
+        $msgs = [];
+        if (is_array($net['messages'] ?? null)) {
+            foreach ($net['messages'] as $m) {
+                if (!is_array($m)) {
+                    continue;
+                }
+                $msgs[] = [
+                    'id' => (string) ($m['id'] ?? ''),
+                    'from' => (string) ($m['from'] ?? ''),
+                    'fromName' => self::cleanText((string) ($m['fromName'] ?? 'Gerät'), 40),
+                    'to' => (string) ($m['to'] ?? ''),
+                    'toName' => self::cleanText((string) ($m['toName'] ?? 'Gerät'), 40),
+                    'text' => self::cleanText((string) ($m['text'] ?? ''), self::MAX_MSG_TEXT),
+                    't' => self::cleanText((string) ($m['t'] ?? ''), 12),
+                    'spoof' => ($m['spoof'] ?? false) === true,
+                    'realFrom' => self::cleanText((string) ($m['realFrom'] ?? ''), 40),
+                ];
+            }
+        }
+        $net['messages'] = array_slice($msgs, -self::MAX_MESSAGES);
         foreach ($net['devices'] as $i => $d) {
             $net['devices'][$i]['id'] = (string) ($d['id'] ?? self::nextId($net['devices']));
             $net['devices'][$i]['type'] = in_array($d['type'] ?? '', self::TYPES, true) ? $d['type'] : 'pc';
@@ -512,6 +626,10 @@ final class Network
             if ($net['devices'][$i]['type'] === 'ap') {
                 $net['devices'][$i]['pass'] = self::cleanText((string) ($d['pass'] ?? ''), 32);
             }
+            // Provider-Zone (#227): Webserver und DNS-Server dürfen beim
+            // Provider hängen (Website-Anbieter), alles andere bleibt im LAN.
+            $net['devices'][$i]['zone'] = (in_array($net['devices'][$i]['type'], self::WAN_TYPES, true)
+                && (($d['zone'] ?? 'lan') === 'wan')) ? 'wan' : 'lan';
         }
         foreach ($net['pages'] as $i => $p) {
             $net['pages'][$i]['id'] = (string) ($p['id'] ?? self::nextId($net['pages']));
@@ -566,6 +684,37 @@ final class Network
             }
         }
         return '192.168.0.254';
+    }
+
+    /** Nächste freie IP in der Provider-Zone (62.153.20.x, #227). */
+    private static function nextWanIp(array $net): string
+    {
+        $used = ['62.153.20.1' => true]; // der Provider selbst
+        foreach ($net['devices'] as $d) {
+            $used[(string) $d['ip']] = true;
+        }
+        for ($i = 2; $i < 255; $i++) {
+            if (!isset($used['62.153.20.' . $i])) {
+                return '62.153.20.' . $i;
+            }
+        }
+        return '62.153.20.254';
+    }
+
+    /** Messenger-Nachricht als einheitliche Zeile (#227). */
+    private static function messageRow(array $net, string $from, string $fromName, string $to, string $toName, string $text, bool $spoof, string $realFrom): array
+    {
+        return [
+            'id' => self::nextId($net['messages']),
+            'from' => $from,
+            'fromName' => $fromName,
+            'to' => $to,
+            'toName' => $toName,
+            'text' => $text,
+            't' => date('H:i'),
+            'spoof' => $spoof,
+            'realFrom' => $realFrom,
+        ];
     }
 
     private static function wlanNetworks(array $net): array

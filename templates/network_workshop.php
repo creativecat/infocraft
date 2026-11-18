@@ -4,7 +4,8 @@
    Lizenz: CC BY-NC-SA 4.0
    Runde 35 (#244): Toolbar mit ausklappbarem Geräte-Hinzufügen,
    PNG-Export, Drucken, einklappbare Missionen.
-   Version: 0.35.0 */ ?>
+   Runde 36 (#245): ARIA-Labels für Toolbar und Bedienelemente.
+   Version: 0.36.0 */ ?>
 <div class="net-layout">
     <aside class="net-side">
         <div class="net-card net-router-card">
@@ -28,8 +29,8 @@
             <h2><span class="icn ic-volume-low" aria-hidden="true"></span> Stufe</h2>
             <p class="net-muted" id="net-level-badge">Stufe 1 · Basis</p>
             <div class="net-add-row">
-                <button type="button" class="btn net-level-btn net-level-active" id="net-level-1">1 · Basis</button>
-                <button type="button" class="btn net-level-btn" id="net-level-2">2 · Oberstufe (Schichten)</button>
+                <button type="button" class="btn net-level-btn net-level-active" id="net-level-1" aria-label="Stufe 1 Basis aktivieren">1 · Basis</button>
+                <button type="button" class="btn net-level-btn" id="net-level-2" aria-label="Stufe 2 Schichtenansicht aktivieren">2 · Oberstufe (Schichten)</button>
             </div>
             <p class="net-muted">Stufe 2 zeigt im Browser die Reise des Aufrufs durch die Schichten des OSI-Modells.</p>
         </div>
@@ -51,8 +52,8 @@
             <?php endif; ?>
             <div class="net-teacher-actions">
                 <a class="btn" href="<?= url('werkstatt/netzwerk/export' . ($classId !== null ? '?klasse=' . (int) $classId : '')) ?>"><span class="icn ic-floppy-disk" aria-hidden="true"></span> Netz sichern (JSON)</a>
-                <button type="button" class="btn" id="net-import-btn"><span class="icn ic-folder-open" aria-hidden="true"></span> Netz wiederherstellen</button>
-                <button type="button" class="btn net-danger" id="net-reset-btn"><span class="icn ic-loop2" aria-hidden="true"></span> Netz zurücksetzen</button>
+                <button type="button" class="btn" id="net-import-btn" aria-label="Netz aus JSON-Datei wiederherstellen"><span class="icn ic-folder-open" aria-hidden="true"></span> Netz wiederherstellen</button>
+                <button type="button" class="btn net-danger" id="net-reset-btn" aria-label="Klassennetz zurücksetzen"><span class="icn ic-loop2" aria-hidden="true"></span> Netz zurücksetzen</button>
             </div>
             <input type="file" id="net-import-file" accept="application/json" hidden>
             <p class="net-muted">Sichern vor Stundenende, wiederherstellen am nächsten Tag: So bleibt das Klassennetz über Unterrichtsstunden hinweg erhalten.</p>
@@ -73,16 +74,16 @@
                         <option value="dns">DNS-Server</option>
                         <option value="ap">Access Point</option>
                     </select>
-                    <input type="text" id="net-add-name" maxlength="40" placeholder="Name (z. B. HP Pro Desk)">
+                    <input type="text" id="net-add-name" maxlength="40" placeholder="Name (z. B. HP Pro Desk)" aria-label="Name des neuen Geräts">
                     <button type="button" class="btn net-add-btn" id="net-add-btn"><span class="icn ic-connection" aria-hidden="true"></span> Anschließen</button>
                 </div>
             </details>
-            <button type="button" class="btn net-tool-btn" id="net-png-btn" title="Topologie als Bilddatei herunterladen"><span class="icn ic-download2" aria-hidden="true"></span> PNG</button>
-            <button type="button" class="btn net-tool-btn" id="net-print-btn" title="Topologie drucken"><span class="icn ic-printer" aria-hidden="true"></span> Drucken</button>
+            <button type="button" class="btn net-tool-btn" id="net-png-btn" title="Topologie als Bilddatei herunterladen" aria-label="Topologie als PNG herunterladen"><span class="icn ic-download2" aria-hidden="true"></span> PNG</button>
+            <button type="button" class="btn net-tool-btn" id="net-print-btn" title="Topologie drucken" aria-label="Topologie drucken"><span class="icn ic-printer" aria-hidden="true"></span> Drucken</button>
         </div>
         <div class="net-stage-wrap">
             <svg id="net-svg" class="net-svg" viewBox="0 0 900 560" role="img" aria-label="Netz-Topologie"></svg>
-            <div class="net-modal" id="net-modal" hidden>
+            <div class="net-modal" id="net-modal" role="dialog" aria-modal="true" aria-label="Geräte-Fenster" hidden>
                 <div class="net-modal-box" id="net-modal-box"></div>
             </div>
         </div>

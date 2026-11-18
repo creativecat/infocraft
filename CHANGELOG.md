@@ -1,3 +1,23 @@
+## [0.36.0] - 2026-11-18 (Runde 36)
+### Netzwerk-Werkstatt, Teil 3 (#227, #245)
+- Provider-Netze: Provider-Cloud auf der Buehne (Stammleitung vom Router),
+  Webserver und DNS-Server ziehen als Website-Anbieter in die Provider-Zone
+  (62.153.20.x), DNS-Eintraege wandern bei Umzug mit, Status zeigt den Provider-Hop.
+- Messenger zwischen Computern und Smartphones: Verlauf je Geraet, Paket fliegt
+  beim Senden sichtbar uebers Kabel; Lehrkraft kann Nachrichten entfernen.
+- Phishing-Demo fuer die Lehrkraft: Absender-Identitaet tauschen, Schueler
+  sehen nur den getaeuschten Namen, Lehrkraft sieht die Kennzeichnung.
+- Sichtbarer Paketflug auf den Kabeln: Anfrage (GET) hin, Antwort (HTML) zurueck,
+  entlang der echten Kabelkurven.
+- Missionen mit Lernprogression: Schwierigkeitsstufen (leicht/mittel/
+  anspruchsvoll) als Badge, kindgerechte Fachwort-Erklarungen je Mission,
+  drei neue Missionen (Messenger, sicheres WLAN-Passwort, Provider-Zone).
+- ARIA-Labels fuer Toolbar, Stufen-Schalter, Import/Reset, Modal und Buttons
+  der Netzwerk-Werkstatt.
+- Editor-Auswahlboxen ohne Emoji: Java/Python mit Brand-Icons, Code-Folie mit
+  Code-Icon (Admin-Einstellungen, Aufgaben, Praesentationen).
+- Stufen-Filter: Code-Werkstatt ab Jahrgangsstufe 8 (LehrplanPLUS, NTG).
+
 ## [0.35.0] - 2026-11-18 (Runde 35)
 ### Netzwerk-Werkstatt, Teil 2 (#244)
 - Toolbar ueber der Buehne: Geraete ueber einen Plus-Button mit ausklappbarem

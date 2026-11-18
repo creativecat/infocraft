@@ -23,8 +23,8 @@
         <div class="two-col">
             <label class="field"><span>Programmiersprache</span>
                 <select name="default_language">
-                    <option value="java"<?= $defaultLanguage === 'java' ? ' selected' : '' ?>>☕ Java</option>
-                    <option value="python"<?= $defaultLanguage === 'python' ? ' selected' : '' ?>>🐍 Python</option>
+                    <option value="java"<?= $defaultLanguage === 'java' ? ' selected' : '' ?>><span class="icn ic-brand-java" aria-hidden="true"></span> Java</option>
+                    <option value="python"<?= $defaultLanguage === 'python' ? ' selected' : '' ?>><span class="icn ic-brand-python" aria-hidden="true"></span> Python</option>
                 </select>
             </label>
             <div class="btn-row" style="align-items:flex-end;"><button class="btn btn-primary" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button></div>

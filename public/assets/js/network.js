@@ -6,11 +6,13 @@
  * Geräte (Computer, Smartphone, Drucker, Webserver, DNS-Server,
  * Access Point), Browser mit DNS-Auflösung und Fehlermeldungen,
  * Webseiten mit eigenem HTML, Missionen für die 7. Jahrgangsstufe.
+ * Provider-Netze mit Website-Anbietern, Messenger zwischen Geräten,
+ * Phishing-Demo für die Lehrkraft und sichtbarer Paketflug (#227).
  * Die Engine ist DOM-frei (Node-Tests), attach() baut die Oberfläche.
  *
  * Node-Tests: module.exports; Browser: window.IC_NET.
  *
- * @version 0.35.0
+ * @version 0.36.0
  * @license CC BY-NC-SA 4.0 (InfoCraft)
  */
 (function () {
@@ -40,6 +42,8 @@
     + '.net-dev-text { fill: #1f2937; font-size: 16px; font-weight: 600; }'
     + '.net-port { fill: #e2e8f0; stroke: #94a3b8; stroke-width: 1; }'
     + '.net-port-on { fill: #34d399; stroke: #0f766e; stroke-width: 1; }'
+    + '.net-provider-box { fill: #e0f2fe; stroke: #0284c7; stroke-width: 2; }'
+    + '.net-provider-trunk { stroke: #0284c7; stroke-dasharray: 8 6; }'
     + 'text { font-family: system-ui, sans-serif; }';
 
   var NEWSPAPER = '<h1>Schulzeitung</h1>'
@@ -71,7 +75,12 @@
   /* =================== Engine (DOM-frei) =================== */
 
   function defaultNet() {
-    return { v: 1, level: 1, router: { name: 'Router', ssid: '', pass: '' }, devices: [], pages: [], dns: [], logs: [], htmlProjects: [] };
+    return {
+      v: 1, level: 1,
+      router: { name: 'Router', ssid: '', pass: '' },
+      provider: { name: 'Schulprovider', ip: '62.153.20.1' },
+      devices: [], pages: [], dns: [], logs: [], messages: [], htmlProjects: []
+    };
   }
 
   /** Netz gegen kaputte oder historische Stände absichern (#233).
@@ -83,7 +92,8 @@
     out.v = typeof src.v === 'number' ? src.v : out.v;
     out.level = src.level === 2 ? 2 : 1;
     if (src.router && typeof src.router === 'object') { out.router = src.router; }
-    var lists = ['devices', 'pages', 'dns', 'logs', 'htmlProjects'];
+    if (src.provider && typeof src.provider === 'object') { out.provider = src.provider; }
+    var lists = ['devices', 'pages', 'dns', 'logs', 'messages', 'htmlProjects'];
     for (var i = 0; i < lists.length; i++) {
       if (Object.prototype.toString.call(src[lists[i]]) === '[object Array]') {
         out[lists[i]] = src[lists[i]].filter(function (e) { return e && typeof e === 'object'; });
@@ -239,15 +249,23 @@
 
   /* =================== Missionen (#226) =================== */
 
+  /* Missionen mit Lernprogression (#226, #245): grad staffelt die
+   * Schwierigkeit (1 = leicht, 2 = mittel, 3 = anspruchsvoll), tip erklärt
+   * das Fachwort kindgerecht für die 7. Jahrgangsstufe. */
+  var GRADS = { 1: 'leicht', 2: 'mittel', 3: 'anspruchsvoll' };
+
   var MISSIONS = [
-    { id: 'm1', title: 'Computer anschließen', text: 'Hänge deinen ersten Computer an den Router.', check: function (net) { return net.devices.some(function (d) { return d.type === 'pc'; }); } },
-    { id: 'm2', title: 'Erster Seitenaufruf', text: 'Öffne am Computer den Browser und rufe eine Seite über die IP-Adresse auf.', flag: 'browse-ip' },
-    { id: 'm3', title: 'WLAN einrichten', text: 'Richte am Router ein WLAN mit Namen und Passwort ein.', check: function (net) { return !!(net.router && net.router.ssid); } },
-    { id: 'm4', title: 'Smartphone online', text: 'Bring dein Smartphone mit dem WLAN-Passwort ins Netz.', check: function (net) { return net.devices.some(function (d) { return d.type === 'phone' && d.wifi; }); } },
-    { id: 'm5', title: 'Schulzeitung frei', text: 'Hänge einen Webserver an, lege die Vorlage Schulzeitung an und schalte sie frei.', check: function (net) { return net.pages.some(function (p) { return p.published; }); } },
-    { id: 'm6', title: 'Per Domain surfen', text: 'Hänge einen DNS-Server an und rufe die Schulzeitung über ihren Domainnamen auf.', flag: 'browse-domain' },
-    { id: 'm7', title: 'Drucker im Netz', text: 'Schließe einen Drucker an den Router an.', check: function (net) { return net.devices.some(function (d) { return d.type === 'printer'; }); } },
-    { id: 'm8', title: 'Eigene Webseite', text: 'Baue auf dem Webserver eine eigene Seite mit deinem HTML.', flag: 'own-page' }
+    { id: 'm1', grad: 1, title: 'Computer anschließen', text: 'Hänge deinen ersten Computer an den Router.', tip: 'Der Router ist der Verteiler im Netz: Er gibt jedem Gerät eine Adresse (IP) und leitet Anfragen weiter.', check: function (net) { return net.devices.some(function (d) { return d.type === 'pc'; }); } },
+    { id: 'm2', grad: 1, title: 'Erster Seitenaufruf', text: 'Öffne am Computer den Browser und rufe eine Seite über die IP-Adresse auf.', tip: 'Eine IP-Adresse ist die Hausnummer eines Geräts im Netz, z. B. 192.168.0.2.', flag: 'browse-ip' },
+    { id: 'm7', grad: 1, title: 'Drucker im Netz', text: 'Schließe einen Drucker an den Router an.', tip: 'Per Kabel oder WLAN: Geräte im selben Netz können den Drucker gemeinsam nutzen.', check: function (net) { return net.devices.some(function (d) { return d.type === 'printer'; }); } },
+    { id: 'm3', grad: 2, title: 'WLAN einrichten', text: 'Richte am Router ein WLAN mit Namen und Passwort ein.', tip: 'Der WLAN-Name heißt SSID, wie ein Klingelschild an der Tür.', check: function (net) { return !!(net.router && net.router.ssid); } },
+    { id: 'm10', grad: 2, title: 'Sicheres WLAN', text: 'Gib dem WLAN ein Passwort mit mindestens 8 Zeichen und prüfe es an einem Gerät.', tip: 'Kurze Passwörter kann man schnell erraten, wie ein Schlüssel, der fast ins Schloss passt.', check: function (net) { return !!(net.router && net.router.pass && String(net.router.pass).length >= 8); } },
+    { id: 'm4', grad: 2, title: 'Smartphone online', text: 'Bring dein Smartphone mit dem WLAN-Passwort ins Netz.', tip: 'Das Smartphone prüft das Passwort beim Router, genau wie ein Türsteher.', check: function (net) { return net.devices.some(function (d) { return d.type === 'phone' && d.wifi; }); } },
+    { id: 'm5', grad: 2, title: 'Schulzeitung frei', text: 'Hänge einen Webserver an, lege die Vorlage Schulzeitung an und schalte sie frei.', tip: 'Ein Webserver ist ein Computer, der Webseiten bereithält und verschickt, wie ein Archiv.', check: function (net) { return net.pages.some(function (p) { return p.published; }); } },
+    { id: 'm6', grad: 3, title: 'Per Domain surfen', text: 'Hänge einen DNS-Server an und rufe die Schulzeitung über ihren Domainnamen auf.', tip: 'Der DNS-Server ist das Telefonbuch des Netzes: Er übersetzt Namen wie schulzeitung.net in IP-Adressen.', flag: 'browse-domain' },
+    { id: 'm11', grad: 3, title: 'Website-Anbieter beim Provider', text: 'Zieh einen Webserver zur Provider-Zone um und rufe die Seite aus dem Schulnetz auf.', tip: 'Der Provider verbindet das Schulnetz mit dem Internet, wie die Post zwischen zwei Städten.', check: function (net) { return net.devices.some(function (d) { return (d.type === 'webserver' || d.type === 'dns') && d.zone === 'wan' && online(d); }); } },
+    { id: 'm8', grad: 3, title: 'Eigene Webseite', text: 'Baue auf dem Webserver eine eigene Seite mit deinem HTML.', tip: 'HTML ist die Sprache der Webseiten: Überschriften, Absätze und Listen.', flag: 'own-page' },
+    { id: 'm9', grad: 3, title: 'Nachricht im Netz', text: 'Schicke einem anderen Gerät im Messenger eine Nachricht.', tip: 'Nachrichten reisen als Pakete durchs Netz, Stück für Stück, und werden wieder zusammengesetzt.', flag: 'msg-sent' }
   ];
 
   function missionsState(net, flags) {
@@ -255,9 +273,44 @@
     for (var i = 0; i < MISSIONS.length; i++) {
       var m = MISSIONS[i];
       var done = m.flag ? flags.indexOf(m.flag) >= 0 : (m.check ? !!m.check(net) : false);
-      out.push({ id: m.id, title: m.title, text: m.text, done: done });
+      out.push({ id: m.id, title: m.title, text: m.text, grad: m.grad || 2, gradLabel: GRADS[m.grad || 2] || 'mittel', tip: m.tip || '', done: done });
+    }
+    // Klare Lernprogression: leicht vor mittel vor anspruchsvoll (#245)
+    out.sort(function (a, b) { return a.grad - b.grad; });
+    return out;
+  }
+
+  /* =================== Messenger (#227) =================== */
+
+  /** Nachrichten eines Geräts: empfangen und gesendet, älteste zuerst. */
+  function messagesFor(net, deviceId) {
+    var out = [];
+    var msgs = (net && Object.prototype.toString.call(net.messages) === '[object Array]') ? net.messages : [];
+    for (var i = 0; i < msgs.length; i++) {
+      if (msgs[i] && (msgs[i].to === deviceId || msgs[i].from === deviceId)) { out.push(msgs[i]); }
     }
     return out;
+  }
+
+  /** Messenger läuft auf Computern und Smartphones, beide online. */
+  function messengerReady(net, d) {
+    return !!d && (d.type === 'pc' || d.type === 'phone') && online(d);
+  }
+
+  /* =================== Provider-Netze & Paketweg (#227) =================== */
+
+  /** Weg eines Aufrufs als Hüpfer-Kette: Geräte im LAN laufen über den
+   * Router, Server in der Provider-Zone zusätzlich über die Provider-Cloud.
+   * Rückgabe: ['dev:<id>', 'router', 'provider', 'dev:<id>'] o. ä. (DOM-frei testbar). */
+  function routeHops(net, fromId, toId) {
+    var a = findDevice(net, fromId);
+    var b = findDevice(net, toId);
+    if (!a || !b || a.id === b.id) { return []; }
+    var wan = (b.zone === 'wan') || (a.zone === 'wan');
+    var hops = ['dev:' + a.id, 'router'];
+    if (wan) { hops.push('provider'); }
+    hops.push('dev:' + b.id);
+    return hops;
   }
 
   /* =================== Oberfläche =================== */
@@ -340,6 +393,10 @@
 
     var openKind = null;
 
+    /* Kabel-Registry für den Paketflug (#227): 'router|dev:5' o. ä. */
+    var paths = {};
+    function edgeKey(a, b) { return a + '|' + b; }
+
     function svgEl(tag, attrs) {
       var el = doc.createElementNS ? doc.createElementNS('http://www.w3.org/2000/svg', tag) : doc.createElement(tag);
       for (var k in attrs) { if (Object.prototype.hasOwnProperty.call(attrs, k)) { el.setAttribute(k, attrs[k]); } }
@@ -364,7 +421,9 @@
       var ipText = svgEl('text', { x: cx, y: cy + 10, class: 'net-sub', 'text-anchor': 'middle' });
       ipText.textContent = '192.168.0.1';
       g.appendChild(ipText);
-      var usedPorts = Math.min(n, PORTS);
+      var usedPorts = 0;
+      for (var pi0 = 0; pi0 < n; pi0++) { if (net.devices[pi0].zone !== 'wan') { usedPorts++; } }
+      usedPorts = Math.min(usedPorts, PORTS);
       for (var pi = 0; pi < PORTS; pi++) {
         var pxx = cx - 72 + pi * 21;
         g.appendChild(svgEl('rect', {
@@ -378,6 +437,23 @@
       })(g);
       svg.appendChild(g);
 
+      // Provider-Cloud (#227): Vermittler zwischen Schulnetz und Website-Anbietern
+      var PX = 724, PY = 86;
+      var trunk = svgEl('path', {
+        d: cableD(cx + 88, cy - rh / 2, PX, PY + 34, 6),
+        class: 'net-link net-provider-trunk'
+      });
+      svg.appendChild(trunk);
+      paths[edgeKey('router', 'provider')] = trunk;
+      var provShape = svgEl('rect', { x: PX - 96, y: PY - 32, rx: 28, width: 192, height: 66, class: 'net-provider-box net-provider' });
+      svg.appendChild(provShape);
+      var provLabel = svgEl('text', { x: PX, y: PY - 6, class: 'net-router-text net-provider', 'text-anchor': 'middle' });
+      provLabel.innerHTML = '<span class="icn ic-cloud" aria-hidden="true"></span> ' + esc((net.provider && net.provider.name) || 'Provider');
+      svg.appendChild(provLabel);
+      var provIp = svgEl('text', { x: PX, y: PY + 14, class: 'net-sub net-provider', 'text-anchor': 'middle' });
+      provIp.textContent = (net.provider && net.provider.ip) || '62.153.20.1';
+      svg.appendChild(provIp);
+
       // SVG-Punkt aus Mauskoordinaten (Zoom und Größe der Bühne mitrechnen)
       function stagePoint(ev) {
         if (!svg.getBoundingClientRect || !ev || typeof ev.clientX !== 'number') { return null; }
@@ -386,22 +462,46 @@
         return { x: (ev.clientX - rect.left) * (900 / rect.width), y: (ev.clientY - rect.top) * (560 / rect.height) };
       }
 
+      var lanCount = 0;
+      var wanCount = 0;
+      var lanTotal = 0;
+      for (var li = 0; li < n; li++) { if (net.devices[li].zone !== 'wan') { lanTotal++; } }
       for (var i = 0; i < n; i++) {
         var d = net.devices[i];
+        var wan = d.zone === 'wan';
         var pos = (d.pos && typeof d.pos.x === 'number' && typeof d.pos.y === 'number')
           ? { x: Math.max(70, Math.min(830, d.pos.x)), y: Math.max(44, Math.min(518, d.pos.y)) }
           : null;
         if (!pos) {
-          var angle = (-90 + i * (360 / Math.max(n, 1))) * Math.PI / 180;
-          pos = { x: cx + Math.cos(angle) * 250, y: cy + Math.sin(angle) * 185 };
+          if (wan) { // Website-Anbieter beim Provider: obere Zone links der Cloud (#227)
+            pos = { x: 130 + (wanCount % 3) * 210, y: 70 + Math.floor(wanCount / 3) * 120 };
+            wanCount++;
+          } else {
+            var angle = (-90 + lanCount * (360 / Math.max(lanTotal, 1))) * Math.PI / 180;
+            pos = { x: cx + Math.cos(angle) * 250, y: cy + Math.sin(angle) * 185 };
+          }
         }
         var dx = pos.x;
         var dy = pos.y;
         var on = online(d);
-        // Leitung vom Router-Port zum Gerät (#235)
-        var portX = cx - 72 + (i % PORTS) * 21 + 7;
-        var line = svgEl('path', { d: cableD(portX, cy + rh / 2, dx, dy, 0), class: 'net-link net-cable' + (on ? '' : ' net-link-off') });
-        svg.appendChild(line);
+        var line;
+        var anchX, anchY;
+        if (wan) {
+          // Leitung von der Provider-Cloud zum Website-Anbieter (#227)
+          anchX = PX - 96;
+          anchY = PY;
+          line = svgEl('path', { d: cableD(anchX, anchY, dx, dy, 0), class: 'net-link net-cable' + (on ? '' : ' net-link-off') });
+          svg.appendChild(line);
+          paths[edgeKey('provider', 'dev:' + d.id)] = line;
+        } else {
+          // Leitung vom Router-Port zum Gerät (#235)
+          anchX = cx - 72 + (lanCount % PORTS) * 21 + 7;
+          anchY = cy + rh / 2;
+          line = svgEl('path', { d: cableD(anchX, anchY, dx, dy, 0), class: 'net-link net-cable' + (on ? '' : ' net-link-off') });
+          svg.appendChild(line);
+          paths[edgeKey('router', 'dev:' + d.id)] = line;
+          lanCount++;
+        }
         var gg = svgEl('g', { class: 'net-device' + (on ? '' : ' net-device-off') });
         gg.appendChild(svgEl('rect', { x: dx - 74, y: dy - 30, rx: 10, width: 148, height: 84 }));
         var t1 = svgEl('text', { x: dx, y: dy - 4, class: 'net-dev-text', 'text-anchor': 'middle' });
@@ -412,7 +512,7 @@
         t2.textContent = d.ip + state;
         gg.appendChild(t2);
         var t3 = svgEl('text', { x: dx, y: dy + 38, class: 'net-sub net-sub-dim', 'text-anchor': 'middle' });
-        t3.textContent = TYPES[d.type] ? TYPES[d.type].label : '';
+        t3.textContent = (TYPES[d.type] ? TYPES[d.type].label : '') + (wan ? ' · beim Provider' : '');
         gg.appendChild(t3);
         (function (dev, devG, lineEl, baseX, baseY, portX0, portY0) {
           if (!devG.addEventListener) { return; }
@@ -480,9 +580,65 @@
           devG.addEventListener('pointerup', up);
           devG.addEventListener('pointercancel', up);
           devG.addEventListener('click', function () { if (!moved) { openModal(dev.id, dev.type); } });
-        })(d, gg, line, dx, dy, portX, cy + rh / 2);
+        })(d, gg, line, dx, dy, anchX, anchY);
         svg.appendChild(gg);
       }
+    }
+
+    /* ---------- Paketflug auf den Kabeln (#227) ---------- */
+
+    /** Paket-Punkt wandert ein Kabel entlang (SVG getPointAtLength),
+     * rückwärts für die Antwort. Ohne SVG-Geometrie still aussteigen. */
+    function flyPacket(pathEl, reverse, label, done) {
+      var raf = win() && win().requestAnimationFrame;
+      if (!svg || !raf || !pathEl || !pathEl.getTotalLength || !pathEl.getPointAtLength) {
+        if (done) { done(); }
+        return;
+      }
+      var circle = svgEl('circle', { r: '7', class: 'net-packet' });
+      var txt = svgEl('text', { class: 'net-packet-label', 'text-anchor': 'middle' });
+      txt.textContent = label || '';
+      svg.appendChild(circle);
+      svg.appendChild(txt);
+      var L = pathEl.getTotalLength();
+      var dur = 480;
+      var t0 = Date.now();
+      function step() {
+        var t = Math.min((Date.now() - t0) / dur, 1);
+        var pt = pathEl.getPointAtLength((reverse ? (1 - t) : t) * L);
+        circle.setAttribute('cx', pt.x);
+        circle.setAttribute('cy', pt.y);
+        txt.setAttribute('x', pt.x);
+        txt.setAttribute('y', pt.y - 12);
+        if (t < 1) { raf(step); return; }
+        if (circle.parentNode) { circle.parentNode.removeChild(circle); }
+        if (txt.parentNode) { txt.parentNode.removeChild(txt); }
+        if (done) { done(); }
+      }
+      raf(step);
+    }
+
+    /** Hüpfer-Kette animieren: Hinweg mit label, Rückweg mit responseLabel. */
+    function animateRoute(hops, label, responseLabel) {
+      var chain = [];
+      for (var i = 0; i < hops.length - 1; i++) {
+        (function (a, b) {
+          chain.push(function (next) {
+            flyPacket(paths[edgeKey(a, b)] || paths[edgeKey(b, a)], false, label, next);
+          });
+        })(hops[i], hops[i + 1]);
+      }
+      if (responseLabel) {
+        for (var r = hops.length - 1; r > 0; r--) {
+          (function (a, b) {
+            chain.push(function (next) {
+              flyPacket(paths[edgeKey(a, b)] || paths[edgeKey(b, a)], true, responseLabel, next);
+            });
+          })(hops[r], hops[r - 1]);
+        }
+      }
+      var idx = 0;
+      (function run() { if (idx < chain.length) { chain[idx++](run); } })();
     }
 
     /* ---------- Missionen ---------- */
@@ -495,7 +651,16 @@
       for (var i = 0; i < state.length; i++) {
         var li = doc.createElement('li');
         li.setAttribute('class', state[i].done ? 'net-mission-done' : '');
-        li.innerHTML = (state[i].done ? '<span class="icn ic-checkmark" aria-hidden="true"></span> ' : '<span class="icn ic-checkbox-unchecked" aria-hidden="true"></span> ') + String(state[i].title).replace(/[&<>]/g, '') + ': ' + String(state[i].text).replace(/[&<>]/g, '');
+        li.appendChild(el('span', 'net-mission-badge net-mission-grad-' + state[i].grad, state[i].gradLabel));
+        li.appendChild((function () {
+          var s = doc.createElement('span');
+          s.innerHTML = (state[i].done ? '<span class="icn ic-checkmark" aria-hidden="true"></span> ' : '<span class="icn ic-checkbox-unchecked" aria-hidden="true"></span> ')
+            + String(state[i].title).replace(/[&<>]/g, '') + ': ' + String(state[i].text).replace(/[&<>]/g, '');
+          return s;
+        })());
+        if (state[i].tip) {
+          li.appendChild(el('div', 'net-mission-tip', 'Fachwort: ' + state[i].tip));
+        }
         list.appendChild(li);
       }
     }
@@ -509,12 +674,32 @@
       return e;
     }
 
+    /** Zwischen Schulnetz und Provider-Zone umziehen (#227): Webserver und
+     * DNS-Server können als Website-Anbieter hinter den Provider ziehen. */
+    function zoneToggle(d) {
+      if (d.type !== 'webserver' && d.type !== 'dns') { return el('span', null); }
+      var box = el('div', 'net-zone-toggle');
+      var btn = el('button', 'btn net-btn-sm');
+      var wan = d.zone === 'wan';
+      btn.innerHTML = wan
+        ? '<span class="icn ic-arrow-left" aria-hidden="true"></span> Zurück ins Schulnetz'
+        : '<span class="icn ic-cloud" aria-hidden="true"></span> Zum Provider ziehen (Website-Anbieter)';
+      btn.setAttribute('aria-label', wan ? 'Gerät zurück ins Schulnetz ziehen' : 'Gerät zur Provider-Zone ziehen');
+      btn.addEventListener('click', function () {
+        act('setZone', { id: d.id, zone: wan ? 'lan' : 'wan' });
+      });
+      box.appendChild(btn);
+      box.appendChild(el('span', 'net-muted', wan ? 'hängt beim Provider' : 'hängt im Schulnetz'));
+      return box;
+    }
+
     /** Entfernen-Button fuer jedes Geraetefenster (#244): Auch AP, DNS-Server
      * und Co. lassen sich jetzt abhaengen. Mit Rueckfrage, gegen Versehen. */
     function deviceFooter(d) {
       var box = el('div', 'net-footer-actions');
       var del = el('button', 'btn net-btn net-danger');
       del.innerHTML = '<span class="icn ic-bin2" aria-hidden="true"></span> Gerät entfernen';
+      del.setAttribute('aria-label', 'Gerät ' + d.name + ' entfernen');
       del.addEventListener('click', function () {
         if (win().confirm && !win().confirm('Gerät "' + d.name + '" wirklich vom Netz trennen und entfernen?')) { return; }
         act('removeDevice', { id: d.id });
@@ -538,6 +723,7 @@
       if (sub) { box.appendChild(el('span', 'net-muted', sub)); }
       var x = el('button', 'btn net-close');
       x.innerHTML = '<span class="icn ic-cross" aria-hidden="true"></span>';
+      x.setAttribute('aria-label', 'Fenster schließen');
       x.addEventListener('click', closeModal);
       box.appendChild(x);
       return box;
@@ -632,6 +818,19 @@
         });
       });
       box.appendChild(save);
+      // Provider-Name (#227): Lehrkraft benennt den Vermittler ins Internet
+      if (cfg.lehrkraft) {
+        var provHead = el('h3', 'net-sec-h', 'Provider (Verbindung ins Internet)');
+        box.appendChild(provHead);
+        box.appendChild(field('Name des Providers', 'input', (net.provider && net.provider.name) || 'Schulprovider', { id: 'net-provider-name', maxlength: '40' }));
+        var pSave = el('button', 'btn net-btn-sm');
+        pSave.innerHTML = '<span class="icn ic-cloud" aria-hidden="true"></span> Provider umbenennen';
+        pSave.addEventListener('click', function () {
+          var nEl = doc.getElementById('net-provider-name');
+          act('setProvider', { name: nEl ? nEl.value : '' });
+        });
+        box.appendChild(pSave);
+      }
       box.appendChild(logsSection('Router-Log (wer ruft wen auf)'));
       return box;
     }
@@ -755,8 +954,11 @@
           frame.setAttribute('srcdoc', pageDocument(res.page));
           view.appendChild(frame);
           status.textContent = 'Geladen von ' + res.server.name + ' (' + res.ip + ')'
+            + (res.server.zone === 'wan' ? ' · über den Provider ' + ((net.provider && net.provider.name) || 'Provider') : '')
             + (res.viaDns ? ' · über DNS aufgelöst' : ' · direkt über die IP');
           saveFlag(isIp(String(url).trim().replace(/^https?:\/\//i, '')) ? 'browse-ip' : 'browse-domain');
+          // Sichtbarer Paketflug auf den Kabeln (#227): Anfrage hin, Antwort zurück
+          animateRoute(routeHops(net, d.id, res.server.id), 'GET', 'HTML');
           act('browse', { who: d.name, url: String(url).trim(), server: res.server.id, ip: d.ip, code: 200, path: '/' });
         } else {
           var err = el('div', 'net-error');
@@ -777,8 +979,133 @@
       shell.appendChild(status);
       shell.appendChild(view);
       box.appendChild(shell);
+      box.appendChild(messengerSection(d));
       box.appendChild(deviceFooter(d));
       return box;
+    }
+
+    /* ---------- Messenger (#227): Nachrichten zwischen Geräten ---------- */
+
+    function messengerSection(d) {
+      var sec = el('div', 'net-messenger');
+      var h = el('h3', 'net-sec-h', 'Messenger');
+      sec.appendChild(h);
+      var partners = [];
+      for (var i = 0; i < net.devices.length; i++) {
+        var o = net.devices[i];
+        if (o.id !== d.id && (o.type === 'pc' || o.type === 'phone') && online(o)) { partners.push(o); }
+      }
+      if (partners.length === 0) {
+        sec.appendChild(el('p', 'net-muted', 'Kein anderes Gerät im Netz, dem du schreiben kannst. Computer und Smartphones erscheinen hier, sobald sie online sind.'));
+        return sec;
+      }
+      // Verlauf: empfangene und gesendete Nachrichten dieses Geräts
+      var msgs = messagesFor(net, d.id);
+      if (msgs.length > 0) {
+        var hist = el('div', 'net-msg-list');
+        for (var m = 0; m < msgs.length; m++) {
+          (function (msg) {
+            var row = el('div', 'net-msg-row' + (msg.to === d.id ? ' net-msg-in' : ' net-msg-out'));
+            var headTxt = (msg.to === d.id ? 'von ' + msg.fromName : 'an ' + msg.toName) + ' · ' + (msg.t || '');
+            var headEl = el('span', 'net-msg-meta', headTxt);
+            row.appendChild(headEl);
+            row.appendChild(el('span', null, msg.text));
+            if (msg.spoof && cfg.lehrkraft) {
+              // Spoofing-Kennzeichnung: nur die Lehrkraft sieht die Täuschung (#227)
+              var badge = el('span', 'net-msg-spoof');
+              badge.innerHTML = '<span class="icn ic-warning" aria-hidden="true"></span> getäuscht: wirklich von ' + esc(msg.realFrom || 'Lehrkraft');
+              row.appendChild(badge);
+            }
+            if (cfg.lehrkraft) {
+              var del = el('button', 'btn net-btn-sm net-danger');
+              del.setAttribute('aria-label', 'Nachricht entfernen');
+              del.innerHTML = '<span class="icn ic-bin2" aria-hidden="true"></span>';
+              del.addEventListener('click', function () { act('deleteMessage', { id: msg.id }); });
+              row.appendChild(del);
+            }
+            hist.appendChild(row);
+          })(msgs[m]);
+        }
+        sec.appendChild(hist);
+      }
+      var sel = el('select', 'net-input');
+      sel.setAttribute('id', 'net-msg-to');
+      for (var p = 0; p < partners.length; p++) {
+        var opt = el('option', null, partners[p].name);
+        opt.setAttribute('value', partners[p].id);
+        sel.appendChild(opt);
+      }
+      var wrap = el('label', 'net-field');
+      wrap.appendChild(el('span', null, 'An'));
+      wrap.appendChild(sel);
+      sec.appendChild(wrap);
+      sec.appendChild(field('Nachricht', 'textarea', '', { id: 'net-msg-text', rows: '2', maxlength: '200' }));
+      var send = el('button', 'btn net-btn');
+      send.innerHTML = '<span class="icn ic-paper-plane" aria-hidden="true"></span> Senden';
+      send.addEventListener('click', function () {
+        var tEl = doc.getElementById('net-msg-to');
+        var xEl = doc.getElementById('net-msg-text');
+        act('sendMessage', { from: d.id, to: tEl ? tEl.value : '', text: xEl ? xEl.value : '' }, function (res) {
+          if (res && res.ok) {
+            saveFlag('msg-sent');
+            if (xEl) { xEl.value = ''; }
+            // Paket fliegt sichtbar zum Empfänger (#227)
+            var toDev = findDevice(net, tEl ? tEl.value : '');
+            if (toDev) { animateRoute(routeHops(net, d.id, toDev.id), 'Nachricht', null); }
+          }
+        });
+      });
+      sec.appendChild(send);
+      // Phishing-Demo der Lehrkraft (#227): Absender-Identität täuschen
+      if (cfg.lehrkraft) {
+        var phish = el('details', 'net-phish');
+        var sum = el('summary', null, '');
+        sum.innerHTML = '<span class="icn ic-warning" aria-hidden="true"></span> Phishing-Demo: Absender täuschen';
+        phish.appendChild(sum);
+        var note = el('p', 'net-muted', 'Für den Unterricht: Die Nachricht zeigt den Namen eines anderen Geräts, nur du siehst die Kennzeichnung. Perfekt für die Frage "Wem könntest du diese Nachricht vertrauen?"');
+        phish.appendChild(note);
+        var victimSel = el('select', 'net-input');
+        victimSel.setAttribute('id', 'net-phish-from');
+        var candidates = [];
+        for (var v = 0; v < net.devices.length; v++) {
+          var vd = net.devices[v];
+          if (vd.type === 'pc' || vd.type === 'phone') { candidates.push(vd); }
+        }
+        for (var c = 0; c < candidates.length; c++) {
+          var vopt = el('option', null, candidates[c].name);
+          vopt.setAttribute('value', candidates[c].id);
+          victimSel.appendChild(vopt);
+        }
+        var vwrap = el('label', 'net-field');
+        vwrap.appendChild(el('span', null, 'Angeblischer Absender'));
+        vwrap.appendChild(victimSel);
+        phish.appendChild(vwrap);
+        var toSel = el('select', 'net-input');
+        toSel.setAttribute('id', 'net-phish-to');
+        for (var t = 0; t < partners.length; t++) {
+          var topt = el('option', null, partners[t].name);
+          topt.setAttribute('value', partners[t].id);
+          toSel.appendChild(topt);
+        }
+        var twrap = el('label', 'net-field');
+        twrap.appendChild(el('span', null, 'Empfänger'));
+        twrap.appendChild(toSel);
+        phish.appendChild(twrap);
+        phish.appendChild(field('Nachricht', 'textarea', '', { id: 'net-phish-text', rows: '2', maxlength: '200' }));
+        var pSend = el('button', 'btn net-btn net-danger');
+        pSend.innerHTML = '<span class="icn ic-warning" aria-hidden="true"></span> Täuschung senden';
+        pSend.addEventListener('click', function () {
+          var fEl = doc.getElementById('net-phish-from');
+          var ttEl = doc.getElementById('net-phish-to');
+          var txEl = doc.getElementById('net-phish-text');
+          act('spoofMessage', { from: fEl ? fEl.value : '', to: ttEl ? ttEl.value : '', text: txEl ? txEl.value : '' }, function (res) {
+            if (res && res.ok && txEl) { txEl.value = ''; }
+          });
+        });
+        phish.appendChild(pSend);
+        sec.appendChild(phish);
+      }
+      return sec;
     }
 
     /* ---------- Webserver-Fenster (#222) ---------- */
@@ -786,6 +1113,7 @@
     function webserverWindow(d) {
       var box = el('div', null);
       box.appendChild(head(d.name, d.ip + ' · Webseiten verwalten', 'ic-cloud'));
+      box.appendChild(zoneToggle(d));
       box.appendChild(el('p', 'net-muted', 'Webseiten für: ' + d.name + '. Bearbeite den HTML-Quelltext und schalte die Seite frei, damit sie über die IP oder Domain erreichbar ist.'));
       var mine = [];
       for (var i = 0; i < net.pages.length; i++) {
@@ -958,6 +1286,7 @@
     function dnsWindow(d) {
       var box = el('div', null);
       box.appendChild(head(d.name, d.ip + ' · Domain-Tabelle', 'ic-compass'));
+      box.appendChild(zoneToggle(d));
       box.appendChild(el('p', 'net-muted', 'Der DNS-Server übersetzt Domainnamen in IP-Adressen. Beim Freischalten einer Webseite erscheint sie hier automatisch.'));
       for (var i = 0; i < net.dns.length; i++) {
         (function (entry) {
@@ -1234,7 +1563,7 @@
   /* =================== Export =================== */
 
   var api = {
-    version: '0.35.0',
+    version: '0.36.0',
     defaultNet: defaultNet,
     resolve: resolve,
     dnsLookup: dnsLookup,
@@ -1251,8 +1580,12 @@
     LAYERS: LAYERS,
     EXAMPLES: EXAMPLES,
     MISSIONS: MISSIONS,
+    GRADS: GRADS,
     NEWSPAPER: NEWSPAPER,
     TYPES: TYPES,
+    messagesFor: messagesFor,
+    messengerReady: messengerReady,
+    routeHops: routeHops,
     attach: attach
   };
   if (typeof window !== 'undefined') { window.IC_NET = api; }

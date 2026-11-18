@@ -87,7 +87,8 @@ final class ModuleController
                 'icon' => '💻',
                 'phase' => 'Phase 4',
                 'status' => 'in-arbeit',
-                'level' => 6,
+                // LehrplanPLUS: Informatik ist Pflichtfach ab Jgst. 8 (NTG), QA-Runde 36
+                'level' => 8,
                 'route' => 'werkstatt/code',
                 'description' => 'Programmieren lernen mit Java und Python, geführt Schritt für Schritt.',
                 'features' => [

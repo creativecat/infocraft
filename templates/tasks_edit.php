@@ -132,11 +132,11 @@ foreach ($classes as $class) {
                 <?= csrf_field() ?>
                 <select name="target" title="Zielsprache der Kopie: ist eine KI-Schnittstelle hinterlegt, wird die Musterlösung konvertiert">
                     <?php if ($defaultLanguage === 'java'): ?>
-                    <option value="java">☕ Java</option>
-                    <option value="python">🐍 Python</option>
+                    <option value="java"><span class="icn ic-brand-java" aria-hidden="true"></span> Java</option>
+                    <option value="python"><span class="icn ic-brand-python" aria-hidden="true"></span> Python</option>
                     <?php else: ?>
-                    <option value="python">🐍 Python</option>
-                    <option value="java">☕ Java</option>
+                    <option value="python"><span class="icn ic-brand-python" aria-hidden="true"></span> Python</option>
+                    <option value="java"><span class="icn ic-brand-java" aria-hidden="true"></span> Java</option>
                     <?php endif; ?>
                 </select>
                 <button class="btn btn-ghost" type="submit" title="Aufgabe als Variante in der anderen Sprache duplizieren"><span class="icn ic-loop2" aria-hidden="true"></span></button>

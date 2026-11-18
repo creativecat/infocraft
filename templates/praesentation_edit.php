@@ -82,7 +82,7 @@
             <label class="field"><span>Typ</span>
                 <select name="type">
                     <option value="text">📄 Text-Folie (Überschrift, Merksatz, Liste)</option>
-                    <option value="code">💻 Code-Folie (Java, Python oder SQL mit Highlighting)</option>
+                    <option value="code"><span class="icn ic-code" aria-hidden="true"></span> Code-Folie (Java, Python oder SQL mit Highlighting)</option>
                 </select>
             </label>
             <label class="field"><span>Vorlage (optional)</span>
