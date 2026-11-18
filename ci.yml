@@ -423,7 +423,7 @@ jobs:
           grep -q "deviceFooter" public/assets/js/network.js && grep -q "net-png-btn" templates/network_workshop.php && NETR35_OK=1 || NETR35_OK=0
           grep -q "cableD" public/assets/js/network.js && grep -q ".net-cable" public/assets/css/style.css && CABLE35_OK=1 || CABLE35_OK=0
           grep -q "moveProvider" src/Models/Network.php && grep -q "net-provider-trunk { fill: none; }" public/assets/css/style.css && grep -q "render({ modal: false })" public/assets/js/network.js && NETR37_OK=1 || NETR37_OK=0
-          grep -q "stageSig" public/assets/js/network.js && grep -q "drawCostumeIcon" public/assets/js/block-editor.js && grep -q ".ic-robot" public/assets/css/style.css && grep -q "class LevelFilter" src/Distribution.php && grep -q "schichten-mac-ports" src/Migrator.php && R38_OK=1 || R38_OK=0
+          grep -q "stageSig" public/assets/js/network.js && grep -q "drawCostumeIcon" public/assets/js/block-editor.js && grep -q ".ic-robot" public/assets/css/style.css && grep -q "class LevelFilter" src/LevelFilter.php && grep -q "function targets" src/Distribution.php && grep -q "schichten-mac-ports" src/Migrator.php && R38_OK=1 || R38_OK=0
           grep -q "ic-brand-java" public/assets/css/style.css && grep -q "ic-brand-python" templates/code_overview.php && BRAND_OK=1 || BRAND_OK=0
           grep -q "T138" tools/ui-tests.js && grep -q "0.35.0" CHANGELOG.md && ICONR35_OK=1 || ICONR35_OK=0
           # Runde 36 (#245): Netzwerk-Werkstatt, Teil 3 (Provider, Messenger, Paketflug).

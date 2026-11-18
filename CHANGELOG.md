@@ -10,7 +10,7 @@
   auf die Werkstatt-Uebersicht; Code/HTML/SQL-Links bestanden schon.
 - Sprechernotizen (#257): Der Präsentations-Editor markiert Folien ohne Notiz.
 - Refactoring (#263): Verteil-Ziele und Stufen-Filter zentral in
-  src/Distribution.php (Distribution, LevelFilter), Controller entschlackt.
+  src/Distribution.php (Distribution) und src/LevelFilter.php (LevelFilter), Controller entschlackt.
 - Lehrplan-Decks mit Sprechernotizen: Schichten/MAC/Ports (Jgst 7, #247),
   Informationssicherheit (Jgst 10, #250), Rekursion/Graphen (Jgst 11, #251),
   Formale Sprachen/EBNF/Automaten (Jgst 12, #252, mit Verweis auf die

@@ -5255,6 +5255,7 @@ setTimeout(function () {
                   var netJs138b = fs136.readFileSync(require.resolve('../public/assets/js/block-editor.js'), 'utf8');
                   var migrator138 = fs136.readFileSync(require.resolve('../src/Migrator.php'), 'utf8');
                   var dist138 = fs136.readFileSync(require.resolve('../src/Distribution.php'), 'utf8');
+                  var lf138 = fs136.readFileSync(require.resolve('../src/LevelFilter.php'), 'utf8');
                   var auth138 = fs136.readFileSync(require.resolve('../src/Controllers/AuthController.php'), 'utf8');
                   var taskStu138 = fs136.readFileSync(require.resolve('../templates/tasks_student.php'), 'utf8');
                   var presEdit138 = fs136.readFileSync(require.resolve('../templates/praesentation_edit.php'), 'utf8');
@@ -5268,9 +5269,9 @@ setTimeout(function () {
                     && netCss138.indexOf('.ic-ball') !== -1,
                     'T138p2 Block-Buehne zeichnet Kostueme als Vektor-Icons statt Emoji (#260)');
                   ok(dist138.indexOf('function targets') !== -1
-                    && dist138.indexOf('class LevelFilter') !== -1
+                    && lf138.indexOf('class LevelFilter') !== -1
                     && modCtrl138.indexOf('LevelFilter::allows') !== -1,
-                    'T138p3 Verteil-Logik und Stufen-Filter zentral in Distribution.php (#263)');
+                    'T138p3 Verteil-Logik in Distribution.php, Stufen-Filter in eigener Datei LevelFilter.php (#263)');
                   ok(auth138.indexOf('csrf_validate') !== -1
                     && auth138.indexOf('logout') !== -1,
                     'T138p4 Logout prueft den CSRF-Token (#259)');
