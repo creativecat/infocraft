@@ -80,6 +80,53 @@
     { v: 'ball', l: '⚽ Ball' }
   ];
   var COSTUME_EMOJI = { robot: '🤖', rocket: '🚀', fish: '🐟', ball: '⚽' };
+  /* #260: Kostueme als Vektor-Icons statt Emoji auf der Buehne. Die Emoji
+   * bleiben als Fallback, wenn der Browser weder Image noch Canvas kennt. */
+  var COSTUME_ICON = { robot: 'ic-robot', rocket: 'ic-rocket', fish: 'ic-fish', ball: 'ic-ball' };
+  var COSTUME_COLOR = { robot: '#475569', rocket: '#ea580c', fish: '#0d9488', ball: '#1f2937' };
+  var COSTUME_ICON_URL = {
+    robot: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDI0IDEwMjQiPjxwYXRoIGQ9Ik01MTIgNjRjLTM1IDAtNjQgMjktNjQgNjR2MzRDMjQyIDE5NiA5NiAzNTAgOTYgNTQwdjIxMmMwIDExOCA4MiAyMTYgMTkyIDI0MHYtOTZjMC0xOCAxNC0zMiAzMi0zMmgzMmMxOCAwIDMyIDE0IDMyIDMydjk2aDI1NnYtOTZjMC0xOCAxNC0zMiAzMi0zMmgzMmMxOCAwIDMyIDE0IDMyIDMydjk2YzExMC0yNCAxOTItMTIyIDE5Mi0yNDBWNTQwYzAtMTkwLTE0Ni0zNDQtMzUyLTM3OHYtMzRjMC0zNS0yOS02NC02NC02NHpNMzIwIDQxNmE5NiA5NiAwIDEgMSAwIDE5MiA5NiA5NiAwIDAgMSAwLTE5MnptMzg0IDBhOTYgOTYgMCAxIDEgMCAxOTIgOTYgOTYgMCAwIDEgMC0xOTJ6Ii8+PC9zdmc+',
+    rocket: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDI0IDEwMjQiPjxwYXRoIGQ9Ik03MDQgNjRsLTMyMCAzMjBoLTE5MmwtMTkyIDI1NmMwIDAgMjAzLjQxNi01Ni42NTIgMzIyLjA2Ni0zMC4wODRsLTMyMi4wNjYgNDE0LjA4NCA0MjEuOTAyLTMyOC4xNDRjNTguODM4IDEzNC42NTQtMzcuOTAyIDMyOC4xNDQtMzcuOTAyIDMyOC4xNDRsMjU2LTE5MnYtMTkybDMyMC0zMjAgNjQtMzIwLTMyMCA2NHoiLz48L3N2Zz4=',
+    fish: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDI0IDEwMjQiPjxwYXRoIGQ9Ik05NiA1MTJDMjA4IDM0MCAzNjggMjU2IDU2MCAyNTZjMjA4IDAgMzY4IDExMiA0NDggMjU2LTgwIDE0NC0yNDAgMjU2LTQ0OCAyNTYtMTkyIDAtMzUyLTg0LTQ2NC0yNTZ6bTQzMi0xNjBhNjQgNjQgMCAxIDAgMCAxMjggNjQgNjQgMCAwIDAgMC0xMjh6TTg4MCAzMjBsMTI4LTE2MHY3MDRsLTEyOC0xNjBjNDgtNjQgNzItMTI4IDcyLTE5MnMtMjQtMTI4LTcyLTE5MnoiLz48L3N2Zz4=',
+    ball: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDI0IDEwMjQiPjxwYXRoIGQ9Ik01MTIgNjRhNDQ4IDQ0OCAwIDEgMSAwIDg5NiA0NDggNDQ4IDAgMCAxIDAtODk2em0wIDE3NmE0OCA0OCAwIDEgMCAwIDk2IDQ4IDQ4IDAgMCAwIDAtOTZ6bTI4NCAxNzhhNDggNDggMCAxIDAgMzAgOTEgNDggNDggMCAwIDAtMzAtOTF6bS01NjggMGE0OCA0OCAwIDEgMCAzMCA5MSA0OCA0OCAwIDAgMC0zMC05MXptNDI2IDI2OGE0OCA0OCAwIDEgMCAzMCA5MSA0OCA0OCAwIDAgMC0zMC05MXptLTI4NCAwYTQ4IDQ4IDAgMSAwIDMwIDkxIDQ4IDQ4IDAgMCAwLTMwLTkxek01MTIgNDI0YTk2IDk2IDAgMSAwIDAgMTkyIDk2IDk2IDAgMCAwIDAtMTkyeiIvPjwvc3ZnPg=='
+  };
+  var costumeImgCache = {};
+  var costumeTintCache = {};
+  /** Kostuem-Icon als Image liefern (oder null, solange nicht geladen). #260 */
+  function costumeIconFor(costume) {
+    var url = COSTUME_ICON_URL[costume];
+    var w = (typeof window !== 'undefined') ? window : null;
+    var Img = w && w.Image;
+    if (!url || !Img) { return null; }
+    if (!costumeImgCache[costume]) {
+      var img = new Img();
+      img.src = url;
+      costumeImgCache[costume] = img;
+    }
+    var im = costumeImgCache[costume];
+    return (im.complete && im.naturalWidth) ? im : null;
+  }
+  /** Kostuem-Icon in der Kostuemfarbe auf die Buehne zeichnen (#260). */
+  function drawCostumeIcon(ctx, costume, size) {
+    var im = costumeIconFor(costume);
+    if (!im || typeof ctx.drawImage !== 'function') { return false; }
+    if (!costumeTintCache[costume]) {
+      var d = (typeof window !== 'undefined') ? window.document : null;
+      if (!d || !d.createElement) { return false; }
+      var off = d.createElement('canvas');
+      off.width = 128;
+      off.height = 128;
+      var octx = off.getContext && off.getContext('2d');
+      if (!octx || typeof octx.drawImage !== 'function') { return false; }
+      octx.drawImage(im, 0, 0, 128, 128);
+      octx.globalCompositeOperation = 'source-in';
+      octx.fillStyle = COSTUME_COLOR[costume] || '#1f2937';
+      octx.fillRect(0, 0, 128, 128);
+      costumeTintCache[costume] = off;
+    }
+    ctx.drawImage(costumeTintCache[costume], -size / 2, -size / 2, size, size);
+    return true;
+  }
   var PEN_COLORS = [
     { v: '#1f2937', l: '⚫ Schwarz' },
     { v: '#dc2626', l: '🔴 Rot' },
@@ -2586,7 +2633,7 @@
       var stageCard = el('button', 'blk-spr-card' + (isStage() ? ' active' : ''));
       stageCard.setAttribute('type', 'button');
       stageCard.setAttribute('data-target', 'stage');
-      stageCard.appendChild(el('span', 'blk-spr-ico', '🎬'));
+      stageCard.appendChild(el('span', 'icn ic-presentation'));
       stageCard.appendChild(el('span', 'blk-spr-name', 'Bühne'));
       stageCard.addEventListener('click', function () { selectTarget(null); });
       els.sprites.appendChild(stageCard);
@@ -2597,7 +2644,9 @@
           card.setAttribute('data-sprite', sp.id);
           var pick = el('button', 'blk-spr-pick');
           pick.setAttribute('type', 'button');
-          pick.appendChild(el('span', 'blk-spr-ico', COSTUME_EMOJI[sp.costume] || '🤖'));
+          var icoWrap = el('span', 'icn ' + (COSTUME_ICON[sp.costume] || 'ic-question'));
+          icoWrap.setAttribute('aria-hidden', 'true');
+          pick.appendChild(icoWrap);
           pick.appendChild(el('span', 'blk-spr-name', sp.name));
           pick.addEventListener('click', function () { selectTarget(sp); });
           card.appendChild(pick);
@@ -3452,7 +3501,11 @@
         if (effectOn && typeof ctx.filter === 'string') {
           try { ctx.filter = 'hue-rotate(' + Math.round(num(sp.effect) * 1.8) + 'deg)'; } catch (e) { effectOn = false; }
         }
-        ctx.fillText(COSTUME_EMOJI[sp.costume] || '🤖', 0, 0);
+        /* Kostuem als Vektor-Icon (#260), Emoji nur noch als Fallback. */
+        var cSize = Math.round(44 * sp.size / 100);
+        if (!drawCostumeIcon(ctx, sp.costume, cSize)) {
+          ctx.fillText(COSTUME_EMOJI[sp.costume] || '🤖', 0, 0);
+        }
         if (effectOn && typeof ctx.filter === 'string') {
           try { ctx.filter = 'none'; } catch (e) {}
         }

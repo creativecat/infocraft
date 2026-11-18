@@ -12,7 +12,7 @@
  *
  * Node-Tests: module.exports; Browser: window.IC_NET.
  *
- * @version 0.37.0
+ * @version 0.38.0
  * @license CC BY-NC-SA 4.0 (InfoCraft)
  */
 (function () {
@@ -332,6 +332,7 @@
     try { net = JSON.parse(boot.getAttribute('data-net') || '{}'); } catch (e) { net = defaultNet(); }
     net = saneNet(net); // kaputte Datenbankstände dürfen attach() nie töten (#233)
     var lastStand = JSON.stringify(net);
+    var stageSig = ''; // #258: Signatur der Topologie, nur bei Aenderung neu zeichnen
 
     var svg = doc.getElementById('net-svg');
     var modal = doc.getElementById('net-modal');
@@ -385,7 +386,14 @@
         byId('net-netinfo').textContent = net.devices.length + ' Geräte im Netz'
           + (hasDns(net) ? ' · DNS aktiv' : ' · kein DNS-Server');
       }
-      drawStage();
+      // #258: Die Buehne nur neu zeichnen, wenn sich die Topologie wirklich
+      // geaendert hat (Geraete, Verkabelung, Provider). Log- und Messenger-
+      // Aktionen rendern sonst bei jedem Klick das komplette SVG neu.
+      var sig = JSON.stringify([net.router.name, net.provider, net.level,
+        net.devices.map(function (d) {
+          return [d.id, d.type, d.name, d.ip, d.wifi, d.ssid, d.cable, d.zone, d.pos || null];
+        })]);
+      if (sig !== stageSig) { drawStage(); stageSig = sig; }
       renderMissions();
       renderLevel();
       if (openId !== null && modal) {
@@ -1621,7 +1629,7 @@
   /* =================== Export =================== */
 
   var api = {
-    version: '0.37.0',
+    version: '0.38.0',
     defaultNet: defaultNet,
     resolve: resolve,
     dnsLookup: dnsLookup,
