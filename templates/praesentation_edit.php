@@ -1,0 +1,99 @@
+<?php /* InfoCraft - offene Lernplattform für Informatik
+   Datei: Präsentationen: Editor
+   Autor: Matthias Glienke, letima development
+   Lizenz: CC BY-NC-SA 4.0
+   Version: 0.15.0 */ ?>
+<section class="panel">
+    <div class="panel-head">
+        <h3><span class="icn ic-film" aria-hidden="true"></span> Präsentation bearbeiten</h3>
+        <div class="btn-row">
+            <a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
+            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>"><span class="icn ic-play" aria-hidden="true"></span> Präsentieren</a>
+        </div>
+    </div>
+    <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id) ?>" class="form">
+        <?= csrf_field() ?>
+        <div class="form-row form">
+            <label class="field"><span>Titel</span><input type="text" name="title" required maxlength="200" value="<?= e($presentation->title) ?>"></label>
+            <label class="field"><span>Ab Jahrgangsstufe</span>
+                <select name="level">
+                    <?php foreach (valid_levels() as $i): ?>
+                    <option value="<?= $i ?>"<?= $i === $presentation->level ? ' selected' : '' ?>><?= $i ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button></div>
+        </div>
+    </form>
+</section>
+
+<?php if ($slides === []): ?>
+<div class="notice">
+    <strong>Noch keine Folien</strong>
+    <p>Füge unten die erste Folie hinzu: eine Text-Folie für Überschriften und Merksätze oder eine Code-Folie für Live-Demos.</p>
+</div>
+<?php endif; ?>
+
+<?php foreach ($slides as $pos => $slide): ?>
+<section class="panel">
+    <div class="panel-head">
+        <h3>Folie <?= $pos + 1 ?>: <?= $slide['type'] === 'code' ? '<span class="icn ic-laptop" aria-hidden="true"></span> Code' : '<span class="icn ic-file-text" aria-hidden="true"></span> Text' ?><?= $slide['title'] !== '' ? ' · ' . e($slide['title']) : '' ?></h3>
+        <div class="btn-row">
+            <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/hoch') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit"<?= $pos === 0 ? ' disabled' : '' ?>><span class="icn ic-arrow-up" aria-hidden="true"></span></button></form>
+            <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/runter') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit"<?= $pos === count($slides) - 1 ? ' disabled' : '' ?>><span class="icn ic-arrow-down" aria-hidden="true"></span></button></form>
+            <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/loeschen') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit" title="Löschen"><span class="icn ic-bin2" aria-hidden="true"></span></button></form>
+        </div>
+    </div>
+    <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos) ?>" class="form">
+        <?= csrf_field() ?>
+        <label class="field"><span>Folien-Titel</span><input type="text" name="title" maxlength="200" value="<?= e($slide['title']) ?>"></label>
+        <?php if ($slide['type'] === 'code'): ?>
+        <div class="form-row form">
+            <label class="field"><span>Sprache</span>
+                <select name="lang">
+                    <?php foreach (['java', 'python', 'sql', 'html'] as $lang): ?>
+                    <option value="<?= $lang ?>"<?= $slide['lang'] === $lang ? ' selected' : '' ?>><?= $lang ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+        </div>
+        <label class="field"><span>Code (erscheint mit Syntax-Highlighting, in der Präsentation veränderbar)</span>
+            <span class="hlwrap" data-hl="<?= e($slide['lang']) ?>"><textarea name="code" rows="10" class="mono" spellcheck="false"><?= e($slide['code']) ?></textarea></span>
+        </label>
+        <?php else: ?>
+        <label class="field"><span>Text (Markdown-lite: # Überschrift, **fett**, *kursiv*, `Code`, - Liste, ``` Block; Bausteine: :::titel, :::merksatz, :::uebung, :::loesung, :::hinweis, :::vergleich, :::karten, :::statistik, :::zitat, je mit :::ende)</span>
+            <textarea name="body" rows="8" class="mono" spellcheck="true"><?= e($slide['body']) ?></textarea>
+        </label>
+        <?php endif; ?>
+        <label class="field"><span><span class="icn ic-mic" aria-hidden="true"></span> Sprechernotiz (nur im Moderatorenbildschirm für Lehrkräfte sichtbar, Schülerinnen und Schüler sehen sie nie)</span>
+            <textarea name="notes" rows="3" class="mono" spellcheck="true" placeholder="Kernbotschaft, Impulsfrage, Zeitangabe - z. B.: &quot;Frage zuerst: Wer hat schon mal ...? (3 Min)&quot;"><?= e($slide['notes'] ?? '') ?></textarea>
+        </label>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Folie speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button></div>
+    </form>
+</section>
+<?php endforeach; ?>
+
+<section class="panel">
+    <h3>Folie anfügen</h3>
+    <p class="muted">Einfach leer: Typ wählen und <span class="icn ic-plus" aria-hidden="true"></span> klicken. Für einen schnellen, aufgeräumten Aufbau gibt es Vorlagen (Bausteine wie Merksatz, Übung mit Lösung, Vergleich und Karten werden automatisch eingerichtet):</p>
+    <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie') ?>" class="form">
+        <?= csrf_field() ?>
+        <div class="form-row form">
+            <label class="field"><span>Typ</span>
+                <select name="type">
+                    <option value="text">📄 Text-Folie (Überschrift, Merksatz, Liste)</option>
+                    <option value="code">💻 Code-Folie (Java, Python oder SQL mit Highlighting)</option>
+                </select>
+            </label>
+            <label class="field"><span>Vorlage (optional)</span>
+                <select name="template" onchange="this.form.type.value = (this.value === 'codedemo' ? 'code' : 'text');">
+                    <option value="">Ohne Vorlage: leere Folie</option>
+                    <?php foreach (\Infocraft\Controllers\PresentationController::slideTemplates() as $tplKey => $tpl): ?>
+                    <option value="<?= e($tplKey) ?>"><?= e($tpl['label']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Folie anfügen"><span class="icn ic-plus" aria-hidden="true"></span> Folie anfügen</button></div>
+        </div>
+    </form>
+</section>
