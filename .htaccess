@@ -1,0 +1,8 @@
+# Fallback, falls der Webspace direkt auf das Repository zeigt (DocumentRoot = Repo-Wurzel).
+# Empfohlen ist, den DocumentRoot direkt auf public/ zeigen zu lassen.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^$ public/ [L]
+  RewriteCond %{REQUEST_URI} !/public/
+  RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
