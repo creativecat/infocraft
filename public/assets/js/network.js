@@ -12,7 +12,7 @@
  *
  * Node-Tests: module.exports; Browser: window.IC_NET.
  *
- * @version 0.36.0
+ * @version 0.37.0
  * @license CC BY-NC-SA 4.0 (InfoCraft)
  */
 (function () {
@@ -43,7 +43,10 @@
     + '.net-port { fill: #e2e8f0; stroke: #94a3b8; stroke-width: 1; }'
     + '.net-port-on { fill: #34d399; stroke: #0f766e; stroke-width: 1; }'
     + '.net-provider-box { fill: #e0f2fe; stroke: #0284c7; stroke-width: 2; }'
-    + '.net-provider-trunk { stroke: #0284c7; stroke-dasharray: 8 6; }'
+    + '.net-provider-trunk { stroke: #0284c7; fill: none; stroke-dasharray: 8 6; }'
+    + '.net-provider-name { fill: #075985; font-size: 16px; font-weight: 700; }'
+    + '.net-provider-ip { fill: #075985; font-size: 13px; }'
+    + '.net-router-sub { fill: #d1fae5; font-size: 13px; }'
     + 'text { font-family: system-ui, sans-serif; }';
 
   var NEWSPAPER = '<h1>Schulzeitung</h1>'
@@ -364,7 +367,11 @@
       }).then(function (r) { return r.json(); }).then(function (data) {
         if (data && data.net) { net = saneNet(data.net); lastStand = JSON.stringify(net); } // (#233)
         if (cb) { cb(data || null); }
-        render();
+        // Seitenaufruf und Druck ändern nur Logs: Das offene Browser-Fenster
+        // darf danach NICHT neu aufgebaut werden, sonst verschwindet die
+        // geladene Seite sofort wieder (#245, Bugfix Runde 37).
+        if (action === 'browse' || action === 'printPage') { render({ modal: false }); }
+        else { render(); }
       }).catch(function () { if (connState) { connState(false); } if (cb) { cb(null); } });
     }
 
@@ -418,7 +425,7 @@
       var label = svgEl('text', { x: cx, y: cy - 8, class: 'net-router-text', 'text-anchor': 'middle' });
       label.innerHTML = '<span class="icn ic-satellite-dish" aria-hidden="true"></span> ' + (net.router.name || 'Router');
       g.appendChild(label);
-      var ipText = svgEl('text', { x: cx, y: cy + 10, class: 'net-sub', 'text-anchor': 'middle' });
+      var ipText = svgEl('text', { x: cx, y: cy + 10, class: 'net-sub net-router-sub', 'text-anchor': 'middle' });
       ipText.textContent = '192.168.0.1';
       g.appendChild(ipText);
       var usedPorts = 0;
@@ -437,22 +444,71 @@
       })(g);
       svg.appendChild(g);
 
-      // Provider-Cloud (#227): Vermittler zwischen Schulnetz und Website-Anbietern
-      var PX = 724, PY = 86;
+      // Provider-Cloud (#227): Vermittler zwischen Schulnetz und Website-Anbietern.
+      // Wie die Geräte frei verschiebbar, Position wird gespeichert (Bugfix Runde 37).
+      var provPosRaw = (net.provider && net.provider.pos && typeof net.provider.pos.x === 'number' && typeof net.provider.pos.y === 'number') ? net.provider.pos : null;
+      var PX = provPosRaw ? Math.max(70, Math.min(830, provPosRaw.x)) : 724;
+      var PY = provPosRaw ? Math.max(44, Math.min(518, provPosRaw.y)) : 86;
+      var providerEdges = []; // WAN-Kabel, die beim Ziehen mitwandern
       var trunk = svgEl('path', {
         d: cableD(cx + 88, cy - rh / 2, PX, PY + 34, 6),
         class: 'net-link net-provider-trunk'
       });
       svg.appendChild(trunk);
       paths[edgeKey('router', 'provider')] = trunk;
-      var provShape = svgEl('rect', { x: PX - 96, y: PY - 32, rx: 28, width: 192, height: 66, class: 'net-provider-box net-provider' });
-      svg.appendChild(provShape);
-      var provLabel = svgEl('text', { x: PX, y: PY - 6, class: 'net-router-text net-provider', 'text-anchor': 'middle' });
+      var provG = svgEl('g', { class: 'net-provider-group' });
+      provG.appendChild(svgEl('rect', { x: PX - 96, y: PY - 32, rx: 28, width: 192, height: 66, class: 'net-provider-box' }));
+      var provLabel = svgEl('text', { x: PX, y: PY - 6, class: 'net-provider-name', 'text-anchor': 'middle' });
       provLabel.innerHTML = '<span class="icn ic-cloud" aria-hidden="true"></span> ' + esc((net.provider && net.provider.name) || 'Provider');
-      svg.appendChild(provLabel);
-      var provIp = svgEl('text', { x: PX, y: PY + 14, class: 'net-sub net-provider', 'text-anchor': 'middle' });
+      provG.appendChild(provLabel);
+      var provIp = svgEl('text', { x: PX, y: PY + 14, class: 'net-provider-ip', 'text-anchor': 'middle' });
       provIp.textContent = (net.provider && net.provider.ip) || '62.153.20.1';
-      svg.appendChild(provIp);
+      provG.appendChild(provIp);
+      (function (pg, bx, by, trunkEl) {
+        if (!pg.addEventListener) { return; }
+        var dragging = false;
+        var moved = false;
+        var start = null;
+        var cur = { x: bx, y: by };
+        function setTrunk(nx, ny) { trunkEl.setAttribute('d', cableD(cx + 88, cy - rh / 2, nx, ny + 34, 6)); }
+        function down(ev) {
+          var p = stagePoint(ev);
+          if (!p) { return; }
+          dragging = true;
+          moved = false;
+          start = { mx: p.x, my: p.y, ox: bx, oy: by };
+          if (pg.setPointerCapture && ev.pointerId !== undefined) {
+            try { pg.setPointerCapture(ev.pointerId); } catch (e) {}
+          }
+          if (ev.preventDefault) { ev.preventDefault(); }
+        }
+        function moveFn(ev) {
+          if (!dragging || !start) { return; }
+          var p = stagePoint(ev);
+          if (!p) { return; }
+          var nx = Math.max(70, Math.min(830, start.ox + (p.x - start.mx)));
+          var ny = Math.max(44, Math.min(518, start.oy + (p.y - start.my)));
+          if (Math.abs(nx - start.ox) > 3 || Math.abs(ny - start.oy) > 3) { moved = true; }
+          cur = { x: nx, y: ny };
+          pg.setAttribute('transform', 'translate(' + (nx - bx) + ',' + (ny - by) + ')');
+          setTrunk(nx, ny);
+          for (var ei = 0; ei < providerEdges.length; ei++) {
+            var pe = providerEdges[ei];
+            pe.el.setAttribute('d', cableD(nx - 96, ny, pe.tx, pe.ty, 0));
+          }
+          if (ev.preventDefault) { ev.preventDefault(); }
+        }
+        function up() {
+          if (!dragging) { return; }
+          dragging = false;
+          if (moved) { act('moveProvider', { x: Math.round(cur.x), y: Math.round(cur.y) }); }
+        }
+        pg.addEventListener('pointerdown', down);
+        pg.addEventListener('pointermove', moveFn);
+        pg.addEventListener('pointerup', up);
+        pg.addEventListener('pointercancel', up);
+      })(provG, PX, PY, trunk);
+      svg.appendChild(provG);
 
       // SVG-Punkt aus Mauskoordinaten (Zoom und Größe der Bühne mitrechnen)
       function stagePoint(ev) {
@@ -493,6 +549,7 @@
           line = svgEl('path', { d: cableD(anchX, anchY, dx, dy, 0), class: 'net-link net-cable' + (on ? '' : ' net-link-off') });
           svg.appendChild(line);
           paths[edgeKey('provider', 'dev:' + d.id)] = line;
+          providerEdges.push({ el: line, tx: dx, ty: dy });
         } else {
           // Leitung vom Router-Port zum Gerät (#235)
           anchX = cx - 72 + (lanCount % PORTS) * 21 + 7;
@@ -505,7 +562,8 @@
         var gg = svgEl('g', { class: 'net-device' + (on ? '' : ' net-device-off') });
         gg.appendChild(svgEl('rect', { x: dx - 74, y: dy - 30, rx: 10, width: 148, height: 84 }));
         var t1 = svgEl('text', { x: dx, y: dy - 4, class: 'net-dev-text', 'text-anchor': 'middle' });
-        t1.innerHTML = '<span class="icn ' + (TYPES[d.type] ? TYPES[d.type].ic : 'ic-question') + '" aria-hidden="true"></span> ' + esc(d.name);
+        var dispName = (d.name || '').length > 18 ? (d.name || '').slice(0, 17) + '…' : (d.name || '');
+        t1.innerHTML = '<span class="icn ' + (TYPES[d.type] ? TYPES[d.type].ic : 'ic-question') + '" aria-hidden="true"></span> ' + esc(dispName);
         gg.appendChild(t1);
         var t2 = svgEl('text', { x: dx, y: dy + 18, class: 'net-sub', 'text-anchor': 'middle' });
         var state = d.wifi ? ' · im WLAN ' + (d.ssid || '') : (d.cable === false ? ' · offline' : (d.type === 'phone' ? ' · kein WLAN' : ' · per Kabel'));
@@ -1563,7 +1621,7 @@
   /* =================== Export =================== */
 
   var api = {
-    version: '0.36.0',
+    version: '0.37.0',
     defaultNet: defaultNet,
     resolve: resolve,
     dnsLookup: dnsLookup,

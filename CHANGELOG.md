@@ -1,3 +1,17 @@
+## [0.37.0] - 2026-11-18 (Runde 37)
+### Netzwerk-Werkstatt: Bugfixes
+- Provider-Stammleitung war ein gefuelltes schwarzes Dreieck: SVG-Fuellung
+  fuer alle Netz-Leitungen abgeschaltet, das Kabel ist jetzt eine Linie.
+- Provider-Cloud frei verschiebbar wie die Geraete, Position wird gespeichert;
+  Stamm- und WAN-Kabel wandern beim Ziehen live mit.
+- Kontrast gefixt: Router-IP hellgruen auf dem dunkelgruenen Router, Provider-
+  Name/IP dunkelblau auf der hellblauen Cloud (statt weiss auf hellblau).
+- Browser-Fenster bleibt nach dem Aufruf von schulnetz.net offen: Der
+  Seitenaufruf baut das Modal nicht mehr neu auf, die geladene Seite bleibt
+  stehen; Druck genauso.
+- Ueberlaufende Inhalte gebändigt: Toolbar, URL-Zeile, Log-, Messenger- und
+  Missionszeilen brechen um, lange Geraetenamen werden auf der Buehne gekuerzt.
+
 ## [0.36.0] - 2026-11-18 (Runde 36)
 ### Netzwerk-Werkstatt, Teil 3 (#227, #245)
 - Provider-Netze: Provider-Cloud auf der Buehne (Stammleitung vom Router),

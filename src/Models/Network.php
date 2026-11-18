@@ -231,6 +231,13 @@ final class Network
                 }
                 break;
 
+            case 'moveProvider': // Bugfix Runde 37: Provider-Cloud ziehen wie die Geräte
+                $net['provider']['pos'] = [
+                    'x' => (int) round(max(0, min(900, (float) ($params['x'] ?? 0)))),
+                    'y' => (int) round(max(0, min(560, (float) ($params['y'] ?? 0)))),
+                ];
+                break;
+
             case 'setAp':
                 foreach ($net['devices'] as $i => $d) {
                     if ($d['id'] === (string) ($params['id'] ?? '') && $d['type'] === 'ap') {
@@ -559,6 +566,13 @@ final class Network
         // Provider-Knoten (#227): Cloud zwischen Schul-Router und Website-Anbietern
         $net['provider'] = array_merge(self::empty()['provider'], is_array($net['provider'] ?? null) ? $net['provider'] : []);
         $net['provider']['name'] = self::cleanText((string) ($net['provider']['name'] ?? 'Schulprovider'), 40);
+        // Gespeicherte Position der Provider-Cloud (Bugfix Runde 37), ohne Wert: Standardplatz
+        if (isset($net['provider']['pos']) && is_array($net['provider']['pos'])) {
+            $net['provider']['pos'] = [
+                'x' => (int) round(max(0, min(900, (float) ($net['provider']['pos']['x'] ?? 724)))),
+                'y' => (int) round(max(0, min(560, (float) ($net['provider']['pos']['y'] ?? 86)))),
+            ];
+        }
         $net['devices'] = array_slice(array_values(array_filter($net['devices'], 'is_array')), 0, self::MAX_DEVICES);
         $net['pages'] = array_slice(array_values(array_filter($net['pages'], 'is_array')), 0, self::MAX_PAGES);
         $net['dns'] = array_slice(array_values(array_filter($net['dns'], 'is_array')), 0, self::MAX_DNS);
