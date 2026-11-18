@@ -266,7 +266,7 @@ jobs:
           grep -q "blk-dragging" public/assets/js/block-editor.js && grep -q "T111 beim Ziehen" tools/ui-tests.js && BLK_DRAGVIS_OK=1 || BLK_DRAGVIS_OK=0
           grep -q "Einfuege-Linie" public/assets/js/block-editor.js && grep -q "T111b die Einfuege-Linie" tools/ui-tests.js && BLK_INS_OK=1 || BLK_INS_OK=0
           grep -q "blk-hint-pulse" public/assets/css/style.css && grep -q "blk-mode-btn" public/assets/css/style.css && BLK_STYLE_OK=1 || BLK_STYLE_OK=0
-          grep -q "letima development" src/Support.php && grep -q "APP_VERSION = '0.40.0'" src/Support.php && grep -q "Keep a Changelog" CHANGELOG.md && grep -q "APP_VERSION" templates/layout.php && BLK_HEAD_OK=1 || BLK_HEAD_OK=0
+          grep -q "letima development" src/Support.php && grep -q "APP_VERSION = '0.41.0'" src/Support.php && grep -q "Keep a Changelog" CHANGELOG.md && grep -q "APP_VERSION" templates/layout.php && BLK_HEAD_OK=1 || BLK_HEAD_OK=0
           grep -q "drag.ghost.style.transform = 'translate('" public/assets/js/block-editor.js && grep -q "_bubW" public/assets/js/block-editor.js && grep -q "children.length > 200" public/assets/js/block-editor.js && grep -q "T113 der gezogene Block folgt" tools/ui-tests.js && BLK_OPT_OK=1 || BLK_OPT_OK=0
           grep -q "switchMode" public/assets/js/block-editor.js && grep -q "blk-switch-btn" templates/code_project.php && grep -q "T109m die Moduswahl" tools/ui-tests.js && BLK_SWITCH_OK=1 || BLK_SWITCH_OK=0
           grep -q "pro: true" public/assets/js/block-editor.js && grep -q "T109e im Lernmodus fehlt die Variablen-Kategorie" tools/ui-tests.js && BLK_LEARN_OK=1 || BLK_LEARN_OK=0
@@ -406,7 +406,7 @@ jobs:
           grep -q "ibook-page-layout" public/assets/css/style.css && IBK_CSS_OK=1 || IBK_CSS_OK=0
           grep -q "href=\"/infobuecher\"" home.html && IBK_NAV_OK=1 || IBK_NAV_OK=0
           [ -f public/assets/vendor/highlight.min.js ] && [ -f public/assets/vendor/mermaid.min.js ] && VENDOR_OK=1 || VENDOR_OK=0
-          grep -q "'94'" src/Support.php && ASSETV_OK=1 || ASSETV_OK=0
+          grep -q "'95'" src/Support.php && ASSETV_OK=1 || ASSETV_OK=0
           # Runde 33 (#241, #242): helle Desktop-Optik und Icon-System.
           grep -q "Helle Desktop-Optik (#241)" public/assets/css/style.css && grep -q "backdrop-filter: saturate(180%) blur(18px)" public/assets/css/style.css && grep -q "border-radius: 980px" public/assets/css/style.css && DESIGN_OK=1 || DESIGN_OK=0
           grep -q ".icn {" public/assets/css/style.css && grep -q "mask-image" public/assets/css/style.css && ICONCSS_OK=1 || ICONCSS_OK=0
@@ -429,8 +429,9 @@ jobs:
           grep -q "net-router-card" templates/network_workshop.php && grep -q "width: min(1680px, 97vw)" public/assets/css/style.css && R39NET_OK=1 || R39NET_OK=0
           grep -q 'card-icon"><?=' templates/diagram_overview.php && grep -q "0.85em" public/assets/css/style.css && R39ICON_OK=1 || R39ICON_OK=0
           grep -q "Runde 40" public/assets/css/style.css && grep -q "position: fixed; inset: 0; padding: 14px; z-index: 80" public/assets/css/style.css && grep -q "bootState" public/assets/js/missions.js && grep -q "ic.missions.open" public/assets/js/missions.js && R40MOD_OK=1 || R40MOD_OK=0
-          grep -q "backdrop-filter: blur(24px)" public/assets/css/style.css && grep -q "net-win-dot { width: 12px" public/assets/css/style.css && grep -q "0.40.0" public/assets/js/network.js && R40WIN_OK=1 || R40WIN_OK=0
+          grep -q "backdrop-filter: blur(24px)" public/assets/css/style.css && grep -q "net-win-dot { width: 12px" public/assets/css/style.css && grep -q "0.41.0" public/assets/js/network.js && R40WIN_OK=1 || R40WIN_OK=0
           grep -q "rawName.length > 13" public/assets/js/network.js && grep -q "font-size: 13px" public/assets/js/network.js && grep -q "ssid.length > 10" public/assets/js/network.js && R40TXT_OK=1 || R40TXT_OK=0
+          grep -q "net-side-toggle" templates/network_workshop.php && grep -q "net-side-hidden" public/assets/js/network.js && grep -q "net.side.hidden" public/assets/js/network.js && grep -q "net-layout.net-side-hidden { grid-template-columns: 1fr; }" public/assets/css/style.css && R41NET_OK=1 || R41NET_OK=0
           grep -q "ic-brand-java" public/assets/css/style.css && grep -q "ic-brand-python" templates/code_overview.php && BRAND_OK=1 || BRAND_OK=0
           grep -q "T138" tools/ui-tests.js && grep -q "0.35.0" CHANGELOG.md && ICONR35_OK=1 || ICONR35_OK=0
           # Runde 36 (#245): Netzwerk-Werkstatt, Teil 3 (Provider, Messenger, Paketflug).
