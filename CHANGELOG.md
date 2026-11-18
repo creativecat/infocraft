@@ -1,3 +1,26 @@
+## [0.38.0] - 2026-11-18 (Runde 38)
+### Offene Issues abgearbeitet (#246-#263)
+- Performance (#258): Die Netzwerk-Buehne zeichnet nur noch neu, wenn sich die
+  Topologie aendert; Log- und Messenger-Aktionen bauen das SVG nicht mehr auf.
+- Kostueme (#260): Roboter, Rakete, Fisch und Ball auf der Block-Buehne als
+  Vektor-Icons (Canvas, einfaerbbar) statt Emoji, auch im Figuren-Panel.
+- Sicherheit (#259): CSRF-Audit ueber alle 114 POST-Routen; Logout validiert
+  jetzt ebenfalls den CSRF-Token, alle uebrigen Routen waren bereits geschuetzt.
+- Aufgaben (#262): Quiz-Aufgaben verlinken direkt aufs Quiz, Allgemein-Aufgaben
+  auf die Werkstatt-Uebersicht; Code/HTML/SQL-Links bestanden schon.
+- Sprechernotizen (#257): Der Präsentations-Editor markiert Folien ohne Notiz.
+- Refactoring (#263): Verteil-Ziele und Stufen-Filter zentral in
+  src/Distribution.php (Distribution, LevelFilter), Controller entschlackt.
+- Lehrplan-Decks mit Sprechernotizen: Schichten/MAC/Ports (Jgst 7, #247),
+  Informationssicherheit (Jgst 10, #250), Rekursion/Graphen (Jgst 11, #251),
+  Formale Sprachen/EBNF/Automaten (Jgst 12, #252, mit Verweis auf die
+  Automaten-, Kellerautomat- und Turing-Sprachen der Code-Werkstatt),
+  Betriebssysteme/Nebenlaeufigkeit (Jgst 12, #253), Maschinelles Lernen
+  (kNN, Baum, Perzeptron, #254), Softwareentwicklung (Wasserfall, Scrum,
+  Testen, #255).
+- Stufen korrigiert (#246, #249): Funktionale Modellierung und Tabellenkalkulation
+  ab Jgst 6 sichtbar (LehrplanPLUS), Redundanz/Anomalien ab Jgst 9.
+
 ## [0.37.0] - 2026-11-18 (Runde 37)
 ### Netzwerk-Werkstatt: Bugfixes
 - Provider-Stammleitung war ein gefuelltes schwarzes Dreieck: SVG-Fuellung

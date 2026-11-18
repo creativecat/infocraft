@@ -68,6 +68,7 @@ final class AuthController
 
     public static function logout(): void
     {
+        csrf_validate(); // #259: auch der Logout ist ein zustandsaenderndes POST
         Auth::logout();
         redirect('/login');
     }

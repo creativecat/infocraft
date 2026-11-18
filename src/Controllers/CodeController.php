@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Infocraft\Controllers;
 
+use Infocraft\Distribution;
 use Infocraft\Auth;
 use Infocraft\Database;
 use Infocraft\Models\Folder;
@@ -436,25 +437,9 @@ final class CodeController
             flash('error', 'Projekt nicht gefunden.');
             redirect('/werkstatt/code');
         }
-        $classId = (int) ($_POST['class_id'] ?? 0);
-        $singleId = (int) ($_POST['user_id'] ?? 0);
-        $recipients = [];
-        if ($classId > 0) {
-            if (!$isAdmin && !SchoolClass::hasTeacher($classId, $user->id)) {
-                flash('error', 'Du unterrichtest diese Klasse nicht.');
-                redirect('/werkstatt/code');
-            }
-            $recipients = User::byClass($classId);
-        } elseif ($singleId > 0) {
-            $student = User::find($singleId);
-            if ($student === null || $student->role !== 'student' || (!$isAdmin && ($student->classId === null || !SchoolClass::hasTeacher($student->classId, $user->id)))) {
-                flash('error', 'Diese Person ist nicht in einer deiner Klassen.');
-                redirect('/werkstatt/code');
-            }
-            $recipients = [$student];
-        }
+        $recipients = Distribution::targets($user); // zentral in src/Distribution.php (#263)
         if ($recipients === []) {
-            flash('error', 'Kein Ziel angegeben.');
+            flash('error', 'Kein Ziel angegeben oder du unterrichtest diese Klasse nicht.');
             redirect('/werkstatt/code');
         }
         foreach ($recipients as $recipient) {

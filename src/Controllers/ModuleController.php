@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Infocraft\Controllers;
 
 use Infocraft\Auth;
+use Infocraft\LevelFilter;
 use Infocraft\Database;
 use Infocraft\Models\SqlTemplate;
 use Infocraft\Models\User;
@@ -208,7 +209,6 @@ final class ModuleController
         if ($user->role !== 'student') {
             return $modules;
         }
-        $level = Auth::levelOf($user) ?? 0;
         $modes = $user->classId === null ? [] : self::modesFor($user->classId);
         $visible = [];
         foreach ($modules as $key => $module) {
@@ -216,7 +216,7 @@ final class ModuleController
             if ($mode === 'sperren') {
                 continue;
             }
-            if ($mode === 'freigeben' || ($module['level'] ?? 6) <= $level) {
+            if ($mode === 'freigeben' || LevelFilter::allows($user, (int) ($module['level'] ?? 6))) {
                 $visible[$key] = $module;
             }
         }

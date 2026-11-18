@@ -5,7 +5,7 @@
    Runde 35 (#244): Toolbar mit ausklappbarem Geräte-Hinzufügen,
    PNG-Export, Drucken, einklappbare Missionen.
    Runde 36 (#245): ARIA-Labels für Toolbar und Bedienelemente.
-   Version: 0.37.0 */ ?>
+   Version: 0.38.0 */ ?>
 <div class="net-layout">
     <aside class="net-side">
         <div class="net-card net-router-card">

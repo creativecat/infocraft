@@ -121,6 +121,11 @@ $currentRating = $entry['submission'] !== null ? (int) ($entry['submission']['se
         </form>
         <?php elseif ($task->type === 'sql'): ?>
         <a class="btn btn-primary" href="<?= url('werkstatt/sql') ?>" title="Diese Aufgabe wird in der SQL-Werkstatt bearbeitet"><span class="icn ic-database" aria-hidden="true"></span> In der SQL-Werkstatt arbeiten</a>
+        <?php elseif ($task->type === 'quiz'): ?>
+        <a class="btn btn-primary" href="<?= url('quiz') ?>" title="Diese Aufgabe wird als Quiz bearbeitet"><span class="icn ic-checkmark" aria-hidden="true"></span> Zum Quiz</a>
+        <?php endif; ?>
+        <?php if ($task->type !== 'code' && $task->type !== 'html' && $task->type !== 'sql'): ?>
+        <a class="btn btn-ghost" href="<?= url('/') ?>" title="Direkt in eine Werkstatt springen: Netzwerk, SQL, Code, HTML oder Diagramme"><span class="icn ic-hammer" aria-hidden="true"></span> Zu den Werkstätten</a>
         <?php endif; ?>
     </div>
 

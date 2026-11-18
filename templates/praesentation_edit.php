@@ -37,7 +37,7 @@
 <?php foreach ($slides as $pos => $slide): ?>
 <section class="panel">
     <div class="panel-head">
-        <h3>Folie <?= $pos + 1 ?>: <?= $slide['type'] === 'code' ? '<span class="icn ic-laptop" aria-hidden="true"></span> Code' : '<span class="icn ic-file-text" aria-hidden="true"></span> Text' ?><?= $slide['title'] !== '' ? ' · ' . e($slide['title']) : '' ?></h3>
+        <h3>Folie <?= $pos + 1 ?>: <?= $slide['type'] === 'code' ? '<span class="icn ic-laptop" aria-hidden="true"></span> Code' : '<span class="icn ic-file-text" aria-hidden="true"></span> Text' ?><?= $slide['title'] !== '' ? ' · ' . e($slide['title']) : '' ?><?php if (trim((string) ($slide['notes'] ?? '')) === ''): ?> <span class="pill" title="Diese Folie hat noch keine Sprechernotiz (#257)"><span class="icn ic-mic" aria-hidden="true"></span> ohne Sprechernotiz</span><?php endif; ?></h3>
         <div class="btn-row">
             <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/hoch') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit"<?= $pos === 0 ? ' disabled' : '' ?>><span class="icn ic-arrow-up" aria-hidden="true"></span></button></form>
             <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/runter') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit"<?= $pos === count($slides) - 1 ? ' disabled' : '' ?>><span class="icn ic-arrow-down" aria-hidden="true"></span></button></form>

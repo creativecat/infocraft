@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Infocraft\Controllers;
 
 use Infocraft\Auth;
+use Infocraft\Distribution;
 use Infocraft\Models\SchoolClass;
 use Infocraft\Models\SqlTemplate;
 use Infocraft\Models\User;
@@ -315,25 +316,7 @@ final class SqlWorkshopController
     /** @return list<User> */
     private static function distributionTargets(User $user, bool $isAdmin): array
     {
-        $classId = (int) ($_POST['class_id'] ?? 0);
-        $singleId = (int) ($_POST['user_id'] ?? 0);
-        if ($classId > 0) {
-            if (!$isAdmin && !SchoolClass::hasTeacher($classId, $user->id)) {
-                return [];
-            }
-            return User::byClass($classId);
-        }
-        if ($singleId > 0) {
-            $student = User::find($singleId);
-            if ($student === null || $student->role !== 'student') {
-                return [];
-            }
-            if (!$isAdmin && ($student->classId === null || !SchoolClass::hasTeacher($student->classId, $user->id))) {
-                return [];
-            }
-            return [$student];
-        }
-        return [];
+        return Distribution::targets($user); // zentral in src/Distribution.php (#263)
     }
 
     /* ===== App-Ansichten (#46, #47): Mobil-Frontend auf dem SQL-Backend =====
