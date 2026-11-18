@@ -7,7 +7,8 @@
    Runde 36 (#245): ARIA-Labels für Toolbar und Bedienelemente.
    Runde 39 (#265): Router-Karte kompakt einklappbar, Missionen als
    schwebende Box über der Bühne (modulare Komponente missions.js).
-   Version: 0.40.0 */ ?>
+   Runde 41: Seitenpanel-Toggle, Buehne standardmaessig volle Breite.
+   Version: 0.41.0 */ ?>
 <div class="net-layout">
     <aside class="net-side">
         <details class="net-card net-router-card" id="net-router-card">
@@ -77,6 +78,7 @@
             </details>
             <button type="button" class="btn net-tool-btn" id="net-png-btn" title="Topologie als Bilddatei herunterladen" aria-label="Topologie als PNG herunterladen"><span class="icn ic-download2" aria-hidden="true"></span> PNG</button>
             <button type="button" class="btn net-tool-btn" id="net-print-btn" title="Topologie drucken" aria-label="Topologie drucken"><span class="icn ic-printer" aria-hidden="true"></span> Drucken</button>
+            <button type="button" class="btn net-tool-btn net-tool-side" id="net-side-toggle" aria-pressed="true" title="Seitenpanel ausblenden: Buehne nutzt die volle Breite"><span class="icn ic-list2" aria-hidden="true"></span> Seitenpanel</button>
         </div>
         <div class="net-stage-wrap">
             <svg id="net-svg" class="net-svg" viewBox="0 0 900 560" role="img" aria-label="Netz-Topologie"></svg>

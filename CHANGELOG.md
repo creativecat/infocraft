@@ -1,3 +1,19 @@
+## [0.41.0] - 2026-11-18 (Runde 41)
+### Netzwerk-Werkstatt: Geraete-Buehne nutzt die volle Seitenbreite
+- Klargestellt (5. Mahnung): Gemeint war die Buehne mit den Geraeten,
+  nicht das Geraetefenster. Das Raster net-layout reservierte 320 px
+  fuer die Seitenkarten (Router, Stufe, Netzwerk-Manager); die Buehne
+  bekam nur den Rest. Das Seitenpanel ist jetzt per Toolbar-Button
+  ein-/ausblendbar und standardmaessig AUSGEBLENDET: Die Buehne nutzt
+  die volle Breite. Der Zustand wird je Browser gemerkt
+  (localStorage net.side.hidden, network.js Runde 41).
+- Toolbar aufgeraeumt: Geraet hinzufuegen links, PNG, Drucken und
+  Seitenpanel als rechtsbuendige Gruppe (Seitenpanel btn zieht mit
+  margin-left auto die Gruppe nach rechts), Hinzufuegen-Panel waechst
+  nicht mehr in die ganze Toolbar, hoechstens 640 px.
+- Buehnen-Rand von 8 auf 6 px verkleinert, Druckansicht blendet
+  Seitenpanel und Toolbar aus.
+
 ## [0.40.0] - 2026-11-18 (Runde 40)
 ### Netzwerk-Werkstatt: Fenster ueber volle Bildschirmbreite, macOS-Fenster-Optik, Kachel-Beschriftung, Missions-Merken
 - Geraete-Fenster (4. Mahnung): Das Modal lag absolut INNERHALB der
