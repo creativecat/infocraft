@@ -266,7 +266,7 @@ jobs:
           grep -q "blk-dragging" public/assets/js/block-editor.js && grep -q "T111 beim Ziehen" tools/ui-tests.js && BLK_DRAGVIS_OK=1 || BLK_DRAGVIS_OK=0
           grep -q "Einfuege-Linie" public/assets/js/block-editor.js && grep -q "T111b die Einfuege-Linie" tools/ui-tests.js && BLK_INS_OK=1 || BLK_INS_OK=0
           grep -q "blk-hint-pulse" public/assets/css/style.css && grep -q "blk-mode-btn" public/assets/css/style.css && BLK_STYLE_OK=1 || BLK_STYLE_OK=0
-          grep -q "letima development" src/Support.php && grep -q "APP_VERSION = '0.32.0'" src/Support.php && grep -q "Keep a Changelog" CHANGELOG.md && grep -q "APP_VERSION" templates/layout.php && BLK_HEAD_OK=1 || BLK_HEAD_OK=0
+          grep -q "letima development" src/Support.php && grep -q "APP_VERSION = '0.33.0'" src/Support.php && grep -q "Keep a Changelog" CHANGELOG.md && grep -q "APP_VERSION" templates/layout.php && BLK_HEAD_OK=1 || BLK_HEAD_OK=0
           grep -q "drag.ghost.style.transform = 'translate('" public/assets/js/block-editor.js && grep -q "_bubW" public/assets/js/block-editor.js && grep -q "children.length > 200" public/assets/js/block-editor.js && grep -q "T113 der gezogene Block folgt" tools/ui-tests.js && BLK_OPT_OK=1 || BLK_OPT_OK=0
           grep -q "switchMode" public/assets/js/block-editor.js && grep -q "blk-switch-btn" templates/code_project.php && grep -q "T109m die Moduswahl" tools/ui-tests.js && BLK_SWITCH_OK=1 || BLK_SWITCH_OK=0
           grep -q "pro: true" public/assets/js/block-editor.js && grep -q "T109e im Lernmodus fehlt die Variablen-Kategorie" tools/ui-tests.js && BLK_LEARN_OK=1 || BLK_LEARN_OK=0
@@ -368,7 +368,7 @@ jobs:
           grep -q "sharedContext" src/Models/InfoBook.php && grep -q "linkPagesShared" src/Controllers/InfoBookController.php && grep -Fq "['link'] = 0;" src/Models/InfoBook.php && R26LINKS_OK=1 || R26LINKS_OK=0
           grep -q "Wer sieht was" templates/ibook_book.php && grep -q "Vorschau deiner Seite" templates/ibook_page.php && R26HINT_OK=1 || R26HINT_OK=0
           grep -q "T130" tools/ui-tests.js && grep -q "advRead130" tools/ui-tests.js && grep -q '## \[0.26.0\]' CHANGELOG.md && R26TEST_OK=1 || R26TEST_OK=0
-          grep -Fq "← Deine InfoBooks" templates/ibook_book.php && grep -Fq "← Deine InfoBooks" templates/ibook_page.php && R27BTN_OK=1 || R27BTN_OK=0
+          grep -Fq "ic-arrow-left" templates/ibook_book.php && grep -Fq "Deine InfoBooks" templates/ibook_book.php && grep -Fq "ic-arrow-left" templates/ibook_page.php && grep -Fq "Deine InfoBooks" templates/ibook_page.php && R27BTN_OK=1 || R27BTN_OK=0
           grep -Fq 'personalBooks($user->id, false)' src/Controllers/InfoBookController.php && grep -Fq 'return $book->classId === null && $book->ownerId === $user->id;' src/Controllers/InfoBookController.php && R27STUBK_OK=1 || R27STUBK_OK=0
           grep -Fq 'elseif ($book->classId === null && $book->ownerId === $user->id)' src/Controllers/InfoBookController.php && grep -Fq 'elseif ($book->classId === null && $book->ownerId === $user->id)' templates/ibook_nav.php && R27SECT_OK=1 || R27SECT_OK=0
           grep -q "navShowArea" templates/ibook_nav.php && grep -Fq 'if (!empty($navShowArea[$navAreaKey]))' templates/ibook_nav.php && R27NAV_OK=1 || R27NAV_OK=0
@@ -406,14 +406,19 @@ jobs:
           grep -q "ibook-page-layout" public/assets/css/style.css && IBK_CSS_OK=1 || IBK_CSS_OK=0
           grep -q "href=\"/infobuecher\"" home.html && IBK_NAV_OK=1 || IBK_NAV_OK=0
           [ -f public/assets/vendor/highlight.min.js ] && [ -f public/assets/vendor/mermaid.min.js ] && VENDOR_OK=1 || VENDOR_OK=0
-          grep -q "'87'" src/Support.php && ASSETV_OK=1 || ASSETV_OK=0
+          grep -q "'88'" src/Support.php && ASSETV_OK=1 || ASSETV_OK=0
           # Runde 33 (#241, #242): helle Desktop-Optik und Icon-System.
           grep -q "Helle Desktop-Optik (#241)" public/assets/css/style.css && grep -q "backdrop-filter: saturate(180%) blur(18px)" public/assets/css/style.css && grep -q "border-radius: 980px" public/assets/css/style.css && DESIGN_OK=1 || DESIGN_OK=0
           grep -q ".icn {" public/assets/css/style.css && grep -q "mask-image" public/assets/css/style.css && ICONCSS_OK=1 || ICONCSS_OK=0
-          grep -Fq "ic_module_icon(\$module['slug'])" templates/layout.php && grep -q "ic-hammer" templates/layout.php && grep -q "ic-menu" templates/layout.php && ICONNAV_OK=1 || ICONNAV_OK=0
+          grep -Fq "ic_module_icon(\$module['slug'])" templates/layout.php && grep -q "ic-hammer" templates/layout.php && grep -q "ic-menu8" templates/layout.php && ICONNAV_OK=1 || ICONNAV_OK=0
           grep -Fq "ic_module_icon(\$module['slug'])" templates/home.php && ICONHOME_OK=1 || ICONHOME_OK=0
-          grep -Fq "'html' => 'ic-palette'" src/Support.php && ICONMAP_OK=1 || ICONMAP_OK=0
+          grep -Fq "'html' => 'ic-embed2'" src/Support.php && ICONMAP_OK=1 || ICONMAP_OK=0
           grep -q "T136 " tools/ui-tests.js && ICONTEST_OK=1 || ICONTEST_OK=0
+          # Runde 34 (#243): kompletter Icon-Umbau, Wiki-Modul entfernt.
+          grep -q "'quiz' => 'ic-trophy3'" src/Support.php && grep -q "'pruefung' => 'ic-clipboard2'" src/Support.php && grep -q "'diagramme' => 'ic-design'" src/Support.php && ICONSWAP_OK=1 || ICONSWAP_OK=0
+          ! grep -q "wiki" public/index.php && ! ls templates/wiki_*.php >/dev/null 2>&1 && ! grep -q "'wiki'" src/Controllers/ModuleController.php && NOWIKI_OK=1 || NOWIKI_OK=0
+          ! grep -rlP "\x{25B6}|\x{25C0}|\x{23F9}|\x{2630}" templates/ >/dev/null && ! grep -qP "\x{25B6}" public/assets/js/app.js && EMOJIFREE_OK=1 || EMOJIFREE_OK=0
+          grep -q "T137" tools/ui-tests.js && grep -q "0.33.0" CHANGELOG.md && ICONR34_OK=1 || ICONR34_OK=0
           CSRFAPP=$(grep -o 'value="[a-f0-9]*"' wsapp.html | head -n1 | cut -d'"' -f2)
           curl -sS -L -b cookies.txt -c cookies.txt -o shopbuy.html --data-urlencode "csrf=$CSRFAPP" --data-urlencode "action=kaufen" --data-urlencode "produkt_id=1" --data-urlencode "menge=2" http://127.0.0.1:8080/werkstatt/sql/shop/app
           grep -q "Bestellung gespeichert" shopbuy.html && SQLAPP_BUY_OK=1 || SQLAPP_BUY_OK=0
@@ -522,7 +527,7 @@ jobs:
           CODE_EXRESULT=$(curl -sS -o exresult.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/pruefungen/$EXID/ergebnis)
           grep -q "Musterlösung" exresult.html && EX_RESULT_OK=1 || EX_RESULT_OK=0
           grep -q "Fast perfekt" exresult.html && EX_FEEDBACK_OK=1 || EX_FEEDBACK_OK=0
-          EXARROW=$(awk '/←/{if(!a)a=NR} /panel-head/{if(!h)h=NR} END{print (a && h && a<h) ? 1 : 0}' exresult.html)
+          EXARROW=$(awk '/ic-arrow-left/{if(!a)a=NR} /panel-head/{if(!h)h=NR} END{print (a && h && a<h) ? 1 : 0}' exresult.html)
           [ "$EXARROW" = "1" ] && EX_ARROW_OK=1 || EX_ARROW_OK=0
           CODE_EXUNLOCK=$(curl -sS -o exunlock.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/)
           grep -q "Prüfungsmodus aktiv" exunlock.html && EX_UNLOCK_OK=0 || EX_UNLOCK_OK=1
