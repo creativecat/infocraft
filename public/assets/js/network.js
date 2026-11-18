@@ -12,7 +12,7 @@
  *
  * Node-Tests: module.exports; Browser: window.IC_NET.
  *
- * @version 0.38.0
+ * @version 0.39.0
  * @license CC BY-NC-SA 4.0 (InfoCraft)
  */
 (function () {
@@ -712,23 +712,33 @@
     function renderMissions() {
       var list = byId('net-missions');
       if (!list) { return; }
-      while (list.firstChild) { list.removeChild(list.firstChild); }
       var state = missionsState(net, flags);
-      for (var i = 0; i < state.length; i++) {
-        var li = doc.createElement('li');
-        li.setAttribute('class', state[i].done ? 'net-mission-done' : '');
-        li.appendChild(el('span', 'net-mission-badge net-mission-grad-' + state[i].grad, state[i].gradLabel));
-        li.appendChild((function () {
-          var s = doc.createElement('span');
-          s.innerHTML = (state[i].done ? '<span class="icn ic-checkmark" aria-hidden="true"></span> ' : '<span class="icn ic-checkbox-unchecked" aria-hidden="true"></span> ')
-            + String(state[i].title).replace(/[&<>]/g, '') + ': ' + String(state[i].text).replace(/[&<>]/g, '');
-          return s;
-        })());
-        if (state[i].tip) {
-          li.appendChild(el('div', 'net-mission-tip', 'Fachwort: ' + state[i].tip));
+      var shared = win().IC_MISSIONS;
+      var done = 0;
+      if (shared && shared.render) {
+        /* Modulare Komponente (#265): Netz- und Code-Werkstatt nutzen dieselbe Missions-Optik. */
+        done = shared.render(doc, list, state);
+      } else {
+        while (list.firstChild) { list.removeChild(list.firstChild); }
+        for (var i = 0; i < state.length; i++) {
+          var li = doc.createElement('li');
+          li.setAttribute('class', state[i].done ? 'ic-mission ic-mission-done' : 'ic-mission');
+          li.appendChild(el('span', 'ic-mission-badge ic-mission-grad-' + state[i].grad, state[i].gradLabel));
+          li.appendChild((function () {
+            var s = doc.createElement('span');
+            s.innerHTML = (state[i].done ? '<span class="icn ic-checkmark" aria-hidden="true"></span> ' : '<span class="icn ic-checkbox-unchecked" aria-hidden="true"></span> ')
+              + String(state[i].title).replace(/[&<>]/g, '') + ': ' + String(state[i].text).replace(/[&<>]/g, '');
+            return s;
+          })());
+          if (state[i].tip) {
+            li.appendChild(el('div', 'ic-mission-tip', 'Fachwort: ' + state[i].tip));
+          }
+          list.appendChild(li);
+          if (state[i].done) { done++; }
         }
-        list.appendChild(li);
       }
+      var count = byId('net-missions-count');
+      if (count) { count.textContent = done + '/' + state.length; }
     }
 
     /* ---------- Geräte-Fenster (Modal) ---------- */
@@ -1629,7 +1639,7 @@
   /* =================== Export =================== */
 
   var api = {
-    version: '0.38.0',
+    version: '0.39.0',
     defaultNet: defaultNet,
     resolve: resolve,
     dnsLookup: dnsLookup,
