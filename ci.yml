@@ -427,7 +427,7 @@ jobs:
           # Runde 39 (#265): Modulare Missions-Box, Router-Karte kompakt, Modal-Breite, Diagramm-Icon, duenneres Plus.
           grep -q "IC_MISSIONS" public/assets/js/missions.js && grep -q "ic-missions-box" public/assets/css/style.css && grep -q "net-missions-box" templates/network_workshop.php && grep -q "data-missions" templates/code_overview.php && grep -q "missionFlags" src/Controllers/CodeController.php && R39MOD_OK=1 || R39MOD_OK=0
           grep -q "net-router-card" templates/network_workshop.php && grep -q "width: min(1680px, 97vw)" public/assets/css/style.css && R39NET_OK=1 || R39NET_OK=0
-          grep -q "card-icon"><?=" templates/diagram_overview.php && grep -q "0.85em" public/assets/css/style.css && R39ICON_OK=1 || R39ICON_OK=0
+          grep -q 'card-icon"><?=' templates/diagram_overview.php && grep -q "0.85em" public/assets/css/style.css && R39ICON_OK=1 || R39ICON_OK=0
           grep -q "ic-brand-java" public/assets/css/style.css && grep -q "ic-brand-python" templates/code_overview.php && BRAND_OK=1 || BRAND_OK=0
           grep -q "T138" tools/ui-tests.js && grep -q "0.35.0" CHANGELOG.md && ICONR35_OK=1 || ICONR35_OK=0
           # Runde 36 (#245): Netzwerk-Werkstatt, Teil 3 (Provider, Messenger, Paketflug).
