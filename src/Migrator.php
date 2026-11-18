@@ -808,6 +808,141 @@ final class Migrator
         $stmt->execute([(int) $lenaId, 'Beispiel: Tiere', 'manuell', $mermaid]);
     }
 
+    /** Bestehende Installationen: Tabellen polls/poll_votes (Live-Abstimmung, Issue #3). */
+    private static function ensurePollTables(PDO $pdo, string $driver): void
+    {
+        if ($driver === 'mysql') {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS polls (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                presentation_id INT UNSIGNED NOT NULL,
+                teacher_id INT UNSIGNED NOT NULL,
+                question VARCHAR(300) NOT NULL,
+                answers TEXT NOT NULL,
+                state VARCHAR(10) NOT NULL DEFAULT \'open\',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                closed_at TIMESTAMP NULL,
+                PRIMARY KEY (id),
+                KEY idx_polls_pres (presentation_id),
+                CONSTRAINT fk_polls_pres FOREIGN KEY (presentation_id) REFERENCES presentations (id) ON DELETE CASCADE,
+                CONSTRAINT fk_polls_teacher FOREIGN KEY (teacher_id) REFERENCES users (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+            $pdo->exec('CREATE TABLE IF NOT EXISTS poll_votes (
+                poll_id INT UNSIGNED NOT NULL,
+                user_id INT UNSIGNED NOT NULL,
+                choice INT UNSIGNED NOT NULL,
+                voted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (poll_id, user_id),
+                CONSTRAINT fk_pvotes_poll FOREIGN KEY (poll_id) REFERENCES polls (id) ON DELETE CASCADE,
+                CONSTRAINT fk_pvotes_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
+            return;
+        }
+        $pdo->exec('CREATE TABLE IF NOT EXISTS polls (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            presentation_id INTEGER NOT NULL REFERENCES presentations (id) ON DELETE CASCADE,
+            teacher_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+            question TEXT NOT NULL,
+            answers TEXT NOT NULL DEFAULT \'[]\',
+            state TEXT NOT NULL DEFAULT \'open\',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            closed_at TEXT NULL
+        )');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS poll_votes (
+            poll_id INTEGER NOT NULL REFERENCES polls (id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+            choice INTEGER NOT NULL,
+            voted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (poll_id, user_id)
+        )');
+    }
+
+     */
+    private static function ensureAdventureChapter2(PDO $pdo): void
+    {
+        $stmt = $pdo->prepare("SELECT id FROM sql_templates WHERE slug = 'adventure'");
+        $stmt->execute();
+        $templateId = (int) $stmt->fetchColumn();
+        if ($templateId > 0) {
+            $exists = $pdo->prepare('SELECT COUNT(*) FROM sql_missions WHERE template_id = ? AND position = ?');
+            $insert = $pdo->prepare('INSERT INTO sql_missions (template_id, position, kind, title, story, task, hint, hint_variants, solution_sql, check_sql, check_expected) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            foreach (self::missionsFor('adventure') as $mission) {
+                if ((int) $mission['position'] < 9) {
+                    continue;
+                }
+                $exists->execute([$templateId, (int) $mission['position']]);
+                if ((int) $exists->fetchColumn() > 0) {
+                    continue;
+                }
+                $insert->execute([
+                    $templateId,
+                    (int) $mission['position'],
+                    $mission['kind'],
+                    $mission['title'],
+                    $mission['story'],
+                    $mission['task'] ?? null,
+                    $mission['hint'],
+                    isset($mission['hints']) ? json_encode($mission['hints'], JSON_UNESCAPED_UNICODE) : null,
+                    $mission['solution_sql'],
+                    $mission['check_sql'] ?? '',
+                    $mission['check_expected'] ?? null,
+                ]);
+            }
+        }
+
+        // Bereits angelegte Arbeitskopien um Ort 6 (Bibliothek) und die
+        // Tabellen buecher/ausleihen ergaenzen; frische Kopien bekommen
+        // alles aus der aktualisierten Vorlage.
+        $dir = INFOCRAFT_ROOT . '/database/sql';
+        if (!is_dir($dir)) {
+            return;
+        }
+        $patch = static function (PDO $sqlite): void {
+            $sqlite->exec('CREATE TABLE IF NOT EXISTS buecher (
+                id INTEGER PRIMARY KEY,
+                titel TEXT NOT NULL,
+                autor TEXT NOT NULL,
+                jahr INTEGER NOT NULL DEFAULT 0,
+                ort_id INTEGER NOT NULL REFERENCES orte (id)
+            )');
+            $sqlite->exec('CREATE TABLE IF NOT EXISTS ausleihen (
+                buch_id INTEGER NOT NULL REFERENCES buecher (id),
+                bewohner_id INTEGER NOT NULL REFERENCES bewohner (id),
+                ausgeliehen_am TEXT NOT NULL
+            )');
+            $sqlite->exec("INSERT OR IGNORE INTO orte (id, name, beschreibung) VALUES (6, 'Bibliothek', 'Die alte Bibliothek der Insel mit verstaubten Regalen')");
+            $sqlite->exec('INSERT OR IGNORE INTO wege (von_ort_id, nach_ort_id, tage) VALUES (5, 6, 1)');
+            if ((int) $sqlite->query('SELECT COUNT(*) FROM buecher')->fetchColumn() === 0) {
+                $insertBook = $sqlite->prepare('INSERT INTO buecher (id, titel, autor, jahr, ort_id) VALUES (?, ?, ?, ?, ?)');
+                $books = [
+                    [1, 'SQL für Seefahrer', 'Magierin Mira', 1801, 6],
+                    [2, 'Die Kunst des Kompassbaus', 'Magierin Mira', 1815, 6],
+                    [3, 'Inselkräuter von A bis Z', 'Kräuterfrau Ida', 1820, 6],
+                    [4, 'Heilkunde aus dem Wald', 'Kräuterfrau Ida', 1823, 6],
+                    [5, 'Sturmprotokolle der Insel', 'Häuptling Mika', 1790, 6],
+                    [6, 'Briefe an die Lotse', 'Fischer Finn', 1828, 6],
+                    [7, 'Vom Werden der Wellen', 'Magierin Mira', 1831, 6],
+                ];
+                foreach ($books as $row) {
+                    $insertBook->execute($row);
+                }
+                $loan = $sqlite->prepare('INSERT INTO ausleihen (buch_id, bewohner_id, ausgeliehen_am) VALUES (?, ?, ?)');
+                $loan->execute([1, 2, '1828-03-12']);
+                $loan->execute([3, 7, '1828-04-02']);
+                $loan->execute([4, 6, '1828-04-19']);
+                $loan->execute([7, 8, '1828-05-01']);
+            }
+        };
+        foreach (glob($dir . '/adventure_u*.sqlite') ?: [] as $path) {
+            try {
+                $sqlite = new PDO('sqlite:' . $path, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+                $patch($sqlite);
+            } catch (PDOException) {
+                // Defekte Kopie einfach stehen lassen: die Migration darf
+                // niemals abbrechen, die Werkstatt regeneriert Kopien selbst.
+            }
+        }
+    }
+
     /**
      * Bestehenden Installationen die Slug-Spalte idempotent nachziehen
      * (permanente Themen-Links /praesentationen/thema/{slug}).
