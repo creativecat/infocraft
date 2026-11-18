@@ -3122,3 +3122,38 @@ a .icn, .btn-link .icn { width: 1em; height: 1em; }
 }
 .ic-brand-java::before { content: "\e900"; color: #007396; }
 .ic-brand-python::before { content: "\e901"; color: #3776ab; }
+
+/* ============ Runde 36 (#245): Provider-Netze, Messenger, Paketflug, Missions-Stufen ============ */
+
+/* Provider-Cloud auf der Bühne */
+.net-provider-box { fill: #e0f2fe; stroke: #0284c7; stroke-width: 2; }
+.net-provider-trunk { stroke: #0284c7 !important; stroke-dasharray: 8 6; }
+
+/* Sichtbarer Paketflug auf den Kabeln (#227) */
+.net-packet { fill: #f59e0b; stroke: #b45309; stroke-width: 1.5; }
+.net-packet-label { fill: #92400e; font-size: 12px; font-weight: 700; }
+
+/* Messenger (#227) */
+.net-messenger { border-top: 1px solid #e2e8f0; margin-top: 14px; padding-top: 12px; }
+.net-msg-list { display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; margin-bottom: 10px; }
+.net-msg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 6px 10px; }
+.net-msg-in { background: #f0fdf4; }
+.net-msg-out { background: #eff6ff; }
+.net-msg-meta { color: #64748b; font-size: 12px; min-width: 100%; }
+.net-msg-spoof { color: #b91c1c; font-size: 12px; font-weight: 600; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 2px 8px; }
+.net-phish { border: 1px solid #fed7aa; border-radius: 10px; padding: 8px 12px; margin-top: 10px; background: #fffbeb; }
+.net-phish summary { cursor: pointer; color: #9a3412; font-weight: 600; }
+
+/* Zone-Umzug (Website-Anbieter beim Provider) */
+.net-zone-toggle { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+
+/* Missions-Stufen (Lernprogression) und Fachwort-Tipps */
+.net-mission-badge { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 8px; margin-right: 6px; vertical-align: 1px; }
+.net-mission-grad-1 { background: #dcfce7; color: #166534; }
+.net-mission-grad-2 { background: #fef9c3; color: #854d0e; }
+.net-mission-grad-3 { background: #fee2e2; color: #991b1b; }
+.net-mission-tip { font-size: 12px; color: #64748b; margin: 2px 0 0 0; padding-left: 26px; }
+
+@media print {
+  .net-packet, .net-packet-label { display: none; }
+}
