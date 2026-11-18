@@ -4467,13 +4467,13 @@ setTimeout(function () {
                     'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
-                  ok(support130.indexOf("APP_VERSION = '0.36.0'") !== -1
-                    && support130.indexOf("ASSET_VERSION = '90'") !== -1
+                  ok(support130.indexOf("APP_VERSION = '0.37.0'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '91'") !== -1
                     && changelog130.indexOf('## [0.33.0]') !== -1
                     && changelog130.indexOf('## [0.31.0]') !== -1
                     && changelog130.indexOf('## [0.30.0]') !== -1
                     && changelog130.indexOf('## [0.36.0]') !== -1,
-                    'T130r Version 0.36.0 mit Asset-Stand 90 und Changelog-Eintrag (Historie bleibt)');
+                    'T130r Version 0.37.0 mit Asset-Stand 91 und Changelog-Eintrag (Historie bleibt)');
                   ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
                     && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
                     && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
@@ -4707,7 +4707,7 @@ setTimeout(function () {
                   netMod.attach(netDoc);
                   var svgLines = svg133.children.filter(function (c) { return c.tagName === 'PATH' && String(c.getAttribute('class') || '').indexOf('net-cable') !== -1; }).length;
                   var svgGroups = svg133.children.filter(function (c) { return c.tagName === 'G'; }).length;
-                  ok(svgLines === 4 && svgGroups === 5,
+                  ok(svgLines === 4 && svgGroups === 6,
                     'T133m Topologie zeichnet alle Geräte und den Router mit Leitungen (#220)');
                   ok(missions133.children.length === 11,
                     'T133n die Missionsliste zeigt alle acht Missionen (#226)');
@@ -4819,7 +4819,7 @@ setTimeout(function () {
                   };
                   netMod.attach(netDoc2);
                   var groups134 = svg134.children.filter(function (c) { return c.tagName === 'G'; });
-                  groups134[2].handlers.click[0]();
+                  groups134[3].handlers.click[0]();
                   var exampleBtns = [];
                   var collect134 = function (root) {
                     for (var i = 0; i < root.children.length; i++) {
@@ -4849,7 +4849,7 @@ setTimeout(function () {
                   ok(loadExCall.length === 1 && loadExCall[loadExCall.length - 1].body.indexOf('sport') !== -1
                     && toHtmlCall.length === 1,
                     'T134h Beispielseite und HTML-Übernahme senden Aktionen mit Parametern (#229, #230)');
-                  groups134[5].handlers.click[0]();
+                  groups134[6].handlers.click[0]();
                   var cableBtn134 = modalBox134.children[0].children.filter(function (c) { return c.tagName === 'BUTTON'; })[0];
                   ok(cableBtn134 && (String(cableBtn134.innerHTML).indexOf('Kabel trennen') !== -1 || String(cableBtn134.textContent).indexOf('Kabel trennen') !== -1)
                     && findById133(modalBox134, 'net-pr-wlan') !== null,
@@ -4892,7 +4892,7 @@ setTimeout(function () {
                   netDoc3.register(new FakeEl('input'), 'net-add-name');
                   netMod.attach(netDoc3);
                   var groups134k = svg134k.children.filter(function (c) { return c.tagName === 'G'; });
-                  ok(groups134k.length === 1 && missions134k.children.length === 11
+                  ok(groups134k.length === 2 && missions134k.children.length === 11
                     && String(netinfo134k.textContent).indexOf('0 Geräte im Netz') !== -1,
                     'T134l attach() mit kaputtem data-net zeichnet Router und Missionen statt grauer Bühne (#233)');
                   ok(netJs.indexOf('attach(window.document)') !== -1,
@@ -4970,7 +4970,7 @@ setTimeout(function () {
                     && portRects135.length === 8 && portsOn135.length === 4
                     && dStart135 === 385,
                     'T135d gespeicherte Position wird gezeichnet, Leitung dockt am eigenen Router-Port an (#236, #238)');
-                  var devG135 = groups135[1];
+                  var devG135 = groups135[2];
                   ok(devG135.handlers.pointerdown && devG135.handlers.pointermove && devG135.handlers.pointerup
                     && devG135.handlers.click,
                     'T135e jedes Geraet traegt Zeiger-Handler fuer Drag & Drop und Klick (#236)');
@@ -5005,11 +5005,11 @@ setTimeout(function () {
                     && htmlCtrl135.indexOf("redirect('/werkstatt/netzwerk')") !== -1
                     && htmlTpl135.indexOf('Zur Netzwerk-Werkstatt') !== -1,
                     'T135j Rueckweg aus dem HTML-Editor: Knopf im Editor, Redirect nach dem Speichern (#239)');
-                  ok(sup135.indexOf("APP_VERSION = '0.36.0'") !== -1
+                  ok(sup135.indexOf("APP_VERSION = '0.37.0'") !== -1
                     && changelog135.indexOf('## [0.33.0]') !== -1
                     && changelog135.indexOf('—') === -1
                     && changelog135.indexOf('## [0.31.0]') !== -1,
-                    'T135k Version 0.36.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
+                    'T135k Version 0.37.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
 
                   /* T136 (#241): helle Desktop-Optik im Stylesheet:
                    * Design-Sektion, Milchglas, Pill-Knoepfe, Fokus-Ring. */
@@ -5048,8 +5048,8 @@ setTimeout(function () {
                     && sup135.indexOf("'html' => 'ic-embed2'") !== -1
                     && sup135.indexOf("'netzwerk' => 'ic-earth'") !== -1
                     && sup135.indexOf("'infobuecher' => 'ic-book'") !== -1
-                    && sup135.indexOf("ASSET_VERSION = '90'") !== -1,
-                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 89');
+                    && sup135.indexOf("ASSET_VERSION = '91'") !== -1,
+                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 91');
 
 
                   /* T137a (Runde 34): Icon-Wechsel nach Vorgabe. */
@@ -5230,6 +5230,26 @@ setTimeout(function () {
                     && presTpl138.indexOf('ic-code') !== -1 && presTpl138.indexOf('\ud83d\udcbb') === -1
                     && /'code',\s*'title' => 'Code-Werkstatt'[\s\S]{0,400}'level' => 8/.test(modCtrl138),
                     'T138m ARIA-Labels in der Werkstatt, Java/Python/Code-Optionen mit Icons, Code-Werkstatt ab Jgst. 8');
+
+                  /* T138n (Runde 37): Provider-Kabel, Kontrast, Provider-Drag. */
+                  var netPhp138 = fs136.readFileSync(require.resolve('../src/Models/Network.php'), 'utf8');
+                  ok(netCss138.indexOf('.net-provider-trunk { fill: none; }') !== -1
+                    && netCss138.indexOf('.net-link { fill: none; }') !== -1
+                    && netCss138.indexOf('.net-provider-name') !== -1
+                    && netCss138.indexOf('.net-router-sub') !== -1
+                    && netCss138.indexOf('.net-provider-group { cursor: grab; }') !== -1
+                    && netJs138.indexOf('moveProvider') !== -1
+                    && netJs138.indexOf('net-provider-group') !== -1
+                    && netPhp138.indexOf("case 'moveProvider'") !== -1
+                    && netJs138.indexOf("class: 'net-sub net-router-sub'") !== -1,
+                    'T138n Provider-Stamm ohne Fuellung, Kontrast-Klassen, moveProvider im Modell');
+
+                  /* T138o (Runde 37): Browser-Fenster bleibt nach Seitenaufruf offen. */
+                  ok(netJs138.indexOf("action === 'browse' || action === 'printPage'") !== -1
+                    && netJs138.indexOf('render({ modal: false })') !== -1
+                    && netCss138.indexOf('.net-pagerow { flex-wrap: wrap; }') !== -1
+                    && netCss138.indexOf('.net-log-line, .net-msg-row, .net-mission-tip { word-break: break-word; overflow-wrap: anywhere; }') !== -1,
+                    'T138o browse/printPage bauen das Modal nicht neu, Overflow gebändigt');
 
 
                   global.document = netSavedDoc;
