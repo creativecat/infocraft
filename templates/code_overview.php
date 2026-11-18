@@ -78,17 +78,17 @@ function ic_proj_row(object $project): string
             <h3><span class="icn ic-plus" aria-hidden="true"></span> Neues Projekt</h3>
             <form method="post" action="<?= url('werkstatt/code/projekt') ?>" class="form">
                 <?= csrf_field() ?>
-                <label class="field"><span>Projektart</span>
+                <label class="field"><span>Projektart <span class="icn ic-brand-java" aria-hidden="true"></span> <span class="icn ic-brand-python" aria-hidden="true"></span></span>
                     <select name="kind" id="new-kind">
-                        <option value="java"<?= (($defaultLanguage ?? 'java') === 'java') ? ' selected' : '' ?>>☕ Java</option>
-                        <option value="python"<?= (($defaultLanguage ?? 'java') === 'python') ? ' selected' : '' ?>>🐍 Python</option>
-                        <option value="asm"<?= (($defaultLanguage ?? 'java') === 'asm') ? ' selected' : '' ?>>⚙️ Assembler</option>
-                        <option value="blocks"<?= (($defaultLanguage ?? 'java') === 'blocks') ? ' selected' : '' ?>>🧩 Blöcke</option>
-                        <option value="automaton">🤖 Automat (endliche Automaten)</option>
-                        <option value="pda">🥞 Kellerautomat</option>
-                        <option value="turing">🧾 Turingmaschine</option>
-                        <option value="logic">🔌 Schaltwerk</option>
-                        <option value="html">🌐 HTML-Seite</option>
+                        <option value="java"<?= (($defaultLanguage ?? 'java') === 'java') ? ' selected' : '' ?>>Java</option>
+                        <option value="python"<?= (($defaultLanguage ?? 'java') === 'python') ? ' selected' : '' ?>>Python</option>
+                        <option value="asm"<?= (($defaultLanguage ?? 'java') === 'asm') ? ' selected' : '' ?>>Assembler</option>
+                        <option value="blocks"<?= (($defaultLanguage ?? 'java') === 'blocks') ? ' selected' : '' ?>>Blöcke</option>
+                        <option value="automaton">Automat (endliche Automaten)</option>
+                        <option value="pda">Kellerautomat</option>
+                        <option value="turing">Turingmaschine</option>
+                        <option value="logic">Schaltwerk</option>
+                        <option value="html">HTML-Seite</option>
                     </select>
                 </label>
                 <label class="field"><span>Projekttitel</span><input type="text" name="title" required placeholder="z. B. Mein erstes Programm"></label>
@@ -99,11 +99,11 @@ function ic_proj_row(object $project): string
                         <?php endforeach; ?>
                     </select>
                 </label>
-                <label class="field" id="new-starter"><span>Startpaket (nur Python)</span>
+                <label class="field" id="new-starter"><span>Startpaket <span class="icn ic-brand-python" aria-hidden="true"></span> (nur Python)</span>
                     <select name="starter">
                         <option value="">- leeres Blatt -</option>
-                        <option value="zaehlen">🔢 Zählen mit Python (Schleifen)</option>
-                        <option value="zeichnen">🎨 Zeichnen mit Zeichen (Turtle-Bild)</option>
+                        <option value="zaehlen">Zählen mit Python (Schleifen)</option>
+                        <option value="zeichnen">Zeichnen mit Zeichen (Turtle-Bild)</option>
                     </select>
                 </label>
                 <div class="btn-row"><button class="btn btn-primary" type="submit" title="Projekt anlegen"><span class="icn ic-plus" aria-hidden="true"></span></button></div>
