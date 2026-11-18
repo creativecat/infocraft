@@ -22,12 +22,12 @@
             <?php endforeach; ?>
         </ul>
         <div class="notice">
-            <strong>Baustelle 🚧</strong>
+            <strong>Baustelle <span class="icn ic-construction" aria-hidden="true"></span></strong>
             <p>Dieser Arbeitsbereich entsteht in <?= e($module['phase']) ?>. Diese Seite ist der Platzhalter mit dem finalen Funktionsumfang, damit Struktur und Navigation jetzt schon nutzbar sind.</p>
         </div>
     </section>
     <section class="panel">
-        <h3>🎓 Bezug zum LehrplanPLUS</h3>
+        <h3><span class="icn ic-graduation" aria-hidden="true"></span> Bezug zum LehrplanPLUS</h3>
         <p><?= e($module['lehrplan']) ?></p>
         <p class="muted">Die konkrete Zuordnung zu Kompetenzen und Jahrgangsstufen wird pro Funktion in docs/lehrplan.md gepflegt.</p>
     </section>

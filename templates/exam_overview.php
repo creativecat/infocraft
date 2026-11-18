@@ -25,7 +25,7 @@
             </label>
             <label class="field"><span>Beschreibung</span><input type="text" name="description" maxlength="300" placeholder="Worum geht es?"></label>
         </div>
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Anlegen">➕</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Anlegen"><span class="icn ic-plus" aria-hidden="true"></span></button></div>
     </form>
 </section>
 
@@ -38,7 +38,7 @@
 <?php foreach ($exams as $exam): ?>
 <section class="panel">
     <div class="panel-head">
-        <h3><?= e($exam->title) ?> <span class="pill"><?= $exam->kind === 'pruefung' ? '🔒 Prüfung' : '📄 Schularbeit' ?></span> <span class="status status-<?= e($exam->phase === 'vorbereitung' ? 'geplant' : ($exam->phase === 'herausgegeben' ? 'fertig' : 'in-arbeit')) ?>"><?= e($exam->phase) ?></span></h3>
+        <h3><?= e($exam->title) ?> <span class="pill"><?= $exam->kind === 'pruefung' ? '<span class="icn ic-lock" aria-hidden="true"></span> Prüfung' : '<span class="icn ic-file-text" aria-hidden="true"></span> Schularbeit' ?></span> <span class="status status-<?= e($exam->phase === 'vorbereitung' ? 'geplant' : ($exam->phase === 'herausgegeben' ? 'fertig' : 'in-arbeit')) ?>"><?= e($exam->phase) ?></span></h3>
         <span class="muted">ab Jahrgangsstufe <?= e($exam->level) ?><?= $exam->description !== '' ? ' · ' . e($exam->description) : '' ?></span>
     </div>
     <div class="btn-row">
@@ -62,7 +62,7 @@
 <?php $exam = $entry['exam']; $work = $entry['work']; ?>
 <section class="panel">
     <div class="panel-head">
-        <h3><?= e($exam->title) ?> <span class="pill"><?= $exam->kind === 'pruefung' ? '🔒 Prüfung' : '📄 Schularbeit' ?></span></h3>
+        <h3><?= e($exam->title) ?> <span class="pill"><?= $exam->kind === 'pruefung' ? '<span class="icn ic-lock" aria-hidden="true"></span> Prüfung' : '<span class="icn ic-file-text" aria-hidden="true"></span> Schularbeit' ?></span></h3>
         <?php if ($exam->phase === 'durchfuehrung'): ?>
         <span class="status status-in-arbeit">läuft jetzt</span>
         <?php elseif ($exam->phase === 'herausgegeben'): ?>
@@ -78,7 +78,7 @@
         <?php if ($exam->phase === 'durchfuehrung' && ($work === null || $work['submitted_at'] === null)): ?>
         <a class="btn btn-primary" href="<?= url('pruefungen/' . $exam->id . '/arbeit') ?>">Zur Arbeit</a>
         <?php elseif ($exam->phase === 'herausgegeben'): ?>
-        <a class="btn btn-primary" href="<?= url('pruefungen/' . $exam->id . '/ergebnis') ?>" title="Ergebnis ansehen">📊</a>
+        <a class="btn btn-primary" href="<?= url('pruefungen/' . $exam->id . '/ergebnis') ?>" title="Ergebnis ansehen"><span class="icn ic-stats-bars" aria-hidden="true"></span></a>
         <?php endif; ?>
     </div>
 </section>

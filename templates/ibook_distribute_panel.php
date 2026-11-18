@@ -10,7 +10,7 @@
  * $distLabel (Aufschrift), $distTitle (Knopf-Hinweistext) und $distHidden
  * (Liste von [name, value]-Paaren fuer versteckte Felder). */ ?>
 <details class="ibook-distribute-details">
-    <summary class="btn btn-ghost">📤 <?= e($distLabel) ?></summary>
+    <summary class="btn btn-ghost"><span class="icn ic-share" aria-hidden="true"></span> <?= e($distLabel) ?></summary>
     <form method="post" action="<?= $distAction ?>" class="form ibook-distribute-panel">
         <?= csrf_field() ?>
         <?php foreach ($distHidden as [$hName, $hValue]): ?>
@@ -52,6 +52,6 @@
                 <input type="text" name="new_section_title" maxlength="160" placeholder="Nur nötig bei neuem Abschnitt">
             </label>
         </div>
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="<?= e($distTitle) ?>">📤 <?= e($distLabel) ?></button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="<?= e($distTitle) ?>"><span class="icn ic-share" aria-hidden="true"></span> <?= e($distLabel) ?></button></div>
     </form>
 </details>

@@ -1503,7 +1503,7 @@ setTimeout(function () {
                 /* T55 (#68): Icons only in der Leiste, Flaechen-Knoepfe unten
                  * rechts in der Flaeche, Auswahl-Sachen im Kontextbereich. */
                 var ibSelBtn55 = ibDoc.body.querySelector('[data-icv-tool="select"]');
-                ok(ibSelBtn55 !== null && ibSelBtn55.textOf() === '🖱️' && String(ibSelBtn55.title || '').indexOf('Auswahl') !== -1, 'T55 Werkzeug-Knoepfe zeigen nur das Icon, die Beschreibung steht als Hover (title)');
+                ok(ibSelBtn55 !== null && ibSelBtn55.innerHTML.indexOf('ic-mouse') !== -1 && String(ibSelBtn55.title || '').indexOf('Auswahl') !== -1, 'T55 Werkzeug-Knoepfe zeigen nur das Icon, die Beschreibung steht als Hover (title)');
                 ok(ibBar.querySelector('[data-icv-grow]') === null && ibBar.querySelector('[data-icv-shrink]') === null && ibStage.querySelector('[data-icv-grow]') !== null, 'T55b die Flaechen-Knoepfe sitzen unten rechts in der Flaeche, nicht mehr in der Leiste');
                 var ibDel55 = ibDoc.body.querySelector('.icv-ctx .icv-delbtn');
                 ok(ibDel55 !== null && ibDel55.parent && String(ibDel55.parent.className).indexOf('icv-ctx') !== -1, 'T55c Loeschen liegt im Auswahl-Kontext (Kontextleiste erscheint nur mit Auswahl)');
@@ -1541,7 +1541,7 @@ setTimeout(function () {
                 for (var ci57 = 0; ci57 < ibBarBtns57.length; ci57++) {
                   if (String(ibBarBtns57[ci57].title || '').indexOf('Code-Fenster') !== -1) { ibCodeBtn57 = ibBarBtns57[ci57]; }
                 }
-                ok(ibCodeBtn57 !== null && ibCodeBtn57.textOf() === '💻', 'T57 Code-Fenster-Knopf in der Leiste zeigt nur das Icon');
+                ok(ibCodeBtn57 !== null && ibCodeBtn57.innerHTML.indexOf('ic-laptop') !== -1, 'T57 Code-Fenster-Knopf in der Leiste zeigt nur das Icon');
                 if (ibCodeBtn57) {
                   ibCodeBtn57.dispatch('click');
                   var ibCodeBox57 = ibStage.querySelector('.icv-code');
@@ -1600,7 +1600,7 @@ setTimeout(function () {
                 for (var ci58 = 0; ci58 < ibBarBtns58.length; ci58++) {
                   if (String(ibBarBtns58[ci58].title || '').indexOf('Datenbank') !== -1) { ibDbBtn58 = ibBarBtns58[ci58]; }
                 }
-                ok(ibDbBtn58 !== null && ibDbBtn58.textOf() === '🗄️', 'T58 Datenbank-Knopf in der Leiste zeigt nur das Icon');
+                ok(ibDbBtn58 !== null && ibDbBtn58.innerHTML.indexOf('ic-database') !== -1, 'T58 Datenbank-Knopf in der Leiste zeigt nur das Icon');
                 if (ibDbBtn58) {
                   ibDbBtn58.dispatch('click');
                   var ibDbBox58 = ibStage.querySelector('.icv-db');
@@ -1663,7 +1663,7 @@ setTimeout(function () {
                 for (var ci59 = 0; ci59 < ibBarBtns59.length; ci59++) {
                   if (String(ibBarBtns59[ci59].title || '').indexOf('Diagramm') !== -1) { ibDiagBtn59 = ibBarBtns59[ci59]; }
                 }
-                ok(ibDiagBtn59 !== null && ibDiagBtn59.textOf() === '📊', 'T59 Diagramm-Knopf in der Leiste zeigt nur das Icon');
+                ok(ibDiagBtn59 !== null && ibDiagBtn59.innerHTML.indexOf('ic-stats-bars') !== -1, 'T59 Diagramm-Knopf in der Leiste zeigt nur das Icon');
                 if (ibDiagBtn59) {
                   ibDiagBtn59.dispatch('click');
                   var ibDiagBox59 = ibStage.querySelector('.icv-diagram');
@@ -3630,7 +3630,7 @@ setTimeout(function () {
                   ok(String(lcOutEl.textContent).indexOf('Netz stabil') !== -1, 'T119o die Auswertung meldet das stabile Netz (#166)');
                   lcClkBtn.dispatch('click');
                   lcClkBtn.dispatch('click');
-                  ok(lcClkBtn.textContent === '▶ Takt', 'T119p der Takt-Knopf startet und stoppt den Takt (#166)');
+                  ok(String(lcClkBtn.innerHTML).indexOf('ic-play') !== -1 && String(lcClkBtn.innerHTML).indexOf('Takt') !== -1, 'T119p der Takt-Knopf startet und stoppt den Takt (#166, Icon statt ▶)');
 
                   /* T120 (#173): Gemeinsamer Werkzeugkasten fuer die
                    * Automaten-Werkstaetten: Historie, Ansicht, PNG, Takt,
@@ -3770,7 +3770,7 @@ setTimeout(function () {
                   var htmlBtn121 = null;
                   var ibBidx;
                   for (ibBidx = 0; ibBar121 && ibBidx < ibBar121.children.length; ibBidx++) {
-                    if (ibBar121.children[ibBidx].textContent === '🌐') { htmlBtn121 = ibBar121.children[ibBidx]; break; }
+                    if (String(ibBar121.children[ibBidx].innerHTML || '').indexOf('ic-embed2') !== -1) { htmlBtn121 = ibBar121.children[ibBidx]; break; }
                   }
                   ok(htmlBtn121 !== null, 'T121 der InfoBook-Editor hat einen Knopf fuer den HTML-Baustein (#174)');
                   htmlBtn121.dispatch('click');
@@ -4414,14 +4414,16 @@ setTimeout(function () {
                   ok(app130.indexOf('fontKerning') !== -1 && app130.indexOf('fontVariantLigatures') !== -1
                     && app130.indexOf('textRendering') !== -1 && app130.indexOf('wordSpacing') !== -1,
                     'T130c das Overlay uebernimmt Kerning-, Ligaturen- und Breiten-Eigenschaften (#200)');
-                  ok(tplAdv130.indexOf('href="#aufgaben"') !== -1 && tplAdv130.indexOf('🗺️ Abenteuer-Übersicht') !== -1
-                    && tplAdv130.indexOf('📖 Zu den Kapiteln') !== -1,
+                  ok(tplAdv130.indexOf('href="#aufgaben"') !== -1 && tplAdv130.indexOf('Abenteuer-Übersicht') !== -1
+                    && tplAdv130.indexOf('ic-map') !== -1
+                    && tplAdv130.indexOf('Zu den Kapiteln') !== -1
+                    && tplAdv130.indexOf('ic-book') !== -1,
                     'T130d die Abenteuer-Seite springt oben direkt zu den Kapiteln und zur Übersicht (#200)');
-                  ok(tplWs130.indexOf('🎯 Zu den Aufgaben') !== -1 && tplWs130.indexOf('href="#aufgaben"') !== -1,
+                  ok(tplWs130.indexOf('Zu den Aufgaben') !== -1 && tplWs130.indexOf('ic-target') !== -1 && tplWs130.indexOf('href="#aufgaben"') !== -1,
                     'T130e die klassische Werkstatt hat denselben Sprung zu ihren Aufgaben oben (#200)');
                   var tplBook130 = advRead130('../templates/ibook_book.php');
                   var tplPage130 = advRead130('../templates/ibook_page.php');
-                  ok(tplBook130.indexOf('← Alle InfoBooks') !== -1 && tplPage130.indexOf('← Alle InfoBooks') !== -1
+                  ok(tplBook130.indexOf('ic-arrow-left') !== -1 && tplBook130.indexOf('Alle InfoBooks') !== -1 && tplPage130.indexOf('ic-arrow-left') !== -1 && tplPage130.indexOf('Alle InfoBooks') !== -1
                     && tplBook130.indexOf('Auth::isTeacher()') !== -1 && tplPage130.indexOf('Auth::isTeacher()') !== -1,
                     'T130f der InfoBooks-Knopf verzweigt je Rolle und fuehrt Lehrkraefte auf die Uebersicht (#201, Runde 27: alle Rollen)');
                   var ctrl130 = advRead130('../src/Controllers/InfoBookController.php');
@@ -4465,12 +4467,12 @@ setTimeout(function () {
                     'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
-                  ok(support130.indexOf("APP_VERSION = '0.32.0'") !== -1
-                    && support130.indexOf("ASSET_VERSION = '87'") !== -1
-                    && changelog130.indexOf('## [0.32.0]') !== -1
+                  ok(support130.indexOf("APP_VERSION = '0.33.0'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '88'") !== -1
+                    && changelog130.indexOf('## [0.33.0]') !== -1
                     && changelog130.indexOf('## [0.31.0]') !== -1
                     && changelog130.indexOf('## [0.30.0]') !== -1,
-                    'T130r Version 0.32.0 mit Asset-Stand 87 und Changelog-Eintrag (Historie bleibt)');
+                    'T130r Version 0.33.0 mit Asset-Stand 88 und Changelog-Eintrag (Historie bleibt)');
                   ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
                     && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
                     && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
@@ -4498,7 +4500,7 @@ setTimeout(function () {
                   ok(ctrl130.indexOf('Nur Lehrkräfte können InfoBooks teilen.') !== -1
                     && ctrl130.indexOf('Nur Lehrkräfte verteilen Seiten.') !== -1,
                     'T131f Teilen und Verteilen bleiben Lehrkraeften vorbehalten (#205)');
-                  ok(tplBook130.indexOf('← Deine InfoBooks') !== -1 && tplPage130.indexOf('← Deine InfoBooks') !== -1,
+                  ok(tplBook130.indexOf('ic-arrow-left') !== -1 && tplBook130.indexOf('Deine InfoBooks') !== -1 && tplPage130.indexOf('Deine InfoBooks') !== -1,
                     'T131g der Knopf heisst fuer Schuelerinnen und Schueler Deine InfoBooks und fuehrt dorthin (#205)');
                   ok(tplNav131.indexOf('elseif ($book->classId === null && $book->ownerId === $user->id)') !== -1
                     && tplNav131.indexOf('<input type="hidden" name="area" value="gemeinsam">') !== -1,
@@ -4521,8 +4523,10 @@ setTimeout(function () {
                     && model130.indexOf('function movePagesToSection') !== -1
                     && routes131.indexOf('/infobuecher/{id}/abschnitt/{sid}/teilen') !== -1,
                     'T131m Teilen verschiebt markierte Seiten in einen neuen Abschnitt hinter dem alten (#207)');
-                  ok(tplBook130.indexOf('✏️ Abschnitt umbenennen') !== -1
-                    && tplBook130.indexOf('✂️ Abschnitt teilen') !== -1
+                  ok(tplBook130.indexOf('Abschnitt umbenennen') !== -1
+                    && tplBook130.indexOf('ic-pencil') !== -1
+                    && tplBook130.indexOf('Abschnitt teilen') !== -1
+                    && tplBook130.indexOf('ic-scissors') !== -1
                     && tplBook130.indexOf('name="page_ids[]"') !== -1,
                     'T131n die Verwaltungsleiste der Abschnittsansicht bietet Umbenennen und Teilen an (#207)');
                   ok(tplNav131.indexOf('—') === -1 && tplOverview131.indexOf('—') === -1
@@ -4829,7 +4833,7 @@ setTimeout(function () {
                   var collectToHtml = function (root) {
                     for (var i = 0; i < root.children.length; i++) {
                       var c = root.children[i];
-                      if (c.tagName === 'BUTTON' && String(c.textContent).indexOf('HTML-Werkstatt') !== -1) { toHtml134.push(c); }
+                      if (c.tagName === 'BUTTON' && (String(c.innerHTML).indexOf('HTML-Werkstatt') !== -1 || String(c.textContent).indexOf('HTML-Werkstatt') !== -1)) { toHtml134.push(c); }
                       collectToHtml(c);
                     }
                   };
@@ -4846,7 +4850,7 @@ setTimeout(function () {
                     'T134h Beispielseite und HTML-Übernahme senden Aktionen mit Parametern (#229, #230)');
                   groups134[5].handlers.click[0]();
                   var cableBtn134 = modalBox134.children[0].children.filter(function (c) { return c.tagName === 'BUTTON'; })[0];
-                  ok(cableBtn134 && String(cableBtn134.textContent).indexOf('Kabel trennen') !== -1
+                  ok(cableBtn134 && (String(cableBtn134.innerHTML).indexOf('Kabel trennen') !== -1 || String(cableBtn134.textContent).indexOf('Kabel trennen') !== -1)
                     && findById133(modalBox134, 'net-pr-wlan') !== null,
                     'T134i Drucker-Fenster bietet Kabel-Trennen und WLAN-Beitritt (#231)');
                   cableBtn134.handlers.click[0]();
@@ -4910,7 +4914,7 @@ setTimeout(function () {
                     && netCtrlPhp.indexOf("'hint' =>") !== -1,
                     'T135 Hero-Bloecke weg, Kurzbeschreibung als Tooltip am Titel, Abenteuer-Knopf bleibt (#235)');
                   var heroPages135 = ['html_overview', 'sql_overview', 'code_overview', 'diagram_overview',
-                    'quiz_overview', 'exam_overview', 'wiki_overview', 'ibook_overview', 'network_workshop'];
+                    'quiz_overview', 'exam_overview', 'ibook_overview', 'network_workshop'];
                   var heroFree135 = true;
                   for (var h135 = 0; h135 < heroPages135.length; h135++) {
                     if (advRead130('../templates/' + heroPages135[h135] + '.php').indexOf('hero-emoji') !== -1) { heroFree135 = false; }
@@ -4997,11 +5001,11 @@ setTimeout(function () {
                     && htmlCtrl135.indexOf("redirect('/werkstatt/netzwerk')") !== -1
                     && htmlTpl135.indexOf('Zur Netzwerk-Werkstatt') !== -1,
                     'T135j Rueckweg aus dem HTML-Editor: Knopf im Editor, Redirect nach dem Speichern (#239)');
-                  ok(sup135.indexOf("APP_VERSION = '0.32.0'") !== -1
-                    && changelog135.indexOf('## [0.32.0]') !== -1
+                  ok(sup135.indexOf("APP_VERSION = '0.33.0'") !== -1
+                    && changelog135.indexOf('## [0.33.0]') !== -1
                     && changelog135.indexOf('—') === -1
                     && changelog135.indexOf('## [0.31.0]') !== -1,
-                    'T135k Version 0.32.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
+                    'T135k Version 0.33.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
 
                   /* T136 (#241): helle Desktop-Optik im Stylesheet:
                    * Design-Sektion, Milchglas, Pill-Knoepfe, Fokus-Ring. */
@@ -5024,7 +5028,7 @@ setTimeout(function () {
                     && masks136 >= 40,
                     'T136b Icon-System: .icn-Basis und mindestens 40 SVG-Masken im Stylesheet');
                   ok(layout136.indexOf('ic-hammer') !== -1
-                    && layout136.indexOf('ic-menu') !== -1
+                    && layout136.indexOf('ic-menu8') !== -1
                     && layout136.indexOf('ic-presentation') !== -1
                     && layout136.indexOf('ic-exit') !== -1
                     && layout136.indexOf("<?= ic_module_icon($module['slug']) ?>") !== -1
@@ -5037,11 +5041,60 @@ setTimeout(function () {
 
                   /* T136e (#242): Modul-Slug -> Icon-Klasse zentral gepflegt. */
                   ok(sup135.indexOf('function ic_module_icon') !== -1
-                    && sup135.indexOf("'html' => 'ic-palette'") !== -1
+                    && sup135.indexOf("'html' => 'ic-embed2'") !== -1
                     && sup135.indexOf("'netzwerk' => 'ic-earth'") !== -1
                     && sup135.indexOf("'infobuecher' => 'ic-book'") !== -1
-                    && sup135.indexOf("ASSET_VERSION = '87'") !== -1,
-                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 87');
+                    && sup135.indexOf("ASSET_VERSION = '88'") !== -1,
+                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 88');
+
+
+                  /* T137a (Runde 34): Icon-Wechsel nach Vorgabe. */
+                  ok(sup135.indexOf("'html' => 'ic-embed2'") !== -1
+                    && sup135.indexOf("'diagramme' => 'ic-design'") !== -1
+                    && sup135.indexOf("'quiz' => 'ic-trophy3'") !== -1
+                    && sup135.indexOf("'pruefung' => 'ic-clipboard2'") !== -1
+                    && layout136.indexOf('ic-menu8') !== -1,
+                    'T137a Icon-Wechsel: embed2/design/trophy3/clipboard2 und menu8');
+
+                  /* T137b (Runde 34): Wiki-Modul ist entfernt. */
+                  var index137 = fs136.readFileSync(require.resolve('../public/index.php'), 'utf8');
+                  var modCtl137 = fs136.readFileSync(require.resolve('../src/Controllers/ModuleController.php'), 'utf8');
+                  ok(index137.indexOf('wiki') === -1
+                    && modCtl137.indexOf("'wiki'") === -1
+                    && fs136.readdirSync(require('path').dirname(require.resolve('../templates/layout.php'))).filter(function (f137b) { return f137b.indexOf('wiki_') === 0; }).length === 0
+                    && sup135.indexOf("'wiki' =>") === -1,
+                    'T137b Wiki-Modul entfernt: keine Routen, kein Template, keine Icon-Map');
+
+                  /* T137c (Runde 34): Templates ohne Play-/Navigationssymbole. */
+                  var sym137 = ['▶', '◀', '⏹', '☰', '↶', '↷', '↺', '↻', '↗'];
+                  var bad137 = [];
+                  fs136.readdirSync(require('path').dirname(require.resolve('../templates/layout.php'))).forEach(function (f137) {
+                    if (f137.slice(-4) !== '.php') { return; }
+                    var t137 = fs136.readFileSync(require('path').dirname(require.resolve('../templates/layout.php')) + '/' + f137, 'utf8');
+                    sym137.forEach(function (sy137) {
+                      if (t137.indexOf(sy137) !== -1) { bad137.push(f137 + ':' + sy137); }
+                    });
+                  });
+                  ok(bad137.length === 0, 'T137c keine Play-/Navigationssymbole mehr in Templates (' + bad137.join(', ') + ')');
+
+                  /* T137d (Runde 34): app.js nutzt Icon-Helper fuer Lauf-Knoepfe. */
+                  var appjs137 = fs136.readFileSync(require.resolve('../public/assets/js/app.js'), 'utf8');
+                  ok(appjs137.indexOf('icnHtml(' + String.fromCharCode(39) + 'ic-play' + String.fromCharCode(39) + ', ' + String.fromCharCode(39) + 'Ausf' + String.fromCharCode(252) + 'hren' + String.fromCharCode(39) + ')') !== -1
+                    && appjs137.indexOf('icnHtml(' + String.fromCharCode(39) + 'ic-play' + String.fromCharCode(39) + ', ' + String.fromCharCode(39) + 'Abfrage ausf' + String.fromCharCode(252) + 'hren' + String.fromCharCode(39) + ')') !== -1
+                    && appjs137.indexOf('▶') === -1
+                    && appjs137.indexOf('🖱') === -1
+                    && appjs137.indexOf('💻') === -1
+                    && appjs137.indexOf('🗄') === -1,
+                    'T137d app.js: Lauf-Knoepfe mit ic-play, keine Emoji-Icons');
+
+                  /* T137e (Runde 34): Takt- und Stoppknoepfe mit Vektor-Icons. */
+                  var logic137 = fs136.readFileSync(require.resolve('../public/assets/js/logic.js'), 'utf8');
+                  var blkStop137 = fs136.readFileSync(require.resolve('../templates/code_project.php'), 'utf8');
+                  ok(logic137.indexOf('ic-play') !== -1
+                    && logic137.indexOf('ic-stop') !== -1
+                    && blkStop137.indexOf('ic-stop') !== -1
+                    && blkStop137.indexOf('⏹') === -1,
+                    'T137e Takt- und Stoppknoepfe mit Vektor-Icons statt ▶/⏹');
 
                   global.document = netSavedDoc;
                   global.window = netSavedWindow;

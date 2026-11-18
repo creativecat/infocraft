@@ -8,15 +8,15 @@
  * Lehrkräfte direkt hier editierbar und speicherbar. */ ?>
 <div class="slide-stage" id="slide-stage" data-pid="<?= (int) $presentation->id ?>">
     <div class="slide-toolbar">
-        <a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen">←</a>
+        <a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
         <?php if ($mayEdit): ?>
-        <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id) ?>" title="Bearbeiten">✏️</a>
+        <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id) ?>" title="Bearbeiten"><span class="icn ic-pencil" aria-hidden="true"></span></a>
         <?php endif; ?>
         <?php if ($isTeacher): ?>
-        <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id . '/moderator') ?>" title="Moderator: Steuerzentrale - aktuelle und nächste Folie, Timer - synchron zu diesem Fenster">🖥</a>
+        <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id . '/moderator') ?>" title="Moderator: Steuerzentrale - aktuelle und nächste Folie, Timer - synchron zu diesem Fenster"><span class="icn ic-display" aria-hidden="true"></span></a>
         <?php endif; ?>
-        <button class="btn btn-ghost" type="button" id="slide-full" title="Vollbild (Taste F)">⛶</button>
-        <div class="slide-counter"><button class="btn btn-ghost" type="button" id="slide-prev" title="Zurück (Pfeiltaste links)">◀</button><span id="slide-counter"></span><button class="btn btn-ghost" type="button" id="slide-next" title="Weiter (Pfeiltaste rechts)">▶</button></div>
+        <button class="btn btn-ghost" type="button" id="slide-full" title="Vollbild (Taste F)"><span class="icn ic-enlarge2" aria-hidden="true"></span></button>
+        <div class="slide-counter"><button class="btn btn-ghost" type="button" id="slide-prev" title="Zurück (Pfeiltaste links)"><span class="icn ic-arrow-left" aria-hidden="true"></span></button><span id="slide-counter"></span><button class="btn btn-ghost" type="button" id="slide-next" title="Weiter (Pfeiltaste rechts)"><span class="icn ic-arrow-right" aria-hidden="true"></span></button></div>
     </div>
 
     <?php if ($slides === []): ?>
@@ -31,7 +31,7 @@
         <h2 class="slide-title"><?= e($slide['title']) ?> <span class="pill"><?= e($slide['lang']) ?></span></h2>
         <pre class="code slide-code"><code class="language-<?= e($slide['lang']) ?>"><?= e($slide['code']) ?></code></pre>
         <?php if ($mayEdit): ?>
-        <button class="btn btn-ghost" type="button" data-edit-toggle="slide-edit-<?= $pos ?>" title="Code verändern (live)">✏️</button>
+        <button class="btn btn-ghost" type="button" data-edit-toggle="slide-edit-<?= $pos ?>" title="Code verändern (live)"><span class="icn ic-pencil" aria-hidden="true"></span></button>
         <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos) ?>" class="form slide-edit" id="slide-edit-<?= $pos ?>" hidden>
             <?= csrf_field() ?>
             <input type="hidden" name="title" value="<?= e($slide['title']) ?>">
@@ -41,8 +41,8 @@
                 <span class="hlwrap" data-hl="<?= e($slide['lang']) ?>"><textarea name="code" rows="12" class="mono" spellcheck="false"><?= e($slide['code']) ?></textarea></span>
             </label>
             <div class="btn-row">
-                <button class="btn btn-primary" type="submit" title="Speichern">💾</button>
-                <button class="btn btn-ghost" type="button" data-edit-cancel="slide-edit-<?= $pos ?>" title="Abbrechen">✕</button>
+                <button class="btn btn-primary" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button>
+                <button class="btn btn-ghost" type="button" data-edit-cancel="slide-edit-<?= $pos ?>" title="Abbrechen"><span class="icn ic-cross" aria-hidden="true"></span></button>
             </div>
         </form>
         <?php endif; ?>
@@ -196,7 +196,9 @@
   function renderClosed(poll) {
     clearBox();
     box.hidden = false;
-    addText('h3', '📊 Ergebnis: ' + poll.question);
+    var pollH3 = addText('h3', '');
+    pollH3.innerHTML = '<span class="icn ic-stats-bars" aria-hidden="true"></span> Ergebnis: ';
+    pollH3.appendChild(document.createTextNode(poll.question));
     var maxCount = 1;
     for (var ci = 0; ci < poll.counts.length; ci++) { if (poll.counts[ci] > maxCount) { maxCount = poll.counts[ci]; } }
     for (var ai = 0; ai < poll.answers.length; ai++) {
@@ -222,7 +224,9 @@
   function renderOpen(poll) {
     clearBox();
     box.hidden = false;
-    addText('h3', '🙋 ' + poll.question);
+    var askH3 = addText('h3', '');
+    askH3.innerHTML = '<span class="icn ic-point-up" aria-hidden="true"></span> ';
+    askH3.appendChild(document.createTextNode(poll.question));
     var form = document.createElement('form');
     form.method = 'post';
     form.action = voteUrl;

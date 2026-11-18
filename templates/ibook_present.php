@@ -14,11 +14,11 @@
    Inline-Script. */ ?>
 <div class="slide-stage" id="slide-stage" data-ibook="<?= (int) $book->id ?>">
     <div class="slide-toolbar">
-        <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id) ?>" title="Zurück zum InfoBook">←</a>
+        <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id) ?>" title="Zurück zum InfoBook"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
         <span class="muted"><?= e($book->title) ?></span>
-        <div class="slide-counter"><button class="btn btn-ghost" type="button" id="slide-prev" title="Zurück (Pfeiltaste links): letzten Schritt wieder ausblenden">◀</button><span id="slide-counter"></span><button class="btn btn-ghost" type="button" id="slide-next" title="Weiter (Klick, Leertaste oder Pfeiltaste rechts): nächsten Schritt einblenden">▶</button></div>
+        <div class="slide-counter"><button class="btn btn-ghost" type="button" id="slide-prev" title="Zurück (Pfeiltaste links): letzten Schritt wieder ausblenden"><span class="icn ic-arrow-left" aria-hidden="true"></span></button><span id="slide-counter"></span><button class="btn btn-ghost" type="button" id="slide-next" title="Weiter (Klick, Leertaste oder Pfeiltaste rechts): nächsten Schritt einblenden"><span class="icn ic-arrow-right" aria-hidden="true"></span></button></div>
         <span class="slide-stepinfo" id="slide-stepinfo" aria-live="polite"></span>
-        <button class="btn btn-ghost" type="button" id="slide-full" title="Vollbild (Taste F)">⛶</button>
+        <button class="btn btn-ghost" type="button" id="slide-full" title="Vollbild (Taste F)"><span class="icn ic-enlarge2" aria-hidden="true"></span></button>
     </div>
     <?php if ($slides === []): ?>
     <section class="slide slide-active" data-slide="0">

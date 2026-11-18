@@ -34,7 +34,6 @@ use Infocraft\Controllers\QuizController;
 use Infocraft\Controllers\SqlWorkshopController;
 use Infocraft\Controllers\TaskController;
 use Infocraft\Controllers\TeacherController;
-use Infocraft\Controllers\WikiController;
 use Infocraft\Router;
 
 // Basispfad, falls InfoCraft in einem Unterverzeichnis installiert ist.
@@ -189,12 +188,6 @@ $router->get('/aufgaben/{id}/export', [TaskController::class, 'export']);
 $router->post('/aufgaben/import', [TaskController::class, 'importJson']);
 
 // Wiki: Nachschlage-Seiten mit Stufen-Filter (Lehrkräfte verwalten)
-$router->get('/wiki', [WikiController::class, 'index']);
-$router->post('/wiki/anlegen', [WikiController::class, 'create']);
-$router->get('/wiki/{id}', [WikiController::class, 'show']);
-$router->get('/wiki/{id}/bearbeiten', [WikiController::class, 'edit']);
-$router->post('/wiki/{id}', [WikiController::class, 'save']);
-$router->post('/wiki/{id}/loeschen', [WikiController::class, 'delete']);
 
 // Präsentationen: Folien mit Vollbild-Modus, Code-Folien sind im
 // Präsentationsmodus direkt editierbar (Syntax-Highlighting).

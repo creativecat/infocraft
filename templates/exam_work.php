@@ -7,7 +7,7 @@
 <div data-exam-save="<?= url('pruefungen/' . $exam->id . '/antwort') ?>">
 <section class="panel">
     <div class="panel-head">
-        <h3><?= e($exam->title) ?> <span class="pill"><?= $exam->kind === 'pruefung' ? '🔒 Prüfung' : '📄 Schularbeit' ?></span></h3>
+        <h3><?= e($exam->title) ?> <span class="pill"><?= $exam->kind === 'pruefung' ? '<span class="icn ic-lock" aria-hidden="true"></span> Prüfung' : '<span class="icn ic-file-text" aria-hidden="true"></span> Schularbeit' ?></span></h3>
         <?php if ($work['submitted_at'] !== null): ?>
         <span class="badge-solved">abgegeben</span>
         <?php endif; ?>

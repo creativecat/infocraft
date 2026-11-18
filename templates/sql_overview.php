@@ -5,7 +5,7 @@
    Version: 0.24.0 */ ?>
 <?php $classNames = []; foreach ($classes as $class) { $classNames[$class->id] = $class->name; } ?>
 <div class="btn-row" style="margin-bottom:1rem">
-    <a class="btn btn-primary" href="<?= url('werkstatt/sql/abenteuer') ?>" title="Erzählte SQL-Abenteuer mit Kapiteln, Szenenbildern und Fortschritt">🗺️ Zu den Abenteuern</a>
+    <a class="btn btn-primary" href="<?= url('werkstatt/sql/abenteuer') ?>" title="Erzählte SQL-Abenteuer mit Kapiteln, Szenenbildern und Fortschritt"><span class="icn ic-map" aria-hidden="true"></span> Zu den Abenteuern</a>
 </div>
 
 <?php if (!$isTeacher): ?>
@@ -18,7 +18,7 @@
 <div class="cards">
     <?php foreach ($grants as $grant): ?>
     <a class="card" href="<?= url('werkstatt/sql/' . $grant['template']->slug) ?>">
-        <div class="card-icon"><?= $grant['template']->isAdventure ? '🏝️' : '🗄️' ?></div>
+        <div class="card-icon"><?= $grant['template']->isAdventure ? '<span class="icn ic-map2" aria-hidden="true"></span>' : '<span class="icn ic-database" aria-hidden="true"></span>' ?></div>
         <h2><?= e($grant['template']->title) ?></h2>
         <p class="card-desc"><?= e($grant['template']->description) ?></p>
         <div class="card-meta"><span class="pill"><?= e($permissions[$grant['permission']] ?? $grant['permission']) ?></span></div>
@@ -30,7 +30,7 @@
 <div class="cards">
     <?php foreach ($templates as $template): ?>
     <a class="card" href="<?= url('werkstatt/sql/' . $template->slug) ?>">
-        <div class="card-icon"><?= $template->isAdventure ? '🏝️' : '🗄️' ?></div>
+        <div class="card-icon"><?= $template->isAdventure ? '<span class="icn ic-map2" aria-hidden="true"></span>' : '<span class="icn ic-database" aria-hidden="true"></span>' ?></div>
         <h2><?= e($template->title) ?></h2>
         <p class="card-desc"><?= e($template->description) ?></p>
         <div class="card-meta"><span class="pill">Vollzugriff</span></div>
@@ -39,7 +39,7 @@
 </div>
 <div class="two-col">
     <section class="panel">
-        <h3>📤 Datenbank austeilen</h3>
+        <h3><span class="icn ic-share" aria-hidden="true"></span> Datenbank austeilen</h3>
         <form method="post" action="<?= url('werkstatt/sql/verteilen') ?>" class="form">
             <?= csrf_field() ?>
             <label class="field">
@@ -83,14 +83,14 @@
                 </select>
                 <p class="muted">Nur lesen = alle arbeiten an derselben gemeinsamen Datenbank, ohne eigene Kopie. Erst mit Schreibrechten erhält jede Person ihre eigene datensparsame Kopie.</p>
             </label>
-            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Austeilen">📤</button></div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Austeilen"><span class="icn ic-share" aria-hidden="true"></span></button></div>
         </form>
         <p class="muted">Wird beides angegeben, gilt die ganze Klasse.</p>
     </section>
 </div>
 
 <section class="panel">
-    <h3>📋 Aktuelle Zuweisungen</h3>
+    <h3><span class="icn ic-clipboard" aria-hidden="true"></span> Aktuelle Zuweisungen</h3>
     <?php if ($assignments === []): ?>
     <p class="muted">Noch keine Zuweisungen in deinen Klassen.</p>
     <?php else: ?>
@@ -107,7 +107,7 @@
                 <form method="post" action="<?= url('werkstatt/sql/entfernen') ?>" class="form-inline">
                     <?= csrf_field() ?>
                     <input type="hidden" name="grant_id" value="<?= (int) $assignment['grantId'] ?>">
-                    <button class="btn btn-ghost" type="submit" title="Zurückziehen">⏹</button>
+                    <button class="btn btn-ghost" type="submit" title="Zurückziehen"><span class="icn ic-stop" aria-hidden="true"></span></button>
                 </form>
             </td>
         </tr>

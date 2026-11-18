@@ -13,7 +13,7 @@ $hasOwner = $legal['operator'] !== '' || $legal['email'] !== '' || $legal['perso
 $address = trim($legal['street'] . ($legal['street'] !== '' && ($legal['zip'] !== '' || $legal['city'] !== '') ? ', ' : '') . $legal['zip'] . ($legal['zip'] !== '' && $legal['city'] !== '' ? ' ' : '') . $legal['city']);
 ?>
 <section class="hero">
-    <div class="hero-emoji">🏛️</div>
+    <div class="hero-emoji"><span class="icn ic-office" aria-hidden="true"></span></div>
     <h1>Impressum</h1>
     <p>Angaben gemäß § 5 DDG.</p>
 </section>

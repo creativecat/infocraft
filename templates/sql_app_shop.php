@@ -7,19 +7,19 @@
 <section class="panel">
     <div class="panel-head">
         <div>
-            <h3>📱 <?= e($template->title) ?>-App</h3>
+            <h3><span class="icn ic-mobile" aria-hidden="true"></span> <?= e($template->title) ?>-App</h3>
             <p class="muted">Ein Mobil-Frontend auf deiner SQL-Datenbank (#46): Alles, was du hier bestellst, landet in denselben Tabellen, die du in der Werkstatt mit SELECT abfragst - und umgekehrt.</p>
         </div>
         <div class="btn-row">
-            <a class="btn btn-ghost" href="<?= url('werkstatt/sql/' . e($template->slug)) ?>">← Werkstatt</a>
-            <a class="btn btn-ghost" href="<?= $appUrl ?>">🔄 Aktualisieren</a>
+            <a class="btn btn-ghost" href="<?= url('werkstatt/sql/' . e($template->slug)) ?>"><span class="icn ic-arrow-left" aria-hidden="true"></span> Werkstatt</a>
+            <a class="btn btn-ghost" href="<?= $appUrl ?>"><span class="icn ic-loop2" aria-hidden="true"></span> Aktualisieren</a>
         </div>
     </div>
     <?php if (!$canWrite): ?>
     <div class="notice">Nur Leserechte: Du kannst die App anschauen, aber nicht bestellen. Deine Lehrkraft kann dir Schreibrechte geben.</div>
     <?php endif; ?>
     <div class="phone-frame">
-        <div class="app-bar">🛍️ InfoShop <span class="app-bar-sub">Bestellen als</span></div>
+        <div class="app-bar"><span class="icn ic-bag" aria-hidden="true"></span> InfoShop <span class="app-bar-sub">Bestellen als</span></div>
         <form method="post" action="<?= $appUrl ?>" class="app-who">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="kunde">
@@ -55,7 +55,7 @@
             <p class="muted app-pad">Keine Produkte (mehr) in der Tabelle produkte.</p>
             <?php endif; ?>
         </div>
-        <div class="app-bar app-bar-sec">📦 Letzte Bestellungen</div>
+        <div class="app-bar app-bar-sec"><span class="icn ic-box" aria-hidden="true"></span> Letzte Bestellungen</div>
         <div class="app-body">
             <?php foreach ($bestellungen as $b): ?>
             <div class="app-row">

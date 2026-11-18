@@ -5,19 +5,19 @@
    Version: 0.15.0 */ ?>
 <section class="panel">
     <div class="panel-head">
-        <h3>➕ Neues Diagramm anlegen</h3>
+        <h3><span class="icn ic-plus" aria-hidden="true"></span> Neues Diagramm anlegen</h3>
     </div>
     <form method="post" action="<?= url('diagramme/anlegen') ?>" class="form form-row">
         <?= csrf_field() ?>
         <label class="field"><span>Titel</span><input type="text" name="title" required maxlength="200" placeholder="z. B. Notenrechner"></label>
         <label class="field"><span>Typ</span>
             <div class="kind-picker">
-                <label class="kind-btn"><input type="radio" name="kind" value="manuell" checked><span>📐 Klassendiagramm</span></label>
-                <label class="kind-btn"><input type="radio" name="kind" value="struktogramm"><span>🧱 Struktogramm</span></label>
-                <label class="kind-btn"><input type="radio" name="kind" value="datenfluss"><span>🌊 Datenflussdiagramm</span></label>
+                <label class="kind-btn"><input type="radio" name="kind" value="manuell" checked><span><span class="icn ic-design" aria-hidden="true"></span> Klassendiagramm</span></label>
+                <label class="kind-btn"><input type="radio" name="kind" value="struktogramm"><span><span class="icn ic-cube" aria-hidden="true"></span> Struktogramm</span></label>
+                <label class="kind-btn"><input type="radio" name="kind" value="datenfluss"><span><span class="icn ic-wave" aria-hidden="true"></span> Datenflussdiagramm</span></label>
             </div>
         </label>
-        <button class="btn btn-primary" type="submit" title="Anlegen und bearbeiten">➕</button>
+        <button class="btn btn-primary" type="submit" title="Anlegen und bearbeiten"><span class="icn ic-plus" aria-hidden="true"></span></button>
     </form>
     <?php if (!$diagramAuto): ?>
     <div class="notice">
@@ -36,11 +36,11 @@
 <div class="cards">
     <?php foreach ($diagrams as $diagram): ?>
     <div class="card">
-        <div class="card-icon"><?= e($diagram->kind === 'struktogramm' ? '🧱' : ($diagram->kind === 'datenfluss' ? '🌊' : '📐')) ?></div>
+        <div class="card-icon"><?= e($diagram->kind === 'struktogramm' ? '<span class="icn ic-cube" aria-hidden="true"></span>' : ($diagram->kind === 'datenfluss' ? '<span class="icn ic-wave" aria-hidden="true"></span>' : '<span class="icn ic-design" aria-hidden="true"></span>')) ?></div>
         <h2><?= e($diagram->title) ?></h2>
         <p class="card-desc muted"><?= e($diagram->kindLabel()) ?></p>
         <div class="card-meta">
-            <a class="btn btn-primary" href="<?= url('diagramme/' . (int) $diagram->id) ?>" title="Bearbeiten">✏️</a>
+            <a class="btn btn-primary" href="<?= url('diagramme/' . (int) $diagram->id) ?>" title="Bearbeiten"><span class="icn ic-pencil" aria-hidden="true"></span></a>
         </div>
     </div>
     <?php endforeach; ?>

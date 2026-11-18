@@ -10,11 +10,11 @@
 /** @var \Infocraft\Models\Task $task @var \Infocraft\Models\TaskTopic[] $topics @var \Infocraft\Models\TaskMaterial[] $materials @var list<\Infocraft\Models\TaskTodo> $todos @var list<array{id:int,kind:string,name:string,dueAt:?string,visibleFrom:?string,assignedAt:string,classId:?int,userId:?int}> $targets @var array<int, array{total:int,submitted:int}> $progress @var int $openGradings @var \Infocraft\Models\SchoolClass[] $classes @var array<int, list<\Infocraft\Models\User>> $studentsByClass @var string $defaultLanguage */
 $typeLabels = ['allgemein' => 'Allgemein', 'sql' => 'SQL', 'html' => 'HTML', 'code' => 'Java/Python', 'quiz' => 'Quiz'];
 $typeHints = [
-    'code' => '💡 Tipp für Java/Python-Aufgaben: Teile eine Starterdatei aus, z. B. Auto.java mit vorbereiteter Klasse. Über die Varianten-Aktion unten kannst du die Aufgabe später mit einem Klick als Java- oder Python-Variante duplizieren.',
-    'html' => '💡 Tipp für HTML-Aufgaben: Teile ein index.html-Gerüst aus, in dem die Kinder nur die markierten Stellen ergänzen.',
-    'sql' => '💡 Tipp für SQL-Aufgaben: Teile ein .sql-Schema aus, damit jede Aufgabe ihre eigene kleine Datenbank mitbringt (CREATE TABLE + INSERTs).',
-    'quiz' => '💡 Tipp für Quiz-Aufgaben: Formuliere die Fragen als ToDos, dann können die Schülerinnen und Schüler jede Frage einzeln abhaken.',
-    'allgemein' => '💡 Tipp: Beschreibe die Aufgabe mit der Formatierungsleiste und lege ToDos an, die die Schülerinnen und Schüler abhaken können.',
+    'code' => '<span class="icn ic-info" aria-hidden="true"></span> Tipp für Java/Python-Aufgaben: Teile eine Starterdatei aus, z. B. Auto.java mit vorbereiteter Klasse. Über die Varianten-Aktion unten kannst du die Aufgabe später mit einem Klick als Java- oder Python-Variante duplizieren.',
+    'html' => '<span class="icn ic-info" aria-hidden="true"></span> Tipp für HTML-Aufgaben: Teile ein index.html-Gerüst aus, in dem die Kinder nur die markierten Stellen ergänzen.',
+    'sql' => '<span class="icn ic-info" aria-hidden="true"></span> Tipp für SQL-Aufgaben: Teile ein .sql-Schema aus, damit jede Aufgabe ihre eigene kleine Datenbank mitbringt (CREATE TABLE + INSERTs).',
+    'quiz' => '<span class="icn ic-info" aria-hidden="true"></span> Tipp für Quiz-Aufgaben: Formuliere die Fragen als ToDos, dann können die Schülerinnen und Schüler jede Frage einzeln abhaken.',
+    'allgemein' => '<span class="icn ic-info" aria-hidden="true"></span> Tipp: Beschreibe die Aufgabe mit der Formatierungsleiste und lege ToDos an, die die Schülerinnen und Schüler abhaken können.',
 ];
 $classNames = [];
 foreach ($classes as $class) {
@@ -22,7 +22,7 @@ foreach ($classes as $class) {
 }
 ?>
 <section class="hero hero-compact">
-    <div class="hero-emoji">✏️</div>
+    <div class="hero-emoji"><span class="icn ic-pencil" aria-hidden="true"></span></div>
     <div class="hero-text">
         <h1>Aufgabe bearbeiten</h1>
         <p>Alles an einer Aufgabe an einem Ort: Inhalt links, Verteilen, Termine, ToDos und Vorlagen rechts.</p>
@@ -31,7 +31,7 @@ foreach ($classes as $class) {
 
 <div class="two-col">
     <section class="panel">
-        <h3>📝 Aufgabe <span class="pill"><?= e($typeLabels[$task->type] ?? $task->type) ?> · Jgst. <?= (int) $task->level ?></span></h3>
+        <h3><span class="icn ic-pencil2" aria-hidden="true"></span> Aufgabe <span class="pill"><?= e($typeLabels[$task->type] ?? $task->type) ?> · Jgst. <?= (int) $task->level ?></span></h3>
         <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/bearbeiten') ?>" class="form">
             <?= csrf_field() ?>
             <label class="field"><span>Titel</span><input type="text" name="title" required value="<?= e($task->title) ?>"></label>
@@ -72,8 +72,8 @@ foreach ($classes as $class) {
                         <button type="button" data-cmd="insertunorderedlist" title="Liste">•</button>
                         <button type="button" data-cmd="insertorderedlist" title="Nummerierte Liste">1.</button>
                         <button type="button" data-cmd="formatblock" data-arg="pre" title="Code-Block">{ }</button>
-                        <button type="button" data-cmd="createlink" title="Link einfügen">🔗</button>
-                        <button type="button" data-cmd="removeFormat" title="Formatierung entfernen">✗</button>
+                        <button type="button" data-cmd="createlink" title="Link einfügen"><span class="icn ic-link" aria-hidden="true"></span></button>
+                        <button type="button" data-cmd="removeFormat" title="Formatierung entfernen"><span class="icn ic-eraser" aria-hidden="true"></span></button>
                     </div>
                     <div class="wysiwyg-view" contenteditable="true" data-placeholder="Was ist zu tun?"></div>
                     <input type="hidden" name="description_html" value="0">
@@ -103,29 +103,29 @@ foreach ($classes as $class) {
                 </div>
             </div>
             <p class="muted"><?= e($typeHints[$task->type] ?? $typeHints['allgemein']) ?></p>
-            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button></div>
         </form>
         <div class="btn-row">
-            <a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool">←</a>
-            <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $task->id . '/export') ?>" title="Aufgabe als Datei sichern oder an Kolleginnen und Kollegen weitergeben (inkl. ToDos, Vorlagen, Musterlösung)">⬇️</a>
+            <a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
+            <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $task->id . '/export') ?>" title="Aufgabe als Datei sichern oder an Kolleginnen und Kollegen weitergeben (inkl. ToDos, Vorlagen, Musterlösung)"><span class="icn ic-arrow-down" aria-hidden="true"></span></a>
             <?php if ($task->presentationProjectId !== null): ?>
-            <a class="btn btn-primary" href="<?= url('werkstatt/' . ($task->type === 'html' ? 'html' : 'code') . '/' . (int) $task->presentationProjectId) ?>" title="Präsentationsmodus läuft: zurück in die temporäre Kopie">🎬 läuft</a>
-            <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $task->id . '/praesentation/download') ?>" title="Temporäre Kopie als Musterlösung herunterladen">⬇️ Musterlösung</a>
+            <a class="btn btn-primary" href="<?= url('werkstatt/' . ($task->type === 'html' ? 'html' : 'code') . '/' . (int) $task->presentationProjectId) ?>" title="Präsentationsmodus läuft: zurück in die temporäre Kopie"><span class="icn ic-film" aria-hidden="true"></span> läuft</a>
+            <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $task->id . '/praesentation/download') ?>" title="Temporäre Kopie als Musterlösung herunterladen"><span class="icn ic-arrow-down" aria-hidden="true"></span> Musterlösung</a>
             <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/praesentation/ende') ?>" class="form-inline">
                 <?= csrf_field() ?>
-                <button class="btn btn-ghost" type="submit" title="Präsentationsmodus beenden und die temporäre Kopie löschen">✕ beenden</button>
+                <button class="btn btn-ghost" type="submit" title="Präsentationsmodus beenden und die temporäre Kopie löschen"><span class="icn ic-cross" aria-hidden="true"></span> beenden</button>
             </form>
             <?php else: ?>
             <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/praesentation/start') ?>" class="form-inline">
                 <?= csrf_field() ?>
-                <button class="btn btn-primary" type="submit" title="Live im Unterricht programmieren, ohne Vorlage zu überschreiben: temporäre Kopie, später als Musterlösung herunterladbar und wieder löschbar">🎬 Präsentationsmodus</button>
+                <button class="btn btn-primary" type="submit" title="Live im Unterricht programmieren, ohne Vorlage zu überschreiben: temporäre Kopie, später als Musterlösung herunterladbar und wieder löschbar"><span class="icn ic-film" aria-hidden="true"></span> Präsentationsmodus</button>
             </form>
             <?php endif; ?>
-            <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $task->id . '/loesung/fenster') ?>" target="_blank" rel="noopener" title="Musterlösung in einem eigenen Fenster öffnen, z. B. für den Zweitbildschirm">🪟 Musterlösung im Fenster</a>
+            <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $task->id . '/loesung/fenster') ?>" target="_blank" rel="noopener" title="Musterlösung in einem eigenen Fenster öffnen, z. B. für den Zweitbildschirm"><span class="icn ic-display2" aria-hidden="true"></span> Musterlösung im Fenster</a>
             <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/teilen') ?>" class="form-inline">
                 <?= csrf_field() ?>
                 <input type="hidden" name="shared" value="<?= $task->shared === 1 ? '0' : '1' ?>">
-                <button class="btn btn-ghost" type="submit" title="<?= $task->shared === 1 ? 'Nicht mehr im gemeinsamen Pool teilen' : 'In den gemeinsamen Pool aller Lehrkräfte teilen' ?>"><?= $task->shared === 1 ? '🚫' : '🤝' ?></button>
+                <button class="btn btn-ghost" type="submit" title="<?= $task->shared === 1 ? 'Nicht mehr im gemeinsamen Pool teilen' : 'In den gemeinsamen Pool aller Lehrkräfte teilen' ?>"><?= $task->shared === 1 ? '<span class="icn ic-blocked" aria-hidden="true"></span>' : '<span class="icn ic-users" aria-hidden="true"></span>' ?></button>
             </form>
             <?php if ($task->type === 'code'): ?>
             <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/variante') ?>" class="form-inline" style="display:flex;gap:6px;align-items:center;">
@@ -139,18 +139,18 @@ foreach ($classes as $class) {
                     <option value="java">☕ Java</option>
                     <?php endif; ?>
                 </select>
-                <button class="btn btn-ghost" type="submit" title="Aufgabe als Variante in der anderen Sprache duplizieren">🔁</button>
+                <button class="btn btn-ghost" type="submit" title="Aufgabe als Variante in der anderen Sprache duplizieren"><span class="icn ic-loop2" aria-hidden="true"></span></button>
             </form>
             <?php endif; ?>
             <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/loeschen') ?>" class="form-inline">
                 <?= csrf_field() ?>
-                <button class="btn btn-ghost" type="submit" title="Aufgabe löschen">🗑</button>
+                <button class="btn btn-ghost" type="submit" title="Aufgabe löschen"><span class="icn ic-bin2" aria-hidden="true"></span></button>
             </form>
         </div>
     </section>
     <div>
         <section class="panel">
-            <h3>📤 Verteilen &amp; Termine <?= $openGradings > 0 ? '<span class="pill pill-warn">✅ ' . (int) $openGradings . ' zu korrigieren</span>' : '' ?></h3>
+            <h3><span class="icn ic-share" aria-hidden="true"></span> Verteilen &amp; Termine <?= $openGradings > 0 ? '<span class="pill pill-warn"><span class="icn ic-checkmark" aria-hidden="true"></span> ' . (int) $openGradings . ' zu korrigieren</span>' : '' ?></h3>
             <?php if ($targets === []): ?>
             <p class="muted">Noch an niemanden ausgeteilt.</p>
             <?php else: ?>
@@ -158,32 +158,32 @@ foreach ($classes as $class) {
             <?php $hidden = $target['visibleFrom'] !== null && $target['visibleFrom'] > date('Y-m-d H:i'); ?>
             <?php $prog = $progress[$target['id']] ?? ['total' => 0, 'submitted' => 0]; ?>
             <div class="target-row">
-                <span class="pill"><?= e($target['kind']) ?> <?= e($target['name']) ?><?= $hidden ? ' · ⏳ erscheint am ' . e($target['visibleFrom']) : '' ?><?= $target['dueAt'] !== null ? ' · 📅 ' . e($target['dueAt']) : '' ?><?= ($target['recurrence'] ?? '') !== '' ? ' · 🔁 ' . e(['weekly' => 'wöchentlich', 'biweekly' => 'alle 2 Wochen', 'monthly' => 'monatlich'][$target['recurrence']]) : '' ?> · ✍️ <?= (int) $prog['submitted'] ?>/<?= (int) $prog['total'] ?> abgegeben</span>
+                <span class="pill"><?= e($target['kind']) ?> <?= e($target['name']) ?><?= $hidden ? ' · ⏳ erscheint am ' . e($target['visibleFrom']) : '' ?><?= $target['dueAt'] !== null ? ' · <span class="icn ic-calendar" aria-hidden="true"></span> ' . e($target['dueAt']) : '' ?><?= ($target['recurrence'] ?? '') !== '' ? ' · <span class="icn ic-loop2" aria-hidden="true"></span> ' . e(['weekly' => 'wöchentlich', 'biweekly' => 'alle 2 Wochen', 'monthly' => 'monatlich'][$target['recurrence']]) : '' ?> · <span class="icn ic-pencil" aria-hidden="true"></span> <?= (int) $prog['submitted'] ?>/<?= (int) $prog['total'] ?> abgegeben</span>
                 <form method="post" action="<?= url('aufgaben/start') ?>" class="form-inline" style="display:flex;gap:6px;align-items:center;">
                     <?= csrf_field() ?>
                     <input type="hidden" name="target_id" value="<?= (int) $target['id'] ?>">
                     <input type="datetime-local" name="visible_from" value="<?= $target['visibleFrom'] !== null ? e(str_replace(' ', 'T', $target['visibleFrom'])) : '' ?>" title="Starttermin: ab wann sehen die Schülerinnen und Schüler diese Aufgabe?">
-                    <button class="icon-btn" type="submit" title="Starttermin setzen oder mit leerem Feld streichen">🚀</button>
+                    <button class="icon-btn" type="submit" title="Starttermin setzen oder mit leerem Feld streichen"><span class="icn ic-rocket" aria-hidden="true"></span></button>
                 </form>
                 <form method="post" action="<?= url('aufgaben/termin') ?>" class="form-inline" style="display:flex;gap:6px;align-items:center;">
                     <?= csrf_field() ?>
                     <input type="hidden" name="target_id" value="<?= (int) $target['id'] ?>">
                     <input type="datetime-local" name="due_at" value="<?= $target['dueAt'] !== null ? e(str_replace(' ', 'T', $target['dueAt'])) : '' ?>" title="Abgabetermin (Datum und Uhrzeit)">
-                    <button class="icon-btn" type="submit" title="Abgabetermin setzen oder streichen">📅</button>
+                    <button class="icon-btn" type="submit" title="Abgabetermin setzen oder streichen"><span class="icn ic-calendar" aria-hidden="true"></span></button>
                 </form>
                 <form method="post" action="<?= url('aufgaben/einziehen') ?>" class="form-inline">
                     <?= csrf_field() ?>
                     <input type="hidden" name="target_id" value="<?= (int) $target['id'] ?>">
-                    <button class="icon-btn" type="submit" title="Zuweisung zurücknehmen, Abgaben bleiben erhalten">↩️</button>
+                    <button class="icon-btn" type="submit" title="Zuweisung zurücknehmen, Abgaben bleiben erhalten"><span class="icn ic-undo" aria-hidden="true"></span></button>
                 </form>
             </div>
             <?php endforeach; ?>
             <?php if ($openGradings > 0 || $targets !== []): ?>
-            <div class="btn-row"><a class="btn btn-primary" href="<?= url('aufgaben/' . (int) $task->id . '/korrektur') ?>" title="Abgaben ansehen und korrigieren">✅ Korrektur</a></div>
+            <div class="btn-row"><a class="btn btn-primary" href="<?= url('aufgaben/' . (int) $task->id . '/korrektur') ?>" title="Abgaben ansehen und korrigieren"><span class="icn ic-checkmark" aria-hidden="true"></span> Korrektur</a></div>
             <?php endif; ?>
             <?php endif; ?>
             <details class="dist-panel">
-                <summary title="An Klasse oder einzelne Personen austeilen">📤 Austeilen</summary>
+                <summary title="An Klasse oder einzelne Personen austeilen"><span class="icn ic-share" aria-hidden="true"></span> Austeilen</summary>
                 <form method="post" action="<?= url('aufgaben/austeilen') ?>" class="form">
                     <?= csrf_field() ?>
                     <input type="hidden" name="task_id" value="<?= (int) $task->id ?>">
@@ -222,12 +222,12 @@ foreach ($classes as $class) {
                             <option value="monthly">🔁 monatlich</option>
                         </select>
                     </label>
-                    <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Austeilen">📤</button></div>
+                    <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Austeilen"><span class="icn ic-share" aria-hidden="true"></span></button></div>
                 </form>
             </details>
         </section>
         <section class="panel">
-            <h3>📝 Eigene ToDo-Notizen (nur für dich sichtbar)</h3>
+            <h3><span class="icn ic-pencil2" aria-hidden="true"></span> Eigene ToDo-Notizen (nur für dich sichtbar)</h3>
             <p class="muted">Deine persönliche Checkliste zu dieser Aufgabe, z. B. beim gemeinsamen Lesen der Aufgabenstellung mit der Klasse. Schülerinnen und Schüler sehen diese Notizen nicht.</p>
             <?php if (($ownTodos ?? []) === []): ?>
             <p class="muted">Noch keine eigenen Notizen angelegt.</p>
@@ -241,7 +241,7 @@ foreach ($classes as $class) {
                             <input type="checkbox" onchange="this.form.submit()" name="toggle_todo_id" value="<?= (int) $ownTodo->id ?>"<?= $ownTodo->done === 1 ? ' checked' : '' ?>>
                             <span<?= $ownTodo->done === 1 ? ' style="text-decoration:line-through;"' : '' ?>><?= e($ownTodo->title) ?></span>
                         </label>
-                        <button class="btn btn-ghost" type="submit" name="delete_todo_id" value="<?= (int) $ownTodo->id ?>" title="Notiz löschen">🗑</button>
+                        <button class="btn btn-ghost" type="submit" name="delete_todo_id" value="<?= (int) $ownTodo->id ?>" title="Notiz löschen"><span class="icn ic-bin2" aria-hidden="true"></span></button>
                     </form>
                 </li>
                 <?php endforeach; ?>
@@ -250,10 +250,10 @@ foreach ($classes as $class) {
             <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/todos/eigene') ?>" class="form-inline">
                 <?= csrf_field() ?>
                 <input type="text" name="todo_title" placeholder="Eigene Notiz ergänzen" maxlength="200" required>
-                <button class="btn btn-ghost" type="submit" title="Legt eine eigene Notiz an">➕ Notiz</button>
+                <button class="btn btn-ghost" type="submit" title="Legt eine eigene Notiz an"><span class="icn ic-plus" aria-hidden="true"></span> Notiz</button>
             </form>
 
-            <h3>📋 ToDos (Vorlage für Schülerinnen und Schüler)</h3>
+            <h3><span class="icn ic-clipboard" aria-hidden="true"></span> ToDos (Vorlage für Schülerinnen und Schüler)</h3>
             <?php if ($todos === []): ?>
             <p class="muted">Noch keine ToDos angelegt.</p>
             <?php else: ?>
@@ -264,7 +264,7 @@ foreach ($classes as $class) {
                     <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/todos') ?>" class="form-inline">
                         <?= csrf_field() ?>
                         <input type="hidden" name="delete_todo_id" value="<?= (int) $todo->id ?>">
-                        <button class="icon-btn" type="submit" title="ToDo löschen">🗑</button>
+                        <button class="icon-btn" type="submit" title="ToDo löschen"><span class="icn ic-bin2" aria-hidden="true"></span></button>
                     </form>
                 </li>
                 <?php endforeach; ?>
@@ -274,24 +274,24 @@ foreach ($classes as $class) {
                 <?= csrf_field() ?>
                 <div class="form-inline" style="display:flex;gap:6px;">
                     <input type="text" name="todo_title" required placeholder="Neues ToDo, z. B. Klasse Auto mit Attributen anlegen" style="flex:1;">
-                    <button class="btn btn-ghost" type="submit" title="ToDo hinzufügen, alle Empfänger sehen es ab jetzt">➕</button>
+                    <button class="btn btn-ghost" type="submit" title="ToDo hinzufügen, alle Empfänger sehen es ab jetzt"><span class="icn ic-plus" aria-hidden="true"></span></button>
                 </div>
             </form>
         </section>
         <section class="panel">
-            <h3>📎 Materialien (Vorlagen für die Schülerinnen und Schüler)</h3>
+            <h3><span class="icn ic-attachment" aria-hidden="true"></span> Materialien (Vorlagen für die Schülerinnen und Schüler)</h3>
             <?php if ($materials === []): ?>
             <p class="muted">Noch keine Materialien ausgeteilt, z. B. Auto.java, index.html oder ein SQL-Schema.</p>
             <?php else: ?>
             <ul class="material-list">
                 <?php foreach ($materials as $material): ?>
                 <li class="material-item">
-                    <a href="<?= url('aufgaben/' . (int) $task->id . '/material/' . (int) $material->id) ?>">📄 <?= e($material->filename) ?></a>
+                    <a href="<?= url('aufgaben/' . (int) $task->id . '/material/' . (int) $material->id) ?>"><span class="icn ic-file-text" aria-hidden="true"></span> <?= e($material->filename) ?></a>
                     <span class="muted">(<?= number_format($material->size / 1024, 1, ',', '') ?> KiB)</span>
                     <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/material') ?>" class="form-inline">
                         <?= csrf_field() ?>
                         <input type="hidden" name="delete_material_id" value="<?= (int) $material->id ?>">
-                        <button class="icon-btn" type="submit" title="Material löschen">🗑</button>
+                        <button class="icon-btn" type="submit" title="Material löschen"><span class="icn ic-bin2" aria-hidden="true"></span></button>
                     </form>
                 </li>
                 <?php endforeach; ?>
@@ -304,7 +304,7 @@ foreach ($classes as $class) {
                     <input type="text" name="filename" placeholder="Dateiname, z. B. Auto.java">
                     <textarea name="material_content" rows="4" placeholder="Inhalt der Vorlage" style="margin-top:6px;"></textarea>
                 </label>
-                <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Material hinzufügen und zum Austeilen bereitstellen">➕</button></div>
+                <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Material hinzufügen und zum Austeilen bereitstellen"><span class="icn ic-plus" aria-hidden="true"></span></button></div>
             </form>
         </section>
     </div>

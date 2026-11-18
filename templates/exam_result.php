@@ -5,11 +5,11 @@
    Version: 0.15.0 */ ?>
 <?php /** @var \Infocraft\Models\Exam $exam */ ?>
 <?php $percent = $totals['total'] > 0 ? $totals['reached'] / $totals['total'] * 100.0 : 0.0; ?>
-<p><a class="btn btn-ghost" href="<?= url('pruefungen') ?>" title="Zur Übersicht">←</a></p>
+<p><a class="btn btn-ghost" href="<?= url('pruefungen') ?>" title="Zur Übersicht"><span class="icn ic-arrow-left" aria-hidden="true"></span></a></p>
 <section class="panel">
     <div class="panel-head">
         <h3>Ergebnis: <?= e($exam->title) ?></h3>
-        <span class="pill"><?= $exam->kind === 'pruefung' ? '🔒 Prüfung' : '📄 Schularbeit' ?></span>
+        <span class="pill"><?= $exam->kind === 'pruefung' ? '<span class="icn ic-lock" aria-hidden="true"></span> Prüfung' : '<span class="icn ic-file-text" aria-hidden="true"></span> Schularbeit' ?></span>
     </div>
     <p class="score-big"><?= e(number_format($totals['reached'], 1, ',', '')) ?> von <?= e($totals['total']) ?> BE · Note <?= e($note) ?> (<?= e(\Infocraft\Models\Exam::gradeLabel($note)) ?>)</p>
     <p class="muted">Das entspricht <?= e(number_format($percent, 1, ',', '')) ?> Prozent der Bewertungseinheiten.</p>

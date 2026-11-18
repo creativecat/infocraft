@@ -10,13 +10,13 @@
 /** @var string $defaultLanguage @var array<string, string> $legal @var bool $demo @var string $announcement @var \Infocraft\Models\User $user */
 ?>
 <section class="hero">
-    <div class="hero-emoji">⚙️</div>
+    <div class="hero-emoji"><span class="icn ic-cog" aria-hidden="true"></span></div>
     <h1>Admin-Einstellungen</h1>
     <p>Schulweite Vorgaben für alle Lehrkräfte und Schülerinnen und Schüler. Änderungen greifen sofort.</p>
 </section>
 
 <section class="panel">
-    <h3>☕ Standard-Programmiersprache</h3>
+    <h3><span class="icn ic-coffee" aria-hidden="true"></span> Standard-Programmiersprache</h3>
     <p class="muted">Gilt überall, wo Java und Python zur Wahl stehen: neue Projekte in der Code-Werkstatt, Aufgaben-Varianten und Sprach-Auswahlklappen. Empfehlung am bayerischen Gymnasium (NTG) ist <strong>Java</strong>; wer in der Unterstufe mit Python arbeitet, stellt hier um.</p>
     <form method="post" action="<?= url('admin/einstellungen') ?>" class="form">
         <?= csrf_field() ?>
@@ -27,25 +27,25 @@
                     <option value="python"<?= $defaultLanguage === 'python' ? ' selected' : '' ?>>🐍 Python</option>
                 </select>
             </label>
-            <div class="btn-row" style="align-items:flex-end;"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
+            <div class="btn-row" style="align-items:flex-end;"><button class="btn btn-primary" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button></div>
         </div>
     </form>
 </section>
 
 <section class="panel">
-    <h3>🧪 Demo-Modus</h3>
+    <h3><span class="icn ic-clipboard" aria-hidden="true"></span> Demo-Modus</h3>
     <p class="muted">Der Demo-Modus zeigt auf der Login-Seite fertige Demo-Konten mit Schnellanmeldung (Passwort demo1234). Für den Produktivbetrieb ausschalten: Die Anmeldung läuft dann nur mit echten Konten oder über Microsoft-SSO. Ohne Auswahl hier gilt der Wert aus der Konfigurationsdatei.</p>
     <form method="post" action="<?= url('admin/einstellungen/demo') ?>" class="form">
         <?= csrf_field() ?>
         <div class="two-col">
             <label class="inline"><input type="checkbox" name="demo_mode" value="1"<?= $demo ? ' checked' : '' ?>> Demo-Modus aktiv</label>
-            <div class="btn-row" style="align-items:flex-end;"><button class="btn btn-primary" type="submit" title="Speichern">💾 Demo-Modus speichern</button></div>
+            <div class="btn-row" style="align-items:flex-end;"><button class="btn btn-primary" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span> Demo-Modus speichern</button></div>
         </div>
     </form>
 </section>
 
 <section class="panel">
-    <h3>📣 Ankündigung auf der Startseite</h3>
+    <h3><span class="icn ic-megaphone" aria-hidden="true"></span> Ankündigung auf der Startseite</h3>
     <p class="muted">Eine kurze Nachricht für alle Konten, prominent über den Arbeitsbereichen der Startseite. Leer lassen oder leeren, um die Ankündigung zu entfernen. Optional dazu ein Anzeige-Zeitraum: Ohne Zeitangaben erscheint die Ankündigung sofort und bleibt dauerhaft.</p>
     <form method="post" action="<?= url('admin/einstellungen/ankuendigung') ?>" class="form">
         <?= csrf_field() ?>
@@ -57,12 +57,12 @@
             <label class="field"><span>Sichtbar bis (optional)</span>
                 <input type="datetime-local" name="announcement_until" value="<?= e($announcementUntil) ?>"></label>
         </div>
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾 Ankündigung speichern</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span> Ankündigung speichern</button></div>
     </form>
 </section>
 
 <section class="panel">
-    <h3>🏛️ Impressum und Datenschutz</h3>
+    <h3><span class="icn ic-office" aria-hidden="true"></span> Impressum und Datenschutz</h3>
     <p class="muted">Angaben für die öffentlichen Seiten Impressum und Datenschutz. Was hier hinterlegt ist, erscheint im Fuß der Plattform als Link. Die Mustervorlage füllt die Textfelder vor: Wer nichts Eigenes speichert, übernimmt den Vorgabetext; ein eigenes Feld ersetzt ihn dauerhaft.</p>
     <form method="post" action="<?= url('admin/einstellungen/rechtliches') ?>" class="form">
         <?= csrf_field() ?>
@@ -102,6 +102,6 @@
             <textarea name="legal_data" rows="3" placeholder="Welche Daten werden erhoben, wofür, wie lange?"><?= e($legal['data']) ?></textarea></label>
         <label class="field"><span>Eigener Text (Datenschutz)</span>
             <textarea name="legal_text" rows="4" placeholder="Weitere Hinweise, Rechte der Betroffenen"><?= e($legal['text']) ?></textarea></label>
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾 Impressum und Datenschutz speichern</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span> Impressum und Datenschutz speichern</button></div>
     </form>
 </section>

@@ -14,7 +14,7 @@ function ic_proj_row(object $project): string
 {
     $id = (int) $project->id;
     $open = e(url('werkstatt/code/' . $id));
-    $icon = e(ic_proj_icon((string) $project->type, (string) $project->language));
+    $icon = ic_proj_icon((string) $project->type, (string) $project->language);
     $kind = e(ic_proj_kind((string) $project->type, (string) $project->language));
     $title = e($project->title);
     return '<div class="proj-row project-card" draggable="true" data-id="' . $id . '" title="Zum Verschieben in einen Ordner ziehen">'
@@ -25,7 +25,7 @@ function ic_proj_row(object $project): string
         . '<form method="post" action="' . e(url('werkstatt/code/loeschen')) . '" class="form-inline" onsubmit="return confirm(\'Projekt wirklich löschen?\');">'
         . csrf_field()
         . '<input type="hidden" name="project_id" value="' . $id . '">'
-        . '<button class="btn btn-ghost" type="submit" title="Löschen">🗑️</button>'
+        . '<button class="btn btn-ghost" type="submit" title="Löschen"><span class="icn ic-bin2" aria-hidden="true"></span></button>'
         . '</form>'
         . '</div>';
 }
@@ -36,7 +36,7 @@ function ic_proj_row(object $project): string
     <?php if ($isTeacher && $projects !== []): ?>
     <div class="ov-topbar">
         <details class="ibook-distribute-details ov-distribute">
-            <summary class="btn btn-ghost" title="Projekt an eine Klasse oder einzelne Person austeilen">📤 Projekt verteilen</summary>
+            <summary class="btn btn-ghost" title="Projekt an eine Klasse oder einzelne Person austeilen"><span class="icn ic-share" aria-hidden="true"></span> Projekt verteilen</summary>
             <form method="post" action="<?= url('werkstatt/code/verteilen') ?>" class="form ibook-distribute-panel ov-distribute-panel">
                 <?= csrf_field() ?>
                 <div class="three-col">
@@ -68,14 +68,14 @@ function ic_proj_row(object $project): string
                         </select>
                     </label>
                 </div>
-                <div class="btn-row"><button class="btn btn-primary" type="submit" title="Kopie austeilen">📤 Verteilen</button></div>
+                <div class="btn-row"><button class="btn btn-primary" type="submit" title="Kopie austeilen"><span class="icn ic-share" aria-hidden="true"></span> Verteilen</button></div>
             </form>
         </details>
     </div>
     <?php endif; ?>
     <div class="ov-boxes">
         <section class="panel">
-            <h3>➕ Neues Projekt</h3>
+            <h3><span class="icn ic-plus" aria-hidden="true"></span> Neues Projekt</h3>
             <form method="post" action="<?= url('werkstatt/code/projekt') ?>" class="form">
                 <?= csrf_field() ?>
                 <label class="field"><span>Projektart</span>
@@ -106,17 +106,17 @@ function ic_proj_row(object $project): string
                         <option value="zeichnen">🎨 Zeichnen mit Zeichen (Turtle-Bild)</option>
                     </select>
                 </label>
-                <div class="btn-row"><button class="btn btn-primary" type="submit" title="Projekt anlegen">➕</button></div>
+                <div class="btn-row"><button class="btn btn-primary" type="submit" title="Projekt anlegen"><span class="icn ic-plus" aria-hidden="true"></span></button></div>
             </form>
         </section>
         <?php if ($isTeacher && $studentsByClass !== []): ?>
         <section class="panel">
-            <h3>🎒 Schülerinnen und Schüler</h3>
+            <h3><span class="icn ic-briefcase" aria-hidden="true"></span> Schülerinnen und Schüler</h3>
             <?php foreach ($studentsByClass as $sClassId => $sStudents): ?>
                 <p class="muted">Klasse <?= e($classNames[$sClassId] ?? '') ?>:</p>
                 <p>
                     <?php foreach ($sStudents as $sStudent): ?>
-                    <a class="pill" href="<?= url('werkstatt/code/schueler/' . (int) $sStudent->id) ?>">📂 <?= e($sStudent->fullName()) ?></a>
+                    <a class="pill" href="<?= url('werkstatt/code/schueler/' . (int) $sStudent->id) ?>"><span class="icn ic-folder-open" aria-hidden="true"></span> <?= e($sStudent->fullName()) ?></a>
                     <?php endforeach; ?>
                 </p>
             <?php endforeach; ?>
@@ -128,9 +128,9 @@ function ic_proj_row(object $project): string
         <?php /* #176: Ordner anlegen (inkl. Hauptebene) gehört direkt hierher
              * in die Ordnerliste, nicht mehr als eigener Kasten oben. */ ?>
         <div class="panel-head">
-            <h3>🗂️ Ordner &amp; Projekte</h3>
+            <h3><span class="icn ic-folder2" aria-hidden="true"></span> Ordner &amp; Projekte</h3>
             <details class="folder-new">
-                <summary class="btn btn-ghost" title="Neuen Ordner anlegen">📁 Neuer Ordner</summary>
+                <summary class="btn btn-ghost" title="Neuen Ordner anlegen"><span class="icn ic-folder" aria-hidden="true"></span> Neuer Ordner</summary>
                 <form method="post" action="<?= url('werkstatt/code/ordner') ?>" class="form form-inline folder-new-form">
                     <?= csrf_field() ?>
                     <label class="field"><span>Name</span><input type="text" name="name" required placeholder="z. B. Hausaufgaben"></label>
@@ -143,14 +143,14 @@ function ic_proj_row(object $project): string
                             <?php endforeach; ?>
                         </select>
                     </label>
-                    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Ordner anlegen">📁 Anlegen</button></div>
+                    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Ordner anlegen"><span class="icn ic-folder" aria-hidden="true"></span> Anlegen</button></div>
                 </form>
             </details>
         </div>
         <p class="muted">Ordner bilden einen Baum mit Unterordnern. Projekte und Ordner per Drag &amp; Drop auf einen anderen Ordner ziehen, um sie zu verschieben.</p>
         <ul class="folder-list">
             <li class="folder-item" data-folder="0">
-                <strong>📁 Ohne Ordner</strong> <span class="pill"><?= (int) ($counts[0] ?? 0) ?></span>
+                <strong><span class="icn ic-folder" aria-hidden="true"></span> Ohne Ordner</strong> <span class="pill"><?= (int) ($counts[0] ?? 0) ?></span>
                 <div class="folder-children">
                     <?php if (($projectsByFolder[0] ?? []) === []): ?>
                     <p class="muted proj-empty">Noch keine Projekte.</p>
@@ -163,14 +163,14 @@ function ic_proj_row(object $project): string
             <?php foreach ($folderRows as $row): ?>
             <?php $folder = $row['folder']; ?>
             <li class="folder-item" draggable="true" data-folder="<?= (int) $folder->id ?>" data-folder-drag="<?= (int) $folder->id ?>" title="Ordner per Drag &amp; Drop in einen anderen Ordner ziehen" style="padding-left: <?= (int) $row['depth'] * 18 ?>px">
-                <strong>📁 <?= e($folder->name) ?></strong> <span class="pill"><?= (int) ($counts[$folder->id] ?? 0) ?></span>
+                <strong><span class="icn ic-folder" aria-hidden="true"></span> <?= e($folder->name) ?></strong> <span class="pill"><?= (int) ($counts[$folder->id] ?? 0) ?></span>
                 <details class="folder-sub">
                     <summary class="folder-add" title="Unterordner anlegen">＋ Unterordner</summary>
                     <form method="post" action="<?= url('werkstatt/code/ordner') ?>" class="form form-inline">
                         <?= csrf_field() ?>
                         <input type="hidden" name="parent_id" value="<?= (int) $folder->id ?>">
                         <input type="text" name="name" required placeholder="Unterordner">
-                        <button class="btn btn-ghost" type="submit" title="Unterordner anlegen">📁</button>
+                        <button class="btn btn-ghost" type="submit" title="Unterordner anlegen"><span class="icn ic-folder" aria-hidden="true"></span></button>
                     </form>
                 </details>
                 <div class="folder-children">

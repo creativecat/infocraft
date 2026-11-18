@@ -17,7 +17,7 @@ $typeLabels = ['allgemein' => 'Allgemein', 'sql' => 'SQL', 'html' => 'HTML', 'co
 $statusLabels = ['offen' => 'offen', 'abgegeben' => 'abgegeben', 'korrigiert' => 'korrigiert', 'ueberfaellig' => 'überfällig'];
 ?>
 <section class="hero">
-    <div class="hero-emoji">📝</div>
+    <div class="hero-emoji"><span class="icn ic-pencil2" aria-hidden="true"></span></div>
     <h1>Meine Aufgaben</h1>
     <p>Alle Aufgaben, die deine Lehrkraft für dich bereitgestellt hat, mit Abgabetermin, ToDos und Vorlagen. Hake ToDos ab, wenn du fertig bist, und lade dir die Materialien zur Aufgabe herunter. Andere Klassenstufen bleiben unsichtbar.</p>
 </section>
@@ -29,7 +29,7 @@ $statusLabels = ['offen' => 'offen', 'abgegeben' => 'abgegeben', 'korrigiert' =>
 <?php endif; ?>
 
 <section class="panel">
-    <h3>🔎 Meine Aufgaben filtern</h3>
+    <h3><span class="icn ic-search" aria-hidden="true"></span> Meine Aufgaben filtern</h3>
     <form method="get" action="<?= url('aufgaben') ?>" class="form">
         <div class="filter-grid">
             <label class="field"><span>Themengebiet</span>
@@ -58,7 +58,7 @@ $statusLabels = ['offen' => 'offen', 'abgegeben' => 'abgegeben', 'korrigiert' =>
             </label>
         </div>
         <div class="btn-row">
-            <button class="btn btn-primary" type="submit" title="Filtern">🔎</button>
+            <button class="btn btn-primary" type="submit" title="Filtern"><span class="icn ic-search" aria-hidden="true"></span></button>
             <a class="btn btn-ghost" href="<?= url('aufgaben') ?>">Zurücksetzen</a>
         </div>
     </form>
@@ -94,11 +94,11 @@ $currentRating = $entry['submission'] !== null ? (int) ($entry['submission']['se
     <div class="panel-head">
         <h3><?= e($task->title) ?></h3>
         <span class="pill">
-            <?php if ($gradingVisible): ?>✅ korrigiert
-            <?php elseif ($submitted): ?>✍️ abgegeben
+            <?php if ($gradingVisible): ?><span class="icn ic-checkmark" aria-hidden="true"></span> korrigiert
+            <?php elseif ($submitted): ?><span class="icn ic-pencil" aria-hidden="true"></span> abgegeben
             <?php elseif ($late): ?>⏰ überfällig
-            <?php else: ?>🔵 offen<?php endif; ?>
-            · <?= e($typeLabels[$task->type] ?? $task->type) ?><?= $topic !== null ? ' · 📁 ' . e($topic->name) : '' ?>
+            <?php else: ?><span class="icn ic-circle" aria-hidden="true"></span> offen<?php endif; ?>
+            · <?= e($typeLabels[$task->type] ?? $task->type) ?><?= $topic !== null ? ' · <span class="icn ic-folder" aria-hidden="true"></span> ' . e($topic->name) : '' ?>
         </span>
     </div>
     <p class="muted">von <?= e($entry['teacherName']) ?><?= $entry['className'] !== null ? ' · Klasse ' . e($entry['className']) : '' ?><?= $task->maxPoints > 0 ? ' · max. ' . (int) $task->maxPoints . ' Punkte' : '' ?></p>
@@ -117,18 +117,18 @@ $currentRating = $entry['submission'] !== null ? (int) ($entry['submission']['se
         <?php if (in_array($task->type, ['code', 'html'], true)): ?>
         <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/oeffnen') ?>" class="form-inline">
             <?= csrf_field() ?>
-            <button class="btn btn-primary" type="submit" title="Deine Arbeitskopie aus den Materialien dieser Aufgabe anlegen (oder wieder öffnen) und direkt in der Werkstatt bearbeiten">🔨 In der <?= $task->type === 'html' ? 'HTML-Werkstatt' : 'Code-Werkstatt' ?> öffnen</button>
+            <button class="btn btn-primary" type="submit" title="Deine Arbeitskopie aus den Materialien dieser Aufgabe anlegen (oder wieder öffnen) und direkt in der Werkstatt bearbeiten"><span class="icn ic-hammer" aria-hidden="true"></span> In der <?= $task->type === 'html' ? 'HTML-Werkstatt' : 'Code-Werkstatt' ?> öffnen</button>
         </form>
         <?php elseif ($task->type === 'sql'): ?>
-        <a class="btn btn-primary" href="<?= url('werkstatt/sql') ?>" title="Diese Aufgabe wird in der SQL-Werkstatt bearbeitet">🗄 In der SQL-Werkstatt arbeiten</a>
+        <a class="btn btn-primary" href="<?= url('werkstatt/sql') ?>" title="Diese Aufgabe wird in der SQL-Werkstatt bearbeitet"><span class="icn ic-database" aria-hidden="true"></span> In der SQL-Werkstatt arbeiten</a>
         <?php endif; ?>
     </div>
 
     <?php if ($taskMaterials !== []): ?>
-    <p class="muted">📎 Materialien zum Herunterladen:</p>
+    <p class="muted"><span class="icn ic-attachment" aria-hidden="true"></span> Materialien zum Herunterladen:</p>
     <ul class="material-list">
         <?php foreach ($taskMaterials as $material): ?>
-        <li class="material-item"><a href="<?= url('aufgaben/' . (int) $task->id . '/material/' . (int) $material->id) ?>">📄 <?= e($material->filename) ?></a> <span class="muted">(<?= number_format($material->size / 1024, 1, ',', '') ?> KiB)</span></li>
+        <li class="material-item"><a href="<?= url('aufgaben/' . (int) $task->id . '/material/' . (int) $material->id) ?>"><span class="icn ic-file-text" aria-hidden="true"></span> <?= e($material->filename) ?></a> <span class="muted">(<?= number_format($material->size / 1024, 1, ',', '') ?> KiB)</span></li>
         <?php endforeach; ?>
     </ul>
     <?php endif; ?>
@@ -136,7 +136,7 @@ $currentRating = $entry['submission'] !== null ? (int) ($entry['submission']['se
     <?php if ($templates !== [] || $ownTodos !== []): ?>
     <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/todos/schueler') ?>" class="form">
         <?= csrf_field() ?>
-        <p class="muted">📋 ToDos (abhaken, wenn du fertig bist):</p>
+        <p class="muted"><span class="icn ic-clipboard" aria-hidden="true"></span> ToDos (abhaken, wenn du fertig bist):</p>
         <ul class="todo-list">
             <?php foreach ($templates as $template): ?>
             <li class="todo-item">
@@ -152,12 +152,12 @@ $currentRating = $entry['submission'] !== null ? (int) ($entry['submission']['se
                     <input type="checkbox" onchange="this.form.submit()" name="toggle_todo_id" value="<?= (int) $ownTodo->id ?>"<?= $ownTodo->done === 1 ? ' checked' : '' ?>>
                     <span<?= $ownTodo->done === 1 ? ' style="text-decoration:line-through;"' : '' ?>><?= e($ownTodo->title) ?></span>
                 </label>
-                <button class="btn btn-ghost" type="submit" name="delete_todo_id" value="<?= (int) $ownTodo->id ?>" title="ToDo löschen">🗑</button>
+                <button class="btn btn-ghost" type="submit" name="delete_todo_id" value="<?= (int) $ownTodo->id ?>" title="ToDo löschen"><span class="icn ic-bin2" aria-hidden="true"></span></button>
             </li>
             <?php endforeach; ?>
         </ul>
         <label class="field"><span>Eigenes ToDo ergänzen</span><input type="text" name="todo_title" placeholder="z. B. Nochmal die Schleife üben"></label>
-        <div class="btn-row"><button class="btn btn-ghost" type="submit" title="ToDo hinzufügen">➕</button></div>
+        <div class="btn-row"><button class="btn btn-ghost" type="submit" title="ToDo hinzufügen"><span class="icn ic-plus" aria-hidden="true"></span></button></div>
     </form>
     <?php endif; ?>
 
@@ -169,7 +169,7 @@ $currentRating = $entry['submission'] !== null ? (int) ($entry['submission']['se
     <?php endif; ?>
     <?php if ($task->solutionVisible === 1 && $task->sampleSolution !== '' && ($gradingVisible || ($late && !$submitted))): ?>
     <div class="notice">
-        <strong>💡 Musterlösung (von deiner Lehrkraft freigegeben)</strong>
+        <strong><span class="icn ic-info" aria-hidden="true"></span> Musterlösung (von deiner Lehrkraft freigegeben)</strong>
         <div class="own"><?= e($task->sampleSolution) ?></div>
         <?php if (!$gradingVisible): ?><p class="muted">Der Abgabetermin ist vorbei, daher darfst du die Musterlösung jetzt sehen. Vergleiche sie mit deiner Lösung!</p><?php endif; ?>
     </div>

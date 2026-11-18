@@ -25,30 +25,30 @@
          * Schuelerinnen und Schueler sehen dort ihre eigenen und das
          * Klassen-InfoBook. */ ?>
         <?php if (\Infocraft\Auth::isTeacher()): ?>
-        <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht aller InfoBooks">← Alle InfoBooks</a>
+        <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht aller InfoBooks"><span class="icn ic-arrow-left" aria-hidden="true"></span> Alle InfoBooks</a>
         <?php else: ?>
-        <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht deiner InfoBooks">← Deine InfoBooks</a>
+        <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht deiner InfoBooks"><span class="icn ic-arrow-left" aria-hidden="true"></span> Deine InfoBooks</a>
         <?php endif; ?>
         <?php /* #185: Breadcrumb als Standort-Anzeige: Buch startet auf der
          * zuletzt besuchten Seite, der Abschnitt fuehrt in die Abschnitts-
          * ansicht, die Seite ist das aktuelle Element (aria-current). */ ?>
         <div class="ibook-topnav-title">
             <nav class="ibook-crumbs" aria-label="Position in diesem InfoBook">
-                <a class="ibook-crumb ibook-crumb-book" href="<?= url('infobuecher/' . (int) $book->id) ?>" title="Buch-Start: zuletzt besuchte Seite">📓 <?= e($book->title) ?></a>
+                <a class="ibook-crumb ibook-crumb-book" href="<?= url('infobuecher/' . (int) $book->id) ?>" title="Buch-Start: zuletzt besuchte Seite"><span class="icn ic-notebook" aria-hidden="true"></span> <?= e($book->title) ?></a>
                 <span class="ibook-crumb-sep" aria-hidden="true">›</span>
                 <a class="ibook-crumb" href="<?= url('infobuecher/' . (int) $book->id . '?abschnitt=' . (int) $section['id']) ?>" title="Abschnitt mit allen Seiten anzeigen"><?= e($section['title']) ?></a>
                 <span class="ibook-crumb-sep" aria-hidden="true">›</span>
-                <span class="ibook-crumb ibook-crumb-here" aria-current="page">📄 <span id="ibook-page-title"><?= e((string) $page['title']) ?></span></span>
+                <span class="ibook-crumb ibook-crumb-here" aria-current="page"><span class="icn ic-file-text" aria-hidden="true"></span> <span id="ibook-page-title"><?= e((string) $page['title']) ?></span></span>
             </nav>
             <p class="muted" id="ibook-page-meta"><?= e($section['title']) ?> · Letzte Änderung: <?= e((string) ($page['updated_at'] ?? 'gerade eben')) ?></p>
         </div>
         <div class="ibook-topnav-right">
-            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation?abschnitt=' . (int) $section['id']) ?>" title="Alle Seiten dieses Abschnitts als Präsentation anzeigen: Schritte erscheinen einzeln per Klick, Reihenfolge im Editor festlegen">🎬 Präsentation</a>
+            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation?abschnitt=' . (int) $section['id']) ?>" title="Alle Seiten dieses Abschnitts als Präsentation anzeigen: Schritte erscheinen einzeln per Klick, Reihenfolge im Editor festlegen"><span class="icn ic-film" aria-hidden="true"></span> Präsentation</a>
             <?php if ($canWrite): ?>
-            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id'] . '?lesen=1') ?>" title="Seite im Lesemodus anzeigen">👀 Vorschau (Lesemodus)</a>
+            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id'] . '?lesen=1') ?>" title="Seite im Lesemodus anzeigen"><span class="icn ic-eye" aria-hidden="true"></span> Vorschau (Lesemodus)</a>
             <?php endif; ?>
             <?php if ($preview): ?>
-            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id']) ?>" title="Zurück zur Bearbeitung">✏️ Bearbeiten</a>
+            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id']) ?>" title="Zurück zur Bearbeitung"><span class="icn ic-pencil" aria-hidden="true"></span> Bearbeiten</a>
             <?php endif; ?>
             <?php if (\Infocraft\Auth::isTeacher() && $canWrite): ?>
             <?php /* #202: Gemeinsames Verteilen-Panel mit Ziel-Abschnitt-Auswahl
@@ -78,7 +78,7 @@
          * den Editor, der alte Lernbereich-Text liess die Bearbeitung
          * dagegen verloren wirken. */ ?>
     <?php if ($preview): ?>
-    <p class="muted">Du liest gerade die Vorschau deiner Seite. Oben rechts führt ✏️ Bearbeiten zurück in den Editor.</p>
+    <p class="muted">Du liest gerade die Vorschau deiner Seite. Oben rechts führt <span class="icn ic-pencil" aria-hidden="true"></span> Bearbeiten zurück in den Editor.</p>
     <?php elseif ((string) $section['area'] === 'gemeinsam'): ?>
     <p class="muted">Diese Seite gehört in den Bereich Zusammenarbeit: Schülerinnen und Schüler der Klasse schreiben hier gemeinsam.</p>
     <?php else: ?>

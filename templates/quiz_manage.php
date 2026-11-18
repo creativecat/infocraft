@@ -5,7 +5,7 @@
    Version: 0.15.0 */ ?>
 <?php $classNames = []; foreach ($classes as $class) { $classNames[$class->id] = $class->name; } ?>
 <section class="hero">
-    <div class="hero-emoji">🏆</div>
+    <div class="hero-emoji"><span class="icn ic-trophy" aria-hidden="true"></span></div>
     <h1><?= e($quiz->title) ?></h1>
     <p><?= e($quiz->description) ?> · ab Jahrgangsstufe <?= e($quiz->level) ?> · <a href="<?= url('quiz') ?>">zur Übersicht</a></p>
 </section>
@@ -21,7 +21,7 @@
             <strong><?= e($question['question']) ?></strong>
             <ul>
                 <?php foreach ([1, 2, 3, 4] as $n): ?>
-                <li><?= (int) $question['correct'] === $n ? '✅ ' : '' ?><?= e($question['answer_' . $n]) ?></li>
+                <li><?= (int) $question['correct'] === $n ? '<span class="icn ic-checkmark" aria-hidden="true"></span> ' : '' ?><?= e($question['answer_' . $n]) ?></li>
                 <?php endforeach; ?>
             </ul>
         </li>
@@ -49,7 +49,7 @@
                 <option value="4">Antwort 4</option>
             </select>
         </label>
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Frage hinzufügen">➕</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Frage hinzufügen"><span class="icn ic-plus" aria-hidden="true"></span></button></div>
     </form>
 </section>
 
@@ -81,7 +81,7 @@
                     <?php endforeach; ?>
                 </select>
             </label>
-            <button class="btn btn-primary" type="submit" title="Austeilen">📤</button>
+            <button class="btn btn-primary" type="submit" title="Austeilen"><span class="icn ic-share" aria-hidden="true"></span></button>
         </div>
     </form>
     <?php if ($targets !== []): ?>

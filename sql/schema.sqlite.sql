@@ -350,20 +350,6 @@ CREATE TABLE IF NOT EXISTS class_diagrams (
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Wiki: Nachschlage-Seiten der Lehrkraefte, sichtbar ab der angegebenen Jahrgangsstufe
-CREATE TABLE IF NOT EXISTS wiki_pages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    teacher_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL DEFAULT '',
-    level INTEGER NOT NULL DEFAULT 6,
-    position INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- Modul-Freigabe je Klasse: 'freigeben' = vorzeitig sichtbar, 'sperren' = ausgeblendet,
--- kein Eintrag = Jahrgangsstufe laut LehrplanPLUS entscheidet
 CREATE TABLE IF NOT EXISTS module_settings (
     class_id INTEGER NOT NULL REFERENCES classes (id) ON DELETE CASCADE,
     module_key TEXT NOT NULL,

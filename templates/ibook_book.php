@@ -15,7 +15,7 @@
  * sitzt als fester Eintrag unten in der Navigation (Partial). */ ?>
 <?php $preview = false; ?>
 <?php $areaNames = ['lernbereich' => 'Lernbereich', 'gemeinsam' => 'Zusammenarbeit', 'eigen' => 'Mein Bereich'];
-$areaIcons = ['lernbereich' => '📖', 'gemeinsam' => '🤝', 'eigen' => '🔒'];
+$areaIcons = ['lernbereich' => '<span class="icn ic-book" aria-hidden="true"></span>', 'gemeinsam' => '<span class="icn ic-users" aria-hidden="true"></span>', 'eigen' => '<span class="icn ic-lock" aria-hidden="true"></span>'];
 /* #206: Heisst der Abschnitt genau wie sein Bereich, steht der Bereich nur
  * einmal da: Pille zeigt dann nur das Icon, die Zeile darunter nennt nur
  * die Seitenzahl, ohne den Bereichsnamen zu wiederholen. */
@@ -28,25 +28,25 @@ $secTitleIsArea = $activeSection !== null && (string) $activeSection['title'] ==
          * Schuelerinnen und Schueler sehen dort ihre eigenen und das
          * Klassen-InfoBook. */ ?>
         <?php if (\Infocraft\Auth::isTeacher()): ?>
-        <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht aller InfoBooks">← Alle InfoBooks</a>
+        <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht aller InfoBooks"><span class="icn ic-arrow-left" aria-hidden="true"></span> Alle InfoBooks</a>
         <?php else: ?>
-        <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht deiner InfoBooks">← Deine InfoBooks</a>
+        <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht deiner InfoBooks"><span class="icn ic-arrow-left" aria-hidden="true"></span> Deine InfoBooks</a>
         <?php endif; ?>
         <div class="ibook-topnav-title">
             <nav class="ibook-crumbs" aria-label="Position in diesem InfoBook">
                 <?php if ($activeSection !== null): ?>
-                <a class="ibook-crumb ibook-crumb-book" href="<?= url('infobuecher/' . (int) $book->id) ?>" title="Buch-Start: zuletzt besuchte Seite">📓 <?= e($book->title) ?></a>
+                <a class="ibook-crumb ibook-crumb-book" href="<?= url('infobuecher/' . (int) $book->id) ?>" title="Buch-Start: zuletzt besuchte Seite"><span class="icn ic-notebook" aria-hidden="true"></span> <?= e($book->title) ?></a>
                 <span class="ibook-crumb-sep" aria-hidden="true">›</span>
-                <span class="ibook-crumb ibook-crumb-here" aria-current="location">📁 <?= e((string) $activeSection['title']) ?></span>
+                <span class="ibook-crumb ibook-crumb-here" aria-current="location"><span class="icn ic-folder" aria-hidden="true"></span> <?= e((string) $activeSection['title']) ?></span>
                 <?php else: ?>
-                <span class="ibook-crumb ibook-crumb-here" aria-current="location">📓 <?= e($book->title) ?></span>
+                <span class="ibook-crumb ibook-crumb-here" aria-current="location"><span class="icn ic-notebook" aria-hidden="true"></span> <?= e($book->title) ?></span>
                 <?php endif; ?>
             </nav>
             <p class="muted"><?= $activeSection !== null ? ($secTitleIsArea ? '' : e($secAreaName) . ' · ') . count($pages) . ' Seite' . (count($pages) === 1 ? '' : 'n') : 'Noch keine Abschnitte' ?></p>
         </div>
         <div class="ibook-topnav-right">
             <?php if ($activeSection !== null): ?>
-            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation?abschnitt=' . (int) $activeSection['id']) ?>" title="Alle Seiten dieses Abschnitts als Präsentation anzeigen: Elemente erscheinen einzeln per Klick">🎬 Präsentation</a>
+            <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id . '/praesentation?abschnitt=' . (int) $activeSection['id']) ?>" title="Alle Seiten dieses Abschnitts als Präsentation anzeigen: Elemente erscheinen einzeln per Klick"><span class="icn ic-film" aria-hidden="true"></span> Präsentation</a>
             <?php endif; ?>
         </div>
     </div>
@@ -66,9 +66,9 @@ $secTitleIsArea = $activeSection !== null && (string) $activeSection['title'] ==
         <?php /* #206: Pille ohne Bereichsnamen, wenn der Abschnitttitel
              * derselbe ist; das Icon traegt den Namen als Tooltip. */ ?>
         <?php if ($secTitleIsArea): ?>
-        <span class="pill" title="Bereich: <?= e($secAreaName) ?>"><?= $areaIcons[(string) $activeSection['area']] ?? '📄' ?></span>
+        <span class="pill" title="Bereich: <?= e($secAreaName) ?>"><?= $areaIcons[(string) $activeSection['area']] ?? '<span class="icn ic-file-text" aria-hidden="true"></span>' ?></span>
         <?php else: ?>
-        <span class="pill"><?= $areaIcons[(string) $activeSection['area']] ?? '📄' ?> <?= e($secAreaName) ?></span>
+        <span class="pill"><?= $areaIcons[(string) $activeSection['area']] ?? '<span class="icn ic-file-text" aria-hidden="true"></span>' ?> <?= e($secAreaName) ?></span>
         <?php endif; ?>
     </div>
     <?php /* #187: Der leere Abschnitt zeigt dasselbe Karten-Grid wie ein
@@ -79,12 +79,12 @@ $secTitleIsArea = $activeSection !== null && (string) $activeSection['title'] ==
     <div class="ibook-secview-cards">
         <?php if ($canWriteSection): ?>
         <a class="ibook-page-card ibook-page-card-empty" href="#ibook-newpage" title="Zur Seite-anlegen-Leiste springen">
-            <span class="ibook-page-title">➕ Erste Seite anlegen</span>
-            <span class="ibook-page-card-hint" aria-hidden="true">Formular unten ↓</span>
+            <span class="ibook-page-title"><span class="icn ic-plus" aria-hidden="true"></span> Erste Seite anlegen</span>
+            <span class="ibook-page-card-hint" aria-hidden="true">Formular unten <span class="icn ic-arrow-down" aria-hidden="true"></span></span>
         </a>
         <?php else: ?>
         <div class="ibook-page-card ibook-page-card-empty">
-            <span class="ibook-page-title">📄 Noch keine Seiten</span>
+            <span class="ibook-page-title"><span class="icn ic-file-text" aria-hidden="true"></span> Noch keine Seiten</span>
             <span class="ibook-page-card-hint">Die Lehrkraft legt die Seiten an.</span>
         </div>
         <?php endif; ?>
@@ -93,8 +93,8 @@ $secTitleIsArea = $activeSection !== null && (string) $activeSection['title'] ==
     <div class="ibook-secview-cards">
         <?php foreach ($pages as $page): ?>
         <a class="ibook-page-card" href="<?= url('infobuecher/' . (int) $book->id . '/seite/' . (int) $page['id']) ?>">
-            <span class="ibook-page-title">📄 <?= e((string) $page['title']) ?></span>
-            <span class="ibook-page-card-hint" aria-hidden="true">Seite öffnen →</span>
+            <span class="ibook-page-title"><span class="icn ic-file-text" aria-hidden="true"></span> <?= e((string) $page['title']) ?></span>
+            <span class="ibook-page-card-hint" aria-hidden="true">Seite öffnen <span class="icn ic-arrow-right" aria-hidden="true"></span></span>
         </a>
         <?php endforeach; ?>
     </div>
@@ -106,7 +106,7 @@ $secTitleIsArea = $activeSection !== null && (string) $activeSection['title'] ==
         <div class="form-row form">
             <label class="field"><span>Neue Seite</span><input type="text" name="title" maxlength="160" placeholder="Titel der Seite"></label>
         </div>
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Seite anlegen (öffnet sich danach direkt)">➕ Seite anlegen</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Seite anlegen (öffnet sich danach direkt)"><span class="icn ic-plus" aria-hidden="true"></span> Seite anlegen</button></div>
     </form>
     <?php endif; ?>
     <?php /* #185/#187: Abschnitts-Verwaltung im Hauptbereich; der
@@ -117,33 +117,33 @@ $secTitleIsArea = $activeSection !== null && (string) $activeSection['title'] ==
         <?php if ((string) $activeSection['area'] !== 'eigen'): ?>
         <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/abschnitt/' . (int) $activeSection['id'] . '/loeschen') ?>" class="inline-form" data-confirm="Abschnitt mit allen Seiten löschen?">
             <?= csrf_field() ?>
-            <button class="btn btn-danger" type="submit" title="Diesen Abschnitt löschen">🗑 Abschnitt löschen</button>
+            <button class="btn btn-danger" type="submit" title="Diesen Abschnitt löschen"><span class="icn ic-bin2" aria-hidden="true"></span> Abschnitt löschen</button>
         </form>
         <?php /* #207: Abschnitt umbenennen, Titel bleibt wie die Seiten. */ ?>
         <details class="ibook-secadmin-details">
-            <summary class="btn btn-ghost" title="Titel dieses Abschnitts ändern">✏️ Abschnitt umbenennen</summary>
+            <summary class="btn btn-ghost" title="Titel dieses Abschnitts ändern"><span class="icn ic-pencil" aria-hidden="true"></span> Abschnitt umbenennen</summary>
             <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/abschnitt/' . (int) $activeSection['id'] . '/umbenennen') ?>" class="form">
                 <?= csrf_field() ?>
                 <div class="form-row form">
                     <label class="field"><span>Titel</span><input type="text" name="title" required maxlength="160" value="<?= e((string) $activeSection['title']) ?>"></label>
                 </div>
-                <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Neuen Titel speichern">✏️ Umbenennen</button></div>
+                <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Neuen Titel speichern"><span class="icn ic-pencil" aria-hidden="true"></span> Umbenennen</button></div>
             </form>
         </details>
         <?php /* #207: Abschnitt teilen: markierte Seiten wandern in einen
              * neuen Abschnitt mit eigenem Titel, gleicher Bereich. */ ?>
         <details class="ibook-secadmin-details">
-            <summary class="btn btn-ghost" title="Markierte Seiten in einen neuen Abschnitt verschieben">✂️ Abschnitt teilen</summary>
+            <summary class="btn btn-ghost" title="Markierte Seiten in einen neuen Abschnitt verschieben"><span class="icn ic-scissors" aria-hidden="true"></span> Abschnitt teilen</summary>
             <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/abschnitt/' . (int) $activeSection['id'] . '/teilen') ?>" class="form">
                 <?= csrf_field() ?>
                 <p class="muted">Markierte Seiten wandern in einen neuen Abschnitt, direkt hinter diesem. Der Bereich bleibt gleich.</p>
                 <?php foreach ($pages as $splitPage): ?>
-                <label class="field ibook-splitpage"><input type="checkbox" name="page_ids[]" value="<?= (int) $splitPage['id'] ?>"> <span>📄 <?= e((string) $splitPage['title']) ?></span></label>
+                <label class="field ibook-splitpage"><input type="checkbox" name="page_ids[]" value="<?= (int) $splitPage['id'] ?>"> <span><span class="icn ic-file-text" aria-hidden="true"></span> <?= e((string) $splitPage['title']) ?></span></label>
                 <?php endforeach; ?>
                 <div class="form-row form">
                     <label class="field"><span>Titel des neuen Abschnitts</span><input type="text" name="title" required maxlength="160" placeholder="z. B. Übungen"></label>
                 </div>
-                <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Markierte Seiten in den neuen Abschnitt verschieben">✂️ Teilen</button></div>
+                <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Markierte Seiten in den neuen Abschnitt verschieben"><span class="icn ic-scissors" aria-hidden="true"></span> Teilen</button></div>
             </form>
         </details>
         <?php endif; ?>
@@ -166,13 +166,13 @@ $secTitleIsArea = $activeSection !== null && (string) $activeSection['title'] ==
     <?php if (\Infocraft\Auth::isTeacher()): ?>
     <div class="notice">
         <strong>Wer sieht was?</strong>
-        <p class="muted">Du siehst als Lehrkraft alle Abschnitte dieses InfoBooks. Schülerinnen und Schüler der Klasse sehen Lernbereich (📖) und Zusammenarbeit (🤝); private Bereiche (🔒 Mein Bereich) sieht nur, wem sie gehören. Diese Ansicht zeigt ausschließlich Abschnitte dieses einen Buchs, nie Inhalte anderer InfoBooks.</p>
+        <p class="muted">Du siehst als Lehrkraft alle Abschnitte dieses InfoBooks. Schülerinnen und Schüler der Klasse sehen Lernbereich (<span class="icn ic-book" aria-hidden="true"></span>) und Zusammenarbeit (<span class="icn ic-users" aria-hidden="true"></span>); private Bereiche (<span class="icn ic-lock" aria-hidden="true"></span> Mein Bereich) sieht nur, wem sie gehören. Diese Ansicht zeigt ausschließlich Abschnitte dieses einen Buchs, nie Inhalte anderer InfoBooks.</p>
     </div>
     <?php /* #202: Ganzes Buch an eine Klasse verteilen: jeder Abschnitt mit
          * Seiten (Lernbereich und Zusammenarbeit) bekommt einen eigenen
          * Abschnitt im Klassen-InfoBook, private Bereiche bleiben aus. */ ?>
     <details class="ibook-distribute-details">
-        <summary class="btn btn-ghost">📚 Ganzes Buch an Klasse verteilen</summary>
+        <summary class="btn btn-ghost"><span class="icn ic-books" aria-hidden="true"></span> Ganzes Buch an Klasse verteilen</summary>
         <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/buch/verteilen') ?>" class="form ibook-distribute-panel" data-confirm="Alle Abschnitte mit Seiten werden als Kopie ins Klassen-InfoBook verteilt?">
             <?= csrf_field() ?>
             <div class="form-row form">
@@ -186,7 +186,7 @@ $secTitleIsArea = $activeSection !== null && (string) $activeSection['title'] ==
                 </label>
             </div>
             <p class="muted">Für jeden Abschnitt mit Seiten (Lernbereich und Zusammenarbeit) entsteht ein eigener Abschnitt im Klassen-InfoBook der Klasse; private Bereiche und leere Abschnitte bleiben aus.</p>
-            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Kopiert alle Abschnitte mit Seiten als neue Abschnitte ins Klassen-InfoBook">📚 Buch verteilen</button></div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Kopiert alle Abschnitte mit Seiten als neue Abschnitte ins Klassen-InfoBook"><span class="icn ic-books" aria-hidden="true"></span> Buch verteilen</button></div>
         </form>
     </details>
     <?php endif; ?>

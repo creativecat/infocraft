@@ -15,7 +15,7 @@
  */
 ?>
 <div class="card" style="max-width:860px;width:100%;margin:0 auto;text-align:left;">
-    <h2 style="margin-top:0;">🪟 Musterlösung: <?= e($task->title) ?></h2>
+    <h2 style="margin-top:0;"><span class="icn ic-display2" aria-hidden="true"></span> Musterlösung: <?= e($task->title) ?></h2>
     <?php if (trim($task->sampleSolution) === ''): ?>
     <p class="muted">Für diese Aufgabe ist noch keine Musterlösung hinterlegt.
         Du kannst sie in der Bearbeitung der Aufgabe ergänzen.</p>

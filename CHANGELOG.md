@@ -5,6 +5,15 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 die Versionierung folgt Semantic Versioning (#145): neue Funktionen erhöhen MINOR,
 reine Fehlerbehebungen PATCH, inkompatible Umstiege MAJOR.
 
+## [0.33.0] - 2026-11-18
+
+### Kompletter Icon-Umbau und Wiki-Modul entfernt (#243)
+
+- Icon-Wechsel nach Vorgabe: HTML-Werkstatt nutzt `icon-embed2`, Diagramm-Werkstatt `icon-design`, das Hamburger-Menü `icon-menu8`, Quizze `icon-trophy3` und Prüfungen `icon-clipboard2`.
+- Emoji-Icons auf allen Unterseiten ersetzt: Pfeil- und Play-Symbole (◀ ▶ ⏹ ← ↶ ↷ ↺ ↻ ↗) in Werkstatt-, InfoBook- und Übersichtsseiten sind Vektor-Icons, auch die Lauf-Knöpfe in der Java- und SQL-Ansicht sowie der Takt-Knopf der Logik-Werkstatt.
+- Icon-System auf 120 SVG-Masken-Icons erweitert; alle Icons folgen der lizenzierten IcoMoon-Auswahl.
+- Wiki-Modul entfernt: Inhalte werden vollständig über die InfoBooks abgebildet. Bestehende Wiki-Daten in der Datenbank bleiben unberührt, es werden nur Routen, Controller und Templates des Moduls entfernt.
+
 ## [0.32.0] - 2026-11-18
 
 ### Geändert

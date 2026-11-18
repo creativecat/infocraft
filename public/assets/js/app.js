@@ -2251,6 +2251,9 @@
     if (text !== undefined) { n.textContent = text; }
     return n;
   }
+  function icnHtml(name, text) {
+    return '<span class="icn ' + name + '" aria-hidden="true"></span>' + (text ? ' ' + text : '');
+  }
   function say(msg, isErr) {
     if (!status) { return; }
     status.textContent = msg;
@@ -2606,10 +2609,10 @@
         th.setAttribute('alt', 'Vorschau');
         div.appendChild(th);
       }
-      div.appendChild(el('div', 'icv-ph', '🔗 ' + ((item.url || '').indexOf('learningapps') >= 0 ? 'LearningApps' : (item.url || '').indexOf('h5p') >= 0 ? 'H5P' : (item.url || '').indexOf('youtube') >= 0 ? 'YouTube' : 'Einbettung')));
+      var phEmb = el('div', 'icv-ph'); phEmb.innerHTML = icnHtml('ic-link', ((item.url || '').indexOf('learningapps') >= 0 ? 'LearningApps' : (item.url || '').indexOf('h5p') >= 0 ? 'H5P' : (item.url || '').indexOf('youtube') >= 0 ? 'YouTube' : 'Einbettung')); div.appendChild(phEmb);
       div.appendChild(el('div', 'muted icv-ph-sub', (item.title ? item.title + ' · ' : '') + (item.url || 'Adresse in der Leiste oben eingeben (YouTube, LearningApps oder H5P)')));
     } else if (item.kind === 'audio') {
-      div.appendChild(el('div', 'icv-ph', '🔊 Audio'));
+      var phAud = el('div', 'icv-ph'); phAud.innerHTML = icnHtml('ic-volume-medium', 'Audio'); div.appendChild(phAud);
       div.appendChild(el('div', 'muted icv-ph-sub', (item.name || 'Audio') + ' · im Lesemodus abspielbar'));
     } else if (item.kind === 'video') {
       /* Erster Frame als Vorschau (#67): preload=metadata holt das Standbild,
@@ -2783,7 +2786,7 @@
           refreshAcExtra();
         }
       } catch (eEd) { /* ohne Gutter laeuft das Feld trotzdem */ }
-      var crun = el('button', 'icv-code-run', '▶ Ausführen');
+      var crun = el('button', 'icv-code-run'); crun.innerHTML = icnHtml('ic-play', 'Ausführen');
       crun.type = 'button';
       crun.setAttribute('data-lang', clangVal);
       rebuildCards();
@@ -2795,7 +2798,7 @@
        * Ausfuehren uebernimmt der globale .icv-db-run-Delegations-Listener.
        * Vorhandene Datenbanken der SQL-Werkstatt fuellen das Schema per
        * Dropdown, ihre Tabellen lassen sich dann einzeln abfragen. */
-      div.appendChild(el('div', 'icv-db-head', '🗄️ Schema und Beispieldaten (SQL)'));
+      var dbHead = el('div', 'icv-db-head'); dbHead.innerHTML = icnHtml('ic-database', 'Schema und Beispieldaten (SQL)'); div.appendChild(dbHead);
       if (dbTemplates.length > 0) {
         var dbLib = el('select', 'icv-db-libsel');
         dbLib.title = 'Eine vorhandene Datenbank aus der SQL-Werkstatt einfügen';
@@ -2863,7 +2866,7 @@
       });
       div.appendChild(dbQTa);
       if (window.IC_AUTOCOMPLETE) { window.IC_AUTOCOMPLETE.attach(dbQTa, 'sql'); }
-      var dbRun = el('button', 'icv-db-run', '▶ Abfrage ausführen');
+      var dbRun = el('button', 'icv-db-run'); dbRun.innerHTML = icnHtml('ic-play', 'Abfrage ausführen');
       dbRun.type = 'button';
       div.appendChild(dbRun);
       /* Ausgabe als echte Tabelle (#84): div statt pre, die Tabelle setzt
@@ -2873,7 +2876,7 @@
       /* HTML-Baustein (#174): Eingabemaske als eigener Kasten neben Java-
        * und SQL-Fenster. Der Quelltext laeuft in einem abgeschotteten
        * iframe (Sandbox ohne same-origin), die Vorschau steht live daneben. */
-      div.appendChild(el('div', 'icv-html-head', '🌐 HTML-Seite (Eingabemaske)'));
+      var htmlHead = el('div', 'icv-html-head'); htmlHead.innerHTML = icnHtml('ic-embed2', 'HTML-Seite (Eingabemaske)'); div.appendChild(htmlHead);
       var hTa = el('textarea', 'mono icv-html-ta');
       hTa.value = item.html || '';
       hTa.setAttribute('spellcheck', 'false');
@@ -2981,7 +2984,7 @@
     /* Loeschen-Knopf am Element (#66): Sichtbar bei Auswahl (CSS), entfernt
      * das Element direkt - bisher war Loeschen nur ueber die Symbolleiste
      * moeglich und die Entf-Taste tat gar nichts. */
-    var del = el('button', 'icv-del', '✕');
+    var del = el('button', 'icv-del'); del.innerHTML = icnHtml('ic-cross');
     del.type = 'button';
     del.title = 'Element entfernen (Entf-Taste geht auch)';
     del.addEventListener('click', function (ev) {
@@ -3071,7 +3074,7 @@
     });
     ctxText.appendChild(b);
   });
-  [['left', '⯇ Links'], ['center', '⯆ Zentriert'], ['right', '⯈ Rechts']].forEach(function (a) {
+  [['left', 'ic-align-left', 'Links'], ['center', 'ic-align-center-horizontal', 'Zentriert'], ['right', 'ic-align-right', 'Rechts']].forEach(function (a) {
     var b = el('button', 'icv-bgbtn', a[1]);
     b.type = 'button';
     b.title = 'Textausrichtung im Textfeld';
@@ -3163,7 +3166,7 @@
     var old = div.querySelector('.icv-linkbadge');
     if (item && item.link) {
       if (!old) {
-        var b = el('div', 'icv-linkbadge', '🔗');
+        var b = el('div', 'icv-linkbadge'); b.innerHTML = icnHtml('ic-link');
         b.title = 'Verlinkt mit einer anderen Seite (im Kontextbereich aendern)';
         div.appendChild(b);
       }
@@ -3173,7 +3176,7 @@
   }
   /* Gruppieren/Loesen (#68): nur sinnvoll mit Auswahl, deshalb im
    * Kontextbereich - die Leiste bleibt frei von Auswahl-abhaengigen Icons. */
-  var grpBtn = el('button', 'icv-bgbtn', '🪢 Gruppieren');
+  var grpBtn = el('button', 'icv-bgbtn'); grpBtn.innerHTML = icnHtml('ic-connection', 'Gruppieren');
   grpBtn.type = 'button';
   grpBtn.title = 'Alle ausgewählten Objekte zu einer Gruppe verbinden: sie bewegen sich dann gemeinsam';
   grpBtn.setAttribute('data-icv-group', '1');
@@ -3184,7 +3187,7 @@
     collect(); markDirty(); updateCtx();
   });
   ctxBar.appendChild(grpBtn);
-  var ungrpBtn = el('button', 'icv-bgbtn', '✂️ Gruppe lösen');
+  var ungrpBtn = el('button', 'icv-bgbtn'); ungrpBtn.innerHTML = icnHtml('ic-scissors', 'Gruppe lösen');
   ungrpBtn.type = 'button';
   ungrpBtn.title = 'Gruppe wieder auflösen: die Objekte bewegen sich wieder einzeln';
   ungrpBtn.setAttribute('data-icv-ungroup', '1');
@@ -3302,10 +3305,11 @@
    * Kontextbereich, der nur mit Auswahl erscheint. */
   var toolbar = el('div', 'icv-toolbar');
   var toolBtns = {};
-  [['select', '🖱️', 'Auswahl: Elemente anklicken, verschieben, Text bearbeiten; Ziehen über die Fläche = Lasso'],
-   ['draw', '✏️', 'Stift: Freihand zeichnen, auch über Bildern (Apple Pencil: druckempfindlich)'],
-   ['eraser', '🧽', 'Radierer: Gezeichnete Striche wegradieren']].forEach(function (t) {
-    var b = el('button', 'btn btn-ghost icv-mode-btn' + (t[0] === 'select' ? ' icv-mode-btn-active' : ''), t[1]);
+  [['select', 'ic-mouse', 'Auswahl: Elemente anklicken, verschieben, Text bearbeiten; Ziehen über die Fläche = Lasso'],
+   ['draw', 'ic-pencil', 'Stift: Freihand zeichnen, auch über Bildern (Apple Pencil: druckempfindlich)'],
+   ['eraser', 'ic-eraser', 'Radierer: Gezeichnete Striche wegradieren']].forEach(function (t) {
+    var b = el('button', 'btn btn-ghost icv-mode-btn' + (t[0] === 'select' ? ' icv-mode-btn-active' : ''));
+    b.innerHTML = icnHtml(t[1]);
     b.type = 'button';
     b.title = t[2];
     b.setAttribute('data-icv-tool', t[0]);
@@ -3369,11 +3373,11 @@
   toolbar.appendChild(swatchWrap);
   toolbar.appendChild(swWrap);
   /* Einfuegen: Icons only (#68), Beschreibung als Hover (title) */
-  var txtBtn = el('button', 'btn btn-ghost', '📝'); txtBtn.type = 'button';
+  var txtBtn = el('button', 'btn btn-ghost'); txtBtn.innerHTML = icnHtml('ic-pencil2'); txtBtn.type = 'button';
   txtBtn.title = 'Textfeld einfügen (oder freie Stelle doppelt antippen)';
   txtBtn.addEventListener('click', function () { setMode('select'); addTextAt(block.w / 2 - 170, block.h / 2 - 60); });
   toolbar.appendChild(txtBtn);
-  var imgBtn = el('button', 'btn btn-ghost', '🖼️'); imgBtn.type = 'button';
+  var imgBtn = el('button', 'btn btn-ghost'); imgBtn.innerHTML = icnHtml('ic-image'); imgBtn.type = 'button';
   imgBtn.title = 'Bild einfügen (hochladen oder einfach auf die Fläche ziehen)';
   var imgFile = el('input', 'iblock-file icv-file'); imgFile.type = 'file';
   imgFile.accept = 'image/png,image/jpeg,image/gif,image/webp';
@@ -3383,7 +3387,7 @@
   });
   toolbar.appendChild(imgBtn);
   toolbar.appendChild(imgFile);
-  var audBtn = el('button', 'btn btn-ghost', '🔊'); audBtn.type = 'button';
+  var audBtn = el('button', 'btn btn-ghost'); audBtn.innerHTML = icnHtml('ic-volume-medium'); audBtn.type = 'button';
   audBtn.title = 'Audio einfügen (hochladen, im Lesemodus abspielbar)';
   var audFile = el('input', 'iblock-file icv-file'); audFile.type = 'file';
   audFile.accept = 'audio/*';
@@ -3393,7 +3397,7 @@
   });
   toolbar.appendChild(audBtn);
   toolbar.appendChild(audFile);
-  var vidBtn = el('button', 'btn btn-ghost', '🎞️'); vidBtn.type = 'button';
+  var vidBtn = el('button', 'btn btn-ghost'); vidBtn.innerHTML = icnHtml('ic-film2'); vidBtn.type = 'button';
   vidBtn.title = 'Video einfügen (hochladen, im Lesemodus abspielbar)';
   var vidFile = el('input', 'iblock-file icv-file'); vidFile.type = 'file';
   vidFile.accept = 'video/*';
@@ -3403,23 +3407,23 @@
   });
   toolbar.appendChild(vidBtn);
   toolbar.appendChild(vidFile);
-  var embBtn = el('button', 'btn btn-ghost', '🔗'); embBtn.type = 'button';
+  var embBtn = el('button', 'btn btn-ghost'); embBtn.innerHTML = icnHtml('ic-link'); embBtn.type = 'button';
   embBtn.title = 'Einbettung einfügen: YouTube (ohne Cookies), LearningApps oder H5P';
   embBtn.addEventListener('click', function () { addEmbedAt(block.w / 2 - 240, block.h / 2 - 40); });
   toolbar.appendChild(embBtn);
-  var codeBtn = el('button', 'btn btn-ghost', '💻'); codeBtn.type = 'button';
+  var codeBtn = el('button', 'btn btn-ghost'); codeBtn.innerHTML = icnHtml('ic-laptop'); codeBtn.type = 'button';
   codeBtn.title = 'Code-Fenster einfügen (Java, JavaScript oder Python mit Konsole)';
   codeBtn.addEventListener('click', function () { addCodeAt(block.w / 2 - 260, block.h / 2 - 90); });
   toolbar.appendChild(codeBtn);
-  var dbBtn = el('button', 'btn btn-ghost', '🗄️'); dbBtn.type = 'button';
+  var dbBtn = el('button', 'btn btn-ghost'); dbBtn.innerHTML = icnHtml('ic-database'); dbBtn.type = 'button';
   dbBtn.title = 'Datenbank einfügen (Schema und SQL-Abfragen)';
   dbBtn.addEventListener('click', function () { addDbAt(block.w / 2 - 210, block.h / 2 - 110); });
   toolbar.appendChild(dbBtn);
-  var htmlBtn = el('button', 'btn btn-ghost', '🌐'); htmlBtn.type = 'button';
+  var htmlBtn = el('button', 'btn btn-ghost'); htmlBtn.innerHTML = icnHtml('ic-embed2'); htmlBtn.type = 'button';
   htmlBtn.title = 'HTML-Seite einfügen (Eingabemaske für die Projektarbeit, #174)';
   htmlBtn.addEventListener('click', function () { addHtmlAt(block.w / 2 - 210, block.h / 2 - 90); });
   toolbar.appendChild(htmlBtn);
-  var diagBtn = el('button', 'btn btn-ghost', '📊'); diagBtn.type = 'button';
+  var diagBtn = el('button', 'btn btn-ghost'); diagBtn.innerHTML = icnHtml('ic-stats-bars'); diagBtn.type = 'button';
   diagBtn.title = 'Diagramm einfügen (Mermaid: Code links, Diagramm rechts)';
   diagBtn.addEventListener('click', function () { addDiagramAt(block.w / 2 - 240, block.h / 2 - 120); });
   toolbar.appendChild(diagBtn);
@@ -3429,7 +3433,7 @@
    * Element (Minimum 500). Die Knoepfe sitzen unten rechts IN der Flaeche
    * (#68), nicht mehr in der Leiste. */
   var areaBtns = el('div', 'icv-area-btns');
-  var growBtn = el('button', 'btn btn-ghost', '⬇️');
+  var growBtn = el('button', 'btn btn-ghost'); growBtn.innerHTML = icnHtml('ic-arrow-down');
   growBtn.type = 'button';
   growBtn.title = 'Fläche um 300 vergrößern';
   growBtn.setAttribute('data-icv-grow', '1');
@@ -3440,7 +3444,7 @@
     collect(); markDirty();
   });
   areaBtns.appendChild(growBtn);
-  var shrinkBtn = el('button', 'btn btn-ghost', '⬆️');
+  var shrinkBtn = el('button', 'btn btn-ghost'); shrinkBtn.innerHTML = icnHtml('ic-arrow-up');
   shrinkBtn.type = 'button';
   shrinkBtn.title = 'Fläche verkleinern, maximal bis zum untersten Element';
   shrinkBtn.setAttribute('data-icv-shrink', '1');
@@ -3454,7 +3458,7 @@
   areaBtns.appendChild(shrinkBtn);
   /* Loeschen braucht eine Auswahl (#68): deshalb im Kontextbereich statt
    * dauerhaft in der Leiste (X am Element und Entf-Taste gibt es weiter). */
-  var delBtn = el('button', 'btn btn-danger icv-delbtn', '🗑'); delBtn.type = 'button';
+  var delBtn = el('button', 'btn btn-danger icv-delbtn'); delBtn.innerHTML = icnHtml('ic-bin2'); delBtn.type = 'button';
   delBtn.title = 'Ausgewähltes Element entfernen';
   delBtn.addEventListener('click', function () { if (sel) { removeItem(sel); } });
   ctxBar.appendChild(delBtn);

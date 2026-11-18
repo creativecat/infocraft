@@ -17,8 +17,8 @@
 ?>
 <section class="panel">
     <div class="panel-head">
-        <a class="btn btn-ghost" href="<?= url('unterricht/klassen') ?>" title="Zurück zu meinen Klassen">←</a>
-        <h3>📊 Fortschritt: Klasse <?= e($class->name) ?></h3>
+        <a class="btn btn-ghost" href="<?= url('unterricht/klassen') ?>" title="Zurück zu meinen Klassen"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
+        <h3><span class="icn ic-stats-bars" aria-hidden="true"></span> Fortschritt: Klasse <?= e($class->name) ?></h3>
     </div>
     <p class="muted">Eine Zeile je Schülerin und Schüler: Quiz-Bestwerte, erledigte Aufgaben und die zuletzt bearbeiteten Projekte aus der Werkstatt.</p>
     <?php if ($rows === []): ?>
@@ -28,19 +28,19 @@
     <?php $student = $row['student']; ?>
     <div class="target-row" style="flex-wrap:wrap;gap:10px;">
         <span class="pill"><strong><?= e($student->fullName()) ?></strong>
-            · 🧠 Quiz: <?= (int) $row['quizDone'] ?>/<?= count($row['quizzes']) ?> gespielt
-            · 📝 Aufgaben: <?= (int) $row['tasksDone'] ?>/<?= count($row['tasks']) ?> abgegeben
+            · <span class="icn ic-brain" aria-hidden="true"></span> Quiz: <?= (int) $row['quizDone'] ?>/<?= count($row['quizzes']) ?> gespielt
+            · <span class="icn ic-pencil2" aria-hidden="true"></span> Aufgaben: <?= (int) $row['tasksDone'] ?>/<?= count($row['tasks']) ?> abgegeben
         </span>
         <span class="muted" style="max-width:100%;">
             <?php if ($row['quizzes'] !== []): ?>
-            🧠 <?php foreach ($row['quizzes'] as $quizRow): ?><?= e($quizRow['title']) ?>: <strong><?= $quizRow['best'] !== null ? e($quizRow['best']) . ' (' . (int) $quizRow['tries'] . ' Versuche)' : 'noch nicht gespielt' ?></strong> · <?php endforeach; ?>
-            <?php else: ?>🧠 noch keine Quizze ausgeteilt · <?php endif; ?>
+            <span class="icn ic-brain" aria-hidden="true"></span> <?php foreach ($row['quizzes'] as $quizRow): ?><?= e($quizRow['title']) ?>: <strong><?= $quizRow['best'] !== null ? e($quizRow['best']) . ' (' . (int) $quizRow['tries'] . ' Versuche)' : 'noch nicht gespielt' ?></strong> · <?php endforeach; ?>
+            <?php else: ?><span class="icn ic-brain" aria-hidden="true"></span> noch keine Quizze ausgeteilt · <?php endif; ?>
             <?php if ($row['tasks'] !== []): ?>
-            📝 <?php foreach ($row['tasks'] as $taskRow): ?><?= $taskRow['done'] ? '✅' : '⬜' ?> <?= e($taskRow['title']) ?><?= $taskRow['submittedAt'] !== null ? ' (' . e(mb_substr($taskRow['submittedAt'], 0, 16)) . ')' : '' ?> · <?php endforeach; ?>
-            <?php else: ?>📝 noch keine Aufgaben ausgeteilt · <?php endif; ?>
+            <span class="icn ic-pencil2" aria-hidden="true"></span> <?php foreach ($row['tasks'] as $taskRow): ?><?= $taskRow['done'] ? '<span class="icn ic-checkmark" aria-hidden="true"></span>' : '<span class="icn ic-checkbox-unchecked" aria-hidden="true"></span>' ?> <?= e($taskRow['title']) ?><?= $taskRow['submittedAt'] !== null ? ' (' . e(mb_substr($taskRow['submittedAt'], 0, 16)) . ')' : '' ?> · <?php endforeach; ?>
+            <?php else: ?><span class="icn ic-pencil2" aria-hidden="true"></span> noch keine Aufgaben ausgeteilt · <?php endif; ?>
             <?php if ($row['projects'] !== []): ?>
-            💻 zuletzt: <?php foreach ($row['projects'] as $projectRow): ?><?= e($projectRow['title']) ?> (<?= e($projectRow['type']) ?><?= $projectRow['language'] !== '' ? '/' . e($projectRow['language']) : '' ?>, <?= e(mb_substr($projectRow['updatedAt'], 0, 16)) ?>) · <?php endforeach; ?>
-            <?php else: ?>💻 noch keine Projekte in der Werkstatt<?php endif; ?>
+            <span class="icn ic-laptop" aria-hidden="true"></span> zuletzt: <?php foreach ($row['projects'] as $projectRow): ?><?= e($projectRow['title']) ?> (<?= e($projectRow['type']) ?><?= $projectRow['language'] !== '' ? '/' . e($projectRow['language']) : '' ?>, <?= e(mb_substr($projectRow['updatedAt'], 0, 16)) ?>) · <?php endforeach; ?>
+            <?php else: ?><span class="icn ic-laptop" aria-hidden="true"></span> noch keine Projekte in der Werkstatt<?php endif; ?>
         </span>
     </div>
     <?php endforeach; ?>

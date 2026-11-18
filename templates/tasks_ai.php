@@ -5,12 +5,12 @@
    Version: 0.15.0 */ ?>
 <?php /** @var \Infocraft\Models\User $user */ ?>
 <section class="hero">
-    <div class="hero-emoji">🤖</div>
+    <div class="hero-emoji"><span class="icn ic-android" aria-hidden="true"></span></div>
     <h1>KI-Schnittstelle</h1>
     <p>Hinterlege einen KI-Zugang für die Korrekturhilfe: Die KI bewertet abgegebene Aufgaben vor und schlägt Note und Feedback vor. Es sieht nur anonymisierte Arbeiten (Pseudonyme statt Namen). Deine Zugangsdaten bleiben auf deinem Server.</p>
 </section>
 
-<p><a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool">←</a></p>
+<p><a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool"><span class="icn ic-arrow-left" aria-hidden="true"></span></a></p>
 
 <section class="panel">
     <h3>Meine KI-Zugangsdaten</h3>
@@ -35,7 +35,7 @@
             </label>
         </div>
         <div class="btn-row">
-            <button class="btn btn-primary" type="submit" title="Speichern">💾</button>
+            <button class="btn btn-primary" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button>
         </div>
     </form>
     <p class="muted">Alle Felder leeren und speichern = eigene Angaben entfernen.</p>
@@ -64,7 +64,7 @@
                 <input type="text" name="model" placeholder="Modellname" value="<?= e($school['model'] ?? '') ?>">
             </label>
         </div>
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Schulweit speichern (für alle Lehrkräfte)">💾</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Schulweit speichern (für alle Lehrkräfte)"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button></div>
     </form>
 </section>
 <?php endif; ?>

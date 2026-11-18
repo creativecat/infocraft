@@ -4,7 +4,7 @@
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
 <section class="hero">
-    <div class="hero-emoji">🎬</div>
+    <div class="hero-emoji"><span class="icn ic-film" aria-hidden="true"></span></div>
     <h1>Präsentationen</h1>
     <p>Folien für den Unterricht: Text und Code mit Syntax-Highlighting, Vollbild-Modus und live veränderbaren Code-Folien.</p>
 </section>
@@ -24,7 +24,7 @@
                 </select>
             </label>
         </div>
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Präsentation anlegen">➕</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Präsentation anlegen"><span class="icn ic-plus" aria-hidden="true"></span></button></div>
     </form>
 </section>
 
@@ -49,17 +49,17 @@ foreach ($items as $presentation) {
 <section class="panel praes-panel">
     <div class="praes-row">
         <div class="praes-info">
-            <a class="praes-title" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">🎬 <?= e($presentation->title) ?></a>
+            <a class="praes-title" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>"><span class="icn ic-film" aria-hidden="true"></span> <?= e($presentation->title) ?></a>
             <span class="muted praes-meta"><?= count($presentation->slides()) ?> Folie<?= count($presentation->slides()) === 1 ? '' : 'n' ?><?php if ($presentation->slug !== null): ?> &middot; <a href="<?= url('praesentationen/thema/' . rawurlencode($presentation->slug)) ?>">Themen-Link</a><?php endif; ?></span>
         </div>
         <div class="praes-actions">
-            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">▶ Präsentieren</a>
-            <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id . '/moderator') ?>" title="Moderator: Steuerzentrale - aktuelle und nächste Folie, Timer - synchron zur Präsentationsansicht">🖥</a>
+            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>"><span class="icn ic-play" aria-hidden="true"></span> Präsentieren</a>
+            <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id . '/moderator') ?>" title="Moderator: Steuerzentrale - aktuelle und nächste Folie, Timer - synchron zur Präsentationsansicht"><span class="icn ic-display" aria-hidden="true"></span></a>
             <?php if ($user->role === 'admin' || $presentation->teacherId === $user->id): ?>
-            <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id) ?>" title="Bearbeiten">✏️</a>
+            <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id) ?>" title="Bearbeiten"><span class="icn ic-pencil" aria-hidden="true"></span></a>
             <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/loeschen') ?>" class="form-inline">
                 <?= csrf_field() ?>
-                <button class="btn btn-ghost" type="submit" title="Löschen">🗑</button>
+                <button class="btn btn-ghost" type="submit" title="Löschen"><span class="icn ic-bin2" aria-hidden="true"></span></button>
             </form>
             <?php endif; ?>
         </div>
@@ -90,11 +90,11 @@ foreach ($items as $presentation) {
 <section class="panel praes-panel">
     <div class="praes-row">
         <div class="praes-info">
-            <a class="praes-title" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">🎬 <?= e($presentation->title) ?></a>
+            <a class="praes-title" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>"><span class="icn ic-film" aria-hidden="true"></span> <?= e($presentation->title) ?></a>
             <span class="muted praes-meta"><?= count($presentation->slides()) ?> Folie<?= count($presentation->slides()) === 1 ? '' : 'n' ?></span>
         </div>
         <div class="praes-actions">
-            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">▶ Ansehen</a>
+            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>"><span class="icn ic-play" aria-hidden="true"></span> Ansehen</a>
         </div>
     </div>
 </section>

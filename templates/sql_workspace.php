@@ -7,16 +7,16 @@
 <section class="panel">
     <div class="panel-head">
         <div>
-            <h3><?= $template->isAdventure ? '🏝️' : '🗄️' ?> <?= e($template->title) ?></h3>
+            <h3><?= $template->isAdventure ? '<span class="icn ic-map2" aria-hidden="true"></span>' : '<span class="icn ic-database" aria-hidden="true"></span>' ?> <?= e($template->title) ?></h3>
             <p class="muted"><?= e($template->description) ?></p>
         </div>
         <span class="pill" title="<?= $permission === 'read' ? 'Nur Leserechte: Du arbeitest an der gemeinsamen Datenbank, es wird keine eigene Kopie angelegt.' : 'Schreibrechte: Du arbeitest an deiner eigenen datensparsamen Kopie der Daten.' ?>"><?= e($permissionLabel) ?></span>
         <?php if (in_array($template->slug, ['shop', 'instacraft'], true)): ?>
-        <a class="btn btn-ghost" href="<?= url('werkstatt/sql/' . e($template->slug) . '/app') ?>" title="Mobil-Frontend auf derselben Datenbank: Bestellungen, Likes und Kommentare landen in den Tabellen der Werkstatt - und umgekehrt.">📱 App-Ansicht</a>
+        <a class="btn btn-ghost" href="<?= url('werkstatt/sql/' . e($template->slug) . '/app') ?>" title="Mobil-Frontend auf derselben Datenbank: Bestellungen, Likes und Kommentare landen in den Tabellen der Werkstatt - und umgekehrt."><span class="icn ic-mobile" aria-hidden="true"></span> App-Ansicht</a>
         <?php endif; ?>
         <?php /* #200: Direkter Sprung zu den Aufgaben, ohne an der Konsole
              vorbei zu scrollen. */ ?>
-        <a class="btn btn-ghost" href="#aufgaben" title="Zu den Aufgaben dieser Datenbank springen">🎯 Zu den Aufgaben</a>
+        <a class="btn btn-ghost" href="#aufgaben" title="Zu den Aufgaben dieser Datenbank springen"><span class="icn ic-target" aria-hidden="true"></span> Zu den Aufgaben</a>
     </div>
     <form method="post" action="<?= url('werkstatt/sql/' . $template->slug) ?>" class="form" id="sql-form">
         <?= csrf_field() ?>
@@ -24,7 +24,7 @@
             <span>SQL-Anweisung (Strg + Enter führt aus)</span>
             <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="sql" rows="5" wrap="off" class="mono sql-input" data-tables="<?= e(implode(',', $sqlTableNames)) ?>" placeholder="SELECT * FROM ..."><?= e($lastSql) ?></textarea></div>
         </label>
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Ausführen">▶</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Ausführen"><span class="icn ic-play" aria-hidden="true"></span></button></div>
     </form>
     <?php if ($result !== null): ?>
         <?php if ($result['ok']): ?>
@@ -39,18 +39,18 @@
                 </tbody>
             </table>
             <?php else: ?>
-            <p>✅ Erfolgreich ausgeführt, <?= (int) $result['affected'] ?> Zeile(n) geändert.</p>
+            <p><span class="icn ic-checkmark" aria-hidden="true"></span> Erfolgreich ausgeführt, <?= (int) $result['affected'] ?> Zeile(n) geändert.</p>
             <?php endif; ?>
         </div>
         <?php else: ?>
-        <div class="query-result error" data-result="error">⛔ <?= e($result['error']) ?></div>
+        <div class="query-result error" data-result="error"><span class="icn ic-blocked" aria-hidden="true"></span> <?= e($result['error']) ?></div>
         <?php endif; ?>
     <?php endif; ?>
 </section>
 
 <div class="two-col">
     <section class="panel">
-        <h3>📋 Tabellen der Datenbank</h3>
+        <h3><span class="icn ic-clipboard" aria-hidden="true"></span> Tabellen der Datenbank</h3>
         <?php foreach ($tables as $table): ?>
         <details class="table-browser">
             <summary><strong><?= e($table['name']) ?></strong> <span class="muted">(<?= count($table['columns']) ?> Spalten)</span></summary>
@@ -63,7 +63,7 @@
         <?php endforeach; ?>
     </section>
     <section class="panel">
-        <h3>🕸️ ER-Diagramm</h3>
+        <h3><span class="icn ic-connection" aria-hidden="true"></span> ER-Diagramm</h3>
         <div class="mermaid"><?= e($er) ?></div>
         <details>
             <summary class="muted">ER-Diagramm-Quelltext anzeigen (zum Weiterverwenden, z. B. in Präsentationen)</summary>
@@ -72,7 +72,7 @@
         <?php if ($diagramAuto): ?>
         <form method="post" action="<?= url('werkstatt/sql/' . $template->slug . '/diagramm') ?>" class="form-inline" style="margin-top:10px;">
             <?= csrf_field() ?>
-            <button class="btn btn-ghost" type="submit" title="Tabellen als Klassendiagramm übernehmen">📐</button>
+            <button class="btn btn-ghost" type="submit" title="Tabellen als Klassendiagramm übernehmen"><span class="icn ic-design" aria-hidden="true"></span></button>
         </form>
         <?php else: ?>
         <p class="muted" style="margin-top:10px;">Das automatische Erzeugen von Klassendiagrammen ist für deine Klasse deaktiviert.</p>
@@ -84,7 +84,7 @@
 <script>if (window.mermaid) { mermaid.initialize({ startOnLoad: true }); }</script>
 
 <section class="panel" id="aufgaben">
-    <h3>🎯 Aufgaben</h3>
+    <h3><span class="icn ic-target" aria-hidden="true"></span> Aufgaben</h3>
     <?php if ($missions === []): ?>
     <p class="muted">Für diese Datenbank gibt es noch keine Aufgaben.</p>
     <?php endif; ?>
@@ -93,7 +93,7 @@
     <div class="mission<?= $isSolved ? ' solved' : '' ?>">
         <div class="mission-head">
             <strong>Aufgabe <?= (int) $mission['position'] ?>: <?= e($mission['title']) ?></strong>
-            <?php if ($isSolved): ?><span class="badge-solved">✅ gelöst</span><?php endif; ?>
+            <?php if ($isSolved): ?><span class="badge-solved"><span class="icn ic-checkmark" aria-hidden="true"></span> gelöst</span><?php endif; ?>
         </div>
         <p><?= e($mission['story']) ?></p>
         <?php if ($isSolved): ?>
@@ -108,18 +108,18 @@
                 <span>Deine SQL-Anweisung<?= ($mission['kind'] ?? 'query') === 'action' ? ' (verändert die Daten, Schreibrechte nötig)' : '' ?></span>
                 <div class="hlwrap sql" data-hl="sql" data-ac="sql"><textarea name="mission_sql" rows="3" wrap="off" class="mono" placeholder="SELECT ..."><?= e($attempt !== null && (int) $attempt['id'] === (int) $mission['id'] ? $attempt['sql'] : '') ?></textarea></div>
             </label>
-            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Prüfen">✅</button></div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Prüfen"><span class="icn ic-checkmark" aria-hidden="true"></span></button></div>
         </form>
         <?php if ($attempt !== null && (int) $attempt['id'] === (int) $mission['id'] && $attempt['sql'] !== ''): ?>
         <div class="adv-feedback">
-            <strong>🔍 Hinweis zu deinem letzten Versuch</strong>
+            <strong><span class="icn ic-search" aria-hidden="true"></span> Hinweis zu deinem letzten Versuch</strong>
             <p class="muted">Deine letzte Eingabe ist erhalten:</p>
             <pre class="code"><code class="language-sql"><?= e($attempt['sql']) ?></code></pre>
             <p><?= e($attempt['feedback']) ?></p>
         </div>
         <?php endif; ?>
         <details>
-            <summary class="muted">💡 Tipp anzeigen</summary>
+            <summary class="muted"><span class="icn ic-info" aria-hidden="true"></span> Tipp anzeigen</summary>
             <p><?= e($mission['hint']) ?></p>
         </details>
         <?php endif; ?>

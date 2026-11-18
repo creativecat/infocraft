@@ -5,10 +5,10 @@
    Version: 0.15.0 */ ?>
 <section class="panel">
     <div class="panel-head">
-        <h3>🎬 Präsentation bearbeiten</h3>
+        <h3><span class="icn ic-film" aria-hidden="true"></span> Präsentation bearbeiten</h3>
         <div class="btn-row">
-            <a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen">←</a>
-            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>">▶ Präsentieren</a>
+            <a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
+            <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>"><span class="icn ic-play" aria-hidden="true"></span> Präsentieren</a>
         </div>
     </div>
     <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id) ?>" class="form">
@@ -22,7 +22,7 @@
                     <?php endforeach; ?>
                 </select>
             </label>
-            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button></div>
         </div>
     </form>
 </section>
@@ -37,11 +37,11 @@
 <?php foreach ($slides as $pos => $slide): ?>
 <section class="panel">
     <div class="panel-head">
-        <h3>Folie <?= $pos + 1 ?>: <?= $slide['type'] === 'code' ? '💻 Code' : '📄 Text' ?><?= $slide['title'] !== '' ? ' · ' . e($slide['title']) : '' ?></h3>
+        <h3>Folie <?= $pos + 1 ?>: <?= $slide['type'] === 'code' ? '<span class="icn ic-laptop" aria-hidden="true"></span> Code' : '<span class="icn ic-file-text" aria-hidden="true"></span> Text' ?><?= $slide['title'] !== '' ? ' · ' . e($slide['title']) : '' ?></h3>
         <div class="btn-row">
-            <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/hoch') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit"<?= $pos === 0 ? ' disabled' : '' ?>>↑</button></form>
-            <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/runter') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit"<?= $pos === count($slides) - 1 ? ' disabled' : '' ?>>↓</button></form>
-            <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/loeschen') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit" title="Löschen">🗑</button></form>
+            <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/hoch') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit"<?= $pos === 0 ? ' disabled' : '' ?>><span class="icn ic-arrow-up" aria-hidden="true"></span></button></form>
+            <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/runter') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit"<?= $pos === count($slides) - 1 ? ' disabled' : '' ?>><span class="icn ic-arrow-down" aria-hidden="true"></span></button></form>
+            <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos . '/loeschen') ?>" class="form-inline"><?= csrf_field() ?><button class="btn btn-ghost" type="submit" title="Löschen"><span class="icn ic-bin2" aria-hidden="true"></span></button></form>
         </div>
     </div>
     <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie/' . $pos) ?>" class="form">
@@ -65,17 +65,17 @@
             <textarea name="body" rows="8" class="mono" spellcheck="true"><?= e($slide['body']) ?></textarea>
         </label>
         <?php endif; ?>
-        <label class="field"><span>🎙 Sprechernotiz (nur im Moderatorenbildschirm für Lehrkräfte sichtbar, Schülerinnen und Schüler sehen sie nie)</span>
+        <label class="field"><span><span class="icn ic-mic" aria-hidden="true"></span> Sprechernotiz (nur im Moderatorenbildschirm für Lehrkräfte sichtbar, Schülerinnen und Schüler sehen sie nie)</span>
             <textarea name="notes" rows="3" class="mono" spellcheck="true" placeholder="Kernbotschaft, Impulsfrage, Zeitangabe - z. B.: &quot;Frage zuerst: Wer hat schon mal ...? (3 Min)&quot;"><?= e($slide['notes'] ?? '') ?></textarea>
         </label>
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Folie speichern">💾</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Folie speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button></div>
     </form>
 </section>
 <?php endforeach; ?>
 
 <section class="panel">
     <h3>Folie anfügen</h3>
-    <p class="muted">Einfach leer: Typ wählen und ➕ klicken. Für einen schnellen, aufgeräumten Aufbau gibt es Vorlagen (Bausteine wie Merksatz, Übung mit Lösung, Vergleich und Karten werden automatisch eingerichtet):</p>
+    <p class="muted">Einfach leer: Typ wählen und <span class="icn ic-plus" aria-hidden="true"></span> klicken. Für einen schnellen, aufgeräumten Aufbau gibt es Vorlagen (Bausteine wie Merksatz, Übung mit Lösung, Vergleich und Karten werden automatisch eingerichtet):</p>
     <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/folie') ?>" class="form">
         <?= csrf_field() ?>
         <div class="form-row form">
@@ -93,7 +93,7 @@
                     <?php endforeach; ?>
                 </select>
             </label>
-            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Folie anfügen">➕ Folie anfügen</button></div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Folie anfügen"><span class="icn ic-plus" aria-hidden="true"></span> Folie anfügen</button></div>
         </div>
     </form>
 </section>

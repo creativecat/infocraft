@@ -4,17 +4,17 @@
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
 <section class="hero">
-    <div class="hero-emoji">🎒</div>
+    <div class="hero-emoji"><span class="icn ic-briefcase" aria-hidden="true"></span></div>
     <h1>Projekte von <?= e($student->fullName()) ?></h1>
     <p><?= $className !== '' ? 'Klasse ' . e($className) : 'Ohne Klasse' ?> · Als Lehrkraft kannst du jedes Projekt öffnen, ansehen und bearbeiten.</p>
 </section>
 
-<p><a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück zur Code-Werkstatt">←</a></p>
+<p><a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück zur Code-Werkstatt"><span class="icn ic-arrow-left" aria-hidden="true"></span></a></p>
 
 <div class="cards">
     <?php foreach ($projects as $project): ?>
     <div class="card project-card">
-        <div class="card-icon"><?= $project->type === 'html' ? '🌐' : ($project->language === 'java' ? '☕' : '🐍') ?></div>
+        <div class="card-icon"><?= $project->type === 'html' ? '<span class="icn ic-earth" aria-hidden="true"></span>' : ($project->language === 'java' ? '<span class="icn ic-coffee" aria-hidden="true"></span>' : '<span class="icn ic-code" aria-hidden="true"></span>') ?></div>
         <h2><?= e($project->title) ?></h2>
         <p class="card-desc muted"><?= $project->type === 'html' ? 'HTML-Seite' : e(strtoupper((string) $project->language)) ?></p>
         <div class="card-meta">

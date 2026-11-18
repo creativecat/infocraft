@@ -4,7 +4,7 @@
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
 <section class="hero">
-    <div class="hero-emoji">🏫</div>
+    <div class="hero-emoji"><span class="icn ic-office" aria-hidden="true"></span></div>
     <h1>Meine Klassen</h1>
     <p>Übersicht deiner Klassen. Für einzelne Schülerinnen und Schüler oder für eine ganze Klasse kannst du hier neue Einmalpasswörter (OTP) erzeugen.</p>
 </section>
@@ -21,35 +21,35 @@
     <div class="panel-head">
         <h3>Klasse <?= e($entry['class']->name) ?> <span class="pill">Jahrgangsstufe <?= (int) $entry['class']->level() ?></span></h3>
         <div class="btn-row" style="display:flex;gap:6px;">
-            <a class="btn btn-ghost" href="<?= url('unterricht/klassen/' . (int) $entry['class']->id . '/fortschritt') ?>" title="Fortschritt der Klasse: Quiz-Bestwerte, erledigte Aufgaben, zuletzt bearbeitete Projekte">📊 Fortschritt</a>
+            <a class="btn btn-ghost" href="<?= url('unterricht/klassen/' . (int) $entry['class']->id . '/fortschritt') ?>" title="Fortschritt der Klasse: Quiz-Bestwerte, erledigte Aufgaben, zuletzt bearbeitete Projekte"><span class="icn ic-stats-bars" aria-hidden="true"></span> Fortschritt</a>
             <form method="post" action="<?= url('unterricht/passwort') ?>" class="form-inline">
                 <?= csrf_field() ?>
                 <input type="hidden" name="class_id" value="<?= (int) $entry['class']->id ?>">
-                <button class="btn btn-primary" type="submit" title="OTP für die ganze Klasse">🔑</button>
+                <button class="btn btn-primary" type="submit" title="OTP für die ganze Klasse"><span class="icn ic-key" aria-hidden="true"></span></button>
             </form>
         </div>
     </div>
     <div class="diagram-toggle-row">
-        <span>📐 Klassendiagramme automatisch erzeugen: <strong><?= $entry['class']->diagramAuto === 1 ? 'erlaubt' : 'deaktiviert' ?></strong></span>
+        <span><span class="icn ic-design" aria-hidden="true"></span> Klassendiagramme automatisch erzeugen: <strong><?= $entry['class']->diagramAuto === 1 ? 'erlaubt' : 'deaktiviert' ?></strong></span>
         <form method="post" action="<?= url('unterricht/klassen/diagramm') ?>" class="form-inline">
             <?= csrf_field() ?>
             <input type="hidden" name="class_id" value="<?= (int) $entry['class']->id ?>">
             <input type="hidden" name="enabled" value="<?= $entry['class']->diagramAuto === 1 ? '0' : '1' ?>">
-            <button class="btn btn-ghost" type="submit" title="Klassendiagramme automatisch erzeugen: <?= $entry['class']->diagramAuto === 1 ? 'derzeit erlaubt, klicken zum Deaktivieren' : 'derzeit deaktiviert, klicken zum Erlauben' ?>"> <?= $entry['class']->diagramAuto === 1 ? '🚫' : '✅' ?> </button>
+            <button class="btn btn-ghost" type="submit" title="Klassendiagramme automatisch erzeugen: <?= $entry['class']->diagramAuto === 1 ? 'derzeit erlaubt, klicken zum Deaktivieren' : 'derzeit deaktiviert, klicken zum Erlauben' ?>"> <?= $entry['class']->diagramAuto === 1 ? '<span class="icn ic-blocked" aria-hidden="true"></span>' : '<span class="icn ic-checkmark" aria-hidden="true"></span>' ?> </button>
         </form>
     </div>
     <div class="diagram-toggle-row">
-        <span>💾 Fenster Mini-Datenbank im Code-Bereich: <strong><?= $entry['class']->dbPanel === 1 ? 'sichtbar' : 'deaktiviert' ?></strong></span>
+        <span><span class="icn ic-floppy-disk" aria-hidden="true"></span> Fenster Mini-Datenbank im Code-Bereich: <strong><?= $entry['class']->dbPanel === 1 ? 'sichtbar' : 'deaktiviert' ?></strong></span>
         <form method="post" action="<?= url('unterricht/klassen/datenbank') ?>" class="form-inline">
             <?= csrf_field() ?>
             <input type="hidden" name="class_id" value="<?= (int) $entry['class']->id ?>">
             <input type="hidden" name="enabled" value="<?= $entry['class']->dbPanel === 1 ? '0' : '1' ?>">
-            <button class="btn btn-ghost" type="submit" title="Fenster Mini-Datenbank: <?= $entry['class']->dbPanel === 1 ? 'derzeit sichtbar, klicken zum Deaktivieren' : 'derzeit deaktiviert, klicken zum Sichtbarmachen' ?>"> <?= $entry['class']->dbPanel === 1 ? '🚫' : '✅' ?> </button>
+            <button class="btn btn-ghost" type="submit" title="Fenster Mini-Datenbank: <?= $entry['class']->dbPanel === 1 ? 'derzeit sichtbar, klicken zum Deaktivieren' : 'derzeit deaktiviert, klicken zum Sichtbarmachen' ?>"> <?= $entry['class']->dbPanel === 1 ? '<span class="icn ic-blocked" aria-hidden="true"></span>' : '<span class="icn ic-checkmark" aria-hidden="true"></span>' ?> </button>
         </form>
     </div>
     <p class="muted">Das Fenster Mini-Datenbank steht in der Code-Werkstatt ganz unten: SQL direkt im Java-Programm. Deaktiviert es die Lehrkraft, verschwindet das Fenster für diese Klasse, die Klasse <code>Database</code> im Programm bleibt aber erreichbar.</p>
     <p class="muted">Schülerinnen und Schüler zeichnen Klassendiagramme immer selbst. Hier stellst du nur ein, ob Diagramme automatisch aus Java-, Python- und SQL-Skripten erzeugt werden dürfen.</p>
-    <h4>🧩 Arbeitsbereiche für diese Klasse</h4>
+    <h4><span class="icn ic-puzzle" aria-hidden="true"></span> Arbeitsbereiche für diese Klasse</h4>
     <p class="muted">Standard: die Jahrgangsstufe im LehrplanPLUS entscheidet. <strong>Freigeben</strong> macht einen Bereich früher nutzbar, <strong>sperren</strong> blendet ihn für die Klasse aus. Austeilungen bleiben auch bei gesperrtem Bereich gespeichert.</p>
     <table class="table">
         <thead><tr><th>Arbeitsbereich</th><th>Ab Stufe</th><th>Einstellung</th><th></th></tr></thead>
@@ -69,7 +69,7 @@
                         <option value="freigeben"<?= $mMode === 'freigeben' ? ' selected' : '' ?>>Freigeben (früher nutzbar)</option>
                         <option value="sperren"<?= $mMode === 'sperren' ? ' selected' : '' ?>>Sperren (ausgeblendet)</option>
                     </select>
-                    <button class="btn btn-ghost" type="submit" title="Speichern">💾</button>
+                    <button class="btn btn-ghost" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button>
                 </form>
             </td>
             <td class="muted"><?= $mMode === 'freigeben' ? 'freigegeben' : ($mMode === 'sperren' ? 'gesperrt' : 'Standard') ?></td>
@@ -91,7 +91,7 @@
                 <form method="post" action="<?= url('unterricht/passwort') ?>" class="form-inline">
                     <?= csrf_field() ?>
                     <input type="hidden" name="user_id" value="<?= (int) $student->id ?>">
-                    <button class="btn btn-ghost" type="submit" title="Neues OTP">🔑</button>
+                    <button class="btn btn-ghost" type="submit" title="Neues OTP"><span class="icn ic-key" aria-hidden="true"></span></button>
                 </form>
             </td>
         </tr>
@@ -104,7 +104,7 @@
 
 <?php if ($teachers !== [] && $allClasses !== []): ?>
 <section class="panel">
-    <h3>⚙️ Lehrkraft einer Klasse zuordnen (Administration)</h3>
+    <h3><span class="icn ic-cog" aria-hidden="true"></span> Lehrkraft einer Klasse zuordnen (Administration)</h3>
     <form method="post" action="<?= url('unterricht/klasse/zuordnen') ?>" class="form form-row">
         <?= csrf_field() ?>
         <label class="field">
@@ -123,7 +123,7 @@
                 <?php endforeach; ?>
             </select>
         </label>
-        <button class="btn btn-primary" type="submit" title="Zuordnen">🔗</button>
+        <button class="btn btn-primary" type="submit" title="Zuordnen"><span class="icn ic-link" aria-hidden="true"></span></button>
     </form>
 </section>
 <?php endif; ?>

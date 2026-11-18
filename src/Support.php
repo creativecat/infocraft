@@ -30,7 +30,7 @@ function url(string $path = ''): string
  * Zeitstempel erhalten (rsync --times, Docker-Layer): Browser laden dann garantiert
  * die neue Datei statt einer alten Version aus dem Cache.
  */
-const ASSET_VERSION = '87';
+const ASSET_VERSION = '88';
 
 /**
  * Programmversion nach Semantic Versioning (#145): MAJOR.MINOR.PATCH.
@@ -38,7 +38,7 @@ const ASSET_VERSION = '87';
  * bleibt fuer inkompatible Umstiege reserviert. Die Entwicklungshistorie
  * steht in CHANGELOG.md im Wurzelverzeichnis.
  */
-const APP_VERSION = '0.32.0';
+const APP_VERSION = '0.33.0';
 
 /**
  * Projekt-Icon (#169): passendes Emoji je Projektart. Frueher stand die
@@ -47,21 +47,108 @@ const APP_VERSION = '0.32.0';
  * gibt es genau eine Stelle, die alle Arten kennt.
  */
 /**
+ * Markdown-lite-Renderer (frueher im Wiki-Controller, Runde 34:
+ * das Wiki-Modul ist entfallen, Praesentationen nutzen ihn weiter).
+ */
+    function ic_render_markdown(string $text): string
+    {
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+        $lines = explode("\n", $text);
+        $html = '';
+        $inList = false;
+        $inCode = false;
+        $codeBuf = [];
+        foreach ($lines as $line) {
+            if (str_starts_with(trim($line), '```')) {
+                if ($inCode) {
+                    $html .= '<pre class="code">' . htmlspecialchars(implode("\n", $codeBuf), ENT_QUOTES) . '</pre>';
+                    $codeBuf = [];
+                    $inCode = false;
+                } else {
+                    if ($inList) {
+                        $html .= '</ul>';
+                        $inList = false;
+                    }
+                    $inCode = true;
+                }
+                continue;
+            }
+            if ($inCode) {
+                $codeBuf[] = $line;
+                continue;
+            }
+            $trimmed = trim($line);
+            if ($trimmed === '') {
+                if ($inList) {
+                    $html .= '</ul>';
+                    $inList = false;
+                }
+                continue;
+            }
+            if (str_starts_with($trimmed, '### ')) {
+                if ($inList) { $html .= '</ul>'; $inList = false; }
+                $html .= '<h4>' . ic_md_inline(substr($trimmed, 4)) . '</h4>';
+                continue;
+            }
+            if (str_starts_with($trimmed, '## ')) {
+                if ($inList) { $html .= '</ul>'; $inList = false; }
+                $html .= '<h3>' . ic_md_inline(substr($trimmed, 3)) . '</h3>';
+                continue;
+            }
+            if (str_starts_with($trimmed, '# ')) {
+                if ($inList) { $html .= '</ul>'; $inList = false; }
+                $html .= '<h2>' . ic_md_inline(substr($trimmed, 2)) . '</h2>';
+                continue;
+            }
+            if (str_starts_with($trimmed, '- ')) {
+                if (!$inList) {
+                    $html .= '<ul>';
+                    $inList = true;
+                }
+                $html .= '<li>' . ic_md_inline(substr($trimmed, 2)) . '</li>';
+                continue;
+            }
+            if ($inList) {
+                $html .= '</ul>';
+                $inList = false;
+            }
+            $html .= '<p>' . ic_md_inline($trimmed) . '</p>';
+        }
+        if ($inList) {
+            $html .= '</ul>';
+        }
+        if ($inCode) {
+            $html .= '<pre class="code">' . htmlspecialchars(implode("\n", $codeBuf), ENT_QUOTES) . '</pre>';
+        }
+        return $html;
+    }
+
+    function ic_md_inline(string $s): string
+    {
+        $s = htmlspecialchars($s, ENT_QUOTES);
+        // Links: [Text](https://... ) oder [Text](/serverrelativ) - nur http(s) und server-relative Pfade.
+        $s = preg_replace('/\[([^\]]+)\]\((https?:\/\/[^)\s]+|\/[^)\s]*)\)/', '<a href="\2">\1</a>', $s) ?? $s;
+        $s = preg_replace('/\*\*(.+?)\*\*/s', '<strong>\1</strong>', $s) ?? $s;
+        $s = preg_replace('/\*(.+?)\*/s', '<em>\1</em>', $s) ?? $s;
+        $s = preg_replace('/`(.+?)`/s', '<code>\1</code>', $s) ?? $s;
+        return $s;
+    }
+
+/**
  * Icon-Klasse fuer ein Modul (#242): Werkstatt-Slug -> CSS-Klasse des
  * Vektor-Icon-Systems (.icn .ic-..., IcoMoon-Auswahl, siehe style.css).
- * Emoji-Icons in der Modulliste bleiben als Datenbestand unberuehrt.
+ * Die Icon-Zuordnung folgt Matthews IcoMoon-Auswahl (Runde 34).
  */
 function ic_module_icon(string $slug): string
 {
     return match ($slug) {
-        'html' => 'ic-palette',
+        'html' => 'ic-embed2',
         'sql' => 'ic-database',
         'netzwerk' => 'ic-earth',
         'code' => 'ic-terminal',
-        'diagramme' => 'ic-share2',
-        'quiz' => 'ic-clipboard',
-        'pruefung' => 'ic-trophy',
-        'wiki' => 'ic-notebook',
+        'diagramme' => 'ic-design',
+        'quiz' => 'ic-trophy3',
+        'pruefung' => 'ic-clipboard2',
         'infobuecher' => 'ic-book',
         'tasks' => 'ic-pencil2',
         default => 'ic-book',
@@ -71,18 +158,18 @@ function ic_module_icon(string $slug): string
 function ic_proj_icon(string $type, string $language): string
 {
     if ($type === 'html') {
-        return '🌐';
+        return '<span class="icn ic-embed2" aria-hidden="true"></span>';
     }
     return match ($language) {
-        'java' => '☕',
-        'python' => '🐍',
-        'asm' => '⚙️',
-        'blocks' => '🧩',
-        'automaton' => '🤖',
-        'pda' => '🥞',
-        'turing' => '🧾',
-        'logic' => '🔌',
-        default => '📄',
+        'java' => '<span class="icn ic-coffee" aria-hidden="true"></span>',
+        'python' => '<span class="icn ic-code" aria-hidden="true"></span>',
+        'asm' => '<span class="icn ic-cog" aria-hidden="true"></span>',
+        'blocks' => '<span class="icn ic-puzzle" aria-hidden="true"></span>',
+        'automaton' => '<span class="icn ic-android" aria-hidden="true"></span>',
+        'pda' => '<span class="icn ic-stack" aria-hidden="true"></span>',
+        'turing' => '<span class="icn ic-list2" aria-hidden="true"></span>',
+        'logic' => '<span class="icn ic-power-cord" aria-hidden="true"></span>',
+        default => '<span class="icn ic-file-text" aria-hidden="true"></span>',
     };
 }
 

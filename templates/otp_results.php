@@ -4,7 +4,7 @@
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
 <section class="hero">
-    <div class="hero-emoji">🔑</div>
+    <div class="hero-emoji"><span class="icn ic-key" aria-hidden="true"></span></div>
     <h1>Neue Einmalpasswörter</h1>
     <p>Die Passwörter gelten ab sofort und sind nur diesmal sichtbar. Bitte ausdrucken oder sicher notieren.</p>
 </section>
@@ -17,7 +17,7 @@
 </div>
 <?php else: ?>
 <div class="notice">
-    <strong>💡 So funktioniert die Satzbaulogik</strong>
+    <strong><span class="icn ic-info" aria-hidden="true"></span> So funktioniert die Satzbaulogik</strong>
     <p>Aus dem Merksatz werden die Anfangsbuchstaben der vier Wörter genommen, dazu zwei Ziffern und ein Sonderzeichen.
     Beispiel: "Apfel, Berg, Katze und Wolke" ergibt <strong>Abkw42!</strong> (A, B, K, W plus Zufallsziffern und -zeichen).
     Der Merksatz ist die Eselsbrücke, damit sich Schülerinnen und Schüler das Einmalpasswort merken können, ohne es aufschreiben zu müssen.</p>
@@ -38,7 +38,7 @@
     </tbody>
 </table>
 <div class="btn-row">
-    <button class="btn btn-ghost" type="button" onclick="window.print()" title="Liste drucken">🖨️</button>
+    <button class="btn btn-ghost" type="button" onclick="window.print()" title="Liste drucken"><span class="icn ic-printer" aria-hidden="true"></span></button>
     <a class="btn btn-primary" href="<?= url('unterricht/klassen') ?>">Fertig, zu meinen Klassen</a>
 </div>
 <?php endif; ?>

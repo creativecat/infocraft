@@ -11,7 +11,7 @@
 $hasPrivacy = $legal['dsb'] !== '' || $legal['hosting'] !== '' || $legal['data'] !== '' || $legal['text'] !== '';
 ?>
 <section class="hero">
-    <div class="hero-emoji">🔒</div>
+    <div class="hero-emoji"><span class="icn ic-lock" aria-hidden="true"></span></div>
     <h1>Datenschutzerklärung</h1>
     <p>Informationen zur Verarbeitung personenbezogener Daten auf dieser Plattform. Die Angaben stammen aus den Admin-Einstellungen.</p>
 </section>

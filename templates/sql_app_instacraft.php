@@ -7,19 +7,19 @@
 <section class="panel">
     <div class="panel-head">
         <div>
-            <h3>📱 <?= e($template->title) ?>-App</h3>
+            <h3><span class="icn ic-mobile" aria-hidden="true"></span> <?= e($template->title) ?>-App</h3>
             <p class="muted">Ein Mobil-Frontend auf deiner SQL-Datenbank (#47): Likes, Kommentare und Follower landen in denselben Tabellen, die du in der Werkstatt mit SELECT abfragst - und umgekehrt.</p>
         </div>
         <div class="btn-row">
-            <a class="btn btn-ghost" href="<?= url('werkstatt/sql/' . e($template->slug)) ?>">← Werkstatt</a>
-            <a class="btn btn-ghost" href="<?= $appUrl ?>">🔄 Aktualisieren</a>
+            <a class="btn btn-ghost" href="<?= url('werkstatt/sql/' . e($template->slug)) ?>"><span class="icn ic-arrow-left" aria-hidden="true"></span> Werkstatt</a>
+            <a class="btn btn-ghost" href="<?= $appUrl ?>"><span class="icn ic-loop2" aria-hidden="true"></span> Aktualisieren</a>
         </div>
     </div>
     <?php if (!$canWrite): ?>
     <div class="notice">Nur Leserechte: Du kannst den Feed anschauen, aber nicht liken oder kommentieren. Deine Lehrkraft kann dir Schreibrechte geben.</div>
     <?php endif; ?>
     <div class="phone-frame">
-        <div class="app-bar">📸 InstaCraft <span class="app-bar-sub">Angemeldet als</span></div>
+        <div class="app-bar"><span class="icn ic-camera" aria-hidden="true"></span> InstaCraft <span class="app-bar-sub">Angemeldet als</span></div>
         <form method="post" action="<?= $appUrl ?>" class="app-who">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="nutzer">
@@ -40,8 +40,8 @@
                 <div class="app-post-text"><?= e($p['beschreibung']) ?></div>
                 <div class="muted app-card-sub"><?= e($p['datum']) ?></div>
                 <div class="app-actions">
-                    <span>❤️ <?= (int) $p['likes'] ?></span>
-                    <span>💬 <?= (int) $p['kommentare'] ?></span>
+                    <span><span class="icn ic-heart" aria-hidden="true"></span> <?= (int) $p['likes'] ?></span>
+                    <span><span class="icn ic-bubble" aria-hidden="true"></span> <?= (int) $p['kommentare'] ?></span>
                 </div>
                 <?php if ($canWrite): ?>
                 <div class="app-actions">
@@ -50,14 +50,14 @@
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="unlike">
                         <input type="hidden" name="post_id" value="<?= (int) $p['id'] ?>">
-                        <button class="btn btn-ghost" type="submit">💙 Liked (zurückziehen)</button>
+                        <button class="btn btn-ghost" type="submit"><span class="icn ic-heart2" aria-hidden="true"></span> Liked (zurückziehen)</button>
                     </form>
                     <?php else: ?>
                     <form method="post" action="<?= $appUrl ?>">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="like">
                         <input type="hidden" name="post_id" value="<?= (int) $p['id'] ?>">
-                        <button class="btn btn-primary" type="submit">🤍 Gefällt mir</button>
+                        <button class="btn btn-primary" type="submit"><span class="icn ic-heart" aria-hidden="true"></span> Gefällt mir</button>
                     </form>
                     <?php endif; ?>
                     <?php if ((int) $p['nutzer_id'] !== (int) $ich['id']): ?>
@@ -73,7 +73,7 @@
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="folgen">
                             <input type="hidden" name="nutzer_id" value="<?= (int) $p['nutzer_id'] ?>">
-                            <button class="btn btn-ghost" type="submit">➕ Folgen</button>
+                            <button class="btn btn-ghost" type="submit"><span class="icn ic-plus" aria-hidden="true"></span> Folgen</button>
                         </form>
                         <?php endif; ?>
                     <?php endif; ?>

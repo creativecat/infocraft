@@ -6,8 +6,8 @@
 <?php /** @var \Infocraft\Models\Exam $exam */ ?>
 <section class="panel">
     <div class="panel-head">
-        <a class="btn btn-ghost" href="<?= url('pruefungen') ?>" title="Übersicht">←</a>
-        <h3><?= e($exam->title) ?> <span class="pill"><?= $exam->kind === 'pruefung' ? '🔒 Prüfung' : '📄 Schularbeit' ?></span> <span class="status status-<?= e($exam->phase === 'vorbereitung' ? 'geplant' : ($exam->phase === 'herausgegeben' ? 'fertig' : 'in-arbeit')) ?>"><?= e($exam->phase) ?></span></h3>
+        <a class="btn btn-ghost" href="<?= url('pruefungen') ?>" title="Übersicht"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
+        <h3><?= e($exam->title) ?> <span class="pill"><?= $exam->kind === 'pruefung' ? '<span class="icn ic-lock" aria-hidden="true"></span> Prüfung' : '<span class="icn ic-file-text" aria-hidden="true"></span> Schularbeit' ?></span> <span class="status status-<?= e($exam->phase === 'vorbereitung' ? 'geplant' : ($exam->phase === 'herausgegeben' ? 'fertig' : 'in-arbeit')) ?>"><?= e($exam->phase) ?></span></h3>
         <span class="muted">ab Jahrgangsstufe <?= e($exam->level) ?><?= $exam->description !== '' ? ' · ' . e($exam->description) : '' ?></span>
     </div>
     <div class="btn-row">
@@ -92,7 +92,7 @@
                             <?php endforeach; ?>
                         </select>
                     </label>
-                    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Hinzufügen">➕</button></div>
+                    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Hinzufügen"><span class="icn ic-plus" aria-hidden="true"></span></button></div>
                 </form>
             </div>
             <div>
@@ -108,7 +108,7 @@
                             <?php endforeach; ?>
                         </select>
                     </label>
-                    <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Vorlage festlegen">📎</button></div>
+                    <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Vorlage festlegen"><span class="icn ic-attachment" aria-hidden="true"></span></button></div>
                 </form>
             </div>
         </div>
@@ -119,7 +119,7 @@
         <?= csrf_field() ?>
         <div class="form-row form">
             <label class="field"><span>Neue Gruppe</span><input type="text" name="name" required maxlength="100" placeholder="z. B. Gruppe A"></label>
-            <button class="btn btn-primary" type="submit" title="Gruppe anlegen">➕</button>
+            <button class="btn btn-primary" type="submit" title="Gruppe anlegen"><span class="icn ic-plus" aria-hidden="true"></span></button>
         </div>
     </form>
 </section>
@@ -149,7 +149,7 @@
         </div>
         <label class="field"><span>Aufgabenstellung (was ist zu tun?)</span><textarea name="description" rows="2" maxlength="2000" placeholder="Beschreibe die Aufgabe für die Schülerinnen und Schüler."></textarea></label>
         <label class="field"><span>Musterlösung</span><textarea name="sample_solution" rows="3" placeholder="Die Lösung, die nach der Herausgabe im Vergleich gezeigt wird."></textarea></label>
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Teilaufgabe hinzufügen">➕</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Teilaufgabe hinzufügen"><span class="icn ic-plus" aria-hidden="true"></span></button></div>
     </form>
 </section>
 
@@ -165,7 +165,7 @@
         <?php if ($group['members'] === []) { continue; } ?>
         <label style="display:block;margin:4px 0;"><input type="checkbox" name="groups[]" value="<?= e($group['id']) ?>" checked> <?= e($group['name']) ?> (<?= count($group['members']) ?>)</label>
         <?php endforeach; ?>
-        <button class="btn btn-primary" type="submit" title="Jetzt starten und austeilen">▶</button>
+        <button class="btn btn-primary" type="submit" title="Jetzt starten und austeilen"><span class="icn ic-play" aria-hidden="true"></span></button>
     </form>
 </section>
 
@@ -181,7 +181,7 @@
             <?= csrf_field() ?>
             <input type="hidden" name="groups[]" value="<?= e($group['id']) ?>">
             <span class="pill"><?= e($group['name']) ?></span>
-            <button class="btn btn-primary" type="submit" title="Diese Gruppe jetzt starten">▶ <?= e($group['name']) ?> jetzt starten (<?= count($group['members']) ?>)</button>
+            <button class="btn btn-primary" type="submit" title="Diese Gruppe jetzt starten"><span class="icn ic-play" aria-hidden="true"></span> <?= e($group['name']) ?> jetzt starten (<?= count($group['members']) ?>)</button>
         </form>
     <?php endforeach; ?>
     <?php if ($works === []): ?>
@@ -203,7 +203,7 @@
     <?php endif; ?>
     <form method="post" action="<?= url('pruefungen/' . $exam->id . '/ende') ?>" style="margin-top:14px;">
         <?= csrf_field() ?>
-        <button class="btn btn-primary" type="submit" title="Abgabe beenden & Korrektur starten">⏹</button>
+        <button class="btn btn-primary" type="submit" title="Abgabe beenden & Korrektur starten"><span class="icn ic-stop" aria-hidden="true"></span></button>
     </form>
 </section>
 
@@ -212,7 +212,7 @@
 <section class="panel">
     <h3>Korrektur läuft</h3>
     <p class="muted">Die Abgabe ist beendet. Jetzt alle Arbeiten bewerten: manuell oder mit einem Klick anonymisiert über die API-Korrektur.</p>
-    <div class="btn-row"><a class="btn btn-primary" href="<?= url('pruefungen/' . $exam->id . '/korrektur') ?>" title="Zur Korrektur">✅</a></div>
+    <div class="btn-row"><a class="btn btn-primary" href="<?= url('pruefungen/' . $exam->id . '/korrektur') ?>" title="Zur Korrektur"><span class="icn ic-checkmark" aria-hidden="true"></span></a></div>
 </section>
 
 <?php else: ?>

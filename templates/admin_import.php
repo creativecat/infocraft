@@ -4,13 +4,13 @@
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
 <section class="hero">
-    <div class="hero-emoji">📥</div>
+    <div class="hero-emoji"><span class="icn ic-download3" aria-hidden="true"></span></div>
     <h1>CSV-Import</h1>
     <p>Klassenlisten importieren: Es werden nur Vorname, Nachname, Klasse und Rolle übernommen, mehr nicht.</p>
 </section>
 
 <div class="notice">
-    <strong>💡 Neue Konten erhalten automatisch ein Einmalpasswort (OTP)</strong>
+    <strong><span class="icn ic-info" aria-hidden="true"></span> Neue Konten erhalten automatisch ein Einmalpasswort (OTP)</strong>
     <p>Nach dem Import erscheint eine Liste mit Anmeldenamen, OTP und Merksatz nach der Satzbaulogik ("Apfel, Berg, Katze und Wolke" ergibt z. B. Abkw42!). Diese Liste ist nur einmal sichtbar, also direkt ausdrucken oder sichern.</p>
 </div>
 
@@ -26,8 +26,8 @@
             <textarea name="csv_text" id="csv-text" rows="6" class="mono" placeholder="Vorname;Nachname;Klasse;Rolle&#10;Mia;Sommer;6R;Schülerin"></textarea>
         </label>
         <div class="btn-row">
-            <button class="btn btn-ghost" type="button" id="fill-example" title="Beispiel einfügen">📋</button>
-            <button class="btn btn-primary" type="submit" title="Import starten">⬆️</button>
+            <button class="btn btn-ghost" type="button" id="fill-example" title="Beispiel einfügen"><span class="icn ic-clipboard" aria-hidden="true"></span></button>
+            <button class="btn btn-primary" type="submit" title="Import starten"><span class="icn ic-arrow-up" aria-hidden="true"></span></button>
         </div>
     </form>
     <p class="muted">Bestehende Konten (gleicher Vor- und Nachname) werden aktualisiert, keine Dubletten angelegt. Neue Konten bekommen einen Anmeldenamen (vorname.nachname) und ein OTP.</p>

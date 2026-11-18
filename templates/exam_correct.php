@@ -6,7 +6,7 @@
 <?php /** @var \Infocraft\Models\User $student */ ?>
 <section class="panel">
     <div class="panel-head">
-        <a class="btn btn-ghost" href="<?= url('pruefungen/' . $exam->id . '/korrektur') ?>" title="Alle Arbeiten">←</a>
+        <a class="btn btn-ghost" href="<?= url('pruefungen/' . $exam->id . '/korrektur') ?>" title="Alle Arbeiten"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
         <h3>Arbeit von <?= e($student->fullName()) ?> <span class="pill"><?= e($exam->title) ?></span></h3>
     </div>
     <?php if ($work !== null): ?>
@@ -25,7 +25,7 @@
         <label class="field"><span>Code der Arbeit</span>
             <textarea name="content" rows="14" class="work-code" spellcheck="false" style="width:100%;font-family:monospace;white-space:pre;"><?= e($projectContent) ?></textarea>
         </label>
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Korrigierte Fassung speichern">💾 Code korrigiert speichern</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Korrigierte Fassung speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span> Code korrigiert speichern</button></div>
     </form>
     <?php else: ?>
     <pre class="work-code"><?= e($projectContent) ?></pre>
@@ -72,5 +72,5 @@
         </div>
     </section>
     <?php endforeach; ?>
-    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Bewertung speichern (zählt als geprüft)">💾</button></div>
+    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Bewertung speichern (zählt als geprüft)"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button></div>
 </form>

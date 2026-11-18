@@ -6,7 +6,7 @@
 <div class="net-layout">
     <aside class="net-side">
         <div class="net-card net-router-card">
-            <h2>📡 Router</h2>
+            <h2><span class="icn ic-satellite-dish" aria-hidden="true"></span> Router</h2>
             <p class="net-muted">Das Zentrum des Netzes. Hier hängst du Geräte an freie Ports.</p>
             <div class="net-router-row"><span>Name</span><strong id="net-router-name">Router</strong></div>
             <div class="net-router-row"><span>IP</span><strong>192.168.0.1</strong></div>
@@ -28,13 +28,13 @@
         </div>
 
         <div class="net-card net-missions-card">
-            <h2>🎯 Missionen</h2>
+            <h2><span class="icn ic-target" aria-hidden="true"></span> Missionen</h2>
             <ul class="net-missions" id="net-missions"></ul>
         </div>
 
         <?php if ($isTeacher): ?>
         <div class="net-card net-level-card">
-            <h2>🎚️ Stufe</h2>
+            <h2><span class="icn ic-volume-low" aria-hidden="true"></span> Stufe</h2>
             <p class="net-muted" id="net-level-badge">Stufe 1 · Basis</p>
             <div class="net-add-row">
                 <button type="button" class="btn net-level-btn net-level-active" id="net-level-1">1 · Basis</button>
@@ -43,7 +43,7 @@
             <p class="net-muted">Stufe 2 zeigt im Browser die Reise des Aufrufs durch die Schichten des OSI-Modells.</p>
         </div>
         <details class="net-card net-teacher-card" id="net-teacher-card">
-            <summary><strong>🧑‍🏫 Netzwerk-Manager</strong> (Lehrkraft)</summary>
+            <summary><strong><span class="icn ic-user" aria-hidden="true"></span><span class="icn ic-office" aria-hidden="true"></span> Netzwerk-Manager</strong> (Lehrkraft)</summary>
             <?php if (!empty($classes)): ?>
             <form method="get" action="<?= url('werkstatt/netzwerk') ?>" class="net-class-pick">
                 <label for="net-class-select">Klasse (gemeinsames Klassennetz):</label>
@@ -59,9 +59,9 @@
             </form>
             <?php endif; ?>
             <div class="net-teacher-actions">
-                <a class="btn" href="<?= url('werkstatt/netzwerk/export' . ($classId !== null ? '?klasse=' . (int) $classId : '')) ?>">💾 Netz sichern (JSON)</a>
-                <button type="button" class="btn" id="net-import-btn">📂 Netz wiederherstellen</button>
-                <button type="button" class="btn net-danger" id="net-reset-btn">♻️ Netz zurücksetzen</button>
+                <a class="btn" href="<?= url('werkstatt/netzwerk/export' . ($classId !== null ? '?klasse=' . (int) $classId : '')) ?>"><span class="icn ic-floppy-disk" aria-hidden="true"></span> Netz sichern (JSON)</a>
+                <button type="button" class="btn" id="net-import-btn"><span class="icn ic-folder-open" aria-hidden="true"></span> Netz wiederherstellen</button>
+                <button type="button" class="btn net-danger" id="net-reset-btn"><span class="icn ic-loop2" aria-hidden="true"></span> Netz zurücksetzen</button>
             </div>
             <input type="file" id="net-import-file" accept="application/json" hidden>
             <p class="net-muted">Sichern vor Stundenende, wiederherstellen am nächsten Tag: So bleibt das Klassennetz über Unterrichtsstunden hinweg erhalten.</p>

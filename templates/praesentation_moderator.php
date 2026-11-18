@@ -9,11 +9,11 @@
  * synchron: Pfeiltasten steuern beide Fenster. */ ?>
 <section class="panel">
     <div class="mod-toolbar">
-        <a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen">←</a>
-        <h3 class="mod-title">🎬 <?= e($presentation->title) ?></h3>
+        <a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
+        <h3 class="mod-title"><span class="icn ic-film" aria-hidden="true"></span> <?= e($presentation->title) ?></h3>
         <span class="pill">Moderator</span>
-        <button class="btn btn-ghost" type="button" id="mod-open" title="Präsentationsansicht im neuen Fenster öffnen (z. B. für den Beamer)">⛶</button>
-        <div class="slide-counter"><button class="btn btn-ghost" type="button" id="mod-prev" title="Zurück (Pfeiltaste links)">◀</button><span id="mod-counter"></span><button class="btn btn-ghost" type="button" id="mod-next" title="Weiter (Pfeiltaste rechts)">▶</button></div>
+        <button class="btn btn-ghost" type="button" id="mod-open" title="Präsentationsansicht im neuen Fenster öffnen (z. B. für den Beamer)"><span class="icn ic-enlarge2" aria-hidden="true"></span></button>
+        <div class="slide-counter"><button class="btn btn-ghost" type="button" id="mod-prev" title="Zurück (Pfeiltaste links)"><span class="icn ic-arrow-left" aria-hidden="true"></span></button><span id="mod-counter"></span><button class="btn btn-ghost" type="button" id="mod-next" title="Weiter (Pfeiltaste rechts)"><span class="icn ic-arrow-right" aria-hidden="true"></span></button></div>
     </div>
 
     <?php if ($slides === []): ?>
@@ -38,29 +38,29 @@
                 <div class="mod-clock" id="mod-clock">--:--</div>
                 <div class="mod-timer" id="mod-timer">00:00</div>
                 <div class="btn-row">
-                    <button class="btn btn-primary" type="button" id="mod-timer-toggle" title="Start">▶</button>
-                    <button class="btn btn-ghost" type="button" id="mod-timer-reset" title="Reset">↺</button>
+                    <button class="btn btn-primary" type="button" id="mod-timer-toggle" title="Start"><span class="icn ic-play" aria-hidden="true"></span></button>
+                    <button class="btn btn-ghost" type="button" id="mod-timer-reset" title="Reset"><span class="icn ic-loop2" aria-hidden="true"></span></button>
                 </div>
             </div>
             <div class="mod-note-box">
-                <h4 class="mod-box-title">🎙 Sprechernotiz <span class="pill">nur für dich</span></h4>
+                <h4 class="mod-box-title"><span class="icn ic-mic" aria-hidden="true"></span> Sprechernotiz <span class="pill">nur für dich</span></h4>
                 <p class="mod-note" id="mod-note"></p>
             </div>
             <div class="mod-note-box">
-                <h4 class="mod-box-title">📝 Eigene Notiz zu dieser Folie <span class="pill">bleibt im Browser</span></h4>
+                <h4 class="mod-box-title"><span class="icn ic-pencil2" aria-hidden="true"></span> Eigene Notiz zu dieser Folie <span class="pill">bleibt im Browser</span></h4>
                 <textarea id="mod-own-note" class="mono" rows="4" placeholder="Didaktischer Kommentar, Zeitmarke, was du betonen willst ..." title="Deine Notiz wird pro Folie im Browser gespeichert (localStorage)"></textarea>
             </div>
             <div class="mod-note-box">
-                <h4 class="mod-box-title">🙋 Fragenspeicher <span class="pill">Zwischenrufe</span></h4>
+                <h4 class="mod-box-title"><span class="icn ic-point-up" aria-hidden="true"></span> Fragenspeicher <span class="pill">Zwischenrufe</span></h4>
                 <div style="display:flex;gap:6px;">
                     <input type="text" id="mod-question-input" placeholder="Frage aus dem Publikum ..." title="Zwischenrufe sammeln und am Stundenende auswerten">
                     <button class="btn btn-primary" type="button" id="mod-question-add" title="Frage merken">＋</button>
                 </div>
                 <ul class="mod-question-list" id="mod-question-list"></ul>
-                <button class="btn btn-ghost" type="button" id="mod-question-clear" title="Alle Fragen löschen (z. B. nach der Auswertung)">🗑 alle löschen</button>
+                <button class="btn btn-ghost" type="button" id="mod-question-clear" title="Alle Fragen löschen (z. B. nach der Auswertung)"><span class="icn ic-bin2" aria-hidden="true"></span> alle löschen</button>
             </div>
             <div class="mod-note-box">
-                <h4 class="mod-box-title">📊 Live-Abstimmung <span class="pill">Klassenzimmer</span></h4>
+                <h4 class="mod-box-title"><span class="icn ic-stats-bars" aria-hidden="true"></span> Live-Abstimmung <span class="pill">Klassenzimmer</span></h4>
                 <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/abstimmung/start') ?>" class="form" id="mod-poll-form">
                     <?= csrf_field() ?>
                     <label class="field"><span>Frage an die Klasse</span>
@@ -72,11 +72,11 @@
                         <input type="text" name="answers[]" maxlength="100" placeholder="Antwort 3 (optional)">
                         <input type="text" name="answers[]" maxlength="100" placeholder="Antwort 4 (optional)">
                     </label>
-                    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Abstimmung starten, die Schülerinnen und Schüler sehen sofort Antwortknöpfe">▶ starten</button></div>
+                    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Abstimmung starten, die Schülerinnen und Schüler sehen sofort Antwortknöpfe"><span class="icn ic-play" aria-hidden="true"></span> starten</button></div>
                 </form>
                 <form method="post" action="<?= url('praesentationen/' . (int) $presentation->id . '/abstimmung/ende') ?>" class="form-inline" id="mod-poll-close" hidden>
                     <?= csrf_field() ?>
-                    <button class="btn btn-ghost" type="submit" title="Abstimmung schließen, Ergebnis bleibt sichtbar">⏹ schließen</button>
+                    <button class="btn btn-ghost" type="submit" title="Abstimmung schließen, Ergebnis bleibt sichtbar"><span class="icn ic-stop" aria-hidden="true"></span> schließen</button>
                 </form>
                 <div id="mod-poll-result" class="mod-poll-result"></div>
             </div>
@@ -233,7 +233,7 @@
       del.className = 'icon-btn';
       del.title = 'Frage erledigt';
       del.setAttribute('data-qi', String(qi));
-      del.appendChild(document.createTextNode('✓'));
+      del.innerHTML = '<span class="icn ic-checkmark" aria-hidden="true"></span>';
       li.appendChild(del);
       questionList.appendChild(li);
     }
@@ -342,14 +342,14 @@
   if (toggleBtn) {
     toggleBtn.addEventListener('click', function () {
       running = !running;
-      toggleBtn.textContent = running ? '⏸ Pause' : '▶ Start';
+      toggleBtn.innerHTML = running ? '<span class="icn ic-stop" aria-hidden="true"></span> Pause' : '<span class="icn ic-play" aria-hidden="true"></span> Start';
     });
   }
   if (resetBtn) {
     resetBtn.addEventListener('click', function () {
       running = false;
       seconds = 0;
-      if (toggleBtn) { toggleBtn.textContent = '▶ Start'; }
+      if (toggleBtn) { toggleBtn.innerHTML = '<span class="icn ic-play" aria-hidden="true"></span> Start'; }
       paintTimer();
     });
   }
@@ -371,7 +371,8 @@
     if (!status || !status.poll) { return; }
     var poll = status.poll;
     var head = document.createElement('p');
-    head.appendChild(document.createTextNode((status.active ? '🔴 läuft: ' : '✅ beendet: ') + poll.question));
+    head.innerHTML = '<span class="icn ' + (status.active ? 'ic-stop' : 'ic-checkmark') + '" aria-hidden="true"></span> ' + (status.active ? 'läuft: ' : 'beendet: ');
+    head.appendChild(document.createTextNode(poll.question));
     pollResult.appendChild(head);
     var maxCount = 1;
     for (var ci = 0; ci < poll.counts.length; ci++) { if (poll.counts[ci] > maxCount) { maxCount = poll.counts[ci]; } }

@@ -4,7 +4,7 @@
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.19.0 */ ?>
 <section class="hero">
-    <div class="hero-emoji">👥</div>
+    <div class="hero-emoji"><span class="icn ic-users2" aria-hidden="true"></span></div>
     <h1>Nutzerverwaltung</h1>
     <p><?= $isAdminView ? 'Alle Konten im Überblick. Für Schülerinnen und Schüler kannst du direkt ein neues Einmalpasswort (OTP) erzeugen.' : 'Die Konten deiner eigenen Klassen im Überblick. Für Schülerinnen und Schüler kannst du direkt ein neues Einmalpasswort (OTP) erzeugen.' ?></p>
 </section>
@@ -19,14 +19,14 @@
 </div>
 
 <div class="notice">
-    <strong>💡 Einmalpasswörter nach Satzbaulogik</strong>
+    <strong><span class="icn ic-info" aria-hidden="true"></span> Einmalpasswörter nach Satzbaulogik</strong>
     <p>Passwörter werden nie frei gewählt: Jedes neue Passwort ist ein OTP aus vier Merkwörtern ("Apfel, Berg, Katze und Wolke" ergibt z. B. Abkw42!). Für ganze Klassen legst du OTPs unter "Meine Klassen" auf einmal an.</p>
 </div>
 
 <section class="panel">
     <div class="panel-head">
-        <h3>📋 Konten<?= $isAdminView ? '' : ' deiner Klassen' ?></h3>
-        <?php if ($isAdminView): ?><a class="btn btn-ghost" href="<?= url('admin/users/csv') ?>" title="Konten als CSV-Datei exportieren">⬇️ CSV-Export</a><?php endif; ?>
+        <h3><span class="icn ic-clipboard" aria-hidden="true"></span> Konten<?= $isAdminView ? '' : ' deiner Klassen' ?></h3>
+        <?php if ($isAdminView): ?><a class="btn btn-ghost" href="<?= url('admin/users/csv') ?>" title="Konten als CSV-Datei exportieren"><span class="icn ic-arrow-down" aria-hidden="true"></span> CSV-Export</a><?php endif; ?>
         <input type="search" id="user-filter" class="input" placeholder="Filtern nach Name, Klasse oder Rolle ...">
     </div>
     <table class="table" id="user-table">
@@ -44,7 +44,7 @@
                 <form method="post" action="<?= url('unterricht/passwort') ?>" class="form-inline">
                     <?= csrf_field() ?>
                     <input type="hidden" name="user_id" value="<?= (int) $u->id ?>">
-                    <button class="btn btn-ghost" type="submit" title="Neues OTP">🔑</button>
+                    <button class="btn btn-ghost" type="submit" title="Neues OTP"><span class="icn ic-key" aria-hidden="true"></span></button>
                 </form>
                 <form method="post" action="<?= url('pruefungen/gruppenschalter') ?>" class="form-inline" title="Feste Prüfungsgruppe">
                     <?= csrf_field() ?>

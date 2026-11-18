@@ -4,11 +4,11 @@
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
 <div class="auth-card">
-    <div class="auth-brand"><span class="brand-mark">🔨</span> <span class="brand-name">Info<strong>Craft</strong></span></div>
+    <div class="auth-brand"><span class="brand-mark"><span class="icn ic-hammer" aria-hidden="true"></span></span> <span class="brand-name">Info<strong>Craft</strong></span></div>
     <p class="auth-sub">Digitale Informatik-Werkstatt</p>
 
     <?php if ($ssoEnabled): ?>
-    <a class="btn btn-primary btn-block" href="<?= url('auth/sso/start') ?>">🔐 Mit Schulkonto anmelden (Microsoft 365)</a>
+    <a class="btn btn-primary btn-block" href="<?= url('auth/sso/start') ?>"><span class="icn ic-lock2" aria-hidden="true"></span> Mit Schulkonto anmelden (Microsoft 365)</a>
     <div class="auth-sep">oder</div>
     <?php endif; ?>
 

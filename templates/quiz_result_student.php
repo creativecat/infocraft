@@ -4,7 +4,7 @@
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
 <section class="hero">
-    <div class="hero-emoji">🏆</div>
+    <div class="hero-emoji"><span class="icn ic-trophy" aria-hidden="true"></span></div>
     <h1><?= e($quiz->title) ?></h1>
     <p class="score-big"><?= e($best['score']) ?> von <?= e($best['total']) ?> richtig</p>
 </section>
@@ -14,7 +14,7 @@
 <section class="panel">
     <div class="panel-head">
         <h3>Frage <?= $index + 1 ?>: <?= e($question['question']) ?></h3>
-        <span class="muted"><?= $given === $correct ? '✅ Richtig' : '❌ Falsch' ?></span>
+        <span class="muted"><?= $given === $correct ? '<span class="icn ic-checkmark" aria-hidden="true"></span> Richtig' : '<span class="icn ic-cross" aria-hidden="true"></span> Falsch' ?></span>
     </div>
     <div class="<?= $given === $correct ? 'review-correct' : 'review-wrong' ?>">
         <p>Richtig: <strong><?= e($question['answer_' . $correct]) ?></strong></p>

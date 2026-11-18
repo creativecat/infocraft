@@ -19,12 +19,12 @@
   /* =================== Konstanten =================== */
 
   var TYPES = {
-    pc: { icon: '💻', label: 'Computer' },
-    phone: { icon: '📱', label: 'Smartphone' },
-    printer: { icon: '🖨️', label: 'Drucker' },
-    webserver: { icon: '🖥️', label: 'Webserver' },
-    dns: { icon: '🧭', label: 'DNS-Server' },
-    ap: { icon: '📶', label: 'Access Point' }
+    pc: { icon: '💻', ic: 'ic-display', label: 'Computer' },
+    phone: { icon: '📱', ic: 'ic-mobile', label: 'Smartphone' },
+    printer: { icon: '🖨️', ic: 'ic-printer', label: 'Drucker' },
+    webserver: { icon: '🖥️', ic: 'ic-cloud', label: 'Webserver' },
+    dns: { icon: '🧭', ic: 'ic-compass', label: 'DNS-Server' },
+    ap: { icon: '📶', ic: 'ic-connection', label: 'Access Point' }
   };
 
   var NEWSPAPER = '<h1>Schulzeitung</h1>'
@@ -329,7 +329,7 @@
       var g = svgEl('g', {});
       g.appendChild(svgEl('rect', { x: cx - rw / 2, y: cy - rh / 2, rx: 10, width: rw, height: rh, class: 'net-router-box' }));
       var label = svgEl('text', { x: cx, y: cy - 8, class: 'net-router-text', 'text-anchor': 'middle' });
-      label.textContent = '📡 ' + (net.router.name || 'Router');
+      label.innerHTML = '<span class="icn ic-satellite-dish" aria-hidden="true"></span> ' + (net.router.name || 'Router');
       g.appendChild(label);
       var ipText = svgEl('text', { x: cx, y: cy + 10, class: 'net-sub', 'text-anchor': 'middle' });
       ipText.textContent = '192.168.0.1';
@@ -442,7 +442,7 @@
       for (var i = 0; i < state.length; i++) {
         var li = doc.createElement('li');
         li.setAttribute('class', state[i].done ? 'net-mission-done' : '');
-        li.textContent = (state[i].done ? '✅ ' : '⬜ ') + state[i].title + ': ' + state[i].text;
+        li.innerHTML = (state[i].done ? '<span class="icn ic-checkmark" aria-hidden="true"></span> ' : '<span class="icn ic-checkbox-unchecked" aria-hidden="true"></span> ') + String(state[i].title).replace(/[&<>]/g, '') + ': ' + String(state[i].text).replace(/[&<>]/g, '');
         list.appendChild(li);
       }
     }
@@ -462,12 +462,14 @@
       if (modal) { modal.setAttribute('hidden', ''); }
     }
 
-    function head(title, sub) {
+    function head(title, sub, icon) {
       var box = el('div', 'net-modal-head');
-      box.appendChild(el('strong', null, title));
+      var strong = el('strong', null, title);
+      if (icon) { strong.innerHTML = '<span class="icn ' + icon + '" aria-hidden="true"></span> ' + title; }
+      box.appendChild(strong);
       if (sub) { box.appendChild(el('span', 'net-muted', sub)); }
       var x = el('button', 'btn net-close');
-      x.textContent = '✕';
+      x.innerHTML = '<span class="icn ic-cross" aria-hidden="true"></span>';
       x.addEventListener('click', closeModal);
       box.appendChild(x);
       return box;
@@ -542,7 +544,7 @@
 
     function routerWindow() {
       var box = el('div', null);
-      box.appendChild(head('📡 ' + (net.router.name || 'Router'), '192.168.0.1 · Verwaltungsoberfläche'));
+      box.appendChild(head(net.router.name || 'Router', '192.168.0.1 · Verwaltungsoberfläche', 'ic-satellite-dish'));
       var passNote = el('p', 'net-muted');
       passNote.textContent = net.router.ssid
         ? 'WLAN "' + net.router.ssid + '" · Passwort: ' + (net.router.pass || '(noch keins)')
@@ -553,7 +555,7 @@
       box.appendChild(ssid);
       box.appendChild(pass);
       var save = el('button', 'btn net-btn');
-      save.textContent = '💾 WLAN speichern';
+      save.innerHTML = '<span class="icn ic-floppy-disk" aria-hidden="true"></span> WLAN speichern';
       save.addEventListener('click', function () {
         var s = doc.getElementById('net-w-ssid');
         var p = doc.getElementById('net-w-pass');
@@ -585,7 +587,7 @@
 
     function browserWindow(d) {
       var box = el('div', null);
-      box.appendChild(head((d.type === 'phone' ? '📱 ' : '💻 ') + d.name, d.ip + (d.wifi ? ' · im WLAN ' + (d.ssid || '') : '')));
+      box.appendChild(head(d.name, d.ip + (d.wifi ? ' · im WLAN ' + (d.ssid || '') : ''), d.type === 'phone' ? 'ic-mobile' : 'ic-display'));
 
       if (d.type === 'phone' && !d.wifi) {
         var note = el('p', 'net-muted', 'Dieses Smartphone ist noch nicht im Netz. Wähle ein WLAN und gib das Passwort ein.');
@@ -609,7 +611,7 @@
         box.appendChild(wrap);
         box.appendChild(field('Passwort', 'input', '', { id: 'net-wlan-pass', type: 'password' }));
         var join = el('button', 'btn net-btn');
-        join.textContent = '📶 Verbinden';
+        join.innerHTML = '<span class="icn ic-connection" aria-hidden="true"></span> Verbinden';
         join.addEventListener('click', function () {
           var sEl = doc.getElementById('net-wlan-sel');
           var pEl = doc.getElementById('net-wlan-pass');
@@ -624,7 +626,7 @@
       input.setAttribute('id', 'net-url-in');
       input.setAttribute('placeholder', '192.168.0.2 oder schulzeitung.net');
       var go = el('button', 'btn net-btn');
-      go.textContent = '➡︎ Öffnen';
+      go.innerHTML = '<span class="icn ic-arrow-right" aria-hidden="true"></span> Öffnen';
       var view = el('div', 'net-view');
       var status = el('div', 'net-status net-muted', 'Bereit. Gib eine Adresse ein.');
       var lastRes = null;
@@ -637,7 +639,7 @@
       }
       if (printers.length > 0) {
         var printBtn = el('button', 'btn net-btn-sm net-print-btn');
-        printBtn.textContent = '🖨️ Auf ' + printers[0].name + ' drucken';
+        printBtn.innerHTML = '<span class="icn ic-printer" aria-hidden="true"></span> Auf ' + printers[0].name + ' drucken';
         printBtn.addEventListener('click', function () {
           act('printPage', { printer: printers[0].id, who: d.name, url: lastUrl });
         });
@@ -651,7 +653,7 @@
         var trace = layerTrace(net, d, lastUrl, lastRes);
         if (trace.length === 0) { return; }
         layersBox = el('details', 'net-layers');
-        layersBox.appendChild(el('summary', null, '🧅 Schichtenansicht (OSI-Modell)'));
+        var osiSum = el('summary', null); osiSum.innerHTML = '<span class="icn ic-stack" aria-hidden="true"></span> Schichtenansicht (OSI-Modell)'; layersBox.appendChild(osiSum);
         for (var i = 0; i < trace.length; i++) {
           var line = el('div', 'net-layer-line');
           line.textContent = 'Schicht ' + trace[i].n + ' · ' + trace[i].name + ': ' + trace[i].text;
@@ -701,7 +703,7 @@
 
     function webserverWindow(d) {
       var box = el('div', null);
-      box.appendChild(head('🖥️ ' + d.name, d.ip + ' · Webseiten verwalten'));
+      box.appendChild(head(d.name, d.ip + ' · Webseiten verwalten', 'ic-cloud'));
       box.appendChild(el('p', 'net-muted', 'Webseiten für: ' + d.name + '. Bearbeite den HTML-Quelltext und schalte die Seite frei, damit sie über die IP oder Domain erreichbar ist.'));
       var mine = [];
       for (var i = 0; i < net.pages.length; i++) {
@@ -710,21 +712,23 @@
       for (var p = 0; p < mine.length; p++) {
         (function (page) {
           var row = el('div', 'net-pagerow');
-          row.appendChild(el('strong', null, page.title + (page.published ? ' 🟢' : ' ⚪')));
+          var pgStrong = el('strong', null, page.title);
+          pgStrong.appendChild(el('span', 'icn ' + (page.published ? 'ic-checkmark' : 'ic-circle'), ''));
+          row.appendChild(pgStrong);
           row.appendChild(el('span', 'net-muted', page.domain ? page.domain : '(nur über IP)'));
           var pub = el('button', 'btn net-btn-sm');
-          pub.textContent = page.published ? '🏁 Sperren' : '🟢 Freischalten';
+          pub.innerHTML = page.published ? '<span class="icn ic-lock" aria-hidden="true"></span> Sperren' : '<span class="icn ic-checkmark" aria-hidden="true"></span> Freischalten';
           pub.addEventListener('click', function () {
             act(page.published ? 'unpublishPage' : 'publishPage', { id: page.id });
           });
           var edit = el('button', 'btn net-btn-sm');
-          edit.textContent = '✏️ Bearbeiten';
+          edit.innerHTML = '<span class="icn ic-pencil" aria-hidden="true"></span> Bearbeiten';
           edit.addEventListener('click', function () { pageEditor(d, page); });
           var del = el('button', 'btn net-btn-sm net-danger');
-          del.textContent = '🗑️';
+          del.innerHTML = '<span class="icn ic-bin2" aria-hidden="true"></span>';
           del.addEventListener('click', function () { act('deletePage', { id: page.id }); });
           var toHtmlBtn = el('button', 'btn net-btn-sm');
-          toHtmlBtn.textContent = '🧱 → HTML-Werkstatt';
+          toHtmlBtn.innerHTML = '<span class="icn ic-cube" aria-hidden="true"></span> in die HTML-Werkstatt';
           toHtmlBtn.addEventListener('click', function () {
             act('toHtml', { id: page.id }, function (res) {
               if (res && res.ok && res.url) { win().location.href = res.url; }
@@ -776,7 +780,7 @@
         projWrap.appendChild(projSel);
         box.appendChild(projWrap);
         var loadHtml = el('button', 'btn net-btn');
-        loadHtml.textContent = '📥 Auf den Webserver laden';
+        loadHtml.innerHTML = '<span class="icn ic-download3" aria-hidden="true"></span> Auf den Webserver laden';
         loadHtml.addEventListener('click', function () {
           var pEl = doc.getElementById('net-html-sel');
           act('fromHtml', { server: d.id, projectId: pEl ? pEl.value : 0 });
@@ -832,13 +836,13 @@
     function pageEditor(d, page) {
       var box = el('div', null);
       var isNew = page === null;
-      box.appendChild(head(isNew ? '✏️ Neue Webseite' : '✏️ ' + page.title, 'Quelltext bearbeiten'));
+      box.appendChild(head(isNew ? 'Neue Webseite' : page.title, 'Quelltext bearbeiten', 'ic-pencil'));
       box.appendChild(field('Titel', 'input', isNew ? 'Meine Seite' : page.title, { id: 'net-pg-title', maxlength: '60' }));
       box.appendChild(field('Domain (für DNS)', 'input', isNew ? '' : page.domain, { id: 'net-pg-domain', maxlength: '40', placeholder: 'z. B. schulzeitung.net' }));
       var ta = field('HTML-Quelltext', 'textarea', isNew ? '<h1>Hallo Welt</h1>\n<p>Meine erste eigene Webseite.</p>' : page.html, { id: 'net-pg-html', rows: '10' });
       box.appendChild(ta);
       var save = el('button', 'btn net-btn');
-      save.textContent = '💾 Speichern';
+      save.innerHTML = '<span class="icn ic-floppy-disk" aria-hidden="true"></span> Speichern';
       save.addEventListener('click', function () {
         var tEl = doc.getElementById('net-pg-title');
         var dEl = doc.getElementById('net-pg-domain');
@@ -870,7 +874,7 @@
 
     function dnsWindow(d) {
       var box = el('div', null);
-      box.appendChild(head('🧭 ' + d.name, d.ip + ' · Domain-Tabelle'));
+      box.appendChild(head(d.name, d.ip + ' · Domain-Tabelle', 'ic-compass'));
       box.appendChild(el('p', 'net-muted', 'Der DNS-Server übersetzt Domainnamen in IP-Adressen. Beim Freischalten einer Webseite erscheint sie hier automatisch.'));
       for (var i = 0; i < net.dns.length; i++) {
         (function (entry) {
@@ -878,7 +882,7 @@
           row.appendChild(el('strong', null, entry.domain));
           row.appendChild(el('span', 'net-muted', '→ ' + entry.ip));
           var del = el('button', 'btn net-btn-sm net-danger');
-          del.textContent = '🗑️';
+          del.innerHTML = '<span class="icn ic-bin2" aria-hidden="true"></span>';
           del.addEventListener('click', function () { act('deleteDns', { id: entry.id }); });
           row.appendChild(del);
           box.appendChild(row);
@@ -902,11 +906,11 @@
 
     function apWindow(d) {
       var box = el('div', null);
-      box.appendChild(head('📶 ' + d.name, d.ip + ' · WLAN-Zugangspunkt'));
+      box.appendChild(head(d.name, d.ip + ' · WLAN-Zugangspunkt', 'ic-connection'));
       box.appendChild(field('WLAN-Name (SSID)', 'input', d.name, { id: 'net-ap-ssid', maxlength: '32' }));
       box.appendChild(field('WLAN-Passwort', 'input', d.pass || '', { id: 'net-ap-pass', maxlength: '32' }));
       var save = el('button', 'btn net-btn');
-      save.textContent = '💾 Speichern';
+      save.innerHTML = '<span class="icn ic-floppy-disk" aria-hidden="true"></span> Speichern';
       save.addEventListener('click', function () {
         var sEl = doc.getElementById('net-ap-ssid');
         var pEl = doc.getElementById('net-ap-pass');
@@ -920,10 +924,10 @@
 
     function printerWindow(d) {
       var box = el('div', null);
-      box.appendChild(head('🖨️ ' + d.name, d.ip + ' · Drucker' + (online(d) ? '' : ' · offline')));
+      box.appendChild(head(d.name, d.ip + ' · Drucker' + (online(d) ? '' : ' · offline'), 'ic-printer'));
       box.appendChild(el('p', 'net-muted', 'Ein Drucker ist flexibel: klassisch per Kabel am Router oder drahtlos per WLAN.'));
       var cableBtn = el('button', 'btn net-btn');
-      cableBtn.textContent = d.cable === false ? '🔌 Kabel anschließen' : '✂️ Kabel trennen (nur noch WLAN)';
+      cableBtn.innerHTML = d.cable === false ? '<span class="icn ic-power-cord" aria-hidden="true"></span> Kabel anschließen' : '<span class="icn ic-scissors" aria-hidden="true"></span> Kabel trennen (nur noch WLAN)';
       cableBtn.addEventListener('click', function () {
         act('setCable', { id: d.id, cable: d.cable === false ? '1' : '0' });
       });
@@ -948,7 +952,7 @@
         box.appendChild(wrap);
         box.appendChild(field('Passwort', 'input', '', { id: 'net-pr-pass', type: 'password' }));
         var join = el('button', 'btn net-btn');
-        join.textContent = '📶 Ins WLAN verbinden';
+        join.innerHTML = '<span class="icn ic-connection" aria-hidden="true"></span> Ins WLAN verbinden';
         join.addEventListener('click', function () {
           var sEl = doc.getElementById('net-pr-wlan');
           var pEl = doc.getElementById('net-pr-pass');
@@ -960,14 +964,14 @@
       }
       box.appendChild(field('Name', 'input', d.name, { id: 'net-ren-name', maxlength: '40' }));
       var ren = el('button', 'btn net-btn');
-      ren.textContent = '💾 Umbenennen';
+      ren.innerHTML = '<span class="icn ic-pencil" aria-hidden="true"></span> Umbenennen';
       ren.addEventListener('click', function () {
         var nEl = doc.getElementById('net-ren-name');
         act('renameDevice', { id: d.id, name: nEl ? nEl.value : '' });
       });
       box.appendChild(ren);
       var del = el('button', 'btn net-btn net-danger');
-      del.textContent = '🗑️ Gerät entfernen';
+      del.innerHTML = '<span class="icn ic-bin2" aria-hidden="true"></span> Gerät entfernen';
       del.addEventListener('click', function () { act('removeDevice', { id: d.id }); closeModal(); });
       box.appendChild(del);
       return box;
@@ -977,18 +981,18 @@
 
     function simpleWindow(d) {
       var box = el('div', null);
-      box.appendChild(head((TYPES[d.type] ? TYPES[d.type].icon : '❓') + ' ' + d.name, d.ip + ' · ' + (TYPES[d.type] ? TYPES[d.type].label : 'Gerät')));
+      box.appendChild(head(d.name, d.ip + ' · ' + (TYPES[d.type] ? TYPES[d.type].label : 'Gerät'), TYPES[d.type] ? TYPES[d.type].ic : 'ic-question'));
       box.appendChild(el('p', 'net-muted', 'Dieses Gerät hängt am Router und ist im Netz erreichbar.'));
       box.appendChild(field('Name', 'input', d.name, { id: 'net-ren-name', maxlength: '40' }));
       var ren = el('button', 'btn net-btn');
-      ren.textContent = '💾 Umbenennen';
+      ren.innerHTML = '<span class="icn ic-pencil" aria-hidden="true"></span> Umbenennen';
       ren.addEventListener('click', function () {
         var nEl = doc.getElementById('net-ren-name');
         act('renameDevice', { id: d.id, name: nEl ? nEl.value : '' });
       });
       box.appendChild(ren);
       var del = el('button', 'btn net-btn net-danger');
-      del.textContent = '🗑️ Gerät entfernen';
+      del.innerHTML = '<span class="icn ic-bin2" aria-hidden="true"></span> Gerät entfernen';
       del.addEventListener('click', function () { act('removeDevice', { id: d.id }); closeModal(); });
       box.appendChild(del);
       return box;

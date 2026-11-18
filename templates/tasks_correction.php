@@ -13,37 +13,37 @@
 $topic = $task->topicId > 0 ? \Infocraft\Models\TaskTopic::find($task->topicId) : null;
 ?>
 <section class="hero">
-    <div class="hero-emoji">✅</div>
+    <div class="hero-emoji"><span class="icn ic-checkmark" aria-hidden="true"></span></div>
     <h1>Korrektur: <?= e($task->title) ?></h1>
     <p>Alle Abgaben dieser Aufgabe auf einen Blick. Trage Note und Kommentar ein, die Schülerinnen und Schüler sehen beides. KI-Vorschläge müssen von dir übernommen werden, bevor sie zählen.</p>
 </section>
 
 <section class="panel">
     <div class="panel-head">
-        <a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool">←</a>
-        <h3><span class="pill"><?= e($task->type) ?> · Jgst. <?= (int) $task->level ?><?= $topic !== null ? ' · 📁 ' . e($topic->name) : '' ?><?= $task->maxPoints > 0 ? ' · max. ' . (int) $task->maxPoints . ' Punkte' : '' ?><?= $task->lateLock === 1 ? ' · 🔒 Frist-Sperre' : '' ?></span> <?= e($task->title) ?></h3>
+        <a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
+        <h3><span class="pill"><?= e($task->type) ?> · Jgst. <?= (int) $task->level ?><?= $topic !== null ? ' · <span class="icn ic-folder" aria-hidden="true"></span> ' . e($topic->name) : '' ?><?= $task->maxPoints > 0 ? ' · max. ' . (int) $task->maxPoints . ' Punkte' : '' ?><?= $task->lateLock === 1 ? ' · <span class="icn ic-lock" aria-hidden="true"></span> Frist-Sperre' : '' ?></span> <?= e($task->title) ?></h3>
     </div>
     <?php if ($task->description !== ''): ?><div class="task-desc"><?= $task->descriptionHtml() ?></div><?php endif; ?>
     <div class="btn-row">
         <?php if ($aiConfigured): ?>
         <form method="post" action="<?= url('aufgaben/' . (int) $task->id . '/ki') ?>" class="form-inline">
             <?= csrf_field() ?>
-            <button class="btn btn-primary" type="submit" title="KI-Erstbewertung für alle offenen Abgaben (anonymisiert)">🤖</button>
+            <button class="btn btn-primary" type="submit" title="KI-Erstbewertung für alle offenen Abgaben (anonymisiert)"><span class="icn ic-android" aria-hidden="true"></span></button>
         </form>
         <?php else: ?>
-        <a class="btn btn-ghost" href="<?= url('aufgaben/ki') ?>">🤖 KI-Schnittstelle einrichten, dann kannst du hier KI-Vorschläge anfordern</a>
+        <a class="btn btn-ghost" href="<?= url('aufgaben/ki') ?>"><span class="icn ic-android" aria-hidden="true"></span> KI-Schnittstelle einrichten, dann kannst du hier KI-Vorschläge anfordern</a>
         <?php endif; ?>
     </div>
     <?php if ($rows === []): ?>
     <p class="muted">Diese Aufgabe ist noch an niemanden ausgeteilt.</p>
     <?php else: ?>
     <p>
-        <span class="pill">👥 <?= (int) $stats['total'] ?> Schülerinnen und Schüler</span>
-        <span class="pill">✍️ <?= (int) $stats['submitted'] ?> abgegeben (<?= $stats['total'] > 0 ? (int) round($stats['submitted'] * 100 / $stats['total']) : 0 ?> %)</span>
+        <span class="pill"><span class="icn ic-users2" aria-hidden="true"></span> <?= (int) $stats['total'] ?> Schülerinnen und Schüler</span>
+        <span class="pill"><span class="icn ic-pencil" aria-hidden="true"></span> <?= (int) $stats['submitted'] ?> abgegeben (<?= $stats['total'] > 0 ? (int) round($stats['submitted'] * 100 / $stats['total']) : 0 ?> %)</span>
         <span class="pill">⏰ <?= (int) $stats['late'] ?> verspätet</span>
-        <span class="pill">✅ <?= (int) $stats['graded'] ?> korrigiert<?= $stats['open'] > 0 ? ' · 🔁 ' . (int) $stats['open'] . ' noch offen' : '' ?></span>
-        <?php if ($stats['avgGrade'] !== null): ?><span class="pill">📊 Notenschnitt: <?= e(number_format($stats['avgGrade'], 2, ',', '')) ?></span><?php endif; ?>
-        <?php if ($task->solutionVisible === 1): ?><span class="pill">💡 Musterlösung für Schülerinnen und Schüler freigegeben</span><?php endif; ?>
+        <span class="pill"><span class="icn ic-checkmark" aria-hidden="true"></span> <?= (int) $stats['graded'] ?> korrigiert<?= $stats['open'] > 0 ? ' · <span class="icn ic-loop2" aria-hidden="true"></span> ' . (int) $stats['open'] . ' noch offen' : '' ?></span>
+        <?php if ($stats['avgGrade'] !== null): ?><span class="pill"><span class="icn ic-stats-bars" aria-hidden="true"></span> Notenschnitt: <?= e(number_format($stats['avgGrade'], 2, ',', '')) ?></span><?php endif; ?>
+        <?php if ($task->solutionVisible === 1): ?><span class="pill"><span class="icn ic-info" aria-hidden="true"></span> Musterlösung für Schülerinnen und Schüler freigegeben</span><?php endif; ?>
     </p>
     <?php endif; ?>
 </section>
@@ -84,13 +84,13 @@ $topic = $task->topicId > 0 ? \Infocraft\Models\TaskTopic::find($task->topicId) 
         <?php if ($row['submission'] !== null): ?>
         <p class="muted">Abgegeben: <?= e($row['submission']['submittedAt']) ?><?= $row['dueAt'] !== null ? ' · Abgabetermin: ' . e($row['dueAt']) . ' Uhr' : '' ?><?= ($row['submission']['selfRating'] ?? 0) > 0 ? ' · Selbsteinschätzung: ' . e(\Infocraft\Models\TaskSubmission::SELF_RATING_LABELS[(int) $row['submission']['selfRating']] ?? '') : '' ?></p>
         <?php if (($row['project'] ?? null) !== null): ?>
-        <p><a class="btn btn-ghost" href="<?= url('werkstatt/' . ($row['project']->type === 'html' ? 'html' : 'code') . '/' . (int) $row['project']->id) ?>" title="Projekt in der Werkstatt öffnen (Quelltext ansehen)">🔗 Projekt: <?= e($row['project']->title) ?></a></p>
+        <p><a class="btn btn-ghost" href="<?= url('werkstatt/' . ($row['project']->type === 'html' ? 'html' : 'code') . '/' . (int) $row['project']->id) ?>" title="Projekt in der Werkstatt öffnen (Quelltext ansehen)"><span class="icn ic-link" aria-hidden="true"></span> Projekt: <?= e($row['project']->title) ?></a></p>
         <?php if ($row['submission']['content'] !== ''): ?><div class="own"><?= e($row['submission']['content']) ?></div><?php endif; ?>
         <details>
             <summary>Quelltext des Projekts ansehen</summary>
             <div class="own" style="white-space:pre-wrap;max-height:40vh;overflow:auto;"><?= e($row['project']->content) ?></div>
             <?php foreach (\Infocraft\Models\ProjectFile::allForProject((int) $row['project']->id) as $projectFile): ?>
-            <p class="muted" style="margin-bottom:2px;">📄 <?= e($projectFile->name) ?></p>
+            <p class="muted" style="margin-bottom:2px;"><span class="icn ic-file-text" aria-hidden="true"></span> <?= e($projectFile->name) ?></p>
             <div class="own" style="white-space:pre-wrap;max-height:25vh;overflow:auto;"><?= e($projectFile->content) ?></div>
             <?php endforeach; ?>
         </details>
@@ -111,6 +111,6 @@ $topic = $task->topicId > 0 ? \Infocraft\Models\TaskTopic::find($task->topicId) 
     </section>
     <?php endforeach; ?>
     <?php if ($rows !== []): ?>
-    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Korrektur speichern (zählt als übernommen)">💾</button></div>
+    <div class="btn-row"><button class="btn btn-primary" type="submit" title="Korrektur speichern (zählt als übernommen)"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button></div>
     <?php endif; ?>
 </form>

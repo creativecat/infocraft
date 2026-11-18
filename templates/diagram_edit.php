@@ -29,8 +29,8 @@ if ($isKlassendiagramm && stripos(ltrim($exportSource), 'classDiagram') !== 0) {
 ?>
 <section class="panel">
     <div class="panel-head">
-        <a class="btn btn-ghost" href="<?= url('diagramme') ?>" title="Zurück">←</a>
-        <h3>📐 <?= e($diagram->title) ?> <span class="pill" id="diagram-kind-pill"><?= e($diagram->kindLabel()) ?></span></h3>
+        <a class="btn btn-ghost" href="<?= url('diagramme') ?>" title="Zurück"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
+        <h3><span class="icn ic-design" aria-hidden="true"></span> <?= e($diagram->title) ?> <span class="pill" id="diagram-kind-pill"><?= e($diagram->kindLabel()) ?></span></h3>
     </div>
 </section>
 
@@ -41,9 +41,9 @@ if ($isKlassendiagramm && stripos(ltrim($exportSource), 'classDiagram') !== 0) {
         <?php if ($switchable): ?>
         <div class="field"><span>Diagrammtyp</span>
             <div class="kind-picker" data-kind-switch="1">
-                <label class="kind-btn"><input type="radio" name="kind" value="struktogramm"<?= $isStruktur ? ' checked' : '' ?>><span>🧱 Struktogramm</span></label>
-                <label class="kind-btn"><input type="radio" name="kind" value="manuell"<?= $isKlassendiagramm ? ' checked' : '' ?>><span>📐 Klassendiagramm</span></label>
-                <label class="kind-btn"><input type="radio" name="kind" value="datenfluss"<?= $isDatenfluss ? ' checked' : '' ?>><span>🌊 Datenflussdiagramm</span></label>
+                <label class="kind-btn"><input type="radio" name="kind" value="struktogramm"<?= $isStruktur ? ' checked' : '' ?>><span><span class="icn ic-cube" aria-hidden="true"></span> Struktogramm</span></label>
+                <label class="kind-btn"><input type="radio" name="kind" value="manuell"<?= $isKlassendiagramm ? ' checked' : '' ?>><span><span class="icn ic-design" aria-hidden="true"></span> Klassendiagramm</span></label>
+                <label class="kind-btn"><input type="radio" name="kind" value="datenfluss"<?= $isDatenfluss ? ' checked' : '' ?>><span><span class="icn ic-wave" aria-hidden="true"></span> Datenflussdiagramm</span></label>
             </div>
             <p class="muted">Der Typwechsel speichert sofort, die Vorschau rechts passt sich direkt an. Alles andere speichert sich automatisch beim Tippen.</p>
         </div>
@@ -124,22 +124,22 @@ Tier &lt;|-- Hund</code></pre>
 speicher "Schuelerliste" -->|Noten| senke "Zeugnis"</code></pre>
             </details>
         </div>
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button></div>
     </form>
     <form method="post" action="<?= url('diagramme/' . (int) $diagram->id . '/loeschen') ?>" class="form-inline" onsubmit="return confirm('Diagramm wirklich löschen?');">
         <?= csrf_field() ?>
-        <button class="btn btn-ghost" type="submit" title="Diagramm löschen">🗑️</button>
+        <button class="btn btn-ghost" type="submit" title="Diagramm löschen"><span class="icn ic-bin2" aria-hidden="true"></span></button>
     </form>
 </section>
 
 <section class="panel" data-diagram-page="1" data-diagram-kind="<?= e($isStruktur ? 'struktogramm' : ($isDatenfluss ? 'datenfluss' : 'manuell')) ?>">
     <div class="panel-head">
-        <h3 id="diagram-preview-title">👁️ <?= $isStruktur ? 'Vorschau (Struktogramm)' : 'Vorschau' ?></h3>
+        <h3 id="diagram-preview-title"><span class="icn ic-eye" aria-hidden="true"></span> <?= $isStruktur ? 'Vorschau (Struktogramm)' : 'Vorschau' ?></h3>
         <div class="btn-row">
             <button class="btn btn-ghost" id="diagram-fit" type="button"<?= $isStruktur ? ' hidden' : '' ?> title="An Fenster anpassen (Umschalten zur Originalgröße)">⤢</button>
-            <button class="btn btn-ghost" id="diagram-fullscreen" type="button" title="Vollbild (Esc beendet)">⛶</button>
-            <button class="btn btn-ghost" id="diagram-refresh" type="button" title="Neu zeichnen">↻</button>
-            <button class="btn btn-primary" id="diagram-png" type="button"<?= $isStruktur ? ' hidden' : '' ?> data-png-name="<?= e(preg_replace('/[^\w.-]+/', '_', $diagram->title)) ?>">🖼️ PNG herunterladen</button>
+            <button class="btn btn-ghost" id="diagram-fullscreen" type="button" title="Vollbild (Esc beendet)"><span class="icn ic-enlarge2" aria-hidden="true"></span></button>
+            <button class="btn btn-ghost" id="diagram-refresh" type="button" title="Neu zeichnen"><span class="icn ic-loop2" aria-hidden="true"></span></button>
+            <button class="btn btn-primary" id="diagram-png" type="button"<?= $isStruktur ? ' hidden' : '' ?> data-png-name="<?= e(preg_replace('/[^\w.-]+/', '_', $diagram->title)) ?>"><span class="icn ic-image" aria-hidden="true"></span> PNG herunterladen</button>
         </div>
     </div>
     <?php if ($isStruktur): ?>

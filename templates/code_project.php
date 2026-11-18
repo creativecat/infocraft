@@ -5,23 +5,23 @@
    Version: 0.18.0 */ ?>
 <section class="panel">
     <div class="panel-head">
-        <a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück">←</a>
-        <h3><?= $project->type === 'html' ? '🌐' : '💻' ?> <?= e($project->title) ?></h3>
+        <a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
+        <h3><?= $project->type === 'html' ? '<span class="icn ic-earth" aria-hidden="true"></span>' : '<span class="icn ic-laptop" aria-hidden="true"></span>' ?> <?= e($project->title) ?></h3>
         <?php if (($presentationTask ?? null) !== null): ?>
-        <span class="pill" title="Präsentationsmodus: Du arbeitest in einer temporären Kopie dieser Aufgabe. Die Aufgabenvorlage und die Materialien bleiben unangetastet, dein Code wird nur hier gespeichert. Mit „Präsentation beenden“ wird die Kopie gelöscht.">🎬 Präsentationsmodus ℹ️</span>
+        <span class="pill" title="Präsentationsmodus: Du arbeitest in einer temporären Kopie dieser Aufgabe. Die Aufgabenvorlage und die Materialien bleiben unangetastet, dein Code wird nur hier gespeichert. Mit „Präsentation beenden“ wird die Kopie gelöscht."><span class="icn ic-film" aria-hidden="true"></span> Präsentationsmodus ℹ</span>
         <?php endif; ?>
         <span class="save-status" id="java-save-info" title="Dein Code wird bei jeder Änderung automatisch gespeichert – auch ohne Speichern-Klick."></span>
     </div>
     <?php if ($isForeign): ?>
     <div class="notice">
-        <strong>🎓 Schülerprojekt von <?= e($ownerName) ?></strong>
+        <strong><span class="icn ic-graduation" aria-hidden="true"></span> Schülerprojekt von <?= e($ownerName) ?></strong>
         <p>Du bist als Lehrkraft hier. Änderungen speicherst du wie gewohnt, die Schülerin oder der Schüler sieht dieselben Dateien. Perfekt, um den Zwischenstand anzusehen oder gemeinsam am Code zu arbeiten.</p>
     </div>
     <?php endif; ?>
     <?php if (($presentationTask ?? null) !== null): ?>
     <div class="two-col pres-task-info">
         <div>
-            <h4 class="diag-head">📝 Aufgabenbeschreibung</h4>
+            <h4 class="diag-head"><span class="icn ic-pencil2" aria-hidden="true"></span> Aufgabenbeschreibung</h4>
             <?php if ($presentationTask->description !== ''): ?>
             <div class="task-desc"><?= $presentationTask->descriptionHtml() ?></div>
             <?php else: ?>
@@ -29,7 +29,7 @@
             <?php endif; ?>
         </div>
         <div>
-            <h4 class="diag-head">📋 ToDos (zum Abhaken)</h4>
+            <h4 class="diag-head"><span class="icn ic-clipboard" aria-hidden="true"></span> ToDos (zum Abhaken)</h4>
             <?php if (($presentationTodos ?? []) !== []): ?>
             <ul class="todo-list" id="pres-todos" data-task="<?= (int) $presentationTask->id ?>">
                 <?php foreach ($presentationTodos as $ptodo): ?>
@@ -45,24 +45,24 @@
             <p class="muted">Für diese Aufgabe sind keine ToDos hinterlegt.</p>
             <?php endif; ?>
             <?php if (($presentationMaterials ?? []) !== []): ?>
-            <h4 class="diag-head">📎 Materialien der Aufgabe</h4>
+            <h4 class="diag-head"><span class="icn ic-attachment" aria-hidden="true"></span> Materialien der Aufgabe</h4>
             <ul class="material-list">
                 <?php foreach ($presentationMaterials as $pmat): ?>
-                <li class="material-item"><a href="<?= url('aufgaben/' . (int) $presentationTask->id . '/material/' . (int) $pmat->id) ?>">📄 <?= e($pmat->filename) ?></a></li>
+                <li class="material-item"><a href="<?= url('aufgaben/' . (int) $presentationTask->id . '/material/' . (int) $pmat->id) ?>"><span class="icn ic-file-text" aria-hidden="true"></span> <?= e($pmat->filename) ?></a></li>
                 <?php endforeach; ?>
             </ul>
             <?php endif; ?>
             <?php if (trim($presentationTask->sampleSolution) !== ''): ?>
             <div class="btn-row">
-                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/loesung/fenster') ?>" target="_blank" title="Musterlösung der Aufgabe in einem eigenen Fenster anzeigen (bleibt unabhängig vom Präsentationsfenster offen, inkl. Erwartungshorizont)">📄 Musterlösung anzeigen</a>
+                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/loesung/fenster') ?>" target="_blank" title="Musterlösung der Aufgabe in einem eigenen Fenster anzeigen (bleibt unabhängig vom Präsentationsfenster offen, inkl. Erwartungshorizont)"><span class="icn ic-file-text" aria-hidden="true"></span> Musterlösung anzeigen</a>
             </div>
             <?php endif; ?>
             <?php if ($project->type === 'code' && $project->language === 'python'): ?>
             <div class="btn-row">
-                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen">⬇️ als Musterlösung herunterladen</a>
+                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen"><span class="icn ic-arrow-down" aria-hidden="true"></span> als Musterlösung herunterladen</a>
                 <form method="post" action="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/ende') ?>" class="form-inline">
                     <?= csrf_field() ?>
-                    <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese temporäre Kopie löschen">✕ beenden und löschen</button>
+                    <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese temporäre Kopie löschen"><span class="icn ic-cross" aria-hidden="true"></span> beenden und löschen</button>
                 </form>
             </div>
             <?php endif; ?>
@@ -72,7 +72,7 @@
     <?php if (($workingTask ?? null) !== null): ?>
     <div class="two-col pres-task-info task-work-info">
         <div>
-            <h4 class="diag-head">📌 Aufgabe: <?= e($workingTask->title) ?></h4>
+            <h4 class="diag-head"><span class="icn ic-pushpin" aria-hidden="true"></span> Aufgabe: <?= e($workingTask->title) ?></h4>
             <?php if ($workingTask->description !== ''): ?>
             <div class="task-desc"><?= $workingTask->descriptionHtml() ?></div>
             <?php else: ?>
@@ -80,7 +80,7 @@
             <?php endif; ?>
         </div>
         <div>
-            <h4 class="diag-head">📋 ToDos (zum Abhaken)</h4>
+            <h4 class="diag-head"><span class="icn ic-clipboard" aria-hidden="true"></span> ToDos (zum Abhaken)</h4>
             <form method="post" action="<?= url('aufgaben/' . (int) $workingTask->id . '/todos/schueler') ?>" class="form">
                 <?= csrf_field() ?>
                 <input type="hidden" name="back" value="<?= url('werkstatt/code/' . (int) $project->id) ?>">
@@ -107,13 +107,13 @@
                 <?= csrf_field() ?>
                 <input type="hidden" name="back" value="<?= url('werkstatt/code/' . (int) $project->id) ?>">
                 <input type="text" name="todo_title" placeholder="Eigenes ToDo ergänzen, z. B. Schleife nochmal üben" maxlength="200">
-                <button class="btn btn-ghost" type="submit" title="Legt ein eigenes ToDo an, das nur du siehst">➕ ToDo</button>
+                <button class="btn btn-ghost" type="submit" title="Legt ein eigenes ToDo an, das nur du siehst"><span class="icn ic-plus" aria-hidden="true"></span> ToDo</button>
             </form>
             <?php if (($workingMaterials ?? []) !== []): ?>
-            <h4 class="diag-head">📎 Materialien der Aufgabe</h4>
+            <h4 class="diag-head"><span class="icn ic-attachment" aria-hidden="true"></span> Materialien der Aufgabe</h4>
             <ul class="material-list">
                 <?php foreach ($workingMaterials as $wmat): ?>
-                <li class="material-item"><a href="<?= url('aufgaben/' . (int) $workingTask->id . '/material/' . (int) $wmat->id) ?>">📄 <?= e($wmat->filename) ?></a></li>
+                <li class="material-item"><a href="<?= url('aufgaben/' . (int) $workingTask->id . '/material/' . (int) $wmat->id) ?>"><span class="icn ic-file-text" aria-hidden="true"></span> <?= e($wmat->filename) ?></a></li>
                 <?php endforeach; ?>
             </ul>
             <?php endif; ?>
@@ -122,7 +122,7 @@
                 <input type="hidden" name="project_id" value="<?= (int) $project->id ?>">
                 <input type="hidden" name="back" value="<?= url('werkstatt/code/' . (int) $project->id) ?>">
                 <div class="btn-row">
-                    <button class="btn btn-primary" type="submit" title="Dieses Projekt als Lösung der Aufgabe einreichen"><?= $workingSubmitted ? 'Neue Version abgeben' : '✅ Abgeben' ?></button>
+                    <button class="btn btn-primary" type="submit" title="Dieses Projekt als Lösung der Aufgabe einreichen"><?= $workingSubmitted ? 'Neue Version abgeben' : '<span class="icn ic-checkmark" aria-hidden="true"></span> Abgeben' ?></button>
                 </div>
             </form>
             <?php if ($workingSubmitted): ?><p class="muted">Dieses Projekt ist als Lösung abgegeben. Du kannst es verbessern und erneut abgeben.</p><?php endif; ?>
@@ -144,7 +144,7 @@
                     <?php if ($file->id > 0): ?>
                     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/datei/' . (int) $file->id . '/loeschen') ?>" class="form-inline ide-file-del">
                         <?= csrf_field() ?>
-                        <button class="btn btn-ghost" type="submit" title="Datei <?= e($file->name) ?> löschen">✕</button>
+                        <button class="btn btn-ghost" type="submit" title="Datei <?= e($file->name) ?> löschen"><span class="icn ic-cross" aria-hidden="true"></span></button>
                     </form>
                     <?php endif; ?>
                 </div>
@@ -157,10 +157,10 @@
             </form>
             <?php if (($presentationTask ?? null) !== null): ?>
             <div class="pres-side-actions">
-                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen">⬇️ Musterlösung</a>
+                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen"><span class="icn ic-arrow-down" aria-hidden="true"></span> Musterlösung</a>
                 <form method="post" action="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/ende') ?>" class="form-inline">
                     <?= csrf_field() ?>
-                    <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese temporäre Kopie löschen">✕ beenden</button>
+                    <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese temporäre Kopie löschen"><span class="icn ic-cross" aria-hidden="true"></span> beenden</button>
                 </form>
             </div>
             <?php endif; ?>
@@ -175,64 +175,64 @@
                 </div>
             </div>
             <?php endforeach; ?>
-            <button class="btn btn-ghost editor-float-btn" type="button" id="java-format" title="Formatieren: rückt deinen Java-Code automatisch ein, 4 Leerzeichen pro Ebene, sauber eingerückt und ausgerückt.">🧹</button>
+            <button class="btn btn-ghost editor-float-btn" type="button" id="java-format" title="Formatieren: rückt deinen Java-Code automatisch ein, 4 Leerzeichen pro Ebene, sauber eingerückt und ausgerückt."><span class="icn ic-magic-wand" aria-hidden="true"></span></button>
             </div>
             <div class="console-errors-box" id="java-errors-box">
-                <div class="console-errors-head">🚨 Fehlerkonsole <span class="err-badge" id="java-error-badge">0</span></div>
+                <div class="console-errors-head"><span class="icn ic-warning" aria-hidden="true"></span> Fehlerkonsole <span class="err-badge" id="java-error-badge">0</span></div>
                 <div class="java-errors" id="java-errors">Noch nichts ausgeführt – hier erscheinen Fehler mit Datei, Zeile und Tipp.</div>
-                <button class="btn btn-ghost" id="java-clear" type="button" title="Leeren">🗑</button>
+                <button class="btn btn-ghost" id="java-clear" type="button" title="Leeren"><span class="icn ic-bin2" aria-hidden="true"></span></button>
             </div>
         </div>
         <div class="ide-console">
             <div class="console-tabs" role="tablist">
-                <button type="button" class="console-tab active" data-ctab="out" title="Ausgabe und Objektkonsole: Startknöpfe, Ausgabe deines Programms und Anweisungsfeld">▶</button>
-                <button type="button" class="console-tab" data-ctab="classes" title="Klassendiagramm: live aus deinem Code, ganz ohne Ausführen">📐</button>
-                <button type="button" class="console-tab" data-ctab="objects" title="Objektdiagramm: alle Objekte mit Attributwerten, Methoden per Klick testen">🧩 <span class="err-badge" id="java-obj-badge">0</span></button>
-                <button type="button" class="console-tab" data-ctab="sprites" title="Sprites: eigene Bilder und Figuren für new Sprite(...)">🖼</button>
-                <button type="button" class="console-tab api-open" id="java-api-open" title="Öffnet die API-Hilfe in einem eigenen Fenster. Es bleibt offen, während du weiterprogrammierst.">📖</button>
+                <button type="button" class="console-tab active" data-ctab="out" title="Ausgabe und Objektkonsole: Startknöpfe, Ausgabe deines Programms und Anweisungsfeld"><span class="icn ic-play" aria-hidden="true"></span></button>
+                <button type="button" class="console-tab" data-ctab="classes" title="Klassendiagramm: live aus deinem Code, ganz ohne Ausführen"><span class="icn ic-design" aria-hidden="true"></span></button>
+                <button type="button" class="console-tab" data-ctab="objects" title="Objektdiagramm: alle Objekte mit Attributwerten, Methoden per Klick testen"><span class="icn ic-puzzle" aria-hidden="true"></span> <span class="err-badge" id="java-obj-badge">0</span></button>
+                <button type="button" class="console-tab" data-ctab="sprites" title="Sprites: eigene Bilder und Figuren für new Sprite(...)"><span class="icn ic-image" aria-hidden="true"></span></button>
+                <button type="button" class="console-tab api-open" id="java-api-open" title="Öffnet die API-Hilfe in einem eigenen Fenster. Es bleibt offen, während du weiterprogrammierst."><span class="icn ic-book" aria-hidden="true"></span></button>
             </div>
             <div class="console-pane" data-cpane="out">
                 <div class="console-run">
-                    <button class="btn btn-primary run-icon" id="run-java" type="button" title="Ausführen (Strg + Enter): dein Programm läuft komplett in deinem Browser." aria-label="Ausführen">▶</button>
-                    <button class="btn btn-ghost run-icon" id="java-step" type="button" title="Einzelschritt: führt genau eine Anweisung aus und zeigt in den Zeilennummern, welche Zeile als Nächstes dran ist." aria-label="Einzelschritt">👣</button>
+                    <button class="btn btn-primary run-icon" id="run-java" type="button" title="Ausführen (Strg + Enter): dein Programm läuft komplett in deinem Browser." aria-label="Ausführen"><span class="icn ic-play" aria-hidden="true"></span></button>
+                    <button class="btn btn-ghost run-icon" id="java-step" type="button" title="Einzelschritt: führt genau eine Anweisung aus und zeigt in den Zeilennummern, welche Zeile als Nächstes dran ist." aria-label="Einzelschritt"><span class="icn ic-next" aria-hidden="true"></span></button>
                     <button class="btn btn-ghost run-icon" id="java-run-rest" type="button" title="Weiter: lässt dein Programm vom Pausenpunkt an bis zum Ende laufen." aria-label="Weiter">⏩</button>
-                    <button class="btn btn-ghost run-icon" id="java-stop" type="button" title="Stopp: hält dein Programm an – die act()-Animation stoppt und ein angefangener Einzelschritt wird abgebrochen." aria-label="Stopp">⏹</button>
+                    <button class="btn btn-ghost run-icon" id="java-stop" type="button" title="Stopp: hält dein Programm an – die act()-Animation stoppt und ein angefangener Einzelschritt wird abgebrochen." aria-label="Stopp"><span class="icn ic-stop" aria-hidden="true"></span></button>
                 </div>
                 <div id="java-step-info" class="step-info"></div>
                 <div class="console-block-title">Ausgabe</div>
                 <pre id="java-console" class="code ide-console-out">Noch nichts ausgeführt.</pre>
                 <div class="console-block-title">Objektkonsole</div>
-                <p class="muted" id="java-repl-hint">Schreibe hier auf mehrere Zeilen, was dein Programm tun soll: Objekte erzeugen und Methoden aufrufen, getrennt vom Entwurf deiner Klassen im Codefenster. ▶ Anweisungen ausführen startet dein Programm automatisch mit.</p>
+                <p class="muted" id="java-repl-hint">Schreibe hier auf mehrere Zeilen, was dein Programm tun soll: Objekte erzeugen und Methoden aufrufen, getrennt vom Entwurf deiner Klassen im Codefenster. <span class="icn ic-play" aria-hidden="true"></span> Anweisungen ausführen startet dein Programm automatisch mit.</p>
                 <div class="repl-edit">
                     <div class="repl-gutter mono" id="java-repl-gutter">1</div>
                     <div class="hlwrap" data-hl="java" data-ac="java"><textarea id="java-repl-in" class="mono" rows="4" autocomplete="off" spellcheck="false"><?= e($replText ?? '') ?></textarea></div>
                 </div>
                 <div class="repl-actions">
-                    <button class="btn btn-primary" id="java-repl-run" type="button" title="Anweisungen ausführen (Strg + Enter): erzeugt die Objekte und ruft die Methoden auf, je Zeile eine Anweisung.">▶ Anweisungen ausführen</button>
+                    <button class="btn btn-primary" id="java-repl-run" type="button" title="Anweisungen ausführen (Strg + Enter): erzeugt die Objekte und ruft die Methoden auf, je Zeile eine Anweisung."><span class="icn ic-play" aria-hidden="true"></span> Anweisungen ausführen</button>
                     <span class="muted">Die Anweisungen bleiben stehen, du kannst sie ändern und erneut ausführen. Sie werden automatisch mit deinem Projekt gespeichert, auch über das Neuladen hinaus.</span>
                 </div>
                 <div id="java-repl-log" class="repl-log"></div>
                 <div id="java-repl-ac" class="ac-box" hidden></div>
             </div>
             <div class="console-pane" data-cpane="classes" hidden>
-                <h4 class="diag-head">📐 Klassendiagramm</h4>
+                <h4 class="diag-head"><span class="icn ic-design" aria-hidden="true"></span> Klassendiagramm</h4>
                 <p class="muted">Live aus deinem Code, ganz ohne Ausführen. Jede Klasse mit harten Ecken: blauer Kopf, Attribute und Methoden mit Strich davor getrennt (+ öffentlich, - privat, # geschützt, ↳ Vererbung). Genau wie in der Diagramm-Werkstatt.</p>
                 <div id="java-classes" class="umldiag"></div>
                 <?php if ($diagramAuto): ?>
                 <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/diagramm') ?>" class="form-inline">
                     <?= csrf_field() ?>
-                    <button class="btn btn-ghost" type="submit" title="In der Diagramm-Werkstatt weiterbearbeiten und als PNG exportieren">📐</button>
+                    <button class="btn btn-ghost" type="submit" title="In der Diagramm-Werkstatt weiterbearbeiten und als PNG exportieren"><span class="icn ic-design" aria-hidden="true"></span></button>
                 </form>
                 <?php else: ?>
                 <p class="muted">Das Übernehmen in die Diagramm-Werkstatt hat deine Lehrkraft für deine Klasse deaktiviert.</p>
                 <?php endif; ?>
             </div>
             <div class="console-pane" data-cpane="objects" hidden>
-                <h4 class="diag-head">🧩 Objektdiagramm <span class="pill">nach UML</span> <details class="hint-details"><summary title="Erklärung zum Objektdiagramm und den anklickbaren Methoden">ℹ️</summary>
+                <h4 class="diag-head"><span class="icn ic-puzzle" aria-hidden="true"></span> Objektdiagramm <span class="pill">nach UML</span> <details class="hint-details"><summary title="Erklärung zum Objektdiagramm und den anklickbaren Methoden">ℹ</summary>
                     <p class="muted">Jedes <code>new</code> landet hier: alle Objekte deines Programms als Kacheln mit abgerundeten Ecken, darunter ihre Attributwerte – die kleine Objektbank neben dem Klassendiagramm, wie in BlueJ.</p>
-                    <p class="muted"><strong>Methoden per Klick testen:</strong> Klicke auf einen Methodennamen unter dem Objekt. Methoden ohne Parameter laufen sofort, Rückgabewert und Ausgaben erscheinen in einer kleinen Blase am Objekt (und im Protokoll der Objektkonsole im Tab ▶). Methoden mit Parametern setzen den Aufruf ins Anweisungsfeld der Objektkonsole, damit du die Argumente ergänzt und ihn dort ausführst.</p>
+                    <p class="muted"><strong>Methoden per Klick testen:</strong> Klicke auf einen Methodennamen unter dem Objekt. Methoden ohne Parameter laufen sofort, Rückgabewert und Ausgaben erscheinen in einer kleinen Blase am Objekt (und im Protokoll der Objektkonsole im Tab <span class="icn ic-play" aria-hidden="true"></span>). Methoden mit Parametern setzen den Aufruf ins Anweisungsfeld der Objektkonsole, damit du die Argumente ergänzt und ihn dort ausführst.</p>
                 </details></h4>
-                <div id="java-objects" class="objdiag">Noch keine Objekte. Klicke oben auf ▶ Ausführen.</div>
+                <div id="java-objects" class="objdiag">Noch keine Objekte. Klicke oben auf <span class="icn ic-play" aria-hidden="true"></span> Ausführen.</div>
             </div>
             <div class="console-pane" data-cpane="sprites" hidden>
                 <p class="muted">Sprites sind fertige Figuren für dein Programm: <code>Sprite s = new Sprite(400, 300, "Schildkröte");</code>. Standard-Figuren: Schildkröte, Auto, Katze, Hund, Fisch, Baum, Wolke, Sonne, Stern, Herz, Raumschiff, Geist, Pilz, Blume.</p>
@@ -240,7 +240,7 @@
                 <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/bild') ?>" enctype="multipart/form-data" class="form-inline sprite-upload">
                     <?= csrf_field() ?>
                     <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp" required title="Bild hochladen (PNG, JPEG, GIF oder WebP, maximal 1 MB)">
-                    <button class="btn btn-primary" type="submit" title="Bild hochladen">Bild hochladen ⬆</button>
+                    <button class="btn btn-primary" type="submit" title="Bild hochladen">Bild hochladen <span class="icn ic-arrow-up" aria-hidden="true"></span></button>
                 </form>
                 <?php if ($images !== []): ?>
                 <div class="ide-img-list">
@@ -251,7 +251,7 @@
                         <code class="muted">new Sprite(x, y, "<?= e($image->name) ?>")</code>
                         <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/bild/' . rawurlencode($image->name) . '/loeschen') ?>" class="form-inline ide-img-del">
                             <?= csrf_field() ?>
-                            <button class="btn btn-ghost" type="submit" title="Bild <?= e($image->name) ?> löschen">✕</button>
+                            <button class="btn btn-ghost" type="submit" title="Bild <?= e($image->name) ?> löschen"><span class="icn ic-cross" aria-hidden="true"></span></button>
                         </form>
                     </div>
                     <?php endforeach; ?>
@@ -265,7 +265,7 @@
                     <p class="muted">Hier stehen alle fertigen Klassen, die du in deinen Java-Programmen benutzen kannst. Zum Aufklappen auf die Überschrift klicken.</p>
 
                     <details open>
-                        <summary>🖨️ Ausgeben und Rechnen (System.out, Math, String, Datenbank)</summary>
+                        <summary><span class="icn ic-printer" aria-hidden="true"></span> Ausgeben und Rechnen (System.out, Math, String, Datenbank)</summary>
                         <table>
                             <tr><td><pre class="code">System.out.println(text);</pre></td><td>Schreibt eine Zeile in die Ausgabe (Zahlen, Text, Rechnungen).</td></tr>
                             <tr><td><pre class="code">System.out.print(text);</pre></td><td>Wie println, aber ohne Zeilenumbruch am Ende.</td></tr>
@@ -283,12 +283,12 @@
                     </details>
 
                     <details>
-                        <summary>👣 Einzelschritt: Anweisung für Anweisung</summary>
-                        <p>Mit <strong>👣 Einzelschritt</strong> führst du genau <em>eine</em> Anweisung aus (z.&nbsp;B. erst das Objekt erzeugen), dann siehst du in den Zeilennummern <strong>gelb markiert</strong>, welche Zeile als Nächstes drankommt. Immer weiterklicken – so siehst du, wie dein Programm Schritt für Schritt läuft. <strong>⏩ Weiter</strong> lässt den Rest bis zum Ende laufen. Fehlerzeilen werden in den Zeilennummern <strong>rot</strong> markiert.</p>
+                        <summary><span class="icn ic-next" aria-hidden="true"></span> Einzelschritt: Anweisung für Anweisung</summary>
+                        <p>Mit <strong><span class="icn ic-next" aria-hidden="true"></span> Einzelschritt</strong> führst du genau <em>eine</em> Anweisung aus (z.&nbsp;B. erst das Objekt erzeugen), dann siehst du in den Zeilennummern <strong>gelb markiert</strong>, welche Zeile als Nächstes drankommt. Immer weiterklicken – so siehst du, wie dein Programm Schritt für Schritt läuft. <strong>⏩ Weiter</strong> lässt den Rest bis zum Ende laufen. Fehlerzeilen werden in den Zeilennummern <strong>rot</strong> markiert.</p>
                     </details>
 
                     <details>
-                        <summary>🖼️ Grafik-Fenster: World und Koordinaten</summary>
+                        <summary><span class="icn ic-image" aria-hidden="true"></span> Grafik-Fenster: World und Koordinaten</summary>
                         <p>Erzeugst du eine Figur oder eine World, öffnet sich das Grafik-Fenster mit einem XY-Feld. <strong>Wichtig:</strong> Der Ursprung (0|0) ist <strong>links oben</strong>, y zeigt nach <strong>unten</strong> – wie in der OnlineIDE/learnj.</p>
                         <table>
                             <tr><td><pre class="code">World w = new World(800, 600);</pre></td><td>Legt die Welt an (Breite, Höhe) und öffnet das Fenster in genau dieser Größe. Ohne eigene World gilt automatisch 800 × 600 (im kleineren Fenster maßstabsgerecht dargestellt).</td></tr>
@@ -306,7 +306,7 @@ Color.darkGray · Color.brown · Color.purple</pre></td><td>Fertige Farben. Übe
                     </details>
 
                     <details>
-                        <summary>⭐ Figuren anlegen: Circle, Rectangle, Text u. a.</summary>
+                        <summary><span class="icn ic-star-full" aria-hidden="true"></span> Figuren anlegen: Circle, Rectangle, Text u. a.</summary>
                         <table>
                             <tr><td><pre class="code">Circle c = new Circle(100, 200, 30);</pre></td><td>Kreis an Position (100|200) mit Radius 30. Für einen einzelnen Punkt nimm einen kleinen Kreis: <code>new Circle(100, 200, 5)</code>.</td></tr>
                             <tr><td><pre class="code">Ellipse e = new Ellipse(100, 200, 40, 20);</pre></td><td>Ellipse mit Radius horizontal (40) und vertikal (20).</td></tr>
@@ -326,7 +326,7 @@ b.setColor(0, 0, Color.red);</pre></td><td>Pixel-Bild: 8 Spalten, 4 Zeilen an Po
                     </details>
 
                     <details>
-                        <summary>🎨 Farben und Rahmen der Figuren</summary>
+                        <summary><span class="icn ic-palette" aria-hidden="true"></span> Farben und Rahmen der Figuren</summary>
                         <table>
                             <tr><td><pre class="code">c.setFillColor(Color.red);</pre></td><td>Füllfarbe. Mit <code>setFillColor(null)</code> wird die Figur nur noch als Rand gezeichnet.</td></tr>
                             <tr><td><pre class="code">c.setBorderColor(Color.black);
@@ -337,7 +337,7 @@ FilledShape.setDefaultFillColor(Color.green);</pre></td><td>Voreinstellungen fü
                     </details>
 
                     <details>
-                        <summary>🔄 Bewegen, Drehen, Spiegeln: alle Figuren</summary>
+                        <summary><span class="icn ic-loop2" aria-hidden="true"></span> Bewegen, Drehen, Spiegeln: alle Figuren</summary>
                         <table>
                             <tr><td><pre class="code">r.move(10, 5);</pre></td><td>Um 10 nach rechts und 5 nach unten verschieben (auch Minus geht: hoch und links).</td></tr>
                             <tr><td><pre class="code">r.rotate(45);</pre></td><td>Um 45 Grad drehen (um die Mitte). Optional mit Drehpunkt: <code>r.rotate(45, 100, 100)</code>.</td></tr>
@@ -352,7 +352,7 @@ r.getX(); · r.getY();</pre></td><td>Welt und Position der Figur abfragen (getX/
                     </details>
 
                     <details>
-                        <summary>🐢 Turtle: Zeichnen wie ein Stift</summary>
+                        <summary><span class="icn ic-brush" aria-hidden="true"></span> Turtle: Zeichnen wie ein Stift</summary>
                         <table>
                             <tr><td><pre class="code">Turtle t = new Turtle();
 Turtle t2 = new Turtle(100, 200);</pre></td><td>Turtle in der Mitte (oder an Position). Sie zeigt zunächst nach rechts und wird als echte Schildkröte gezeichnet.</td></tr>
@@ -365,20 +365,20 @@ t.setBorderWidth(3);</pre></td><td>Stiftfarbe und Strichdicke.</td></tr>
                     </details>
 
                     <details>
-                        <summary>🧩 Sprite: fertige Figuren und eigene Bilder</summary>
+                        <summary><span class="icn ic-puzzle" aria-hidden="true"></span> Sprite: fertige Figuren und eigene Bilder</summary>
                         <p>Mit <code>Sprite</code> zeigst du sofort schöne Figuren – wie in einem echten Spiel. Der Name ist ein String, die Figur sitzt mit ihrer Mitte an der Position:</p>
                         <table>
                             <tr><td><pre class="code">Sprite s = new Sprite(400, 300, "Schildkröte");</pre></td><td>Legt eine Figur an (Mittelpunkt 400|300). Ohne Namen: automatisch die Schildkröte.</td></tr>
                             <tr><td><pre class="code">s.scale(2); · s.rotate(45);
 s.move(10, 0); · s.destroy();</pre></td><td>Wie jede Figur strecken, drehen, bewegen, entfernen – auch <code>setAlpha</code>, <code>setVisible</code>, <code>mirrorX</code> und alles unter „Bewegen, Drehen, Spiegeln“.</td></tr>
                             <tr><td><pre class="code">Sprite a = new Sprite(100, 100, "Auto");</pre></td><td>Standard-Figuren: <code>Schildkröte</code>, <code>Auto</code>, <code>Katze</code>, <code>Hund</code>, <code>Fisch</code>, <code>Baum</code>, <code>Wolke</code>, <code>Sonne</code>, <code>Stern</code>, <code>Herz</code>, <code>Raumschiff</code>, <code>Geist</code>, <code>Pilz</code>, <code>Blume</code>.</td></tr>
-                            <tr><td><pre class="code">Sprite b = new Sprite(400, 300, "Ball");</pre></td><td>Eigene Bilder: Lade rechts im Tab 🖼 (Sprites) eine Grafik hoch (PNG, JPEG, GIF, WebP, maximal 1 MB). Ihr Name ohne Endung ist der Sprite-Name – bei „ball.png“ also <code>"Ball"</code> bzw. <code>"ball"</code>.</td></tr>
+                            <tr><td><pre class="code">Sprite b = new Sprite(400, 300, "Ball");</pre></td><td>Eigene Bilder: Lade rechts im Tab <span class="icn ic-image" aria-hidden="true"></span> (Sprites) eine Grafik hoch (PNG, JPEG, GIF, WebP, maximal 1 MB). Ihr Name ohne Endung ist der Sprite-Name – bei „ball.png“ also <code>"Ball"</code> bzw. <code>"ball"</code>.</td></tr>
                         </table>
-                        <p class="muted">Eigene Bilder gehören zum Projekt: Wenn deine Lehrkraft es austeilt, bekommen alle dieselben Sprites. Die Größe des Grafik-Fensters legst du im Code fest (<code>new World(640, 480)</code>), bei jedem ▶ Ausführen startet es leer, und Schließen/Anzeigen stehen direkt am Grafik-Fenster unten. Und mit <code>class Auto extends Sprite</code> kannst du wie gewohnt <code>act()</code>, Tasten und Maus nutzen.</p>
+                        <p class="muted">Eigene Bilder gehören zum Projekt: Wenn deine Lehrkraft es austeilt, bekommen alle dieselben Sprites. Die Größe des Grafik-Fensters legst du im Code fest (<code>new World(640, 480)</code>), bei jedem <span class="icn ic-play" aria-hidden="true"></span> Ausführen startet es leer, und Schließen/Anzeigen stehen direkt am Grafik-Fenster unten. Und mit <code>class Auto extends Sprite</code> kannst du wie gewohnt <code>act()</code>, Tasten und Maus nutzen.</p>
                     </details>
 
                     <details>
-                        <summary>🎬 Animation mit act() – wie in der OnlineIDE</summary>
+                        <summary><span class="icn ic-film" aria-hidden="true"></span> Animation mit act() – wie in der OnlineIDE</summary>
                         <p>Wenn deine Klasse von einer Figur erbt, kannst du die Methode <code>act()</code> überschreiben. Sie wird automatisch ca. 30-mal pro Sekunde aufgerufen – perfekt für Bewegungen und Spiele:</p>
                         <pre class="code">class Ball extends Circle {
     Ball() { super(100, 100, 20); }
@@ -391,7 +391,7 @@ s.move(10, 0); · s.destroy();</pre></td><td>Wie jede Figur strecken, drehen, be
                     </details>
 
                     <details>
-                        <summary>⌨️ Tastatur und 🖱️ Maus: Ereignisse</summary>
+                        <summary>⌨ Tastatur und <span class="icn ic-mouse" aria-hidden="true"></span> Maus: Ereignisse</summary>
                         <p>Diese Methoden kannst du in deine Klasse schreiben (überschreiben). InfoCraft ruft sie automatisch auf:</p>
                         <table>
                             <tr><td><pre class="code">void onKeyDown(String taste) { ... }
@@ -407,7 +407,7 @@ void onMouseLeave() { ... }</pre></td><td>Maus fährt über die Figur / verläss
                     </details>
 
                     <details>
-                        <summary>👥 Group: Figuren zusammen bewegen + Zusammenstöße</summary>
+                        <summary><span class="icn ic-users2" aria-hidden="true"></span> Group: Figuren zusammen bewegen + Zusammenstöße</summary>
                         <table>
                             <tr><td><pre class="code">Group g = new Group(auto, ball);
 g.add(rad2);</pre></td><td>Gruppe anlegen (oder Figuren einzeln hinzufügen). Eine Figur gehört zu höchstens einer Gruppe.</td></tr>
@@ -419,7 +419,7 @@ g.add(rad2);</pre></td><td>Gruppe anlegen (oder Figuren einzeln hinzufügen). Ei
                     </details>
 
                     <details>
-                        <summary>🔘 Knöpfe und Eingabefelder im Grafik-Fenster</summary>
+                        <summary><span class="icn ic-radio-checked" aria-hidden="true"></span> Knöpfe und Eingabefelder im Grafik-Fenster</summary>
                         <p>Mit diesen Elementen bauen Kinder echte kleine Programme mit Bedienung:</p>
                         <table>
                             <tr><td><pre class="code">Button b = new Button(20, 20, 120, 36);
@@ -446,7 +446,7 @@ rb.setSelected(true);</pre></td><td>Auswahlknopf, <code>rb.isSelected()</code> f
                     </details>
 
                     <details>
-                        <summary>⌨️ Eingabe mit Input – wie in der Online-IDE</summary>
+                        <summary><span class="icn ic-keyboard" aria-hidden="true"></span> Eingabe mit Input – wie in der Online-IDE</summary>
                         <p>Die Klasse <code>Input</code> öffnet ein Dialogfenster und fragt deine Nutzerin oder deinen Nutzer ab. Der zweite Wert ist die Antwort, falls jemand nichts eintippt:</p>
                         <table>
                             <tr><td><pre class="code">String name = Input.readString("Wie heißt du?", "Alex");</pre></td><td>Text eingeben.</td></tr>
@@ -460,7 +460,7 @@ rb.setSelected(true);</pre></td><td>Auswahlknopf, <code>rb.isSelected()</code> f
                     </details>
 
                     <details>
-                        <summary>🎲 Zufall mit Random</summary>
+                        <summary><span class="icn ic-dice" aria-hidden="true"></span> Zufall mit Random</summary>
                         <table>
                             <tr><td><pre class="code">int wurf = Random.randint(1, 6);</pre></td><td>Würfel: eine Zahl von 1 bis 6 (beide Grenzen können kommen).</td></tr>
                             <tr><td><pre class="code">double zufall = Random.randdouble(0, 1);</pre></td><td>Kommazahl zwischen 0 und 1.</td></tr>
@@ -471,8 +471,8 @@ double muecke = wuerfel.nextDouble(); // 0.0 bis 1.0</pre></td><td>Eigenes Zufal
                     </details>
 
                     <details>
-                        <summary>✅ Prüfen mit Assertions: automatische Tests</summary>
-                        <p>Mit <code>Assertions</code> prüft dein Programm sich selbst – wie die Unit-Tests der Profis. Bestandene Prüfungen drucken ein ✓, schlägt eine fehl, stoppt das Programm mit einer klaren Meldung:</p>
+                        <summary><span class="icn ic-checkmark" aria-hidden="true"></span> Prüfen mit Assertions: automatische Tests</summary>
+                        <p>Mit <code>Assertions</code> prüft dein Programm sich selbst – wie die Unit-Tests der Profis. Bestandene Prüfungen drucken ein <span class="icn ic-checkmark" aria-hidden="true"></span>, schlägt eine fehl, stoppt das Programm mit einer klaren Meldung:</p>
                         <pre class="code">Assertions.assertEquals(4, 2 * 2, "Malnehmen stimmt");
 Assertions.assertTrue(name.length() > 0, "Name darf nicht leer sein");
 Assertions.assertFalse(7 < 5, "Sieben ist nicht kleiner als fünf");
@@ -481,7 +481,7 @@ Assertions.assertCodeReached("Das Ende wurde erreicht");</pre>
                     </details>
 
                     <details>
-                        <summary>📐 Rechnen mit Vector2 und MathTools</summary>
+                        <summary><span class="icn ic-design" aria-hidden="true"></span> Rechnen mit Vector2 und MathTools</summary>
                         <p><code>Vector2</code> ist ein Pfeil in der Ebene – perfekt für Bewegungen und Geometrie (gleiche Klasse wie in der Online-IDE):</p>
                         <table>
                             <tr><td><pre class="code">Vector2 v = new Vector2(3, 4);
@@ -504,7 +504,7 @@ MathTools.intersectCircleWithPolygon(mx, my, r, ecken);</pre></td><td>Liegt der 
                     </details>
 
                     <details>
-                        <summary>🧭 Richtung und Position: Direction, Position, CollisionPair</summary>
+                        <summary><span class="icn ic-compass" aria-hidden="true"></span> Richtung und Position: Direction, Position, CollisionPair</summary>
                         <table>
                             <tr><td><pre class="code">Direction.top · Direction.right
 Direction.bottom · Direction.left</pre></td><td>Richtungen wie in der Online-IDE. <code>Direction.getDx(richtung)</code> und <code>Direction.getDy(richtung)</code> geben die Änderung pro Schritt (rechts: +1|0, unten: 0|+1 ...).</td></tr>
@@ -517,7 +517,7 @@ paar.shapeA.getX(); paar.shapeB.getY();</pre></td><td>Merkt sich zwei Figuren, d
                     </details>
 
                     <details>
-                        <summary>🔊 Sound und 🎮 Gamepad</summary>
+                        <summary><span class="icn ic-volume-medium" aria-hidden="true"></span> Sound und <span class="icn ic-gamepad" aria-hidden="true"></span> Gamepad</summary>
                         <table>
                             <tr><td><pre class="code">Sound.playSound("coin");
 Sound.playSound("beep");</pre></td><td>Kurze Töne: beep, click, coin, boom, laser, jump, win, lose, alarm.</td></tr>
@@ -528,7 +528,7 @@ Gamepad.getAxisValue(0, 1);</pre></td><td>Controller abfragen: Nummer des Pads, 
                     </details>
 
                     <details>
-                        <summary>🥧 Kreisbogen und Kreissektor: Arc und Sector</summary>
+                        <summary><span class="icn ic-pie-chart" aria-hidden="true"></span> Kreisbogen und Kreissektor: Arc und Sector</summary>
                         <table>
                             <tr><td><pre class="code">Arc a = new Arc(200, 150, 20, 80, 0, 90);</pre></td><td>Kreisbogen-Ring: Mittelpunkt (200|150), Innenradius 20, Außenradius 80, von 0° bis 90° (0° = rechts, im Uhrzeigersinn).</td></tr>
                             <tr><td><pre class="code">a.setInnerRadius(30); a.setOuterRadius(90);
@@ -541,7 +541,7 @@ s.drawRadii(true);</pre></td><td>Tortenstück („Kuchenstück“) mit Radius 80
                     </details>
 
                     <details>
-                        <summary>🖥 SystemTools: Ausgabe und Tempo</summary>
+                        <summary><span class="icn ic-display" aria-hidden="true"></span> SystemTools: Ausgabe und Tempo</summary>
                         <table>
                             <tr><td><pre class="code">SystemTools.clearScreen();</pre></td><td>Löscht die bisherige Ausgabe.</td></tr>
                             <tr><td><pre class="code">SystemTools.setSpeed(60);
@@ -563,9 +563,9 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
                davon, wie hoch die linke Spalte ist. */ ?>
         <div class="gfx-dock" id="gfx-dock" hidden>
             <div class="gfx-dock-bar">
-                <button class="btn btn-ghost gfx-dock-btn" id="java-gfx-hide" type="button" title="Grafik-Fenster schließen">✕ Schließen</button>
-                <button class="btn btn-ghost gfx-dock-btn" id="java-gfx-open" type="button" title="Grafik-Fenster anzeigen: blendet das Grafik-Fenster wieder ein. Es öffnet sich auch automatisch, sobald dein Programm etwas zeichnet.">🎨 Anzeigen</button>
-                <span class="muted gfx-dock-hint">Größe im Code festlegen: <code>new World(640, 480)</code> (Standard 800 × 600). Bei jedem ▶ Ausführen startet das Fenster leer.</span>
+                <button class="btn btn-ghost gfx-dock-btn" id="java-gfx-hide" type="button" title="Grafik-Fenster schließen"><span class="icn ic-cross" aria-hidden="true"></span> Schließen</button>
+                <button class="btn btn-ghost gfx-dock-btn" id="java-gfx-open" type="button" title="Grafik-Fenster anzeigen: blendet das Grafik-Fenster wieder ein. Es öffnet sich auch automatisch, sobald dein Programm etwas zeichnet."><span class="icn ic-palette" aria-hidden="true"></span> Anzeigen</button>
+                <span class="muted gfx-dock-hint">Größe im Code festlegen: <code>new World(640, 480)</code> (Standard 800 × 600). Bei jedem <span class="icn ic-play" aria-hidden="true"></span> Ausführen startet das Fenster leer.</span>
             </div>
         </div>
     </div>
@@ -585,7 +585,7 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
                     <?php if ($file->id > 0): ?>
                     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/datei/' . (int) $file->id . '/loeschen') ?>" class="form-inline ide-file-del">
                         <?= csrf_field() ?>
-                        <button class="btn btn-ghost" type="submit" title="Datei <?= e($file->name) ?> löschen">✕</button>
+                        <button class="btn btn-ghost" type="submit" title="Datei <?= e($file->name) ?> löschen"><span class="icn ic-cross" aria-hidden="true"></span></button>
                     </form>
                     <?php endif; ?>
                 </div>
@@ -598,10 +598,10 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
             </form>
             <?php if (($presentationTask ?? null) !== null): ?>
             <div class="pres-side-actions">
-                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen">⬇️ Musterlösung</a>
+                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen"><span class="icn ic-arrow-down" aria-hidden="true"></span> Musterlösung</a>
                 <form method="post" action="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/ende') ?>" class="form-inline">
                     <?= csrf_field() ?>
-                    <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese temporäre Kopie löschen">✕ beenden</button>
+                    <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese temporäre Kopie löschen"><span class="icn ic-cross" aria-hidden="true"></span> beenden</button>
                 </form>
             </div>
             <?php endif; ?>
@@ -618,35 +618,35 @@ System.out.println(SystemTools.getPrintLog());</pre></td><td>Alle Ausgaben mitsc
             <?php endforeach; ?>
             </div>
             <div class="console-errors-box" id="asm-errors-box">
-                <div class="console-errors-head">🚨 Fehlerkonsole <span class="err-badge" id="asm-error-badge">0</span></div>
+                <div class="console-errors-head"><span class="icn ic-warning" aria-hidden="true"></span> Fehlerkonsole <span class="err-badge" id="asm-error-badge">0</span></div>
                 <div class="java-errors" id="asm-errors">Noch nichts ausgeführt – hier erscheinen Fehler mit Datei, Zeile und Tipp.</div>
-                <button class="btn btn-ghost" id="asm-clear" type="button" title="Leeren">🗑</button>
+                <button class="btn btn-ghost" id="asm-clear" type="button" title="Leeren"><span class="icn ic-bin2" aria-hidden="true"></span></button>
             </div>
         </div>
         <div class="ide-console">
             <div class="console-tabs" role="tablist">
-                <button type="button" class="console-tab active" data-ctab="out" title="Ausgabe: Startknöpfe, Ausgabe deines Programms und Register">▶</button>
-                <button type="button" class="console-tab" data-ctab="cmd" title="Befehle: alle Assembler-Befehle mit Erklärung">📖</button>
+                <button type="button" class="console-tab active" data-ctab="out" title="Ausgabe: Startknöpfe, Ausgabe deines Programms und Register"><span class="icn ic-play" aria-hidden="true"></span></button>
+                <button type="button" class="console-tab" data-ctab="cmd" title="Befehle: alle Assembler-Befehle mit Erklärung"><span class="icn ic-book" aria-hidden="true"></span></button>
             </div>
             <div class="console-pane" data-cpane="out">
                 <div class="console-run">
-                    <button class="btn btn-primary run-icon" id="run-asm" type="button" title="Ausführen (Strg + Enter): dein Assembler-Programm läuft komplett in deinem Browser." aria-label="Ausführen">▶</button>
-                    <button class="btn btn-ghost run-icon" id="asm-step" type="button" title="Einzelschritt: führt genau einen Befehl aus und markiert in den Zeilennummern, welcher Befehl als Nächster dran ist." aria-label="Einzelschritt">👣</button>
+                    <button class="btn btn-primary run-icon" id="run-asm" type="button" title="Ausführen (Strg + Enter): dein Assembler-Programm läuft komplett in deinem Browser." aria-label="Ausführen"><span class="icn ic-play" aria-hidden="true"></span></button>
+                    <button class="btn btn-ghost run-icon" id="asm-step" type="button" title="Einzelschritt: führt genau einen Befehl aus und markiert in den Zeilennummern, welcher Befehl als Nächster dran ist." aria-label="Einzelschritt"><span class="icn ic-next" aria-hidden="true"></span></button>
                     <button class="btn btn-ghost run-icon" id="asm-run-rest" type="button" title="Weiter: lässt dein Programm vom Pausenpunkt an bis zum Ende laufen." aria-label="Weiter">⏩</button>
-                    <button class="btn btn-ghost run-icon" id="asm-stop" type="button" title="Stopp: hält dein Programm an." aria-label="Stopp">⏹</button>
+                    <button class="btn btn-ghost run-icon" id="asm-stop" type="button" title="Stopp: hält dein Programm an." aria-label="Stopp"><span class="icn ic-stop" aria-hidden="true"></span></button>
                 </div>
                 <div id="asm-step-info" class="step-info"></div>
                 <div class="console-block-title">Ausgabe</div>
                 <pre id="asm-console" class="code ide-console-out">Noch nichts ausgeführt.</pre>
                 <div class="console-block-title">Register</div>
-                <p class="muted">Deine 16 Register mit ihren Werten, live bei jedem ▶ Ausführen und jedem 👣 Einzelschritt. <code>R0</code> bis <code>R15</code>, dahinter die Vergleichsflags und der Programmzähler.</p>
+                <p class="muted">Deine 16 Register mit ihren Werten, live bei jedem <span class="icn ic-play" aria-hidden="true"></span> Ausführen und jedem <span class="icn ic-next" aria-hidden="true"></span> Einzelschritt. <code>R0</code> bis <code>R15</code>, dahinter die Vergleichsflags und der Programmzähler.</p>
                 <div id="asm-registers" class="asm-registers"></div>
                 <div class="console-block-title">Eingabe für IN</div>
                 <p class="muted">Zahlen für <code>IN</code> hineinschreiben, mehrere mit Komma getrennt (z. B. <code>3, 12</code>): <code>IN R1</code> nimmt jeweils die nächste Zahl.</p>
                 <input type="text" id="asm-in" class="mono asm-in" autocomplete="off" spellcheck="false">
             </div>
             <div class="console-pane" data-cpane="cmd" hidden>
-                <h4 class="diag-head">📖 Alle Befehle</h4>
+                <h4 class="diag-head"><span class="icn ic-book" aria-hidden="true"></span> Alle Befehle</h4>
                 <div id="asm-commands" class="asm-commands">
                     <table>
                         <tr><td><pre class="code">LOAD R1, 5
@@ -671,7 +671,7 @@ JLT marke</pre></td><td>Springt, wenn <strong>größer</strong> (JGT) bzw. <stro
                         <tr><td><pre class="code">HALT</pre></td><td>Beendet das Programm. Fehlt HALT, meckert die Fehlerkonsole.</td></tr>
                         <tr><td><pre class="code">; ein Kommentar</pre></td><td>Alles hinter <code>;</code> bis zum Zeilenende wird ignoriert.</td></tr>
                     </table>
-                    <h4 class="diag-head">🎓 Abitur-Befehle (Akkumulator-Maschine)</h4>
+                    <h4 class="diag-head"><span class="icn ic-graduation" aria-hidden="true"></span> Abitur-Befehle (Akkumulator-Maschine)</h4>
                     <p class="muted">Für Abituraufgaben gibt es eine Akkumulator-Maschine: der <strong>Akku</strong> (ganz oben in der Register-Anzeige) ist ein besonderes Register, die Speicherzellen <code>R0</code> bis <code>R15</code> sind der Hauptspeicher. Klein- und Großschreibung sind egal.</p>
                     <table>
                         <tr><td><pre class="code">LOAD #5
@@ -717,13 +717,13 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
             <svg id="amt-canvas" aria-label="Zeichenflaeche des Automaten"></svg>
             <div class="amt-hint" id="amt-hint"></div>
             <div class="amt-toolbar">
-                <button class="btn" data-amt-mode="select" type="button" aria-pressed="true" title="Auswaehlen (a)">☝️</button>
-                <button class="btn" data-amt-mode="state" type="button" aria-pressed="false" title="Zustand anlegen (z)">⭕</button>
-                <button class="btn" data-amt-mode="trans" type="button" aria-pressed="false" title="Uebergang anlegen (u)">➡️</button>
-                <button class="btn" data-amt-mode="delete" type="button" aria-pressed="false" title="Loeschen (l)">🗑️</button>
+                <button class="btn" data-amt-mode="select" type="button" aria-pressed="true" title="Auswaehlen (a)"><span class="icn ic-point-up" aria-hidden="true"></span></button>
+                <button class="btn" data-amt-mode="state" type="button" aria-pressed="false" title="Zustand anlegen (z)"><span class="icn ic-circle" aria-hidden="true"></span></button>
+                <button class="btn" data-amt-mode="trans" type="button" aria-pressed="false" title="Uebergang anlegen (u)"><span class="icn ic-arrow-right" aria-hidden="true"></span></button>
+                <button class="btn" data-amt-mode="delete" type="button" aria-pressed="false" title="Loeschen (l)"><span class="icn ic-bin2" aria-hidden="true"></span></button>
                 <span class="amt-sep"></span>
-                <button class="btn" id="amt-undo" type="button" title="Rueckgaengig (Strg+Z)">↶</button>
-                <button class="btn" id="amt-redo" type="button" title="Wiederholen (Strg+Y)">↷</button>
+                <button class="btn" id="amt-undo" type="button" title="Rueckgaengig (Strg+Z)"><span class="icn ic-undo" aria-hidden="true"></span></button>
+                <button class="btn" id="amt-redo" type="button" title="Wiederholen (Strg+Y)"><span class="icn ic-redo" aria-hidden="true"></span></button>
                 <button class="btn" id="amt-trap" type="button" title="Alle fehlenden Uebergaenge fuehren in einen Trap-Zustand">Trap ergänzen</button>
                 <button class="btn" id="amt-new" type="button" title="Neuer, leerer Automat">Neu</button>
                 <span class="amt-sep"></span>
@@ -745,9 +745,9 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
                 <input class="inp mono" id="amt-word" placeholder="z. B. abba" autocomplete="off" spellcheck="false">
                 <div class="btn-row">
                     <button class="btn btn-primary" id="amt-run" type="button">Prüfen</button>
-                    <button class="btn" id="amt-step" type="button">Schritt ▸</button>
-                    <button class="btn" id="amt-play" type="button">▶ Abspielen</button>
-                    <button class="btn" id="amt-reset" type="button" title="Simulation zuruecksetzen">↺</button>
+                    <button class="btn" id="amt-step" type="button">Schritt <span class="icn ic-next" aria-hidden="true"></span></button>
+                    <button class="btn" id="amt-play" type="button"><span class="icn ic-play" aria-hidden="true"></span> Abspielen</button>
+                    <button class="btn" id="amt-reset" type="button" title="Simulation zuruecksetzen"><span class="icn ic-loop2" aria-hidden="true"></span></button>
                 </div>
                 <div id="amt-out"></div>
             </section>
@@ -786,16 +786,16 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
             <svg id="pda-canvas" aria-label="Zeichenflaeche des Kellerautomaten"></svg>
             <div class="pda-hint" id="pda-hint"></div>
             <div class="pda-toolbar">
-                <button class="btn" data-pda-mode="select" type="button" aria-pressed="true" title="Auswaehlen">☝️</button>
-                <button class="btn" data-pda-mode="state" type="button" aria-pressed="false" title="Zustand anlegen">⭕</button>
-                <button class="btn" data-pda-mode="trans" type="button" aria-pressed="false" title="Uebergang anlegen">➡️</button>
-                <button class="btn" data-pda-mode="delete" type="button" aria-pressed="false" title="Loeschen">🗑️</button>
-                <button class="btn" id="pda-undo" type="button" title="Zurueck (Undo)">↶</button>
-                <button class="btn" id="pda-redo" type="button" title="Wiederherstellen (Redo)">↷</button>
+                <button class="btn" data-pda-mode="select" type="button" aria-pressed="true" title="Auswaehlen"><span class="icn ic-point-up" aria-hidden="true"></span></button>
+                <button class="btn" data-pda-mode="state" type="button" aria-pressed="false" title="Zustand anlegen"><span class="icn ic-circle" aria-hidden="true"></span></button>
+                <button class="btn" data-pda-mode="trans" type="button" aria-pressed="false" title="Uebergang anlegen"><span class="icn ic-arrow-right" aria-hidden="true"></span></button>
+                <button class="btn" data-pda-mode="delete" type="button" aria-pressed="false" title="Loeschen"><span class="icn ic-bin2" aria-hidden="true"></span></button>
+                <button class="btn" id="pda-undo" type="button" title="Zurueck (Undo)"><span class="icn ic-undo" aria-hidden="true"></span></button>
+                <button class="btn" id="pda-redo" type="button" title="Wiederherstellen (Redo)"><span class="icn ic-redo" aria-hidden="true"></span></button>
                 <button class="btn" id="pda-zoom-out" type="button" title="Verkleinern">−</button>
-                <button class="btn" id="pda-fit" type="button" title="Einpassen">⛶</button>
+                <button class="btn" id="pda-fit" type="button" title="Einpassen"><span class="icn ic-enlarge2" aria-hidden="true"></span></button>
                 <button class="btn" id="pda-zoom-in" type="button" title="Vergroessern">＋</button>
-                <button class="btn" id="pda-png" type="button" title="Als PNG laden">🖼️</button>
+                <button class="btn" id="pda-png" type="button" title="Als PNG laden"><span class="icn ic-image" aria-hidden="true"></span></button>
             </div>
             <div class="pop pda-pop" id="pda-pop" hidden>
                 <label for="pda-pop-in" id="pda-pop-lbl">Uebergang</label>
@@ -810,8 +810,8 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
                 <input class="inp mono" id="pda-word" placeholder="z. B. aabb oder ε" autocomplete="off" spellcheck="false">
                 <div class="btn-row">
                     <button class="btn btn-primary" id="pda-run" type="button">Prüfen</button>
-                    <button class="btn" id="pda-play" type="button" title="Schrittweise abspielen">▶ Abspielen</button>
-                    <button class="btn" id="pda-reset" type="button" title="Ausgabe zuruecksetzen">↺</button>
+                    <button class="btn" id="pda-play" type="button" title="Schrittweise abspielen"><span class="icn ic-play" aria-hidden="true"></span> Abspielen</button>
+                    <button class="btn" id="pda-reset" type="button" title="Ausgabe zuruecksetzen"><span class="icn ic-loop2" aria-hidden="true"></span></button>
                 </div>
                 <div id="pda-out"></div>
             </section>
@@ -856,16 +856,16 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
             <svg id="tm-canvas" aria-label="Zeichenflaeche der Turingmaschine"></svg>
             <div class="tm-hint" id="tm-hint"></div>
             <div class="tm-toolbar">
-                <button class="btn" data-tm-mode="select" type="button" aria-pressed="true" title="Auswaehlen">☝️</button>
-                <button class="btn" data-tm-mode="state" type="button" aria-pressed="false" title="Zustand anlegen">⭕</button>
-                <button class="btn" data-tm-mode="rule" type="button" aria-pressed="false" title="Regel anlegen">➡️</button>
-                <button class="btn" data-tm-mode="delete" type="button" aria-pressed="false" title="Loeschen">🗑️</button>
-                <button class="btn" id="tm-undo" type="button" title="Zurueck (Undo)">↶</button>
-                <button class="btn" id="tm-redo" type="button" title="Wiederherstellen (Redo)">↷</button>
+                <button class="btn" data-tm-mode="select" type="button" aria-pressed="true" title="Auswaehlen"><span class="icn ic-point-up" aria-hidden="true"></span></button>
+                <button class="btn" data-tm-mode="state" type="button" aria-pressed="false" title="Zustand anlegen"><span class="icn ic-circle" aria-hidden="true"></span></button>
+                <button class="btn" data-tm-mode="rule" type="button" aria-pressed="false" title="Regel anlegen"><span class="icn ic-arrow-right" aria-hidden="true"></span></button>
+                <button class="btn" data-tm-mode="delete" type="button" aria-pressed="false" title="Loeschen"><span class="icn ic-bin2" aria-hidden="true"></span></button>
+                <button class="btn" id="tm-undo" type="button" title="Zurueck (Undo)"><span class="icn ic-undo" aria-hidden="true"></span></button>
+                <button class="btn" id="tm-redo" type="button" title="Wiederherstellen (Redo)"><span class="icn ic-redo" aria-hidden="true"></span></button>
                 <button class="btn" id="tm-zoom-out" type="button" title="Verkleinern">−</button>
-                <button class="btn" id="tm-fit" type="button" title="Einpassen">⛶</button>
+                <button class="btn" id="tm-fit" type="button" title="Einpassen"><span class="icn ic-enlarge2" aria-hidden="true"></span></button>
                 <button class="btn" id="tm-zoom-in" type="button" title="Vergroessern">＋</button>
-                <button class="btn" id="tm-png" type="button" title="Als PNG laden">🖼️</button>
+                <button class="btn" id="tm-png" type="button" title="Als PNG laden"><span class="icn ic-image" aria-hidden="true"></span></button>
             </div>
             <div class="pop tm-pop" id="tm-pop" hidden>
                 <label for="tm-pop-in" id="tm-pop-lbl">Regel</label>
@@ -880,9 +880,9 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
                 <input class="inp mono" id="tm-word" placeholder="z. B. 1011" autocomplete="off" spellcheck="false">
                 <div class="btn-row">
                     <button class="btn btn-primary" id="tm-run" type="button">Laufen lassen</button>
-                    <button class="btn" id="tm-play" type="button" title="Schrittweise abspielen">▶ Abspielen</button>
-                    <button class="btn" id="tm-step" type="button" title="Einzelne Schritte ansehen">Schritt ▸</button>
-                    <button class="btn" id="tm-reset" type="button" title="Ausgabe zuruecksetzen">↺</button>
+                    <button class="btn" id="tm-play" type="button" title="Schrittweise abspielen"><span class="icn ic-play" aria-hidden="true"></span> Abspielen</button>
+                    <button class="btn" id="tm-step" type="button" title="Einzelne Schritte ansehen">Schritt <span class="icn ic-next" aria-hidden="true"></span></button>
+                    <button class="btn" id="tm-reset" type="button" title="Ausgabe zuruecksetzen"><span class="icn ic-loop2" aria-hidden="true"></span></button>
                 </div>
                 <div id="tm-out"></div>
             </section>
@@ -918,9 +918,9 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
             <svg id="lc-canvas" aria-label="Zeichenflaeche des Schaltwerks"></svg>
             <div class="lc-hint" id="lc-hint"></div>
             <div class="lc-toolbar">
-                <button class="btn" data-lc-mode="select" type="button" aria-pressed="true" title="Schalter umschalten und auswaehlen">☝️</button>
-                <button class="btn" data-lc-mode="place" data-lc-kind="switch" type="button" aria-pressed="false" title="Schalter platzieren">🔲 Schalter</button>
-                <button class="btn" data-lc-mode="place" data-lc-kind="lamp" type="button" aria-pressed="false" title="Lampe platzieren">💡 Lampe</button>
+                <button class="btn" data-lc-mode="select" type="button" aria-pressed="true" title="Schalter umschalten und auswaehlen"><span class="icn ic-point-up" aria-hidden="true"></span></button>
+                <button class="btn" data-lc-mode="place" data-lc-kind="switch" type="button" aria-pressed="false" title="Schalter platzieren"><span class="icn ic-checkbox-unchecked" aria-hidden="true"></span> Schalter</button>
+                <button class="btn" data-lc-mode="place" data-lc-kind="lamp" type="button" aria-pressed="false" title="Lampe platzieren"><span class="icn ic-info" aria-hidden="true"></span> Lampe</button>
                 <button class="btn" data-lc-mode="place" data-lc-kind="and" type="button" aria-pressed="false" title="UND-Gatter platzieren">UND</button>
                 <button class="btn" data-lc-mode="place" data-lc-kind="or" type="button" aria-pressed="false" title="ODER-Gatter platzieren">ODER</button>
                 <button class="btn" data-lc-mode="place" data-lc-kind="not" type="button" aria-pressed="false" title="NICHT-Gatter platzieren">NICHT</button>
@@ -928,8 +928,8 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
                 <button class="btn" data-lc-mode="place" data-lc-kind="xor" type="button" aria-pressed="false" title="XOR-Gatter platzieren">XOR</button>
                 <button class="btn" data-lc-mode="place" data-lc-kind="clock" type="button" aria-pressed="false" title="Taktgeber platzieren">⏱ Takt</button>
                 <button class="btn" data-lc-mode="place" data-lc-kind="dff" type="button" aria-pressed="false" title="D-Flipflop platzieren">D-FF</button>
-                <button class="btn" data-lc-mode="wire" type="button" aria-pressed="false" title="Draht ziehen">🔌 Draht</button>
-                <button class="btn" data-lc-mode="delete" type="button" aria-pressed="false" title="Loeschen">🗑️</button>
+                <button class="btn" data-lc-mode="wire" type="button" aria-pressed="false" title="Draht ziehen"><span class="icn ic-power-cord" aria-hidden="true"></span> Draht</button>
+                <button class="btn" data-lc-mode="delete" type="button" aria-pressed="false" title="Loeschen"><span class="icn ic-bin2" aria-hidden="true"></span></button>
             </div>
         </section>
         <aside class="lc-side">
@@ -938,7 +938,7 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
                 <h3>Auswertung</h3>
                 <div class="btn-row">
                     <button class="btn btn-primary" id="lc-eval" type="button">Auswerten</button>
-                    <button class="btn" id="lc-clock" type="button" title="Taktgeber laufen lassen oder stoppen">▶ Takt</button>
+                    <button class="btn" id="lc-clock" type="button" title="Taktgeber laufen lassen oder stoppen"><span class="icn ic-play" aria-hidden="true"></span> Takt</button>
                 </div>
                 <div id="lc-out"></div>
             </section>
@@ -969,15 +969,15 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
         </div>
         <aside class="blk-stage-col">
             <div class="blk-stagebar">
-                <button class="btn btn-primary" id="blk-flag" type="button" title="Start: alle ▶-Skripte laufen los">▶</button>
-                <button class="btn" id="blk-stop" type="button" title="Stop: alle laufenden Skripte anhalten">⏹</button>
+                <button class="btn btn-primary" id="blk-flag" type="button" title="Start: alle Skripte laufen los"><span class="icn ic-play" aria-hidden="true"></span></button>
+                <button class="btn" id="blk-stop" type="button" title="Stop: alle laufenden Skripte anhalten"><span class="icn ic-stop" aria-hidden="true"></span></button>
                 <button class="btn" id="blk-templates" type="button" title="Beispielprogramm laden (#142)">Vorlagen</button>
-                <button class="btn" id="blk-full" type="button" title="Buehne im Vollbild anzeigen (#143)">⛶</button>
+                <button class="btn" id="blk-full" type="button" title="Buehne im Vollbild anzeigen (#143)"><span class="icn ic-enlarge2" aria-hidden="true"></span></button>
                 <span class="blk-switch" id="blk-mode" role="group" aria-label="Modus der Werkstatt">
-                    <button class="btn blk-switch-btn<?= $blkMode === 'expert' ? '' : ' active' ?>" id="blk-mode-learn" type="button" aria-pressed="<?= $blkMode === 'expert' ? 'false' : 'true' ?>" title="Lernmodus: die Grundbausteine für den Einstieg (#161)">🧠 Lernmodus</button>
-                    <button class="btn blk-switch-btn<?= $blkMode === 'expert' ? ' active' : '' ?>" id="blk-mode-expert" type="button" aria-pressed="<?= $blkMode === 'expert' ? 'true' : 'false' ?>" title="Expertenmodus: mehr Blöcke, Code-Ansicht und Konsole (#161)">🎓 Expertenmodus</button>
+                    <button class="btn blk-switch-btn<?= $blkMode === 'expert' ? '' : ' active' ?>" id="blk-mode-learn" type="button" aria-pressed="<?= $blkMode === 'expert' ? 'false' : 'true' ?>" title="Lernmodus: die Grundbausteine für den Einstieg (#161)"><span class="icn ic-brain" aria-hidden="true"></span> Lernmodus</button>
+                    <button class="btn blk-switch-btn<?= $blkMode === 'expert' ? ' active' : '' ?>" id="blk-mode-expert" type="button" aria-pressed="<?= $blkMode === 'expert' ? 'true' : 'false' ?>" title="Expertenmodus: mehr Blöcke, Code-Ansicht und Konsole (#161)"><span class="icn ic-graduation" aria-hidden="true"></span> Expertenmodus</button>
                 </span>
-                <button class="btn" id="blk-code" type="button" data-port="<?= url('werkstatt/code/blocks/port') ?>" title="Block-Programm als Java oder Python anzeigen (#140)">🐍 Java / Python</button>
+                <button class="btn" id="blk-code" type="button" data-port="<?= url('werkstatt/code/blocks/port') ?>" title="Block-Programm als Java oder Python anzeigen (#140)"><span class="icn ic-code" aria-hidden="true"></span> Java / Python</button>
                 <span class="muted" id="blk-runinfo"></span>
             </div>
             <div class="blk-stage" id="blk-stage">
@@ -998,7 +998,7 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
     </div>
     <section class="panel">
         <div class="panel-head">
-            <h3>📚 Befehlsübersicht</h3>
+            <h3><span class="icn ic-books" aria-hidden="true"></span> Befehlsübersicht</h3>
         </div>
         <p class="muted">Alle Blöcke mit Erklärung - automatisch aus derselben Registry erzeugt, die auch die Palette füllt.</p>
         <div id="blk-help" class="blk-help"></div>
@@ -1012,7 +1012,7 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
                 <textarea name="content" id="code-editor" rows="18" class="mono code-editor" spellcheck="false"><?= e($project->content) ?></textarea>
             </div>
         </label>
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button></div>
     </form>
     <?php endif; ?>
 </section>
@@ -1020,13 +1020,13 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
 <?php if ($project->type === 'code' && $project->language === 'python'): ?>
 <section class="panel">
     <div class="panel-head">
-        <h3>📐 Klassendiagramm</h3>
+        <h3><span class="icn ic-design" aria-hidden="true"></span> Klassendiagramm</h3>
     </div>
     <?php if ($diagramAuto): ?>
     <p class="muted">Aus diesem <?= e($project->language ?? 'Code') ?>-Skript wird automatisch ein Klassendiagramm erzeugt (Klassen, Attribute, Methoden, Vererbung). Danach kannst du es weiterbearbeiten und als PNG exportieren.</p>
     <form method="post" action="<?= url('werkstatt/code/' . (int) $project->id . '/diagramm') ?>" class="form-inline">
         <?= csrf_field() ?>
-        <button class="btn btn-primary" type="submit" title="Klassendiagramm erzeugen">📐</button>
+        <button class="btn btn-primary" type="submit" title="Klassendiagramm erzeugen"><span class="icn ic-design" aria-hidden="true"></span></button>
     </form>
     <?php else: ?>
     <div class="notice">
@@ -1041,8 +1041,8 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
 <?php if ($project->type === 'code' && $project->language === 'python'): ?>
 <section class="panel">
     <div class="panel-head">
-        <h3>▶️ Python ausführen</h3>
-        <button class="btn btn-primary" id="run-python" type="button" title="Los">▶</button>
+        <h3><span class="icn ic-play" aria-hidden="true"></span> Python ausführen</h3>
+        <button class="btn btn-primary" id="run-python" type="button" title="Los"><span class="icn ic-play" aria-hidden="true"></span></button>
     </div>
     <p class="muted">Dein Programm läuft vollständig in deinem Browser (Pyodide): Es wird kein Code auf dem Server ausgeführt. Mit Strg + Enter startest du ebenfalls. Beim ersten Start wird Python geladen, das dauert einen Moment.</p>
     <pre id="code-output" class="code">Noch nichts ausgeführt.</pre>
@@ -1067,7 +1067,7 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
 <?php elseif ($project->type === 'html'): ?>
 <section class="panel">
     <div class="notice">
-        <strong>💡 Tipp</strong>
+        <strong><span class="icn ic-info" aria-hidden="true"></span> Tipp</strong>
         <p>Für HTML-Seiten gibt es die <a href="<?= url('werkstatt/html') ?>">HTML-Werkstatt</a> mit Sofortvorschau beim Tippen.</p>
     </div>
 </section>
@@ -1080,9 +1080,9 @@ HOLD</pre></td><td>Beendet das Programm (bedeuten dasselbe wie <code>HALT</code>
     <input type="hidden" id="java-db-ro" value="1">
     <?php endif; ?>
     <div class="panel-head">
-        <h3>💾 Mini-Datenbank: SQL direkt in Java</h3>
+        <h3><span class="icn ic-floppy-disk" aria-hidden="true"></span> Mini-Datenbank: SQL direkt in Java</h3>
         <?php if (!empty($dbReadOnly)): ?>
-        <span class="pill" title="Deine Lehrkraft hat diese Datenbank nur mit Leserechten an die Aufgabe angehängt: Alle arbeiten mit denselben Daten, SELECT und Database.query sind erlaubt, schreibende Befehle sind gesperrt.">🔒 Nur Leserechte</span>
+        <span class="pill" title="Deine Lehrkraft hat diese Datenbank nur mit Leserechten an die Aufgabe angehängt: Alle arbeiten mit denselben Daten, SELECT und Database.query sind erlaubt, schreibende Befehle sind gesperrt."><span class="icn ic-lock" aria-hidden="true"></span> Nur Leserechte</span>
         <?php endif; ?>
     </div>
     <p>Die eingebaute Klasse <code>Database</code> speichert Tabellen im Speicher deines Browsers – ganz ohne Installation:</p>
@@ -1093,14 +1093,14 @@ System.out.println(Database.query("SELECT * FROM schueler WHERE punkte > 10"));
 int anzahl = Database.count("SELECT * FROM schueler");   // Zeilen einer Abfrage
 String beste = Database.value("SELECT name FROM schueler ORDER BY punkte DESC");
 System.out.println(Database.tables());                     // alle Tabellen</pre>
-    <p class="muted">Verfügbar: <code>execute</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>query</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>count</code> die Zeilenanzahl, <code>value</code> den ersten Wert, <code>tables</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank bleibt mit deinem Projekt gespeichert: Bei jedem ▶ Ausführen startet sie mit den Tabellen und Daten aus deinem letzten Stand (und der Beispieldatenbank deiner Aufgabe, falls die Lehrkraft eine .sql-Datei als Material angehängt hat).</p>
+    <p class="muted">Verfügbar: <code>execute</code> für CREATE TABLE, INSERT, UPDATE, DELETE und DROP TABLE; <code>query</code> liefert das SELECT-Ergebnis als formatierte Tabelle, <code>count</code> die Zeilenanzahl, <code>value</code> den ersten Wert, <code>tables</code> die vorhandenen Tabellen. Text in SQL gehört in einfache Anführungszeichen ('Anna'), Zahlen ohne (12). Die Datenbank bleibt mit deinem Projekt gespeichert: Bei jedem <span class="icn ic-play" aria-hidden="true"></span> Ausführen startet sie mit den Tabellen und Daten aus deinem letzten Stand (und der Beispieldatenbank deiner Aufgabe, falls die Lehrkraft eine .sql-Datei als Material angehängt hat).</p>
 
     <?php if (!empty($dbTemplates)): ?>
     <form method="post" enctype="multipart/form-data" action="<?= url('werkstatt/code/' . $project->id . '/datenbank/datei') ?>" class="form-inline db-load-form">
         <?= csrf_field() ?>
         <label for="db-sql-file"><strong>Eigene SQL-Datei:</strong></label>
         <input type="file" name="sql_file" id="db-sql-file" accept=".sql" required>
-        <button class="btn btn-ghost" type="submit" title="Lädt eine eigene .sql-Datei mit CREATE TABLE- und INSERT-Befehlen als Mini-Datenbank deines Projekts.">📤 SQL-Datei hochladen</button>
+        <button class="btn btn-ghost" type="submit" title="Lädt eine eigene .sql-Datei mit CREATE TABLE- und INSERT-Befehlen als Mini-Datenbank deines Projekts."><span class="icn ic-share" aria-hidden="true"></span> SQL-Datei hochladen</button>
     </form>
     <form method="post" action="<?= url('werkstatt/code/' . $project->id . '/datenbank') ?>" class="form-inline db-load-form">
         <?= csrf_field() ?>
@@ -1111,18 +1111,18 @@ System.out.println(Database.tables());                     // alle Tabellen</pre
             <option value="<?= (int) $dbTemplate->id ?>"><?= e($dbTemplate->title) ?></option>
             <?php endforeach; ?>
         </select>
-        <button class="btn btn-ghost" type="submit" title="Ersetzt die Mini-Datenbank durch die gewählte Beispieldatenbank mit ihren Tabellen und Daten.">📦 Laden</button>
+        <button class="btn btn-ghost" type="submit" title="Ersetzt die Mini-Datenbank durch die gewählte Beispieldatenbank mit ihren Tabellen und Daten."><span class="icn ic-box" aria-hidden="true"></span> Laden</button>
     </form>
     <p class="muted">Ersetzt deine aktuelle Mini-Datenbank durch die Tabellen und Daten der gewählten Vorlage (z. B. Schule oder Schulbibliothek). Eigene Tabellen und Daten gehen dabei verloren.</p>
     <?php endif; ?>
 
     <div class="db-two-col">
         <div class="db-block">
-            <h4 class="diag-head">🗄 Vorhandene Tabellen</h4>
-            <p class="muted">Alle Tabellen und Spalten deiner Datenbank, live nach jedem ▶ Ausführen: Hier siehst du, worauf dein Programm zugreifen kann (<code>Database.execute(...)</code> und <code>Database.query(...)</code>).</p>
+            <h4 class="diag-head"><span class="icn ic-database" aria-hidden="true"></span> Vorhandene Tabellen</h4>
+            <p class="muted">Alle Tabellen und Spalten deiner Datenbank, live nach jedem <span class="icn ic-play" aria-hidden="true"></span> Ausführen: Hier siehst du, worauf dein Programm zugreifen kann (<code>Database.execute(...)</code> und <code>Database.query(...)</code>).</p>
             <div id="java-dbschema-static" class="umldiag">
                 <?php if (empty($seedTables)): ?>
-                <p class="muted">Noch keine Tabellen: Lade oben eine Beispieldatenbank oder lade eine eigene SQL-Datei hoch - die Tabellen erscheinen dann sofort hier (und bleiben mit jedem ▶ Ausführen erhalten).</p>
+                <p class="muted">Noch keine Tabellen: Lade oben eine Beispieldatenbank oder lade eine eigene SQL-Datei hoch - die Tabellen erscheinen dann sofort hier (und bleiben mit jedem <span class="icn ic-play" aria-hidden="true"></span> Ausführen erhalten).</p>
                 <?php else: ?>
                 <?php foreach ($seedTables as $seedTable): ?>
                 <table class="db-schema-table">
@@ -1144,11 +1144,11 @@ System.out.println(Database.tables());                     // alle Tabellen</pre
 
         <div class="db-block">
             <details class="db-console-details">
-            <summary class="diag-head">🧪 DB-Konsole: eigene Abfragen und Tabellen ausprobieren (aufklappen)</summary>
+            <summary class="diag-head"><span class="icn ic-clipboard" aria-hidden="true"></span> DB-Konsole: eigene Abfragen und Tabellen ausprobieren (aufklappen)</summary>
                         <p class="muted"><?php if (empty($dbReadOnly)): ?>Schicke Abfragen direkt an die Datenbank, ohne dein Programm zu ändern: <code>SELECT</code> zeigt das Ergebnis an, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>CREATE TABLE</code> und <code>DROP TABLE</code> ändern die Datenbank dauerhaft (sie wird automatisch mit deinem Projekt gespeichert). Damit legst du hier auch neue Daten an und prüfst sofort, was dein Programm daraus liest.<?php else: ?>Schicke Abfragen an die angehängte Datenbank: <code>SELECT</code> zeigt das Ergebnis an. Schreibende Befehle sind gesperrt, weil deine Lehrkraft nur Leserechte vergeben hat - alle arbeiten mit denselben Daten.<?php endif; ?></p>
             <div class="hlwrap" data-hl="sql" data-ac="sqldb"><textarea id="java-db-in" class="mono db-console-in" rows="3" autocomplete="off" spellcheck="false"></textarea></div>
             <div class="repl-actions">
-                <button class="btn btn-primary" id="java-db-run" type="button" title="Abfrage ausführen (Strg + Enter): schickt den SQL-Befehl an die Datenbank und zeigt das Ergebnis.">▶ Abfrage ausführen</button>
+                <button class="btn btn-primary" id="java-db-run" type="button" title="Abfrage ausführen (Strg + Enter): schickt den SQL-Befehl an die Datenbank und zeigt das Ergebnis."><span class="icn ic-play" aria-hidden="true"></span> Abfrage ausführen</button>
             </div>
             <pre id="java-db-out" class="code ide-console-out db-console-out"></pre>
             </details>

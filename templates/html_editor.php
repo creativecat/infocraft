@@ -5,25 +5,25 @@
    Version: 0.15.0 */ ?>
 <section class="panel">
     <div class="panel-head">
-        <h3>🌐 <?= e($project->title) ?></h3>
+        <h3><span class="icn ic-earth" aria-hidden="true"></span> <?= e($project->title) ?></h3>
         <?php if (($fromNet ?? false) === true): ?>
-        <a class="btn btn-ghost" href="<?= url('werkstatt/netzwerk') ?>" title="Zurück zur Netzwerk-Werkstatt">🌐 Zur Netzwerk-Werkstatt</a>
+        <a class="btn btn-ghost" href="<?= url('werkstatt/netzwerk') ?>" title="Zurück zur Netzwerk-Werkstatt"><span class="icn ic-earth" aria-hidden="true"></span> Zur Netzwerk-Werkstatt</a>
         <?php endif; ?>
-        <a class="btn btn-ghost" href="<?= url('werkstatt/html') ?>" title="Zurück">←</a>
+        <a class="btn btn-ghost" href="<?= url('werkstatt/html') ?>" title="Zurück"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
         <?php if (($presentationTask ?? null) !== null): ?>
-        <span class="pill" title="Präsentationsmodus: Du arbeitest in einer temporären Kopie dieser Aufgabe. Die Aufgabenvorlage und die Materialien bleiben unangetastet, dein Code wird nur hier gespeichert. Mit „Präsentation beenden“ wird die Kopie gelöscht.">🎬 Präsentationsmodus ℹ️</span>
+        <span class="pill" title="Präsentationsmodus: Du arbeitest in einer temporären Kopie dieser Aufgabe. Die Aufgabenvorlage und die Materialien bleiben unangetastet, dein Code wird nur hier gespeichert. Mit „Präsentation beenden“ wird die Kopie gelöscht."><span class="icn ic-film" aria-hidden="true"></span> Präsentationsmodus ℹ</span>
         <?php endif; ?>
     </div>
     <?php if ($isForeign): ?>
     <div class="notice">
-        <strong>🎓 Schülerprojekt von <?= e($ownerName) ?></strong>
+        <strong><span class="icn ic-graduation" aria-hidden="true"></span> Schülerprojekt von <?= e($ownerName) ?></strong>
         <p>Du bist als Lehrkraft hier. Änderungen speicherst du wie gewohnt, die Schülerin oder der Schüler sieht dieselbe Seite.</p>
     </div>
     <?php endif; ?>
     <?php if (($presentationTask ?? null) !== null): ?>
     <div class="two-col pres-task-info">
         <div>
-            <h4 class="diag-head">📝 Aufgabenbeschreibung</h4>
+            <h4 class="diag-head"><span class="icn ic-pencil2" aria-hidden="true"></span> Aufgabenbeschreibung</h4>
             <?php if ($presentationTask->description !== ''): ?>
             <div class="task-desc"><?= $presentationTask->descriptionHtml() ?></div>
             <?php else: ?>
@@ -31,7 +31,7 @@
             <?php endif; ?>
         </div>
         <div>
-            <h4 class="diag-head">📋 ToDos (zum Abhaken)</h4>
+            <h4 class="diag-head"><span class="icn ic-clipboard" aria-hidden="true"></span> ToDos (zum Abhaken)</h4>
             <?php if (($presentationTodos ?? []) !== []): ?>
             <ul class="todo-list" id="pres-todos" data-task="<?= (int) $presentationTask->id ?>">
                 <?php foreach ($presentationTodos as $ptodo): ?>
@@ -47,23 +47,23 @@
             <p class="muted">Für diese Aufgabe sind keine ToDos hinterlegt.</p>
             <?php endif; ?>
             <?php if (($presentationMaterials ?? []) !== []): ?>
-            <h4 class="diag-head">📎 Materialien der Aufgabe</h4>
+            <h4 class="diag-head"><span class="icn ic-attachment" aria-hidden="true"></span> Materialien der Aufgabe</h4>
             <ul class="material-list">
                 <?php foreach ($presentationMaterials as $pmat): ?>
-                <li class="material-item"><a href="<?= url('aufgaben/' . (int) $presentationTask->id . '/material/' . (int) $pmat->id) ?>">📄 <?= e($pmat->filename) ?></a></li>
+                <li class="material-item"><a href="<?= url('aufgaben/' . (int) $presentationTask->id . '/material/' . (int) $pmat->id) ?>"><span class="icn ic-file-text" aria-hidden="true"></span> <?= e($pmat->filename) ?></a></li>
                 <?php endforeach; ?>
             </ul>
             <?php endif; ?>
             <?php if (trim($presentationTask->sampleSolution) !== ''): ?>
             <div class="btn-row">
-                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/loesung/fenster') ?>" target="_blank" title="Musterlösung der Aufgabe in einem eigenen Fenster anzeigen (bleibt unabhängig vom Präsentationsfenster offen, inkl. Erwartungshorizont)">📄 Musterlösung anzeigen</a>
+                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/loesung/fenster') ?>" target="_blank" title="Musterlösung der Aufgabe in einem eigenen Fenster anzeigen (bleibt unabhängig vom Präsentationsfenster offen, inkl. Erwartungshorizont)"><span class="icn ic-file-text" aria-hidden="true"></span> Musterlösung anzeigen</a>
             </div>
             <?php endif; ?>
             <div class="btn-row">
-                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen">⬇️ als Musterlösung herunterladen</a>
+                <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/download') ?>" title="Diese Version als Musterlösung herunterladen"><span class="icn ic-arrow-down" aria-hidden="true"></span> als Musterlösung herunterladen</a>
                 <form method="post" action="<?= url('aufgaben/' . (int) $presentationTask->id . '/praesentation/ende') ?>" class="form-inline">
                     <?= csrf_field() ?>
-                    <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese temporäre Kopie löschen">✕ beenden und löschen</button>
+                    <button class="btn btn-ghost" type="submit" title="Präsentation beenden und diese temporäre Kopie löschen"><span class="icn ic-cross" aria-hidden="true"></span> beenden und löschen</button>
                 </form>
             </div>
         </div>
@@ -72,7 +72,7 @@
     <?php if (($workingTask ?? null) !== null): ?>
     <div class="two-col pres-task-info task-work-info">
         <div>
-            <h4 class="diag-head">📌 Aufgabe: <?= e($workingTask->title) ?></h4>
+            <h4 class="diag-head"><span class="icn ic-pushpin" aria-hidden="true"></span> Aufgabe: <?= e($workingTask->title) ?></h4>
             <?php if ($workingTask->description !== ''): ?>
             <div class="task-desc"><?= $workingTask->descriptionHtml() ?></div>
             <?php else: ?>
@@ -80,7 +80,7 @@
             <?php endif; ?>
         </div>
         <div>
-            <h4 class="diag-head">📋 ToDos (zum Abhaken)</h4>
+            <h4 class="diag-head"><span class="icn ic-clipboard" aria-hidden="true"></span> ToDos (zum Abhaken)</h4>
             <form method="post" action="<?= url('aufgaben/' . (int) $workingTask->id . '/todos/schueler') ?>" class="form">
                 <?= csrf_field() ?>
                 <input type="hidden" name="back" value="<?= url('werkstatt/html/' . (int) $project->id) ?>">
@@ -107,10 +107,10 @@
             <p class="muted">Eigene ToDos ergänzt du in der Aufgaben-Sicht unter „Meine Aufgaben“.</p>
             <?php endif; ?>
             <?php if (($workingMaterials ?? []) !== []): ?>
-            <h4 class="diag-head">📎 Materialien der Aufgabe</h4>
+            <h4 class="diag-head"><span class="icn ic-attachment" aria-hidden="true"></span> Materialien der Aufgabe</h4>
             <ul class="material-list">
                 <?php foreach ($workingMaterials as $wmat): ?>
-                <li class="material-item"><a href="<?= url('aufgaben/' . (int) $workingTask->id . '/material/' . (int) $wmat->id) ?>">📄 <?= e($wmat->filename) ?></a></li>
+                <li class="material-item"><a href="<?= url('aufgaben/' . (int) $workingTask->id . '/material/' . (int) $wmat->id) ?>"><span class="icn ic-file-text" aria-hidden="true"></span> <?= e($wmat->filename) ?></a></li>
                 <?php endforeach; ?>
             </ul>
             <?php endif; ?>
@@ -119,7 +119,7 @@
                 <input type="hidden" name="project_id" value="<?= (int) $project->id ?>">
                 <input type="hidden" name="back" value="<?= url('werkstatt/html/' . (int) $project->id) ?>">
                 <div class="btn-row">
-                    <button class="btn btn-primary" type="submit" title="Dieses Projekt als Lösung der Aufgabe einreichen"><?= $workingSubmitted ? 'Neue Version abgeben' : '✅ Abgeben' ?></button>
+                    <button class="btn btn-primary" type="submit" title="Dieses Projekt als Lösung der Aufgabe einreichen"><?= $workingSubmitted ? 'Neue Version abgeben' : '<span class="icn ic-checkmark" aria-hidden="true"></span> Abgeben' ?></button>
                 </div>
             </form>
             <?php if ($workingSubmitted): ?><p class="muted">Dieses Projekt ist als Lösung abgegeben. Du kannst es verbessern und erneut abgeben.</p><?php endif; ?>
@@ -132,16 +132,16 @@
         <label class="field"><span>Titel</span><input type="text" name="title" value="<?= e($project->title) ?>" required></label>
 
         <div class="vw-bar" role="tablist" aria-label="Ansichten">
-            <button type="button" class="vw-tab vw-on" id="vt-wy" role="tab" aria-selected="true" aria-controls="vp-wy" data-vtab="wy" title="Gestalten">🖌️</button>
-            <button type="button" class="vw-tab" id="vt-src" role="tab" aria-selected="false" aria-controls="vp-src" data-vtab="src" title="Quelltext">📝</button>
-            <button type="button" class="vw-tab" id="vt-view" role="tab" aria-selected="false" aria-controls="vp-view" data-vtab="view" title="Vorschau">👁️</button>
+            <button type="button" class="vw-tab vw-on" id="vt-wy" role="tab" aria-selected="true" aria-controls="vp-wy" data-vtab="wy" title="Gestalten"><span class="icn ic-brush" aria-hidden="true"></span></button>
+            <button type="button" class="vw-tab" id="vt-src" role="tab" aria-selected="false" aria-controls="vp-src" data-vtab="src" title="Quelltext"><span class="icn ic-pencil2" aria-hidden="true"></span></button>
+            <button type="button" class="vw-tab" id="vt-view" role="tab" aria-selected="false" aria-controls="vp-view" data-vtab="view" title="Vorschau"><span class="icn ic-eye" aria-hidden="true"></span></button>
         </div>
 
         <div class="html-io">
-            <button type="button" class="btn btn-ghost" id="html-upload-btn" title="HTML-Datei öffnen">⬆</button>
+            <button type="button" class="btn btn-ghost" id="html-upload-btn" title="HTML-Datei öffnen"><span class="icn ic-arrow-up" aria-hidden="true"></span></button>
             <input type="file" id="html-upload" accept=".html,.htm,text/html" hidden>
-            <button type="button" class="btn btn-ghost" id="html-download" title="HTML herunterladen">⬇</button>
-            <button type="button" class="btn btn-ghost" id="html-newwin" title="Vorschau in neuem Fenster">↗</button>
+            <button type="button" class="btn btn-ghost" id="html-download" title="HTML herunterladen"><span class="icn ic-arrow-down" aria-hidden="true"></span></button>
+            <button type="button" class="btn btn-ghost" id="html-newwin" title="Vorschau in neuem Fenster"><span class="icn ic-enlarge2" aria-hidden="true"></span></button>
             <span class="muted" id="html-io-note" role="status" aria-live="polite"></span>
         </div>
 
@@ -162,17 +162,17 @@
                 <button type="button" class="wy-btn" data-wycmd="insertUnorderedList" title="Liste mit Punkten">•</button>
                 <button type="button" class="wy-btn" data-wycmd="insertOrderedList" title="Nummerierte Liste">1.</button>
                 <label class="wy-tool">Farbe <input type="color" id="wy-color" value="#4f46e5" title="Schriftfarbe" aria-label="Schriftfarbe"></label>
-                <button type="button" class="wy-btn" data-wycmd="createLink" title="Link einfügen">🔗</button>
-                <button type="button" class="wy-btn" data-wycmd="undo" title="Rückgängig">↶</button>
-                <button type="button" class="wy-btn" data-wycmd="redo" title="Wiederholen">↷</button>
+                <button type="button" class="wy-btn" data-wycmd="createLink" title="Link einfügen"><span class="icn ic-link" aria-hidden="true"></span></button>
+                <button type="button" class="wy-btn" data-wycmd="undo" title="Rückgängig"><span class="icn ic-undo" aria-hidden="true"></span></button>
+                <button type="button" class="wy-btn" data-wycmd="redo" title="Wiederholen"><span class="icn ic-redo" aria-hidden="true"></span></button>
             </div>
             <iframe id="html-wysiwyg" title="Seite gestalten" sandbox="allow-same-origin"></iframe>
-            <p class="vw-hint">Tipp: Gestalte hier – und schau danach im 📝 Quelltext nach, welcher Tag bei deinem Klick entsteht. So lernst du, was jeder Effekt in HTML bedeutet.</p>
+            <p class="vw-hint">Tipp: Gestalte hier – und schau danach im <span class="icn ic-pencil2" aria-hidden="true"></span> Quelltext nach, welcher Tag bei deinem Klick entsteht. So lernst du, was jeder Effekt in HTML bedeutet.</p>
         </div>
 
         <div class="vw-pane" id="vp-src" role="tabpanel" aria-labelledby="vt-src" data-vpane="src" hidden>
             <div class="tag-help">
-                <label class="wy-tool">❓ Tag erklären
+                <label class="wy-tool"><span class="icn ic-question" aria-hidden="true"></span> Tag erklären
                     <select id="tag-explain" aria-label="HTML-Tag erklären">
                         <option value="" selected disabled>&lt;…&gt;</option>
                         <option value="doctype">&lt;!DOCTYPE html&gt;</option>
@@ -340,7 +340,7 @@
             <iframe id="html-preview" class="preview-frame" sandbox="" title="Vorschau deiner Seite"></iframe>
         </div>
 
-        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern">💾</button></div>
+        <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button></div>
     </form>
 </section>
 <script src="<?= vendor_asset('assets/vendor/highlight.min.js', 'https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.12.0/highlight.min.js', 100000) ?>"></script>

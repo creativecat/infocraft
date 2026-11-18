@@ -221,7 +221,7 @@ final class PresentationController
             $t = trim($lines[$i]);
             if ($open === '') {
                 if (preg_match('/^:::(titel|merksatz|uebung|loesung|hinweis|vergleich|karten|statistik|zitat)$/', $t, $m) === 1) {
-                    $html .= WikiController::renderMarkdown(implode("\n", $plain));
+                    $html .= ic_render_markdown(implode("\n", $plain));
                     $plain = [];
                     $open = $m[1];
                     $buf = [];
@@ -241,7 +241,7 @@ final class PresentationController
         if ($open !== '') {
             $html .= self::renderSlideBlock($open, implode("\n", $buf));
         }
-        $html .= WikiController::renderMarkdown(implode("\n", $plain));
+        $html .= ic_render_markdown(implode("\n", $plain));
         return $html;
     }
 
@@ -250,15 +250,15 @@ final class PresentationController
     {
         if ($kind === 'vergleich') {
             $parts = preg_split('/\n?\Q:::|\E\n?/', $content) ?: [];
-            $left = WikiController::renderMarkdown(trim((string) ($parts[0] ?? '')));
-            $right = WikiController::renderMarkdown(trim((string) ($parts[1] ?? '')));
+            $left = ic_render_markdown(trim((string) ($parts[0] ?? '')));
+            $right = ic_render_markdown(trim((string) ($parts[1] ?? '')));
             if (trim((string) ($parts[1] ?? '')) === '') {
                 $right = $left;
                 $left = '';
             }
             return '<div class="sblock sblock-vergleich"><div class="sb-col">' . $left . '</div><div class="sb-col">' . $right . '</div></div>';
         }
-        $inner = WikiController::renderMarkdown($content);
+        $inner = ic_render_markdown($content);
         $classes = [
             'titel' => 'sblock sblock-titel',
             'merksatz' => 'sblock sblock-merksatz',

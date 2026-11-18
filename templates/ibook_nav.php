@@ -16,7 +16,7 @@
  * in der Navigation (nur Verwalter), auf jeder Ansicht desselben Orts.
  * Erwartet: $book, $nav, $activeSectionId, $activePageId, $canWrite,
  * $canManage, $navNewSection, $preview. */ ?>
-<?php $navAreas = ['lernbereich' => ['📖', 'Lernbereich'], 'gemeinsam' => ['🤝', 'Zusammenarbeit'], 'eigen' => ['🔒', 'Mein Bereich']]; ?>
+<?php $navAreas = ['lernbereich' => ['<span class="icn ic-book" aria-hidden="true"></span>', 'Lernbereich'], 'gemeinsam' => ['<span class="icn ic-users" aria-hidden="true"></span>', 'Zusammenarbeit'], 'eigen' => ['<span class="icn ic-lock" aria-hidden="true"></span>', 'Mein Bereich']]; ?>
 <?php /* #206: Das Bereichs-Label ueber dem ersten Abschnitt seines Bereichs
  * steht nur, wenn mindestens ein Abschnitt des Bereichs anders heisst als
  * der Bereich selbst. Heisst ein Abschnitt genau wie sein Bereich, traegt
@@ -33,7 +33,7 @@
     <?php /* #71: Die Navigation klappt auf und zu: Kopfzeile antippen. Ohne
      * Javascript nutzbar (details/summary), Standardzustand offen. */ ?>
     <details class="ibook-pagenav-box" open>
-    <summary class="ibook-pagenav-head" title="Navigation ein- und ausklappen">📓 <?= e($book->title) ?></summary>
+    <summary class="ibook-pagenav-head" title="Navigation ein- und ausklappen"><span class="icn ic-notebook" aria-hidden="true"></span> <?= e($book->title) ?></summary>
     <?php
     $navArea = null;
     foreach ($nav as $navEntry):
@@ -41,7 +41,7 @@
         $navAreaKey = (string) $navSec['area'];
         if ($navAreaKey !== $navArea):
             $navArea = $navAreaKey;
-            $navIcon = $navAreas[$navAreaKey][0] ?? '📄';
+            $navIcon = $navAreas[$navAreaKey][0] ?? '<span class="icn ic-file-text" aria-hidden="true"></span>';
             $navName = $navAreas[$navAreaKey][1] ?? $navAreaKey;
     ?>
     <?php if (!empty($navShowArea[$navAreaKey])): ?>
@@ -71,7 +71,7 @@
         <?php if (!$navIsActive && $navEntry['pages'] === []): ?>
         <span class="ibook-pagenav-empty">Noch keine Seiten</span>
         <?php if ($navEntry['canWrite']): ?>
-        <a class="ibook-pagenav-secopen" href="<?= url('infobuecher/' . (int) $book->id . '?abschnitt=' . (int) $navSec['id']) ?>" title="Abschnittsansicht öffnen">Abschnitt öffnen →</a>
+        <a class="ibook-pagenav-secopen" href="<?= url('infobuecher/' . (int) $book->id . '?abschnitt=' . (int) $navSec['id']) ?>" title="Abschnittsansicht öffnen">Abschnitt öffnen <span class="icn ic-arrow-right" aria-hidden="true"></span></a>
         <?php endif; ?>
         <?php endif; ?>
         <?php /* #72/#184/#186: Genau ein "Neue Seite"-Formular, allein am
@@ -82,7 +82,7 @@
             <?= csrf_field() ?>
             <input type="hidden" name="section_id" value="<?= (int) $navSec['id'] ?>">
             <input type="text" name="title" maxlength="160" placeholder="Neue Seite" aria-label="Neue Seite in diesem Abschnitt anlegen">
-            <button class="btn btn-ghost" type="submit" title="Neue Seite in diesem Abschnitt anlegen (öffnet sich danach direkt)">➕</button>
+            <button class="btn btn-ghost" type="submit" title="Neue Seite in diesem Abschnitt anlegen (öffnet sich danach direkt)"><span class="icn ic-plus" aria-hidden="true"></span></button>
         </form>
         <?php endif; ?>
     </div>
@@ -117,7 +117,7 @@
                 <input type="hidden" name="area" value="gemeinsam">
                 <?php endif; ?>
             </label>
-            <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Abschnitt anlegen">➕ Abschnitt anlegen</button></div>
+            <div class="btn-row"><button class="btn btn-ghost" type="submit" title="Abschnitt anlegen"><span class="icn ic-plus" aria-hidden="true"></span> Abschnitt anlegen</button></div>
         </form>
     </details>
     <?php endif; ?>
@@ -127,14 +127,14 @@
      * haengen sich ans Ende des Buchs. */ ?>
     <?php if ($canManage): ?>
     <details class="ibook-navimport-details">
-        <summary class="btn btn-ghost" title="Abschnitte und Seiten aus einem JSON-Paket anlegen">📥 Buchpaket importieren</summary>
+        <summary class="btn btn-ghost" title="Abschnitte und Seiten aus einem JSON-Paket anlegen"><span class="icn ic-download3" aria-hidden="true"></span> Buchpaket importieren</summary>
         <form method="post" action="<?= url('infobuecher/' . (int) $book->id . '/import') ?>" class="form ibook-navimport">
             <?= csrf_field() ?>
             <label class="field"><span>JSON-Paket (Abschnitte + Seiten)</span>
                 <textarea name="paket" rows="4" placeholder='{"sections":[{"title":"SQL","area":"lernbereich","pages":[{"title":"SELECT","blocks":[]}]}]}'></textarea>
             </label>
             <p class="muted">Fügt Abschnitte mit Seiten ans Ende des Buchs an. Texte, DB-Abfrage-Fenster, Code, Diagramme und Einbettungen (YouTube, LearningApps, H5P) kommen mit; Bilder, Audio und Video müssen danach neu hochgeladen werden.</p>
-            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Abschnitte und Seiten aus dem JSON anlegen">📥 Importieren</button></div>
+            <div class="btn-row"><button class="btn btn-primary" type="submit" title="Abschnitte und Seiten aus dem JSON anlegen"><span class="icn ic-download3" aria-hidden="true"></span> Importieren</button></div>
         </form>
     </details>
     <?php endif; ?>

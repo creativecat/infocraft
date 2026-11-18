@@ -153,22 +153,6 @@ final class ModuleController
                 ],
                 'lehrplan' => 'Übergreifend: Leistungserhebung und Feedback in allen Bereichen.',
             ],
-            'wiki' => [
-                'slug' => 'wiki',
-                'title' => 'Wiki',
-                'icon' => '📚',
-                'phase' => 'Phase 6',
-                'status' => 'fertig',
-                'level' => 6,
-                'route' => 'wiki',
-                'description' => 'Nachschlagen und vertiefen.',
-                'features' => [
-                    'Wiki-Seiten zu Fachbegriffen und Konzepten, ab Jahrgangsstufe 6',
-                    'Lehrkräfte legen Seiten mit einfacher Markdown-Formatierung an',
-                    'Stufen-Filter: Schülerinnen und Schüler sehen Seiten bis zur eigenen Klassenstufe',
-                ],
-                'lehrplan' => 'Übergreifend: Fachbegriffe und Konzepte, Selbstlernen.',
-            ],
             'infobuecher' => [
                 'slug' => 'infobuecher',
                 'title' => 'InfoBook',

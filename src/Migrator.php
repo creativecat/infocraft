@@ -93,7 +93,6 @@ final class Migrator
             self::seedDemoExams($pdo);
             self::seedTenthGradeExams($pdo);
             self::seedDemoDiagrams($pdo);
-            self::seedWikiPages($pdo);
             self::seedPresentations($pdo);
             self::seedDemoInfoBooks($pdo);
         }
@@ -810,185 +809,6 @@ final class Migrator
     }
 
     /**
-     * Wiki-Startseiten: Anleitung für Lehrkräfte plus ein paar Beispiel-Fachbegriffe,
-     * die den Stufen-Filter zeigen. Idempotent: nur fehlende Titel werden ergänzt.
-     */
-    /** Bestehende Installationen: Tabellen polls/poll_votes (Live-Abstimmung, Issue #3). */
-    private static function ensurePollTables(PDO $pdo, string $driver): void
-    {
-        if ($driver === 'mysql') {
-            $pdo->exec('CREATE TABLE IF NOT EXISTS polls (
-                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                presentation_id INT UNSIGNED NOT NULL,
-                teacher_id INT UNSIGNED NOT NULL,
-                question VARCHAR(300) NOT NULL,
-                answers TEXT NOT NULL,
-                state VARCHAR(10) NOT NULL DEFAULT \'open\',
-                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                closed_at TIMESTAMP NULL,
-                PRIMARY KEY (id),
-                KEY idx_polls_pres (presentation_id),
-                CONSTRAINT fk_polls_pres FOREIGN KEY (presentation_id) REFERENCES presentations (id) ON DELETE CASCADE,
-                CONSTRAINT fk_polls_teacher FOREIGN KEY (teacher_id) REFERENCES users (id) ON DELETE CASCADE
-            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
-            $pdo->exec('CREATE TABLE IF NOT EXISTS poll_votes (
-                poll_id INT UNSIGNED NOT NULL,
-                user_id INT UNSIGNED NOT NULL,
-                choice INT UNSIGNED NOT NULL,
-                voted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (poll_id, user_id),
-                CONSTRAINT fk_pvotes_poll FOREIGN KEY (poll_id) REFERENCES polls (id) ON DELETE CASCADE,
-                CONSTRAINT fk_pvotes_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci');
-            return;
-        }
-        $pdo->exec('CREATE TABLE IF NOT EXISTS polls (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            presentation_id INTEGER NOT NULL REFERENCES presentations (id) ON DELETE CASCADE,
-            teacher_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-            question TEXT NOT NULL,
-            answers TEXT NOT NULL DEFAULT \'[]\',
-            state TEXT NOT NULL DEFAULT \'open\',
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            closed_at TEXT NULL
-        )');
-        $pdo->exec('CREATE TABLE IF NOT EXISTS poll_votes (
-            poll_id INTEGER NOT NULL REFERENCES polls (id) ON DELETE CASCADE,
-            user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-            choice INTEGER NOT NULL,
-            voted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (poll_id, user_id)
-        )');
-    }
-
-    /**
-     * Dateninsel Kapitel 2 (Issue #7): Die Missionen 9 bis 12 (Bibliothek,
-     * GROUP BY, HAVING, Unterabfragen) fehlen evtl. noch in bestehenden
-     * Installationen, ebenso die Bibliothek in bereits angelegten
-     * SQLite-Arbeitskopien. Alles idempotent.
-     */
-    private static function ensureAdventureChapter2(PDO $pdo): void
-    {
-        $stmt = $pdo->prepare("SELECT id FROM sql_templates WHERE slug = 'adventure'");
-        $stmt->execute();
-        $templateId = (int) $stmt->fetchColumn();
-        if ($templateId > 0) {
-            $exists = $pdo->prepare('SELECT COUNT(*) FROM sql_missions WHERE template_id = ? AND position = ?');
-            $insert = $pdo->prepare('INSERT INTO sql_missions (template_id, position, kind, title, story, task, hint, hint_variants, solution_sql, check_sql, check_expected) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-            foreach (self::missionsFor('adventure') as $mission) {
-                if ((int) $mission['position'] < 9) {
-                    continue;
-                }
-                $exists->execute([$templateId, (int) $mission['position']]);
-                if ((int) $exists->fetchColumn() > 0) {
-                    continue;
-                }
-                $insert->execute([
-                    $templateId,
-                    (int) $mission['position'],
-                    $mission['kind'],
-                    $mission['title'],
-                    $mission['story'],
-                    $mission['task'] ?? null,
-                    $mission['hint'],
-                    isset($mission['hints']) ? json_encode($mission['hints'], JSON_UNESCAPED_UNICODE) : null,
-                    $mission['solution_sql'],
-                    $mission['check_sql'] ?? '',
-                    $mission['check_expected'] ?? null,
-                ]);
-            }
-        }
-
-        // Bereits angelegte Arbeitskopien um Ort 6 (Bibliothek) und die
-        // Tabellen buecher/ausleihen ergaenzen; frische Kopien bekommen
-        // alles aus der aktualisierten Vorlage.
-        $dir = INFOCRAFT_ROOT . '/database/sql';
-        if (!is_dir($dir)) {
-            return;
-        }
-        $patch = static function (PDO $sqlite): void {
-            $sqlite->exec('CREATE TABLE IF NOT EXISTS buecher (
-                id INTEGER PRIMARY KEY,
-                titel TEXT NOT NULL,
-                autor TEXT NOT NULL,
-                jahr INTEGER NOT NULL DEFAULT 0,
-                ort_id INTEGER NOT NULL REFERENCES orte (id)
-            )');
-            $sqlite->exec('CREATE TABLE IF NOT EXISTS ausleihen (
-                buch_id INTEGER NOT NULL REFERENCES buecher (id),
-                bewohner_id INTEGER NOT NULL REFERENCES bewohner (id),
-                ausgeliehen_am TEXT NOT NULL
-            )');
-            $sqlite->exec("INSERT OR IGNORE INTO orte (id, name, beschreibung) VALUES (6, 'Bibliothek', 'Die alte Bibliothek der Insel mit verstaubten Regalen')");
-            $sqlite->exec('INSERT OR IGNORE INTO wege (von_ort_id, nach_ort_id, tage) VALUES (5, 6, 1)');
-            if ((int) $sqlite->query('SELECT COUNT(*) FROM buecher')->fetchColumn() === 0) {
-                $insertBook = $sqlite->prepare('INSERT INTO buecher (id, titel, autor, jahr, ort_id) VALUES (?, ?, ?, ?, ?)');
-                $books = [
-                    [1, 'SQL für Seefahrer', 'Magierin Mira', 1801, 6],
-                    [2, 'Die Kunst des Kompassbaus', 'Magierin Mira', 1815, 6],
-                    [3, 'Inselkräuter von A bis Z', 'Kräuterfrau Ida', 1820, 6],
-                    [4, 'Heilkunde aus dem Wald', 'Kräuterfrau Ida', 1823, 6],
-                    [5, 'Sturmprotokolle der Insel', 'Häuptling Mika', 1790, 6],
-                    [6, 'Briefe an die Lotse', 'Fischer Finn', 1828, 6],
-                    [7, 'Vom Werden der Wellen', 'Magierin Mira', 1831, 6],
-                ];
-                foreach ($books as $row) {
-                    $insertBook->execute($row);
-                }
-                $loan = $sqlite->prepare('INSERT INTO ausleihen (buch_id, bewohner_id, ausgeliehen_am) VALUES (?, ?, ?)');
-                $loan->execute([1, 2, '1828-03-12']);
-                $loan->execute([3, 7, '1828-04-02']);
-                $loan->execute([4, 6, '1828-04-19']);
-                $loan->execute([7, 8, '1828-05-01']);
-            }
-        };
-        foreach (glob($dir . '/adventure_u*.sqlite') ?: [] as $path) {
-            try {
-                $sqlite = new PDO('sqlite:' . $path, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-                $patch($sqlite);
-            } catch (PDOException) {
-                // Defekte Kopie einfach stehen lassen: die Migration darf
-                // niemals abbrechen, die Werkstatt regeneriert Kopien selbst.
-            }
-        }
-    }
-
-    private static function seedWikiPages(PDO $pdo): void
-    {
-        $idFor = static function (PDO $pdo, string $login): int {
-            $stmt = $pdo->prepare('SELECT id FROM users WHERE login_name = ?');
-            $stmt->execute([$login]);
-            $id = $stmt->fetchColumn();
-            return $id === false || $id === null ? 1 : (int) $id;
-        };
-        $adminId = $idFor($pdo, 'matthias.glienke');
-
-        $pages = [
-            ['Anleitung für Lehrkräfte', 6, self::wikiTeacherGuide()],
-            ['Präsentationen: Themenübersicht', 6, self::wikiPresentationIndex()],
-            ['Algorithmus', 6, "# Algorithmus\n\nEin **Algorithmus** ist eine eindeutige Handlungsvorschrift zur Lösung eines Problems: endlich viele, klar festgelegte Schritte in einer festen Reihenfolge.\n\n## Beispiele\n- Rezept für Pfannkuchen\n- Bauanleitung für ein Regal\n- Ein Programm in Java oder Python\n\n## Merksatz\n\nAlgorithmen sind *eindeutig*, *endlich* und *allgemein* gültig."],
-            ['SQL', 9, "# SQL\n\n**SQL** (Structured Query Language) ist die Sprache, um Daten in relationalen Datenbanken zu beschreiben, abzufragen und zu ändern.\n\n## Die wichtigsten Befehle\n- `SELECT` - Daten abfragen\n- `INSERT INTO` - Daten einfügen\n- `UPDATE` - Daten ändern\n- `DELETE FROM` - Daten löschen\n- `CREATE TABLE` - Tabelle anlegen\n\n```sql\nSELECT name, note FROM schueler\nWHERE note >= 2\nORDER BY name;\n```"],
-            ['Objektorientierung', 10, "# Objektorientierung\n\nEin **Objekt** fasst zusammen, was eine Sache weiß (Attribute) und was sie kann (Methoden). Die **Klasse** ist der Bauplan für solche Objekte.\n\n## Begriffe\n- **Klasse**: Bauplan (z. B. `Auto`)\n- **Objekt**: konkrete Ausprägung (z. B. Lenas rotes Auto)\n- **Attribut**: Eigenschaft, z. B. `farbe`\n- **Methode**: Fähigkeit, z. B. `fahren()`\n- **Vererbung**: Spezialklassen erben von einer allgemeinen Klasse\n\n```java\nclass Auto {\n    String farbe;\n\n    void fahren() {\n        System.out.println(\"Das \" + farbe + \" Auto faehrt los.\");\n    }\n}\n```"],
-            // Issue #9: Vorlage für die Kodex-Übung am Ende der Präsentation
-            // \"Digitale Kommunikation\" (Jgst. 7). Lückentext gemeinsam im
-            // Unterricht ausfüllen und als eigene Seite der Klasse speichern.
-            ['Klassen-Kodex (Vorlage)', 7, "# Klassen-Kodex (Vorlage)\n\nSo gehen wir in unserer Klasse miteinander um - digital und im echten Leben. Diese Vorlage füllen wir gemeinsam aus: An allen Stellen mit `_____` ergänzt ihr unsere Beschlüsse.\n\n## 1. Umgangston\n\nWir schreiben im Netz so, wie wir auch persönlich miteinander reden: `_____` (z. B. freundlich, ohne Beleidigungen).\n\n## 2. Bilder und Videos von anderen\n\nBevor wir ein Foto oder Video von jemandem teilen, fragen wir: `_____`.\n\n## 3. Passwörter und Geräte\n\nUnsere Passwörter behandeln wir so: `_____`. Die Geräte anderer benutzen wir nur: `_____`.\n\n## 4. Quellen angeben\n\nWenn wir Texte oder Bilder verwenden, die nicht von uns sind, dann: `_____`.\n\n## 5. Wenn etwas schiefgeht\n\nWenn uns etwas komisch vorkommt oder jemand gemobbt wird, dann: `_____` (z. B. einer Lehrkraft melden, nicht selbst schlagen im Chat).\n\n## Unsere Unterschriften\n\nWir beschließen diesen Kodex für die Klasse `_____` am `_____`."],
-        ];
-
-        $exists = $pdo->prepare('SELECT COUNT(*) FROM wiki_pages WHERE title = ?');
-        $insert = $pdo->prepare('INSERT INTO wiki_pages (teacher_id, title, content, level, position) VALUES (?, ?, ?, ?, ?)');
-        $position = 0;
-        foreach ($pages as [$title, $level, $content]) {
-            $exists->execute([$title]);
-            if ((int) $exists->fetchColumn() > 0) {
-                continue;
-            }
-            $position += 1;
-            $insert->execute([$adminId, $title, $content, $level, $position]);
-        }
-    }
-
-    /**
      * Bestehenden Installationen die Slug-Spalte idempotent nachziehen
      * (permanente Themen-Links /praesentationen/thema/{slug}).
      */
@@ -1593,7 +1413,7 @@ final class Migrator
             ['slug' => 'digitale-kommunikation', 'title' => 'Digitale Kommunikation: Klug schreiben, wertschätzend bleiben', 'level' => 7, 'v' => 1, 'legacy' => [], 'slides' => [
                 ['type' => 'text', 'title' => 'Schreiben im Netz', 'body' => "# Digitale Kommunikation\n\nIm Netz fehlt, was im Gespräch hilft: **Tonfall, Mimik, Gestik**. Ein Satz wie *\"Das war wohl nicht so gut.\"* kann witzig oder verletzend gemeint sein - am Bildschirm entscheidet die Leserin.\n\n## Wer schreibt, bleibt lesbar\n\nDigitale Nachrichten **verschwinden nicht**: Screenshots, Weiterleitungen und Sicherungen machen alles dauerhaft. Deshalb gilt: Schreibe nichts, was du der Person nicht auch in die Augen sagen würdest.\n\n## Regeln für Klassenchats\n\n- Zuerst lesen, dann senden - und prüfen, ob die Nachricht so ankommt, wie sie gemeint ist.\n- **Themen**- und **Fachchats** nur für ihr Thema nutzen.\n- Keine Nachrichten nach 22 Uhr - auch **Lehrkräfte** und Eltern schlafen."],
                 ['type' => 'text', 'title' => 'Netiquette, digitale Spuren, Persönlichkeitsrechte', 'body' => "## Netiquette\n\nDie **Netiquette** ist das ungeschriebene Regelwerk fürs Netz: wertschätzend schreiben, Groß-/Kleinschreibung nicht ignorieren, KEIN SCHREIEN IN GROSSBUCHSTABEN, Verstehens-Fragen stellen statt Vorwürfe.\n\n## Digitale Spuren\n\nJede Anmeldung, jeder Like, jeder Standort hinterlässt Spuren. Aus vielen kleinen Spuren entsteht ein **Profil**. Tipps:\n\n- Klarnamen nur dort, wo nötig.\n- Standort-Freigaben aus, außer du brauchst sie.\n- Alte Accounts löschen, die du nicht mehr nutzt.\n\n## Rechte am eigenen Bild\n\nFotos von anderen nur **mit Einverständnis** veröffentlichen - das ist kein Höflichkeits-, sondern ein **Persönlichkeitsrecht**. Gruppennamen, Chats und Fotos anderer gehören den anderen genauso wie ihre Sachen."],
-                ['type' => 'text', 'title' => 'Übung: Ein Klassen-Kodex fürs Netz', 'body' => "**Übung: Der Klassen-Kodex**\n\nEure Klasse plant einen Klassenchat. Entwerft in Kleingruppen einen **Kodex mit fünf Regeln**:\n\n1. Zwei Regeln zum **Umgang miteinander** (wertschätzend schreiben, kein Cyber-Mobbing).\n2. Eine Regel zu **Zeiten** (Wann dürfen Nachrichten kommen?).\n3. Eine Regel zu **Fotos und Namen** anderer.\n4. Eine Regel, was im **Fach-Chat** erlaubt ist.\n\nTragt die Vorschläge zusammen und beschließt die fünf Regeln gemeinsam. Schreibt sie als **Wiki-Seite** in InfoCraft."],
+                ['type' => 'text', 'title' => 'Übung: Ein Klassen-Kodex fürs Netz', 'body' => "**Übung: Der Klassen-Kodex**\n\nEure Klasse plant einen Klassenchat. Entwerft in Kleingruppen einen **Kodex mit fünf Regeln**:\n\n1. Zwei Regeln zum **Umgang miteinander** (wertschätzend schreiben, kein Cyber-Mobbing).\n2. Eine Regel zu **Zeiten** (Wann dürfen Nachrichten kommen?).\n3. Eine Regel zu **Fotos und Namen** anderer.\n4. Eine Regel, was im **Fach-Chat** erlaubt ist.\n\nTragt die Vorschläge zusammen und beschließt die fünf Regeln gemeinsam. Schreibt sie als **InfoBook-Seite** in euer Klassen-InfoBook."],
                 ['type' => 'text', 'title' => 'Lösung: Muster-Kodex', 'body' => "**Muster-Kodex (für eure Klasse anpassbar)**\n\n1. **Wertschätzend bleiben**: Keine Beleidigungen, keine Bloßstellungen - offline gelten dieselben Regeln wie online.\n2. **Themen trennen**: Der Chat ist für Organisation, Hausaufgaben und Absprachen - Privates bleibt privat.\n3. **Ruhezeiten**: Nach 22 Uhr und an Wochenenden schicken wir keine Nachrichten.\n4. **Fotos und Namen**: Ohne Einverständnis der abgebildeten Person wird nichts geteilt.\n5. **Konflikte lösen**: Wer sich über eine Nachricht ärgert, fragt direkt nach - und klärt es im Zweifel im persönlichen Gespräch.\n\nEin Kodex lebt davon, dass **alle** ihn beschlossen haben - deshalb stand die Abstimmung am Ende der Übung."],
             ]],
             ['slug' => 'algorithmen', 'title' => 'Algorithmen: Schritt für Schritt', 'level' => 7, 'v' => 1, 'legacy' => [], 'slides' => [
@@ -1869,28 +1689,6 @@ final class Migrator
             $slides[$index] = $slide;
         }
         return $slides;
-    }
-
-    /** Markdown-lite-Übersicht aller Themen-Präsentationen mit permanenten Links. */
-    private static function wikiPresentationIndex(): string
-    {
-        $text = "# Präsentationen: Themenübersicht\n\nDie **Informatik-Jahr-Decks** (Jgst. 9 und 10) stimmen aufs Schuljahr ein - Motivation und Ausblick, ohne Übung. Die **Themenpräsentationen** vertiefen danach jeden Lernbereich und enden mit einer **Übungsaufgabe samt Musterlösung** - so kannst du das Durchgenommene sofort üben. Alle Decks, gruppiert nach Jahrgangsstufe:\n\n";
-        $currentLevel = 0;
-        foreach (self::presentationSeeds() as $seed) {
-            if ($seed['level'] !== $currentLevel) {
-                $currentLevel = $seed['level'];
-                $text .= "## Jahrgangsstufe " . $currentLevel . "\n\n";
-            }
-            $text .= "- [" . $seed['title'] . "](/praesentationen/thema/" . $seed['slug'] . ")\n";
-        }
-        $text .= "\nDie Links bleiben dauerhaft gültig. In der Präsentation: Taste **F** für Vollbild, Pfeiltasten zum Blättern; als Lehrkraft kannst du Code-Folien live verändern und speichern.";
-        return $text;
-    }
-
-    /** Text der Wiki-Anleitung für Lehrkräfte (Markdown-lite). */
-    private static function wikiTeacherGuide(): string
-    {
-        return "# Anleitung für Lehrkräfte\n\nWillkommen bei **InfoCraft**! Diese Seite fasst die wichtigsten Arbeitsschritte zusammen. Du kannst sie hier bearbeiten und um eigene Hinweise ergänzen.\n\n## Erste Schritte\n\n1. Anmelden über die Startseite.\n2. Unter **Nutzer** Konten für Schülerinnen und Schüler anlegen oder per **CSV-Import** ganze Klassen einspielen.\n3. Unter **Meine Klassen** deinem Konto Klassen zuordnen: Du siehst dann nur deine Klassen und deine Schülerinnen und Schüler.\n\n## Module passend zum Lehrplan freigeben\n\nUnter **Meine Klassen** legst du für jede Klasse fest, welche Arbeitsbereiche sichtbar sind:\n\n- **Standard**: Der LehrplanPLUS-Stufe des Moduls folgt (z. B. SQL erst ab Jgst. 9).\n- **Freigeben**: Die Klasse sieht das Modul früher.\n- **Sperren**: Die Klasse sieht das Modul nicht.\n\nDas gilt auch für die direkte URL: gesperrte Module sind nicht aufrufbar.\n\n## Arbeiten austeilen\n\n- **Code-Werkstatt**: Projekte anlegen und an Klassen oder Einzelne austeilen; über die Schüleransicht erreichst du die Projekte deiner Schülerinnen und Schüler.\n- **SQL-Werkstatt**: Vorlagen (Datenbanken) ausgeben mit Rechten für *nur lesen*, *lesen und schreiben* oder *Tabellen anlegen*.\n- **Aufgabenpool**: eigene Aufgaben anlegen oder fertige Aufgaben (Jgst. 6 bis 13) aus dem Katalog übernehmen und austeilen.\n\n## Präsentieren und Nachschlagen\n\n- **Wiki**: Diese Nachschlage-Seiten hier. Der Stufen-Filter blendet Seiten aus, die über der Klassenstufe liegen.\n- **Präsentationen**: Folien aus Text und Code, kompakt gruppiert nach Jahrgangsstufe (Jgst. 6 bis 12). Im Präsentationsmodus:\n    - **Vollbild** über den Knopf oder Taste **F**\n    - **Pfeiltasten** oder Leertaste blättern\n    - Code-Folien lassen sich über *Code verändern* direkt während der Präsentation bearbeiten und speichern\n- **Moderatorenbildschirm** (nur für Lehrkräfte): Der Knopf **Moderator** öffnet eine Steuerzentrale mit aktueller und nächster Folie, Folienliste, Timer und Uhr. Öffne sie am Laptop und die Präsentationsansicht im Vollbild auf dem Beamer - beide Fenster laufen im selben Browser synchron mit (Pfeiltasten steuern beide).\n\n## Prüfungen und Schularbeiten\n\nUnter **Prüfungen & Arbeiten** legst du Gruppen mit eigenen Vorlagen an und startest die Prüfung. Während der Prüfung sind für die betroffene Klasse alle anderen Bereiche gesperrt - andere Klassen arbeiten normal weiter. Korrektur mit Punkten und Noten, optional anonymisiert; Schularbeiten ohne Sperre sind ebenfalls möglich.";
     }
 
     /**

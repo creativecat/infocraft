@@ -4,7 +4,7 @@
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.24.0 */ ?>
 <section class="hero">
-    <div class="hero-emoji">🗺️</div>
+    <div class="hero-emoji"><span class="icn ic-map" aria-hidden="true"></span></div>
     <h1>SQL-Abenteuer</h1>
     <p><?= $isTeacher
         ? 'Erzählte SQL-Missionen mit Rahmenhandlung: Du kannst jedes Abenteuer direkt spielen oder es an deine Klassen austeilen (Schreibrechte nötig).'
@@ -30,7 +30,7 @@
             <p class="card-desc"><?= e($adv['meta']['teaser']) ?></p>
             <div class="adv-progress" title="Fortschritt: <?= $adv['solved'] ?> von <?= $adv['total'] ?> Kapiteln gelöst"><div class="adv-progress-fill" style="width: <?= $percent ?>%"></div></div>
             <div class="card-meta">
-                <span class="pill"><?= $adv['solved'] ?> / <?= $adv['total'] ?> Kapitel<?= $adv['solved'] === $adv['total'] && $adv['total'] > 0 ? ' ✅' : '' ?></span>
+                <span class="pill"><?= $adv['solved'] ?> / <?= $adv['total'] ?> Kapitel<?= $adv['solved'] === $adv['total'] && $adv['total'] > 0 ? ' <span class="icn ic-checkmark" aria-hidden="true"></span>' : '' ?></span>
                 <span class="pill">Jahrgang <?= (int) $adv['template']->level ?></span>
             </div>
         </div>
@@ -41,11 +41,11 @@
         <div class="adv-card-body">
             <h2><?= $adv['meta']['emoji'] ?> <?= e($adv['template']->title) ?></h2>
             <p class="card-desc"><?= e($adv['meta']['teaser']) ?></p>
-            <div class="card-meta"><span class="pill">🔒 Noch nicht zugeteilt</span></div>
+            <div class="card-meta"><span class="pill"><span class="icn ic-lock" aria-hidden="true"></span> Noch nicht zugeteilt</span></div>
         </div>
     </div>
     <?php endif; ?>
     <?php endforeach; ?>
 </div>
 
-<p><a class="btn btn-ghost" href="<?= url('werkstatt/sql') ?>">← Zurück zur Werkstatt</a></p>
+<p><a class="btn btn-ghost" href="<?= url('werkstatt/sql') ?>"><span class="icn ic-arrow-left" aria-hidden="true"></span> Zurück zur Werkstatt</a></p>

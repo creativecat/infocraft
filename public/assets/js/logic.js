@@ -475,10 +475,10 @@
         if (tickTimer) {
           clearInterval(tickTimer);
           tickTimer = null;
-          clockBtn.textContent = '▶ Takt';
+          clockBtn.innerHTML = '<span class="icn ic-play" aria-hidden="true"></span> Takt';
           return;
         }
-        clockBtn.textContent = '⏹ Takt stoppen';
+        clockBtn.innerHTML = '<span class="icn ic-stop" aria-hidden="true"></span> Takt stoppen';
         tickTimer = setInterval(function () {
           C = tickCircuit(C);
           render();
