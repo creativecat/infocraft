@@ -856,6 +856,11 @@ final class Migrator
         )');
     }
 
+    /**
+     * Dateninsel Kapitel 2 (Issue #7): Die Missionen 9 bis 12 (Bibliothek,
+     * GROUP BY, HAVING, Unterabfragen) fehlen evtl. noch in bestehenden
+     * Installationen, ebenso die Bibliothek in bereits angelegten
+     * SQLite-Arbeitskopien. Alles idempotent.
      */
     private static function ensureAdventureChapter2(PDO $pdo): void
     {
