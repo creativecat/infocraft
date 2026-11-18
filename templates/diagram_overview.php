@@ -36,7 +36,7 @@
 <div class="cards">
     <?php foreach ($diagrams as $diagram): ?>
     <div class="card">
-        <div class="card-icon"><?= e($diagram->kind === 'struktogramm' ? '<span class="icn ic-cube" aria-hidden="true"></span>' : ($diagram->kind === 'datenfluss' ? '<span class="icn ic-wave" aria-hidden="true"></span>' : '<span class="icn ic-design" aria-hidden="true"></span>')) ?></div>
+        <div class="card-icon"><?= $diagram->kind === 'struktogramm' ? '<span class="icn ic-cube" aria-hidden="true"></span>' : ($diagram->kind === 'datenfluss' ? '<span class="icn ic-wave" aria-hidden="true"></span>' : '<span class="icn ic-design" aria-hidden="true"></span>') /* Runde 39: Icon-HTML darf nicht durch e() escapen, sonst steht der Span als Text in der Karte */ ?></div>
         <h2><?= e($diagram->title) ?></h2>
         <p class="card-desc muted"><?= e($diagram->kindLabel()) ?></p>
         <div class="card-meta">

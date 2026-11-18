@@ -56,6 +56,17 @@ final class CodeController
             $counts[$key] = ($counts[$key] ?? 0) + 1;
         }
         $isTeacher = Auth::isTeacher();
+        /* Missionen der Code-Werkstatt (#265): Flags aus dem Projektbestand,
+         * die modulare Missions-Box (missions.js) hakt automatisch ab. */
+        $missionFlags = [];
+        foreach ($projects as $project) {
+            $missionFlags['has-project'] = true;
+            $lang = $project->language !== null && $project->language !== '' ? $project->language : $project->type;
+            $missionFlags['has-' . $lang] = true;
+        }
+        if (count($projects) >= 3) {
+            $missionFlags['three-projects'] = true;
+        }
         render('code_overview', [
             'title' => 'Code-Werkstatt',
             'hint' => 'Deine Projekte, organisiert in einem Ordnerbaum mit Unterordnern. Zieh Projekte einfach per Drag & Drop in einen Ordner.',
@@ -67,6 +78,7 @@ final class CodeController
             'projectsByFolder' => $projectsByFolder,
             'counts' => $counts,
             'isTeacher' => $isTeacher,
+            'missionFlags' => array_keys($missionFlags),
             'defaultLanguage' => SiteSetting::defaultLanguage(),
             'classes' => $isTeacher ? SchoolClass::forTeacher($user->id, $user->role === 'admin') : [],
             'studentsByClass' => $isTeacher ? self::studentsByClass($user) : [],

@@ -2,7 +2,8 @@
    Datei: Code-Werkstatt: Projektübersicht
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.19.0 */ ?>
+   Runde 39 (#265): Missionen als schwebende Box (missions.js).
+   Version: 0.39.0 */ ?>
 <?php $classNames = []; foreach ($classes as $class) { $classNames[$class->id] = $class->name; } ?>
 <?php /* Ordner mit Unterordnern: Diese zeigen keinen 'Noch keine Projekte'-Platzhalter,
      * auch wenn sie selbst keine direkten Projekte enthalten (#45). */ $folderHasChildren = [];
@@ -210,3 +211,11 @@ function ic_proj_row(object $project): string
   syncNewForm();
 })();
 </script>
+
+<?php /* Missionen als schwebende Box (#265): missions.js füllt die Liste
+   automatisch aus den Flags des Projektbestands und hakt erledigte ab. */ ?>
+<details class="ic-missions-box" id="code-missions-box" data-missions="<?= e(json_encode($missionFlags, JSON_UNESCAPED_UNICODE)) ?>" open>
+    <summary class="ic-missions-head"><span class="icn ic-target" aria-hidden="true"></span> Missionen <span class="ic-missions-count" aria-hidden="true"></span></summary>
+    <ul class="ic-missions" id="code-missions"></ul>
+</details>
+<script src="<?= asset_url('assets/js/missions.js') ?>"></script>

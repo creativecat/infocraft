@@ -1,3 +1,20 @@
+## [0.39.0] - 2026-11-18 (Runde 39)
+### Modulare Missionen, Netzwerk-Feinschliff, Diagramm-Icon-Fix (#265)
+- Modulare Missions-Box (#265): Neue gemeinsame Komponente
+  public/assets/js/missions.js (IC_MISSIONS) rendert Missionen/Checklisten
+  einheitlich als ausklappbare, schwebende Box (ic-missions-box) über der
+  Seite, haekt automatisch ab und zaehlt den Fortschritt; die Netzwerk-
+  Werkstatt und die Code-Werkstatt nutzen sie, alle weiteren Werkstaetten
+  koennen folgen. Code-Werkstatt erhaelt sechs eigene Missionen aus dem
+  Projektbestand (CodeController liefert die Flags).
+- Netzwerk (#265): Das Geraete-Fenster (Modal) nutzt jetzt fast die volle
+  Bildschirmbreite; die Router-Karte ist kompakt einklappbar (Netzinfos
+  im Innern) und raeumt die Seitenleiste auf.
+- Diagramm-Fix: Das Icon auf den Diagramm-Karten wurde durch HTML-Escaping
+  als Quelltext angezeigt; jetzt erscheint wieder das richtige Vektor-Icon.
+- Icon-Feinschliff: Das Plus-Icon ist jetzt ein duenner Strich-Plus statt
+  des fetten Blocks, Kopf-Icons in Panel-Überschriften sind textgross.
+
 ## [0.38.0] - 2026-11-18 (Runde 38)
 ### Offene Issues abgearbeitet (#246-#263)
 - Performance (#258): Die Netzwerk-Buehne zeichnet nur noch neu, wenn sich die

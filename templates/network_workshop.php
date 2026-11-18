@@ -5,11 +5,13 @@
    Runde 35 (#244): Toolbar mit ausklappbarem Geräte-Hinzufügen,
    PNG-Export, Drucken, einklappbare Missionen.
    Runde 36 (#245): ARIA-Labels für Toolbar und Bedienelemente.
-   Version: 0.38.0 */ ?>
+   Runde 39 (#265): Router-Karte kompakt einklappbar, Missionen als
+   schwebende Box über der Bühne (modulare Komponente missions.js).
+   Version: 0.39.0 */ ?>
 <div class="net-layout">
     <aside class="net-side">
-        <div class="net-card net-router-card">
-            <h2><span class="icn ic-satellite-dish" aria-hidden="true"></span> Router</h2>
+        <details class="net-card net-router-card" id="net-router-card">
+            <summary class="net-router-sum"><span class="icn ic-satellite-dish" aria-hidden="true"></span> Router <span class="net-muted">192.168.0.1</span></summary>
             <p class="net-muted">Das Zentrum des Netzes. Hier hängst du Geräte an freie Ports.</p>
             <div class="net-router-row"><span>Name</span><strong id="net-router-name">Router</strong></div>
             <div class="net-router-row"><span>IP</span><strong>192.168.0.1</strong></div>
@@ -17,11 +19,6 @@
             <p class="net-muted">Neue Geräte fügst du oben über der Bühne hinzu: einfach „Gerät hinzufügen“ aufklappen.</p>
             <div class="net-netinfo" id="net-netinfo"></div>
             <p class="net-conn" id="net-conn" hidden></p>
-        </div>
-
-        <details class="net-card net-missions-card" id="net-missions-card" open>
-            <summary><h2><span class="icn ic-target" aria-hidden="true"></span> Missionen</h2><span class="net-missions-toggle" aria-hidden="true">zum Ausklappen</span></summary>
-            <ul class="net-missions" id="net-missions"></ul>
         </details>
 
         <?php if ($isTeacher): ?>
@@ -90,6 +87,11 @@
     </main>
 </div>
 
+<details class="ic-missions-box" id="net-missions-box" open>
+    <summary class="ic-missions-head"><span class="icn ic-target" aria-hidden="true"></span> Missionen <span class="ic-missions-count" id="net-missions-count" aria-hidden="true"></span></summary>
+    <ul class="ic-missions" id="net-missions"></ul>
+</details>
+
 <form id="net-import-form" method="post" action="<?= url('werkstatt/netzwerk/aktion') ?>" hidden>
     <?= csrf_field() ?>
     <input type="hidden" name="aktion" value="import">
@@ -105,4 +107,5 @@
     data-ist-lehrkraft="<?= $isTeacher ? '1' : '0' ?>"
     data-net="<?= e(json_encode($net, JSON_UNESCAPED_UNICODE)) ?>"
 ></script>
+<script src="<?= asset_url('assets/js/missions.js') ?>"></script>
 <script src="<?= asset_url('assets/js/network.js') ?>"></script>
