@@ -1,0 +1,594 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.3", "8.5"]
+    steps:
+      - uses: actions/checkout@v5
+      - name: "Vendor-Skripte sicherstellen (highlight/mermaid lokal, kein CDN im Schulnetz)"
+        run: |
+          set +e
+          NEED=0
+          HL_SZ=$(wc -c < public/assets/vendor/highlight.min.js 2>/dev/null || echo 0)
+          MM_SZ=$(wc -c < public/assets/vendor/mermaid.min.js 2>/dev/null || echo 0)
+          if [ "$HL_SZ" -lt 100000 ]; then NEED=1; fi
+          if [ "$MM_SZ" -lt 3000000 ]; then NEED=1; fi
+          if [ "$NEED" = "1" ]; then
+            mkdir -p public/assets/vendor
+            if [ "$HL_SZ" -lt 100000 ]; then
+              curl -sS --max-time 120 -o public/assets/vendor/highlight.min.js https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.12.0/highlight.min.js
+              node --check public/assets/vendor/highlight.min.js || echo "::warning::highlight-Download unbrauchbar ($(wc -c < public/assets/vendor/highlight.min.js) Bytes)"
+            fi
+            if [ "$MM_SZ" -lt 3000000 ]; then
+              curl -sS --max-time 180 -o public/assets/vendor/mermaid.min.js https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js
+              node --check public/assets/vendor/mermaid.min.js || echo "::warning::mermaid-Download unbrauchbar ($(wc -c < public/assets/vendor/mermaid.min.js) Bytes)"
+            fi
+            echo "::notice::vendor nach Download: highlight=$(wc -c < public/assets/vendor/highlight.min.js) mermaid=$(wc -c < public/assets/vendor/mermaid.min.js)"
+            if [ "${{ matrix.php }}" = "8.3" ] && [ "$(wc -c < public/assets/vendor/mermaid.min.js)" -ge 3000000 ]; then
+              git config user.name "infocraft-ci"
+              git config user.email "ci@infocraft.invalid"
+              git add public/assets/vendor
+              git commit -m "vendor: mermaid/highlight lokal bereitgestellt (CI-Runner, kein CDN im Schulnetz noetig)" || true
+              git pull --rebase --no-edit origin main || true
+              git push origin HEAD:main || echo "::warning::Vendor-Commit konnte nicht gepusht werden (Branch-Schutz?); CDN-Fallback greift"
+            fi
+          fi
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_sqlite, curl
+      - name: Syntaxpruefung (php -l)
+        run: |
+          set +e
+          OUT=$(find . -name "*.php" -print0 | xargs -0 -n1 php -l 2>&1)
+          ST=$?
+          echo "$OUT"
+          if [ "$ST" -ne 0 ]; then echo "::error::$(echo "$OUT" | grep -m1 'Parse error')"; exit 1; fi
+      - name: Migration mit Beispieldaten
+        run: php tools/migrate.php --driver sqlite
+      - name: Migration erneut ausfuehren (Idempotenz)
+        run: php tools/migrate.php --driver sqlite
+      - name: Java-Interpreter-Tests (Node)
+        run: node tools/java-vm-tests.js
+      - name: "UI-Tests Java-IDE (Node, Fake-DOM: alle Buttons klickbar)"
+        run: node tools/ui-tests.js
+      - name: "Assembler-VM-Tests (Node)"
+        run: node tools/asm-vm-tests.js
+      - name: Smoke-Tests (Werkstatt, Rechte, Stufen)
+        run: |
+          php -S 127.0.0.1:8080 -t public public/index.php &> server.log &
+          sleep 2
+          set +e
+          curl() { command curl --max-time 45 "$@"; }
+          DB="database/infocraft.sqlite"
+          CODE_LOGIN=$(curl -sS -o login.html -w "%{http_code}" -c cookies.txt http://127.0.0.1:8080/login)
+          CSRF=$(grep -o 'value="[a-f0-9]*"' login.html | head -n1 | cut -d'"' -f2)
+          CODE_DEMO=$(curl -sS -L -o home.html -w "%{http_code}" -b cookies.txt -c cookies.txt -d "csrf=$CSRF" -d "user_id=1" http://127.0.0.1:8080/login/demo)
+          CODE_SQL=$(curl -sS -o sql.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/sql)
+          grep -q "werkstatt/sql/schule" sql.html && SQLOV_OK=1 || SQLOV_OK=0
+          CODE_CODE=$(curl -sS -o code.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/code)
+          grep -q "value=\"java\"" code.html && C_JDEF_OK=1 || C_JDEF_OK=0
+          grep -q "folder-children" code.html && C_GROUP_OK=1 || C_GROUP_OK=0
+          grep -q "new-kind" code.html && C_NEWLANG_OK=1 || C_NEWLANG_OK=0
+          grep -q "syncNewForm" code.html && C_NEWFORM_OK=1 || C_NEWFORM_OK=0
+          grep -q "ov-topbar" code.html && grep -q "Projekt verteilen" code.html && OV_DISTRT_OK=1 || OV_DISTRT_OK=0
+          grep -q "folder-new" code.html && grep -q "Hauptebene" code.html && FOLD_LOCALRT_OK=1 || FOLD_LOCALRT_OK=0
+          grep -q "#94a3b8" public/assets/css/style.css && GHOST_CSS_OK=1 || GHOST_CSS_OK=0
+          CODE_TASKS=$(curl -sS -o tasks.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/aufgaben)
+          CODE_WS=$(curl -sS -o ws.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/sql/shop)
+          CODE_SQLTWS=$(curl -sS -L -o sqltws.html -w "%{http_code}" -b cookies.txt -c cookies.txt http://127.0.0.1:8080/werkstatt/sql/schule)
+          grep -q "Das Kursangebot" sqltws.html && SQLTWS_OK=1 || SQLTWS_OK=0
+          CODE_SQLADV=$(curl -sS -o sqladv.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/sql/abenteuer)
+          grep -q "SQL-Abenteuer" sqladv.html && grep -q "adv-card" sqladv.html && grep -q "Raumstation Alpha" sqladv.html && SQLADVHUBRO_OK=1 || SQLADVHUBRO_OK=0
+          CODE_SQLADVWS=$(curl -sS -o sqladvws.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/sql/raumstation)
+          grep -q "adv-chapter" sqladvws.html && grep -q "Noch verschlossen" sqladvws.html && grep -q "adv-progress" sqladvws.html && SQLADVSTORYRO_OK=1 || SQLADVSTORYRO_OK=0
+          # Runde 25 (#198, #199): Fehlversuch bleibt erhalten, Weg-Layout mit Kapitelbildern.
+          grep -q "adv-path" sqladvws.html && grep -q "adv-station" sqladvws.html && grep -q "adv-dot" sqladvws.html && grep -q "adv-task" sqladvws.html && grep -q "adv-moment" sqladvws.html && R25PATHRO_OK=1 || R25PATHRO_OK=0
+          R25_MISSION=$(grep -o 'mission/[0-9]*' sqladvws.html | head -n1 | cut -d/ -f2)
+          R25_CSRF=$(grep -o 'value="[a-f0-9]*"' sqladvws.html | head -n1 | cut -d'"' -f2)
+          CODE_R25TRY=$(curl -sS -L -o sqladvtry.html -w "%{http_code}" -b cookies.txt -c cookies.txt --data-urlencode "csrf=$R25_CSRF" --data-urlencode "mission_sql=SELECT * FROM crew" "http://127.0.0.1:8080/werkstatt/sql/raumstation/mission/$R25_MISSION")
+          grep -q "adv-feedback" sqladvtry.html && grep -Fq "SELECT * FROM crew" sqladvtry.html && grep -q "Hinweis zu deinem letzten Versuch" sqladvtry.html && R25TRYRO_OK=1 || R25TRYRO_OK=0
+          R25_VDB=$(php -r '$pdo = new PDO("sqlite:database/infocraft.sqlite"); echo $pdo->query("SELECT COUNT(*) FROM sql_missions WHERE hint_variants IS NOT NULL")->fetchColumn();')
+          [ "$R25_VDB" = "42" ] && R25VDB_OK=1 || R25VDB_OK=0
+          # Netzwerk-Werkstatt (#220-#226): Seite, Aktion, Stand-Polling, Export (Lehrkraft-Session cookies.txt)
+          CODE_NETW=$(curl -sS -o netw.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/netzwerk)
+          grep -q "net-svg" netw.html && grep -q "Netzwerk-Werkstatt" netw.html && grep -q "net-boot" netw.html && NET_PAGE_OK=1 || NET_PAGE_OK=0
+          NETCSRF=$(grep -o 'data-csrf="[a-f0-9]*"' netw.html | head -n1 | cut -d'"' -f2)
+          curl -sS -b cookies.txt -o netact.json -d "aktion=addDevice" --data-urlencode 'params={"type":"webserver","name":"CI Webserver"}' -d "csrf=$NETCSRF" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netact.json && grep -q '192.168.0.2' netact.json && grep -q 'CI Webserver' netact.json && NET_ADD_OK=1 || NET_ADD_OK=0
+          curl -sS -b cookies.txt -o netpub.json --data-urlencode 'params={"server":"n1","title":"CI Zeitung","domain":"ci-zeitung.test","html":"<h1>CI</h1>"}' -d "csrf=$NETCSRF" -d "aktion=savePage" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          NETPGID=$(php -r '$n = json_decode((new PDO("sqlite:database/infocraft.sqlite"))->query("SELECT content FROM net_networks WHERE class_id IS NULL AND owner_id = 1")->fetchColumn(), true); foreach ($n["pages"] as $p) { if ($p["title"] === "CI Zeitung") { echo $p["id"]; } }')
+          curl -sS -b cookies.txt -o netpub2.json --data-urlencode "params={\"id\":\"$NETPGID\"}" -d "csrf=$NETCSRF" -d "aktion=publishPage" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netpub.json && grep -q '"ok":true' netpub2.json && NET_PAGEACT_OK=1 || NET_PAGEACT_OK=0
+          curl -sS -o netstand.json -b cookies.txt http://127.0.0.1:8080/werkstatt/netzwerk/stand
+          grep -q '192.168.0.2' netstand.json && grep -q 'ci-zeitung.test' netstand.json && NET_STAND_OK=1 || NET_STAND_OK=0
+          CODE_NETEXP=$(curl -sS -o netexp.json -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/netzwerk/export)
+          grep -q '"devices"' netexp.json && grep -q 'CI Zeitung' netexp.json && NET_EXPORT_OK=1 || NET_EXPORT_OK=0
+          NETDB=$(sqlite3 "$DB" "SELECT COUNT(*) FROM net_networks")
+          [ "$NETDB" = "1" ] && NET_DB_OK=1 || NET_DB_OK=0
+          # Runde 30 (#229-#232): Beispielseite, HTML-Bruecke, Stufen-Schalter, Drucker.
+          curl -sS -b cookies.txt -o netex.json --data-urlencode 'params={"server":"n1","example":"sport"}' -d "csrf=$NETCSRF" -d "aktion=loadExample" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netex.json && grep -q 'Sportclub Eichenwald' netex.json && NET_EXRO_OK=1 || NET_EXRO_OK=0
+          NETPG2ID=$(php -r '$n = json_decode((new PDO("sqlite:database/infocraft.sqlite"))->query("SELECT content FROM net_networks WHERE class_id IS NULL AND owner_id = 1")->fetchColumn(), true); foreach ($n["pages"] as $p) { if ($p["title"] === "Sportclub Eichenwald") { echo $p["id"]; } }')
+          curl -sS -b cookies.txt -o nettohtml.json --data-urlencode "params={\"id\":\"$NETPG2ID\"}" -d "csrf=$NETCSRF" -d "aktion=toHtml" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' nettohtml.json && grep -q 'werkstatt/html/' nettohtml.json && grep -q '"url":"' nettohtml.json && NET_TOHTML_OK=1 || NET_TOHTML_OK=0
+          NETPROJID=$(grep -o 'werkstatt/html/[0-9]*' nettohtml.json | head -n1 | cut -d/ -f3)
+          curl -sS -b cookies.txt -o netfromhtml.json --data-urlencode "params={\"server\":\"n1\",\"projectId\":\"$NETPROJID\"}" -d "csrf=$NETCSRF" -d "aktion=fromHtml" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netfromhtml.json && grep -q 'Sportclub Eichenwald' netfromhtml.json && grep -q 'eichenwald-sport.net' netfromhtml.json && NET_FROMHTML_OK=1 || NET_FROMHTML_OK=0
+          curl -sS -b cookies.txt -o netlvl.json --data-urlencode 'params={"level":"2"}' -d "csrf=$NETCSRF" -d "aktion=setLevel" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netlvl.json && grep -q '"level":2' netlvl.json && NET_LEVELRO_OK=1 || NET_LEVELRO_OK=0
+          curl -sS -b cookies.txt -o netlvl1.json --data-urlencode 'params={"level":"1"}' -d "csrf=$NETCSRF" -d "aktion=setLevel" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"level":1' netlvl1.json && NET_LEVEL1RO_OK=1 || NET_LEVEL1RO_OK=0
+          curl -sS -b cookies.txt -o netpr.json --data-urlencode 'params={"type":"printer","name":"CI Drucker"}' -d "csrf=$NETCSRF" -d "aktion=addDevice" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netpr.json && grep -q 'CI Drucker' netpr.json && NET_PRRO_OK=1 || NET_PRRO_OK=0
+          curl -sS -b cookies.txt -o netprint.json --data-urlencode 'params={"printer":"n2","url":"zeitung.test"}' -d "csrf=$NETCSRF" -d "aktion=printPage" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netprint.json && grep -q 'druckt' netprint.json && NET_PRINTRO_OK=1 || NET_PRINTRO_OK=0
+          # Runde 32 (#218): Geraete-Logs, DHCP-Vergabe, Webserver-Log mit Statuscode.
+          curl -sS -b cookies.txt -o netpc.json --data-urlencode 'params={"type":"pc","name":"CI PC"}' -d "csrf=$NETCSRF" -d "aktion=addDevice" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netpc.json && grep -q 'CI PC' netpc.json && grep -q 'IP-Vergabe (DHCP)' netpc.json && NET_PCD_OK=1 || NET_PCD_OK=0
+          curl -sS -b cookies.txt -o netbrow.json --data-urlencode 'params={"who":"CI PC","url":"http://192.168.0.2/","server":"n1","ip":"192.168.0.3","code":"200","path":"/"}' -d "csrf=$NETCSRF" -d "aktion=browse" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netbrow.json && grep -q 'HTTP 200' netbrow.json && grep -q '"code":200' netbrow.json && NET_DLOG_OK=1 || NET_DLOG_OK=0
+          curl -sS -b cookies.txt -o netreset.json --data-urlencode 'params={}' -d "csrf=$NETCSRF" -d "aktion=reset" http://127.0.0.1:8080/werkstatt/netzwerk/aktion
+          grep -q '"ok":true' netreset.json && grep -q '192.168.0.2' netreset.json && NET_RESET_DB_OK=0 || NET_RESET_DB_OK=1
+          CODE_HTML=$(curl -sS -o html.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/html)
+          # Navigation: HTML-Werkstatt steht ganz oben (#57)
+          NAVPOS_H=$(grep -bo "HTML-Werkstatt" home.html | head -n1 | cut -d: -f1)
+          NAVPOS_S=$(grep -bo "SQL-Werkstatt" home.html | head -n1 | cut -d: -f1)
+          [ -n "$NAVPOS_H" ] && [ -n "$NAVPOS_S" ] && [ "$NAVPOS_H" -lt "$NAVPOS_S" ] && NAV_HTML_OK=1 || NAV_HTML_OK=0
+          grep -q "folder-item" html.html && H_FOLD_OK=1 || H_FOLD_OK=0
+          PYID=$(sqlite3 "$DB" "SELECT id FROM projects WHERE title = 'Begrüßung mit Python'")
+          CODE_PYED=$(curl -sS -o pyed.html -w "%{http_code}" -b cookies.txt http://127.0.0.1:8080/werkstatt/code/$PYID)
+          grep -q "run-python" pyed.html && PY_RUN_OK=1 || PY_RUN_OK=0
+          grep -q "hlwrap" pyed.html && HL_CODE_OK=1 || HL_CODE_OK=0
+          CSRF2=$(grep -o 'value="[a-f0-9]*"' ws.html | head -n1 | cut -d'"' -f2)
+          grep -q "hlwrap" ws.html && HL_SQL_OK=1 || HL_SQL_OK=0
+          grep -q 'data-hl="sql"' ws.html && HL_SQLHL_OK=1 || HL_SQLHL_OK=0
+          grep -q 'data-ac="sql"' ws.html && AC_SQL_OK=1 || AC_SQL_OK=0
+          grep -q 'data-tables="[^"]*produkte' ws.html && AC_SQLTB_OK=1 || AC_SQLTB_OK=0
+          curl -sS -L -b cookies.txt -c cookies.txt -o query.html --data-urlencode "csrf=$CSRF2" --data-urlencode "sql=SELECT COUNT(*) AS n FROM produkte" http://127.0.0.1:8080/werkstatt/sql/shop
+          grep -q 'data-result="ok"' query.html && QUERY_OK=1 || QUERY_OK=0
+          CODE_SQLAPP_SHOP=$(curl -sS -L -o wsapp.html -w "%{http_code}r%{num_redirects}" -b cookies.txt http://127.0.0.1:8080/werkstatt/sql/shop/app)
+          grep -q "phone-frame" wsapp.html && SQLAPP_SHOP_OK=1 || SQLAPP_SHOP_OK=0
+          grep -q "App-Ansicht" ws.html && SQLAPPLINK_OK=1 || SQLAPPLINK_OK=0
+          grep -q 'class="hlwrap sql" data-hl="sql" data-ac="sql"' ws.html && SQLNEST_OK=1 || SQLNEST_OK=0
+          grep -q 'data-hl="sql">' ws.html && SQLNEST_BAD=1 || SQLNEST_BAD=0
+          grep -q "ic-ghost" public/assets/js/app.js && GHOSTJS_OK=1 || GHOSTJS_OK=0
+          grep -q "repl-gutter" public/assets/js/app.js && GUTTER_GUARD_OK=1 || GUTTER_GUARD_OK=0
+          grep -q "ide > .gfx-dock" public/assets/css/style.css && GFXDOCK_CSS_OK=1 || GFXDOCK_CSS_OK=0
+          grep -q "edAcSession" public/assets/js/java-vm.js && EDAC_MEM_OK=1 || EDAC_MEM_OK=0
+          grep -q "pageXOffset" public/assets/js/java-vm.js && ACSCROLL_OK=1 || ACSCROLL_OK=0
+          grep -q "wireDbConsole" public/assets/js/java-vm.js && DBCONS_OK=1 || DBCONS_OK=0
+          grep -q "restoreClassDiagramHeader" public/assets/js/app.js && DIAG_RESTORE_OK=1 || DIAG_RESTORE_OK=0
+          grep -q "edAcFallbackScan" public/assets/js/java-vm.js && EDAC_FB_OK=1 || EDAC_FB_OK=0
+          grep -q "Noch keine Abfrage" public/assets/js/java-vm.js && DBCONS_DELEG_OK=1 || DBCONS_DELEG_OK=0
+          grep -q "repl-edit:focus-within" public/assets/css/style.css && REPL_FOCUS_OK=1 || REPL_FOCUS_OK=0
+          grep -q "elementFromPoint" public/assets/js/app.js && DBCONSFIX_OK=1 || DBCONSFIX_OK=0
+          grep -q "__icDbRunDone" public/assets/js/java-vm.js && DBRUN_GUARD_OK=1 || DBRUN_GUARD_OK=0
+          grep -Fq ".gfx-dock .gfx-window { width: fit-content; max-width: 100%; margin: 0 auto; }" public/assets/css/style.css && GFXFIT_OK=1 || GFXFIT_OK=0
+          grep -q "host.clientWidth" public/assets/js/java-vm.js && GFXFITJS_OK=1 || GFXFITJS_OK=0
+          grep -Fq ".repl-edit > .hlwrap { flex: 1; min-width: 0; }" public/assets/css/style.css && REPLW_OK=1 || REPLW_OK=0
+          grep -q "DOMContentLoaded" public/assets/js/java-vm.js && BOOTDOM_OK=1 || BOOTDOM_OK=0
+          grep -q "setAttribute('rows'" public/assets/js/java-vm.js && REPLGROW_OK=1 || REPLGROW_OK=0
+          grep -Fq ".repl-edit .hlwrap > pre" public/assets/css/style.css && REPLOVL_OK=1 || REPLOVL_OK=0
+          grep -q "ibook-editor" public/assets/js/app.js && IBK_JS_OK=1 || IBK_JS_OK=0
+          grep -q "icv-stage" public/assets/js/app.js && IBK_CVJS_OK=1 || IBK_CVJS_OK=0
+          grep -q "icv-mode-draw" public/assets/css/style.css && IBK_CVCSS_OK=1 || IBK_CVCSS_OK=0
+          grep -q "icv-del" public/assets/js/app.js && IBK_DEL_OK=1 || IBK_DEL_OK=0
+          grep -q "Backspace" public/assets/js/app.js && IBK_DELKEY_OK=1 || IBK_DELKEY_OK=0
+          grep -q "fitTa" public/assets/js/app.js && IBK_FITTA_OK=1 || IBK_FITTA_OK=0
+          grep -q "itemDivs" public/assets/js/app.js && IBK_SELNB_OK=1 || IBK_SELNB_OK=0
+          grep -Fq ".icv-selected .icv-del" public/assets/css/style.css && IBK_DELCSS_OK=1 || IBK_DELCSS_OK=0
+          grep -Fq ".ibook-topnav { margin-bottom: 8px; justify-content: flex-start" public/assets/css/style.css && IBK_NAVL_OK=1 || IBK_NAVL_OK=0
+          grep -q "ibook-distribute-details" templates/ibook_distribute_panel.php && grep -q "ibook_distribute_panel.php" templates/ibook_page.php && IBK_DIST_OK=1 || IBK_DIST_OK=0
+          grep -Fq "?lesen=1" templates/ibook_page.php && IBK_PREV_OK=1 || IBK_PREV_OK=0
+          grep -q "HTTP_X_IC_AUTOSAVE" src/Controllers/InfoBookController.php && IBK_ASAVE_OK=1 || IBK_ASAVE_OK=0
+          grep -q "Automatisch gespeichert" public/assets/js/app.js && IBK_ASAVEJS_OK=1 || IBK_ASAVEJS_OK=0
+          ! grep -q "Seite speichern" templates/ibook_page.php && IBK_NOBTN_OK=1 || IBK_NOBTN_OK=0
+          grep -q "icv-rs-nw" public/assets/css/style.css && IBK_4C_OK=1 || IBK_4C_OK=0
+          grep -q "i.ytimg.com" public/assets/js/app.js && IBK_YT_OK=1 || IBK_YT_OK=0
+          grep -q "icv-video-preview" public/assets/js/app.js && IBK_VID_OK=1 || IBK_VID_OK=0
+          grep -q "H5P" public/assets/js/app.js && IBK_H5PJS_OK=1 || IBK_H5PJS_OK=0
+          grep -q "h5p.com" src/Models/InfoBook.php && IBK_H5PPHP_OK=1 || IBK_H5PPHP_OK=0
+          grep -q "IC_RUN_CODE" public/assets/js/app.js && IBK_CODEPHP_OK=1 || IBK_CODEPHP_OK=0
+          grep -q "IC_DB_RUN" public/assets/js/app.js && IBK_DBPHP_OK=1 || IBK_DBPHP_OK=0
+          grep -q "IC_RENDER_DIAGRAM" public/assets/js/app.js && IBK_DIAGPHP_OK=1 || IBK_DIAGPHP_OK=0
+          grep -q "mermaid" templates/ibook_page.php && IBK_DIAGTPL_OK=1 || IBK_DIAGTPL_OK=0
+          grep -Fq "item.kind === 'image' || item.kind === 'ink' || item.kind === 'embed' || item.kind === 'audio' || item.kind === 'video'" public/assets/js/app.js && IBK_MOVEGRIP_OK=1 || IBK_MOVEGRIP_OK=0
+          grep -q "IC_IBOOK_NAVFOLD" public/assets/js/app.js && grep -q "ibook-pagenav-fold" templates/ibook_page.php && grep -q "ibook-navtoggle" public/assets/css/style.css && IBK_FOLD_OK=1 || IBK_FOLD_OK=0
+          grep -q "ibook-topnav-title" templates/ibook_page.php && grep -q "ibook-topnav-title" public/assets/css/style.css && IBK_HERO_OK=1 || IBK_HERO_OK=0
+          grep -q "icv-diagram-mode" public/assets/js/app.js && grep -q "icv-diagram-lib" public/assets/js/app.js && IBK_DGMODE_OK=1 || IBK_DGMODE_OK=0
+          grep -q "icv-diagram-split-ro" src/Controllers/InfoBookController.php && grep -q "icv-diagram-split-bar" public/assets/css/style.css && grep -Fq "'dmode'" src/Models/InfoBook.php && IBK_DGSPLITPHP_OK=1 || IBK_DGSPLITPHP_OK=0
+          grep -q "icv-code-langsel" public/assets/js/app.js && grep -q "InfoCraftJavaVM" public/assets/js/app.js && IBK_LANGJS_OK=1 || IBK_LANGJS_OK=0
+          grep -q "icv-code-langtag" src/Controllers/InfoBookController.php && grep -q "java-vm.js" templates/ibook_page.php && grep -Fq "'lang'" src/Models/InfoBook.php && IBK_LANGPHP_OK=1 || IBK_LANGPHP_OK=0
+          grep -q "icv-db-libsel" public/assets/js/app.js && grep -q "dbTemplates" src/Controllers/InfoBookController.php && grep -q "data-dbtemplates" templates/ibook_page.php && IBK_DBTPL_OK=1 || IBK_DBTPL_OK=0
+          grep -Fq "files['Main.java'] = String(src);" public/assets/js/app.js && IBK_JAVAFIX_OK=1 || IBK_JAVAFIX_OK=0
+          grep -q "icv-db-table" public/assets/js/app.js && grep -q "icv-db-table" public/assets/css/style.css && grep -q "icv-db-count" public/assets/js/app.js && IBK_DBTAB_OK=1 || IBK_DBTAB_OK=0
+          grep -q "icv-code-projsel" public/assets/js/app.js && grep -q "codeClasses" src/Controllers/InfoBookController.php && grep -q "data-codeclasses" templates/ibook_page.php && IBK_CLSPROJ_OK=1 || IBK_CLSPROJ_OK=0
+          grep -q "icv-code-card" public/assets/js/app.js && grep -q "icv-code-card" public/assets/css/style.css && grep -Fq "'cls'" src/Models/InfoBook.php && grep -q "data-clsfiles" src/Controllers/InfoBookController.php && IBK_CLSCARD_OK=1 || IBK_CLSCARD_OK=0
+          grep -q "refreshAcExtra" public/assets/js/app.js && grep -q "MERMAID_SNIPPETS" public/assets/js/app.js && IBK_AUTOCOMP_OK=1 || IBK_AUTOCOMP_OK=0
+          grep -q "splitTuples" public/assets/js/app.js && IBK_DBROWS_OK=1 || IBK_DBROWS_OK=0
+          grep -Fq "endet mitten in einem Ausdruck" public/assets/js/java-vm.js && IBK_EOFMSG_OK=1 || IBK_EOFMSG_OK=0
+          grep -q "optgroup" public/assets/js/app.js && IBK_DROPGRP_OK=1 || IBK_DROPGRP_OK=0
+          grep -Fq "<textarea class=\"mono icv-code-src\"" src/Controllers/InfoBookController.php && IBK_ROCODE_OK=1 || IBK_ROCODE_OK=0
+          grep -q "IC_EDIT_TOOLS" public/assets/js/app.js && grep -q "icv-gutter" public/assets/css/style.css && grep -q "MERMAID_KEYWORDS" public/assets/js/app.js && IBK_EDITPAR_OK=1 || IBK_EDITPAR_OK=0
+          grep -q "icv-edwrap > textarea.icv-code-src" public/assets/css/style.css && IBK_GUTTERPAD_OK=1 || IBK_GUTTERPAD_OK=0
+          grep -q "AltGr-Klammern (#98)" public/assets/js/app.js && IBK_ALTGR_OK=1 || IBK_ALTGR_OK=0
+          grep -q "data-clsname" src/Controllers/InfoBookController.php && grep -q "wireReadCards" public/assets/js/app.js && IBK_ROCLS_OK=1 || IBK_ROCLS_OK=0
+          grep -q "tabIndent" public/assets/js/app.js && grep -q "Vorschub statt Fokus-Sprung" public/assets/js/app.js && grep -q "T79 Tab ohne Vorschlag" tools/ui-tests.js && IBK_TAB_OK=1 || IBK_TAB_OK=0
+          grep -q ".icv-code .icv-gutter-cell" public/assets/css/style.css && grep -q "padding: 7px 0" public/assets/css/style.css && IBK_GUTALIGN_OK=1 || IBK_GUTALIGN_OK=0
+          grep -q "icv-hl-pre" public/assets/css/style.css && grep -q "highlight.min.js" templates/ibook_page.php && grep -q "highlight(ta, 'java')" public/assets/js/app.js && IBK_IBHL_OK=1 || IBK_IBHL_OK=0
+          grep -q "Noch keine Session (#106)" public/assets/js/java-vm.js && grep -q "T82 " tools/ui-tests.js && WSC_REPLAUTO_OK=1 || WSC_REPLAUTO_OK=0
+          grep -q "Ueberschreiben statt stapeln" public/assets/js/java-vm.js && grep -q "SessionUeberschreibtGleichesObjekt" tools/java-vm-tests.js && WSC_OBJOVER_OK=1 || WSC_OBJOVER_OK=0
+          grep -q "Anweisungen ausführen:" public/assets/js/java-vm.js && grep -q "REPLAUSGABE" tools/ui-tests.js && WSC_REPLOUT_OK=1 || WSC_REPLOUT_OK=0
+          grep -q "SFMono-Regular, Menlo, Consolas, monospace" public/assets/css/style.css && grep -q "code.style.transform" public/assets/js/app.js && grep -q "caret-color" public/assets/css/style.css && WSC_REPLHL_OK=1 || WSC_REPLHL_OK=0
+          grep -q "width: fit-content" public/assets/css/style.css && grep -q "Math.min(Math.round(w.w), 960)" public/assets/js/java-vm.js && WSC_GFXFIT2_OK=1 || WSC_GFXFIT2_OK=0
+          grep -Fq "top: auto; right: auto;" public/assets/css/style.css && grep -q "Overlay-Basisregel neutralisieren" public/assets/css/style.css && GFX_DOCKPOS_OK=1 || GFX_DOCKPOS_OK=0
+          grep -Fq ".hlwrap.hl-active > #java-repl-in { color: transparent; }" public/assets/css/style.css && grep -q "T85b die ID-Regel" tools/ui-tests.js && REPL_CLRTXT_OK=1 || REPL_CLRTXT_OK=0
+          grep -q "attach(dbQTa, 'sql')" public/assets/js/app.js && grep -q "SQL-Abfrage-Feld im DB-Element" public/assets/js/app.js && grep -q "T84 das SQL-Abfrage-Feld" tools/ui-tests.js && IBK_SQLAC_OK=1 || IBK_SQLAC_OK=0
+          grep -q "fitStageTas" public/assets/js/app.js && grep -q "T86c nach dem Laden/Import" tools/ui-tests.js && IBK_FITLOAD_OK=1 || IBK_FITLOAD_OK=0
+          grep -q "'python', 'java', 'asm', 'blocks'" src/Controllers/CodeController.php && grep -q "🧩 Blöcke" templates/code_overview.php && BLK_NEW_OK=1 || BLK_NEW_OK=0
+          grep -q "window.IC_BLOCKS" public/assets/js/block-editor.js && grep -q "T88 gehe 10 Schritte" tools/ui-tests.js && BLK_VM_OK=1 || BLK_VM_OK=0
+          grep -q "Zufallszahl von" public/assets/js/block-editor.js && grep -q "T89d Division durch 0" tools/ui-tests.js && BLK_OPS_OK=1 || BLK_OPS_OK=0
+          grep -q "blk-ide" templates/code_project.php && grep -q "blk-stage" templates/code_project.php && grep -q "T95c die Figur zeichnet sich" tools/ui-tests.js && BLK_STAGE_OK=1 || BLK_STAGE_OK=0
+          grep -q "blk-pal" public/assets/js/block-editor.js && grep -q "T93e die Befehlsuebersicht" tools/ui-tests.js && BLK_UI_OK=1 || BLK_UI_OK=0
+          grep -q "automatisch gespeichert um" public/assets/js/block-editor.js && grep -q "T94 das Autospeichern" tools/ui-tests.js && BLK_AUTOSAVE_OK=1 || BLK_AUTOSAVE_OK=0
+          grep -q "blk-ghost" public/assets/js/block-editor.js && grep -q "pointercancel" public/assets/js/block-editor.js && grep -q "restoreDrag" public/assets/js/block-editor.js && grep -q "T98 die Figurenliste" tools/ui-tests.js && BLK_DRAG_OK=1 || BLK_DRAG_OK=0
+          grep -q "clip-path" public/assets/css/style.css && grep -q "blk-stack::after" public/assets/css/style.css && grep -q "T96 jeder Block traegt seine Form" tools/ui-tests.js && BLK_SHAPE_OK=1 || BLK_SHAPE_OK=0
+          grep -q "Wenn ▶ angeklickt wird" public/assets/js/block-editor.js && grep -q "T96b der Start-Hut nennt den Play-Knopf" tools/ui-tests.js && BLK_PLAY_OK=1 || BLK_PLAY_OK=0
+          grep -q "addSprite" public/assets/js/block-editor.js && grep -q "blk-sprites" templates/code_project.php && grep -q "T97 ein altes Programm" tools/ui-tests.js && grep -q "T98d eine neue Figur" tools/ui-tests.js && BLK_SPR_OK=1 || BLK_SPR_OK=0
+          grep -q "selectTarget" public/assets/js/block-editor.js && grep -q "T99 das Buehnen-Skript" tools/ui-tests.js && grep -q "T99b die Buehne zeigt nur passende" tools/ui-tests.js && BLK_TGT_OK=1 || BLK_TGT_OK=0
+          ! grep -q "💾 Speichern" templates/code_project.php && grep -q "automatisch gespeichert um" public/assets/js/block-editor.js && BLK_NOBTN_OK=1 || BLK_NOBTN_OK=0
+          grep -q "parentKind = 'next'; parentNode = prev" public/assets/js/block-editor.js && grep -q "T100 der unterste Block loest nur sich" tools/ui-tests.js && BLK_UNCHAIN_OK=1 || BLK_UNCHAIN_OK=0
+          grep -q "play_note" public/assets/js/block-editor.js && grep -q "T101 die Klang-Kategorie" tools/ui-tests.js && BLK_SOUND_OK=1 || BLK_SOUND_OK=0
+          grep -q "broadcast_wait" public/assets/js/block-editor.js && grep -q "T102 senden startet" tools/ui-tests.js && BLK_MSG_OK=1 || BLK_MSG_OK=0
+          grep -q "when_clicked" public/assets/js/block-editor.js && grep -q "T103 Maus-x" tools/ui-tests.js && BLK_SENSE_OK=1 || BLK_SENSE_OK=0
+          grep -q "pralle vom Rand ab" public/assets/js/block-editor.js && grep -q "T104 gleiten" tools/ui-tests.js && BLK_MOVE2_OK=1 || BLK_MOVE2_OK=0
+          grep -q "naechstes_kostuem" public/assets/js/block-editor.js && grep -q "T105 denken" tools/ui-tests.js && BLK_LOOKS2_OK=1 || BLK_LOOKS2_OK=0
+          grep -q "Rest von" public/assets/js/block-editor.js && grep -q "T106 Rest von 7" tools/ui-tests.js && BLK_OPS2_OK=1 || BLK_OPS2_OK=0
+          grep -q "programToJava" public/assets/js/block-editor.js && grep -q "T107 Java-Ansicht" tools/ui-tests.js && BLK_CODE_OK=1 || BLK_CODE_OK=0
+          grep -q "portBlocks" src/Controllers/CodeController.php && grep -q "werkstatt/code/blocks/port" public/index.php && grep -q "T108d die Portierung" tools/ui-tests.js && BLK_PORT_OK=1 || BLK_PORT_OK=0
+          grep -q "Ursprung oben links" public/assets/js/block-editor.js && grep -q "T88 gehe 10 Schritte" tools/ui-tests.js && BLK_COORD_OK=1 || BLK_COORD_OK=0
+          grep -q "Expertenmodus" public/assets/js/block-editor.js && grep -q "blk-mode" templates/code_project.php && grep -q "T109 der Editor startet" tools/ui-tests.js && BLK_MODE_OK=1 || BLK_MODE_OK=0
+          grep -q "btn.style.background = cat.color" public/assets/js/block-editor.js && grep -q "T109c jeder Kategorie-Knopf" tools/ui-tests.js && BLK_COLOR_OK=1 || BLK_COLOR_OK=0
+          grep -q "function consoleRun" public/assets/js/block-editor.js && grep -q "T110 hilfe listet" tools/ui-tests.js && BLK_CONSOLE_OK=1 || BLK_CONSOLE_OK=0
+          grep -q "extends Figur" public/assets/js/block-editor.js && grep -q "T107 Java-Ansicht" tools/ui-tests.js && BLK_OOP_OK=1 || BLK_OOP_OK=0
+          grep -q "blk-dragging" public/assets/js/block-editor.js && grep -q "T111 beim Ziehen" tools/ui-tests.js && BLK_DRAGVIS_OK=1 || BLK_DRAGVIS_OK=0
+          grep -q "Einfuege-Linie" public/assets/js/block-editor.js && grep -q "T111b die Einfuege-Linie" tools/ui-tests.js && BLK_INS_OK=1 || BLK_INS_OK=0
+          grep -q "blk-hint-pulse" public/assets/css/style.css && grep -q "blk-mode-btn" public/assets/css/style.css && BLK_STYLE_OK=1 || BLK_STYLE_OK=0
+          grep -q "letima development" src/Support.php && grep -q "APP_VERSION = '0.33.0'" src/Support.php && grep -q "Keep a Changelog" CHANGELOG.md && grep -q "APP_VERSION" templates/layout.php && BLK_HEAD_OK=1 || BLK_HEAD_OK=0
+          grep -q "drag.ghost.style.transform = 'translate('" public/assets/js/block-editor.js && grep -q "_bubW" public/assets/js/block-editor.js && grep -q "children.length > 200" public/assets/js/block-editor.js && grep -q "T113 der gezogene Block folgt" tools/ui-tests.js && BLK_OPT_OK=1 || BLK_OPT_OK=0
+          grep -q "switchMode" public/assets/js/block-editor.js && grep -q "blk-switch-btn" templates/code_project.php && grep -q "T109m die Moduswahl" tools/ui-tests.js && BLK_SWITCH_OK=1 || BLK_SWITCH_OK=0
+          grep -q "pro: true" public/assets/js/block-editor.js && grep -q "T109e im Lernmodus fehlt die Variablen-Kategorie" tools/ui-tests.js && BLK_LEARN_OK=1 || BLK_LEARN_OK=0
+          grep -q "legalSave" src/Controllers/AdminController.php && grep -q "Impressum und Datenschutz" templates/admin_settings.php && grep -q "'/impressum'" public/index.php && LEGAL_OK=1 || LEGAL_OK=0
+          grep -q "applyTrap" public/assets/js/automaton.js && grep -q "amt-ide" templates/code_project.php && grep -q "T114 die Automaten-Engine" tools/ui-tests.js && AMT_OK=1 || AMT_OK=0
+          grep -q "Enter direkt nach einer oeffnenden Klammer" public/assets/js/app.js && grep -q "T115 Enter nach einer oeffnenden Klammer" tools/ui-tests.js && IBK_OPENBLK_OK=1 || IBK_OPENBLK_OK=0
+          grep -q "when_clone" public/assets/js/block-editor.js && grep -q "clone_create" public/assets/js/block-editor.js && grep -q "T116t ein Klon startet" tools/ui-tests.js && BLK_CLONE_OK=1 || BLK_CLONE_OK=0
+          grep -q "list_add" public/assets/js/block-editor.js && grep -q "T116m Listen fuellen" tools/ui-tests.js && BLK_LIST_OK=1 || BLK_LIST_OK=0
+          grep -q "callproc" public/assets/js/block-editor.js && grep -q "T116q ein Baustein springt" tools/ui-tests.js && BLK_PROC_OK=1 || BLK_PROC_OK=0
+          grep -q "BACKDROP_OPTIONS" public/assets/js/block-editor.js && grep -q "blk-bg" templates/code_project.php && grep -q "T116x Hintergrund wechseln" tools/ui-tests.js && BLK_BACKDROP_OK=1 || BLK_BACKDROP_OK=0
+          grep -q "TEMPLATES" public/assets/js/block-editor.js && grep -q "blk-templates" templates/code_project.php && grep -q "T116g der Vorlagen-Knopf" tools/ui-tests.js && BLK_TPL_OK=1 || BLK_TPL_OK=0
+          grep -q "blk-fullbox" public/assets/js/block-editor.js && grep -q "blk-fullbox" public/assets/css/style.css && grep -q "T116k der Vollbild-Knopf" tools/ui-tests.js && BLK_FULL_OK=1 || BLK_FULL_OK=0
+          grep -q "legal_kind" templates/admin_settings.php && grep -q "Privatperson" templates/legal_imprint.php && grep -q "Privatperson" templates/admin_settings.php && LEGAL_KIND_OK=1 || LEGAL_KIND_OK=0
+          grep -q "IC_PDA" public/assets/js/pda.js && grep -q "T117 der Kellerautomat" tools/ui-tests.js && PDA_OK=1 || PDA_OK=0
+          grep -q "IC_TM" public/assets/js/turing.js && grep -q "T118 die Turingmaschine" tools/ui-tests.js && TM_OK=1 || TM_OK=0
+          grep -q "IC_LOGIC" public/assets/js/logic.js && grep -q "T119 der Halbaddierer" tools/ui-tests.js && LC_OK=1 || LC_OK=0
+          grep -q "new-kind" code.html && grep -q "Projektart" code.html && C_KIND_OK=1 || C_KIND_OK=0
+          grep -q "ov-boxes" templates/code_overview.php && grep -q "code-ov" templates/code_overview.php && grep -q "ic_proj_icon" src/Support.php && OV_BOX_OK=1 || OV_BOX_OK=0
+          grep -q "ic_legal_defaults" src/Support.php && grep -q "ic_legal_field" src/Controllers/HomeController.php && LEGAL_DEF_OK=1 || LEGAL_DEF_OK=0
+          grep -q "IC_AMT_TOOLS" public/assets/js/amt-tools.js && grep -q "T120 der Werkzeugkasten" tools/ui-tests.js && grep -q "amt-tools.js" templates/code_project.php && AMT_TOOLS_OK=1 || AMT_TOOLS_OK=0
+          grep -q "pda-undo" templates/code_project.php && grep -q "pda-play" templates/code_project.php && grep -q "T120l" tools/ui-tests.js && PDA_PAR_OK=1 || PDA_PAR_OK=0
+          grep -q "tm-batch" templates/code_project.php && grep -q "tm-undo" templates/code_project.php && grep -q "T120t" tools/ui-tests.js && TM_PAR_OK=1 || TM_PAR_OK=0
+          grep -q "icv-html" src/Controllers/InfoBookController.php && grep -q "IC_HTML_RENDER" public/assets/js/app.js && grep -q "T121" tools/ui-tests.js && IBK_HTML_OK=1 || IBK_HTML_OK=0
+          grep -q "DEFAULT_PAL\[k\]" public/assets/js/automaton.js && grep -q -- "--paper:" public/assets/css/style.css && grep -q "T122" tools/ui-tests.js && AMT_PAL_OK=1 || AMT_PAL_OK=0
+          grep -q "ov-topbar" templates/code_overview.php && grep -q "ov-distribute" templates/code_overview.php && grep -q "ibook-distribute-details" templates/code_overview.php && OVDIST_OK=1 || OVDIST_OK=0
+          grep -q "folder-new" templates/code_overview.php && grep -q "Hauptebene" templates/code_overview.php && grep -q "folder-add" templates/code_overview.php && FOLDNEW_OK=1 || FOLDNEW_OK=0
+          grep -q "folder-add" public/assets/css/style.css && FOLDSUBCSS_OK=1 || FOLDSUBCSS_OK=0
+          grep -q "IC_PRESENT" public/assets/js/app.js && grep -q "T123" tools/ui-tests.js && grep -q "slide-stepinfo" templates/ibook_present.php && IBKSLIDE_OK=1 || IBKSLIDE_OK=0
+          grep -q "slide-step-hidden" public/assets/css/style.css && grep -q "slide-step-in" public/assets/css/style.css && ! grep -q "slide-progress" public/assets/css/style.css && IBKANIMCSS_OK=1 || IBKANIMCSS_OK=0
+          ! grep -q "'praesentationen'" src/Controllers/ModuleController.php && grep -q "Zeitsteuerung" src/Controllers/ModuleController.php && PMERGE_OK=1 || PMERGE_OK=0
+          ! grep -q "als-praesentation" public/index.php && ! grep -q "createPresentation" src/Controllers/InfoBookController.php && IBKALSPDEL_OK=1 || IBKALSPDEL_OK=0
+          grep -q "ic_demo_mode" src/Support.php && grep -q "ic_demo_mode" src/Controllers/AuthController.php && grep -q "demo_mode" templates/admin_settings.php && DEMOTGL_OK=1 || DEMOTGL_OK=0
+          grep -q "CSV-Import ist nur für die Administration" src/Controllers/AdminController.php && grep -q "CSV-Import" templates/layout.php && ADMIMP_OK=1 || ADMIMP_OK=0
+          grep -q "forTeacher" src/Controllers/AdminController.php && grep -q "deiner Klassen" templates/admin_users.php && TEACHUSR_OK=1 || TEACHUSR_OK=0
+          grep -q "announcement" src/Controllers/HomeController.php && grep -q "ic-annc" templates/home.php && grep -q "Ankündigung" templates/admin_settings.php && ANNC_OK=1 || ANNC_OK=0
+          grep -q "kv-legal" templates/legal_imprint.php && ! grep -q "#167" templates/admin_settings.php && IMPRESS_OK=1 || IMPRESS_OK=0
+          grep -q "role === 'admin'" templates/home.php && HOMEADM_OK=1 || HOMEADM_OK=0
+          grep -q "usersCsv" src/Controllers/AdminController.php && grep -q "admin/users/csv" templates/admin_users.php && USERCSVC_OK=1 || USERCSVC_OK=0
+          grep -q "ibook-navtoggle" templates/ibook_page.php && grep -q "ibook-navtoggle" templates/ibook_book.php && grep -q "ibook-pagenav.ibook-pagenav-off { display: none; }" public/assets/css/style.css && IBK_NAVINHALT_OK=1 || IBK_NAVINHALT_OK=0
+          grep -q "seiten-reihenfolge" public/index.php && grep -q "reorderPages" src/Controllers/InfoBookController.php && grep -q "ibook-pagenav-drag" templates/ibook_nav.php && grep -q "ibook-pagenav-drag" public/assets/js/app.js && IBK_NAVDND_OK=1 || IBK_NAVDND_OK=0
+          grep -q "IC_EDIT_TOOLS.clsMembers" public/assets/js/app.js && IBK_MODCLS_OK=1 || IBK_MODCLS_OK=0
+          grep -q "growStage" public/assets/js/app.js && IBK_INF_OK=1 || IBK_INF_OK=0
+          grep -q "dragActive" public/assets/js/app.js && IBK_DRAG_OK=1 || IBK_DRAG_OK=0
+          grep -q "item.bg === 'none'" public/assets/js/app.js && IBK_POSTIT_OK=1 || IBK_POSTIT_OK=0
+          grep -q "ibook-pagenav" templates/ibook_nav.php && IBK_NAV68_OK=1 || IBK_NAV68_OK=0
+          grep -q "navSection" src/Controllers/InfoBookController.php && IBK_NAVPHP_OK=1 || IBK_NAVPHP_OK=0
+          grep -q "icv-area-btns" public/assets/js/app.js && IBK_ICONS_OK=1 || IBK_ICONS_OK=0
+          grep -q "lassoSelect" public/assets/js/app.js && IBK_LASSO_OK=1 || IBK_LASSO_OK=0
+          grep -q "nextGroupId" public/assets/js/app.js && IBK_GROUP_OK=1 || IBK_GROUP_OK=0
+          grep -q "'none'" src/Models/InfoBook.php && IBK_NONE_OK=1 || IBK_NONE_OK=0
+          ! grep -q "Baustein" templates/ibook_book.php && IBK_NOBLOCKS_OK=1 || IBK_NOBLOCKS_OK=0
+          grep -q "navLesen" templates/ibook_nav.php && IBK_LESENAV_OK=1 || IBK_LESENAV_OK=0
+          grep -q "ibook-pagenav-box" templates/ibook_nav.php && grep -q "ibook-pagenav-box" public/assets/css/style.css && IBK_COLL_OK=1 || IBK_COLL_OK=0
+          grep -q "ibook-navnew" templates/ibook_nav.php && IBK_NAVNEW_OK=1 || IBK_NAVNEW_OK=0
+          grep -q "'canWrite' => self::canWriteSection" src/Controllers/InfoBookController.php && IBK_NAVNEWPHP_OK=1 || IBK_NAVNEWPHP_OK=0
+          grep -q "ibook-pagenav-pages" templates/ibook_nav.php && grep -q "ibook-pagenav-pages" public/assets/css/style.css && IBK_NAVFOCUS_OK=1 || IBK_NAVFOCUS_OK=0
+          grep -q "ibook-pagenav-section-active" templates/ibook_nav.php && grep -q "ibook-pagenav-section-active" public/assets/css/style.css && IBK_NAVSECACT_OK=1 || IBK_NAVSECACT_OK=0
+          grep -q "ibook-navnewsec-details" templates/ibook_nav.php && grep -q "ibook-navnewsec-details" public/assets/css/style.css && IBK_NAVSECCOLL_OK=1 || IBK_NAVSECCOLL_OK=0
+          grep -q "navSectionsFor" src/Controllers/InfoBookController.php && IBK_NAVSTU_OK=1 || IBK_NAVSTU_OK=0
+          grep -q "ibook_nav.php" templates/ibook_page.php && grep -q "ibook_nav.php" templates/ibook_book.php && IBK_NAVSHARE_OK=1 || IBK_NAVSHARE_OK=0
+          grep -q "ibook-crumbs" templates/ibook_page.php && grep -q "ibook-crumbs" templates/ibook_book.php && grep -q ".ibook-crumbs" public/assets/css/style.css && IBK_NAVCRUMB_OK=1 || IBK_NAVCRUMB_OK=0
+          grep -q "ic_ibook_last" src/Controllers/InfoBookController.php && grep -q "lastVisitedPage" src/Controllers/InfoBookController.php && IBK_NAVLASTPHP_OK=1 || IBK_NAVLASTPHP_OK=0
+          grep -q "ibook-secview" templates/ibook_book.php && grep -q ".ibook-secview" public/assets/css/style.css && IBK_NAVSECV_OK=1 || IBK_NAVSECV_OK=0
+          grep -q "ibook-pagenav-secdetails" templates/ibook_nav.php && grep -q "ibook-pagenav-secdetails" public/assets/js/app.js && grep -q ".ibook-pagenav-secdetails" public/assets/css/style.css && IBK_NAVSECFOLD_OK=1 || IBK_NAVSECFOLD_OK=0
+          grep -q "ibook-navimport-details" templates/ibook_nav.php && grep -q ".ibook-navimport-details" public/assets/css/style.css && IBK_NAVIMP_OK=1 || IBK_NAVIMP_OK=0
+          grep -q "ibook-page-card-empty" templates/ibook_book.php && grep -q ".ibook-page-card-empty" public/assets/css/style.css && IBK_SECEMPTY_OK=1 || IBK_SECEMPTY_OK=0
+          ! grep -q "target=" templates/ibook_page.php && IBK_PREVWIN_OK=1 || IBK_PREVWIN_OK=0
+          grep -q "icv-clsbox" public/assets/js/app.js && grep -q ".icv-clsbox" public/assets/css/style.css && IBK_CLSBOX_OK=1 || IBK_CLSBOX_OK=0
+          grep -q "slide-step-hidden" public/assets/js/app.js && grep -q "slide-stepinfo" public/assets/js/app.js && IBK_PRESSTEP_OK=1 || IBK_PRESSTEP_OK=0
+          grep -Fq "item['step']" src/Models/InfoBook.php && grep -Fq "item['anim']" src/Models/InfoBook.php && grep -q "'fade', 'up', 'left', 'zoom'" src/Models/InfoBook.php && IBK_STEPPHP_OK=1 || IBK_STEPPHP_OK=0
+          grep -q "data-step=" src/Controllers/InfoBookController.php && grep -q "data-anim=" src/Controllers/InfoBookController.php && grep -q "'present'" src/Controllers/InfoBookController.php && grep -q "66vh" src/Controllers/InfoBookController.php && IBK_STEPRENDER_OK=1 || IBK_STEPRENDER_OK=0
+          grep -q "data-step" public/assets/js/app.js && grep -q "icv-ctx-step" public/assets/js/app.js && grep -q "refreshStepBadge" public/assets/js/app.js && IBK_STEPJS_OK=1 || IBK_STEPJS_OK=0
+          grep -q "slide-in-up" public/assets/css/style.css && grep -q "slide-in-left" public/assets/css/style.css && grep -q "slide-in-zoom" public/assets/css/style.css && IBK_STEPANIM_OK=1 || IBK_STEPANIM_OK=0
+          grep -q "«" public/assets/css/style.css && ! grep -q "☰" public/assets/css/style.css && IBK_FOLDICON_OK=1 || IBK_FOLDICON_OK=0
+          ! grep -q "Freie Fläche" templates/ibook_page.php && IBK_NOFLAECHE_OK=1 || IBK_NOFLAECHE_OK=0
+          grep -q "\"sections\"" docs/beispielpakete/if-anweisungen-java.json && grep -q "\"sections\"" docs/beispielpakete/vererbung-java.json && grep -q "\"step\"" docs/beispielpakete/if-anweisungen-java.json && grep -q "\"anim\"" docs/beispielpakete/vererbung-java.json && grep -q "Buchpaket importieren" docs/beispielpakete/README.md && IBK_PKG_OK=1 || IBK_PKG_OK=0
+          grep -q "adv-card" templates/sql_adventures.php && grep -q "adv-progress-fill" templates/sql_adventures.php && grep -q "SQL-Abenteuer" templates/sql_adventures.php && grep -q "adv-chapter" templates/sql_adventure.php && grep -q "adv-locked" templates/sql_adventure.php && grep -q "adv-finale" templates/sql_adventure.php && SQLADVTPL_OK=1 || SQLADVTPL_OK=0
+          grep -q "public static function adventures" src/Controllers/SqlWorkshopController.php && grep -q "'sql_adventure'" src/Controllers/SqlWorkshopController.php && grep -q "SqlAdventure::meta" src/Controllers/SqlWorkshopController.php && grep -q "abenteuer" public/index.php && grep -q "werkstatt/sql/abenteuer" templates/sql_overview.php && SQLADVCTRL_OK=1 || SQLADVCTRL_OK=0
+          grep -q "'raumstation' =>" src/SqlAdventure.php && grep -q "'museum' =>" src/SqlAdventure.php && grep -q "'festival' =>" src/SqlAdventure.php && grep -q "<svg" src/SqlAdventure.php && SQLADVMETA_OK=1 || SQLADVMETA_OK=0
+          grep -q "'raumstation', 'Raumstation Alpha'" src/Migrator.php && grep -q "'museum', 'Das Museum des verschwundenen Meisterwerks'" src/Migrator.php && grep -q "'festival', 'Festival der jungen Bühnen'" src/Migrator.php && grep -Fq "if (\$slug === 'raumstation')" src/Migrator.php && SQLADVMIG_OK=1 || SQLADVMIG_OK=0
+          grep -q "CREATE TABLE" sql/templates/raumstation.sql && grep -q "INSERT INTO" sql/templates/raumstation.sql && grep -q "CREATE TABLE" sql/templates/museum.sql && grep -q "INSERT INTO" sql/templates/museum.sql && grep -q "CREATE TABLE" sql/templates/festival.sql && grep -q "INSERT INTO" sql/templates/festival.sql && SQLADVSEED_OK=1 || SQLADVSEED_OK=0
+          grep -q "adv-progress-fill" public/assets/css/style.css && grep -q "adv-chapter-badge" public/assets/css/style.css && grep -q "adv-finale" public/assets/css/style.css && SQLADVCSS_OK=1 || SQLADVCSS_OK=0
+          grep -q "T128" tools/ui-tests.js && SQLADVTEST_OK=1 || SQLADVTEST_OK=0
+          grep -q "window.getComputedStyle(area)" public/assets/js/app.js && grep -q "pre.style\[prop\]" public/assets/js/app.js && grep -q ".hlwrap.sql > textarea, .hlwrap.sql > pre { font-size: 0.95rem; }" public/assets/css/style.css && R25CARET_OK=1 || R25CARET_OK=0
+          grep -q "task TEXT NULL" sql/schema.sqlite.sql && grep -q "hint_variants TEXT NULL" sql/schema.sqlite.sql && grep -q "task TEXT NULL" sql/schema.mysql.sql && grep -q "hint_variants TEXT NULL" sql/schema.mysql.sql && grep -q "ensureMissionTextColumns" src/Migrator.php && R25COLS_OK=1 || R25COLS_OK=0
+          grep -q "refreshSeedMissionTexts" src/Migrator.php && grep -q "json_encode(\$mission\['hints'\]" src/Migrator.php && grep -q "'hints' =>" src/Migrator.php && R25VARS_OK=1 || R25VARS_OK=0
+          grep -q "attemptFeedback" src/SqlWorkshop.php && grep -q "'groupby'" src/SqlWorkshop.php && grep -q "'subquery'" src/SqlWorkshop.php && grep -q "'scope'" src/SqlWorkshop.php && R25ANL_OK=1 || R25ANL_OK=0
+          grep -q "adv-path" templates/sql_adventure.php && grep -q "adv-station" templates/sql_adventure.php && grep -q "adv-dot" templates/sql_adventure.php && grep -q "adv-task" templates/sql_adventure.php && grep -q "adv-feedback" templates/sql_adventure.php && grep -q "chapterScene" templates/sql_adventure.php && R25PATH_OK=1 || R25PATH_OK=0
+          grep -q ".adv-path { display: grid" public/assets/css/style.css && grep -q ".adv-task {" public/assets/css/style.css && grep -q ".adv-feedback {" public/assets/css/style.css && grep -q "min-width: 900px" public/assets/css/style.css && R25PATHCSS_OK=1 || R25PATHCSS_OK=0
+          grep -q "public static function chapterScene" src/SqlAdventure.php && grep -q "spaceChapterScenes" src/SqlAdventure.php && grep -q "museumChapterScenes" src/SqlAdventure.php && grep -q "islandChapterScenes" src/SqlAdventure.php && R25SCENE_OK=1 || R25SCENE_OK=0
+          grep -q "T129" tools/ui-tests.js && grep -q "advVal129" tools/ui-tests.js && grep -q "attemptFeedback" src/Controllers/SqlWorkshopController.php && grep -q "mission_attempt" src/Controllers/SqlWorkshopController.php && R25TEST_OK=1 || R25TEST_OK=0
+          [ "$(grep -c 'wrap="off"' templates/sql_workspace.php)" = "2" ] && [ "$(grep -c 'wrap="off"' templates/sql_adventure.php)" = "2" ] && R26WRAP_OK=1 || R26WRAP_OK=0
+          grep -q "fontKerning" public/assets/js/app.js && grep -q ".hlwrap.sql > pre { white-space: pre; overflow-wrap: normal; }" public/assets/css/style.css && R26METRIC_OK=1 || R26METRIC_OK=0
+          grep -q "Zu den Aufgaben" templates/sql_workspace.php && grep -q "Zu den Kapiteln" templates/sql_adventure.php && grep -q 'href="#aufgaben"' templates/sql_workspace.php && grep -q 'href="#aufgaben"' templates/sql_adventure.php && R26JUMP_OK=1 || R26JUMP_OK=0
+          grep -Fq "Auth::isTeacher" templates/ibook_book.php && grep -Fq "Auth::isTeacher" templates/ibook_page.php && grep -Fq "Alle InfoBooks" templates/ibook_book.php && grep -Fq "Alle InfoBooks" templates/ibook_page.php && R26BTN_OK=1 || R26BTN_OK=0
+          grep -q "resolveDistributeTarget" src/Controllers/InfoBookController.php && grep -q "function distributeSection" src/Controllers/InfoBookController.php && grep -q "function distributeBook" src/Controllers/InfoBookController.php && R26DIST_OK=1 || R26DIST_OK=0
+          grep -Fq "/infobuecher/{id}/abschnitt/{sid}/verteilen" public/index.php && grep -Fq "/infobuecher/{id}/buch/verteilen" public/index.php && R26ROUTES_OK=1 || R26ROUTES_OK=0
+          grep -q "ibook_distribute_panel" templates/ibook_page.php && grep -q "ibook_distribute_panel" templates/ibook_book.php && grep -q "new_section_title" templates/ibook_distribute_panel.php && grep -q "Ganzes Buch an Klasse verteilen" templates/ibook_book.php && R26PANEL_OK=1 || R26PANEL_OK=0
+          grep -q "sharedContext" src/Models/InfoBook.php && grep -q "linkPagesShared" src/Controllers/InfoBookController.php && grep -Fq "['link'] = 0;" src/Models/InfoBook.php && R26LINKS_OK=1 || R26LINKS_OK=0
+          grep -q "Wer sieht was" templates/ibook_book.php && grep -q "Vorschau deiner Seite" templates/ibook_page.php && R26HINT_OK=1 || R26HINT_OK=0
+          grep -q "T130" tools/ui-tests.js && grep -q "advRead130" tools/ui-tests.js && grep -q '## \[0.26.0\]' CHANGELOG.md && R26TEST_OK=1 || R26TEST_OK=0
+          grep -Fq "ic-arrow-left" templates/ibook_book.php && grep -Fq "Deine InfoBooks" templates/ibook_book.php && grep -Fq "ic-arrow-left" templates/ibook_page.php && grep -Fq "Deine InfoBooks" templates/ibook_page.php && R27BTN_OK=1 || R27BTN_OK=0
+          grep -Fq 'personalBooks($user->id, false)' src/Controllers/InfoBookController.php && grep -Fq 'return $book->classId === null && $book->ownerId === $user->id;' src/Controllers/InfoBookController.php && R27STUBK_OK=1 || R27STUBK_OK=0
+          grep -Fq 'elseif ($book->classId === null && $book->ownerId === $user->id)' src/Controllers/InfoBookController.php && grep -Fq 'elseif ($book->classId === null && $book->ownerId === $user->id)' templates/ibook_nav.php && R27SECT_OK=1 || R27SECT_OK=0
+          grep -q "navShowArea" templates/ibook_nav.php && grep -Fq 'if (!empty($navShowArea[$navAreaKey]))' templates/ibook_nav.php && R27NAV_OK=1 || R27NAV_OK=0
+          grep -q "secTitleIsArea" templates/ibook_book.php && grep -Fq 'title="Bereich: <?= e($secAreaName) ?>"' templates/ibook_book.php && R27DUP_OK=1 || R27DUP_OK=0
+          grep -q "function renameSection" src/Controllers/InfoBookController.php && grep -q "function splitSection" src/Controllers/InfoBookController.php && grep -Fq "/infobuecher/{id}/abschnitt/{sid}/umbenennen" public/index.php && grep -Fq "/infobuecher/{id}/abschnitt/{sid}/teilen" public/index.php && R27MGMT_OK=1 || R27MGMT_OK=0
+          grep -q "function renameSection" src/Models/InfoBook.php && grep -q "function createSectionAfter" src/Models/InfoBook.php && grep -q "function movePagesToSection" src/Models/InfoBook.php && R27MODEL_OK=1 || R27MODEL_OK=0
+          grep -q "Nur Lehrkräfte können InfoBooks teilen" src/Controllers/InfoBookController.php && grep -q "Für dein Konto ist keine Klasse hinterlegt" templates/ibook_overview.php && R27SHARE_OK=1 || R27SHARE_OK=0
+          grep -q "T131" tools/ui-tests.js && grep -q "advRead130" tools/ui-tests.js && grep -q "T132" tools/ui-tests.js && grep -q '## \[0.27.0\]' CHANGELOG.md && grep -q '## \[0.28.0\]' CHANGELOG.md && R27TEST_OK=1 || R27TEST_OK=0
+          grep -q "nextIp" src/Models/Network.php && grep -q "MAX_DEVICES" src/Models/Network.php && grep -q "publishDns" src/Models/Network.php && grep -Fq 'Falsches WLAN-Passwort' src/Models/Network.php && grep -Fq '192.168.0.' src/Models/Network.php && NET_MODEL_OK=1 || NET_MODEL_OK=0
+          grep -q "function index" src/Controllers/NetworkController.php && grep -q "function stand" src/Controllers/NetworkController.php && grep -q "function aktion" src/Controllers/NetworkController.php && grep -q "function export" src/Controllers/NetworkController.php && grep -Fq "class_id IS NULL AND owner_id = ?" src/Models/Network.php && NET_CTRL_OK=1 || NET_CTRL_OK=0
+          grep -Fq "/werkstatt/netzwerk/aktion" public/index.php && grep -Fq "/werkstatt/netzwerk/stand" public/index.php && grep -Fq "/werkstatt/netzwerk/export" public/index.php && NET_ROUTES_OK=1 || NET_ROUTES_OK=0
+          grep -q "net-svg" templates/network_workshop.php && grep -q "net-boot" templates/network_workshop.php && grep -q "network.js" templates/network_workshop.php && grep -q "net-missions" templates/network_workshop.php && grep -q "net-teacher-card" templates/network_workshop.php && NET_TPL_OK=1 || NET_TPL_OK=0
+          grep -q "setInterval(poll, 5000)" public/assets/js/network.js && grep -q "DNS-Server antwortet nicht" public/assets/js/network.js && grep -Fq 'Webseiten für' public/assets/js/network.js && grep -q "joinWlan" public/assets/js/network.js && grep -q "srcdoc" public/assets/js/network.js && NET_JS_OK=1 || NET_JS_OK=0
+          grep -q ".net-device" public/assets/css/style.css && grep -q ".net-link-off" public/assets/css/style.css && grep -q ".net-mission-done" public/assets/css/style.css && grep -q ".net-urlbar" public/assets/css/style.css && NET_CSS_OK=1 || NET_CSS_OK=0
+          grep -q "ensureNetNetworksTable" src/Migrator.php && grep -q "net_networks" sql/schema.sqlite.sql && grep -q "net_networks" sql/schema.mysql.sql && NET_MIG_OK=1 || NET_MIG_OK=0
+          grep -q "'netzwerk'" src/Controllers/ModuleController.php && grep -q "Netzwerk-Werkstatt" src/Controllers/ModuleController.php && grep -q "'level' => 7" src/Controllers/ModuleController.php && NET_MODULE_OK=1 || NET_MODULE_OK=0
+          grep -q "T133" tools/ui-tests.js && grep -q "netSample" tools/ui-tests.js && grep -q '## \[0.29.0\]' CHANGELOG.md && grep -q "Netzwerk-Werkstatt" README.md && NET_TEST_OK=1 || NET_TEST_OK=0
+          grep -q "EXAMPLES" src/Models/Network.php && grep -q "loadExample" src/Models/Network.php && NET_EX_OK=1 || NET_EX_OK=0
+          grep -q "toHtml" src/Controllers/NetworkController.php && grep -q "fromHtml" src/Controllers/NetworkController.php && grep -q "htmlProjects" src/Controllers/NetworkController.php && NET_BRIDGE_OK=1 || NET_BRIDGE_OK=0
+          grep -q "WLAN_TYPES" src/Models/Network.php && grep -q "setCable" src/Models/Network.php && grep -q "printPage" src/Models/Network.php && NET_CABLE_OK=1 || NET_CABLE_OK=0
+          grep -q "setLevel" src/Models/Network.php && grep -q "net-level-2" templates/network_workshop.php && grep -q "layerTrace" public/assets/js/network.js && grep -q "EXAMPLES" public/assets/js/network.js && NET_LEVEL_OK=1 || NET_LEVEL_OK=0
+          grep -q "T134 " tools/ui-tests.js && NET_TEST30_OK=1 || NET_TEST30_OK=0
+          grep -q "attach(window.document)" public/assets/js/network.js && NET_BOOT_OK=1 || NET_BOOT_OK=0
+          grep -q "'hint'" src/Support.php && grep -q 'title="<?= e($hint) ?>' templates/layout.php && ! grep -q "net-hero" templates/network_workshop.php && ! grep -q "hero-emoji" templates/sql_overview.php && grep -q "Zu den Abenteuern" templates/sql_overview.php && HERO_OK=1 || HERO_OK=0
+          grep -q "moveDevice" src/Models/Network.php && grep -q "moveDevice" public/assets/js/network.js && grep -q "pointerdown" public/assets/js/network.js && NET_DRAG_OK=1 || NET_DRAG_OK=0
+          grep -q "lastStand" public/assets/js/network.js && grep -q "modal: false" public/assets/js/network.js && grep -q "applyInputs" public/assets/js/network.js && NET_POLL_OK=1 || NET_POLL_OK=0
+          grep -q "net-port-on" public/assets/js/network.js && grep -q ".net-port-on" public/assets/css/style.css && grep -q "font-size: 16px" public/assets/css/style.css && NET_PORTS_OK=1 || NET_PORTS_OK=0
+          grep -q "?netz=1" src/Controllers/NetworkController.php && grep -q "fromNet" src/Controllers/HtmlController.php && grep -q "Zur Netzwerk-Werkstatt" templates/html_editor.php && NET_BACK_OK=1 || NET_BACK_OK=0
+          grep -q "T135 " tools/ui-tests.js && NET_TEST31_OK=1 || NET_TEST31_OK=0
+          grep -q "icv-linkbadge" public/assets/js/app.js && IBK_LINK_OK=1 || IBK_LINK_OK=0
+          grep -q "data-nav" templates/ibook_page.php && IBK_LINKTPL_OK=1 || IBK_LINKTPL_OK=0
+          grep -q "'link'" src/Models/InfoBook.php && IBK_LINKPHP_OK=1 || IBK_LINKPHP_OK=0
+          grep -q "data-confirm" public/assets/js/app.js && CONFIRM_OK=1 || CONFIRM_OK=0
+          grep -Fq '\Infocraft\Auth::isTeacher' templates/ibook_page.php && ! grep -q "als-praesentation" templates/ibook_book.php && IBK_AUTH_OK=1 || IBK_AUTH_OK=0
+          grep -q "ibook-page-layout" public/assets/css/style.css && IBK_CSS_OK=1 || IBK_CSS_OK=0
+          grep -q "href=\"/infobuecher\"" home.html && IBK_NAV_OK=1 || IBK_NAV_OK=0
+          [ -f public/assets/vendor/highlight.min.js ] && [ -f public/assets/vendor/mermaid.min.js ] && VENDOR_OK=1 || VENDOR_OK=0
+          grep -q "'88'" src/Support.php && ASSETV_OK=1 || ASSETV_OK=0
+          # Runde 33 (#241, #242): helle Desktop-Optik und Icon-System.
+          grep -q "Helle Desktop-Optik (#241)" public/assets/css/style.css && grep -q "backdrop-filter: saturate(180%) blur(18px)" public/assets/css/style.css && grep -q "border-radius: 980px" public/assets/css/style.css && DESIGN_OK=1 || DESIGN_OK=0
+          grep -q ".icn {" public/assets/css/style.css && grep -q "mask-image" public/assets/css/style.css && ICONCSS_OK=1 || ICONCSS_OK=0
+          grep -Fq "ic_module_icon(\$module['slug'])" templates/layout.php && grep -q "ic-hammer" templates/layout.php && grep -q "ic-menu8" templates/layout.php && ICONNAV_OK=1 || ICONNAV_OK=0
+          grep -Fq "ic_module_icon(\$module['slug'])" templates/home.php && ICONHOME_OK=1 || ICONHOME_OK=0
+          grep -Fq "'html' => 'ic-embed2'" src/Support.php && ICONMAP_OK=1 || ICONMAP_OK=0
+          grep -q "T136 " tools/ui-tests.js && ICONTEST_OK=1 || ICONTEST_OK=0
+          # Runde 34 (#243): kompletter Icon-Umbau, Wiki-Modul entfernt.
+          grep -q "'quiz' => 'ic-trophy3'" src/Support.php && grep -q "'pruefung' => 'ic-clipboard2'" src/Support.php && grep -q "'diagramme' => 'ic-design'" src/Support.php && ICONSWAP_OK=1 || ICONSWAP_OK=0
+          ! grep -q "wiki" public/index.php && ! ls templates/wiki_*.php >/dev/null 2>&1 && ! grep -q "'wiki'" src/Controllers/ModuleController.php && NOWIKI_OK=1 || NOWIKI_OK=0
+          ! grep -rlP "\x{25B6}|\x{25C0}|\x{23F9}|\x{2630}" templates/ >/dev/null && ! grep -qP "\x{25B6}" public/assets/js/app.js && EMOJIFREE_OK=1 || EMOJIFREE_OK=0
+          grep -q "T137" tools/ui-tests.js && grep -q "0.33.0" CHANGELOG.md && ICONR34_OK=1 || ICONR34_OK=0
+          CSRFAPP=$(grep -o 'value="[a-f0-9]*"' wsapp.html | head -n1 | cut -d'"' -f2)
+          curl -sS -L -b cookies.txt -c cookies.txt -o shopbuy.html --data-urlencode "csrf=$CSRFAPP" --data-urlencode "action=kaufen" --data-urlencode "produkt_id=1" --data-urlencode "menge=2" http://127.0.0.1:8080/werkstatt/sql/shop/app
+          grep -q "Bestellung gespeichert" shopbuy.html && SQLAPP_BUY_OK=1 || SQLAPP_BUY_OK=0
+          [ -f database/sql/shop_u1.sqlite ] && SQLAPP_DB_OK=1 || SQLAPP_DB_OK=0
+          CLASS6=$(sqlite3 "$DB" "SELECT id FROM classes WHERE name = '6R'")
+          CODE_OTP=$(curl -sS -L -o otp.html -w "%{http_code}" -b cookies.txt -c cookies.txt -d "csrf=$CSRF2" -d "class_id=$CLASS6" http://127.0.0.1:8080/unterricht/passwort)
+          grep -q "Satzbaulogik" otp.html && OTP_OK=1 || OTP_OK=0
+          EMMA=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'emma.krueger'")
+          LENA=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'lena.müller'")
+          curl -sS -o login2.html -c cookies2.txt http://127.0.0.1:8080/login
+          CSRF3=$(grep -o 'value="[a-f0-9]*"' login2.html | head -n1 | cut -d'"' -f2)
+          CODE_EMMA=$(curl -sS -L -o home_emma.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt -d "csrf=$CSRF3" -d "user_id=$EMMA" http://127.0.0.1:8080/login/demo)
+          grep -q "werkstatt/sql" home_emma.html && EMMA_SQL=1 || EMMA_SQL=0
+          grep -q "werkstatt/code" home_emma.html && EMMA_CODE=1 || EMMA_CODE=0
+          grep -q "Systemstatus" home_emma.html && HOME_ST_OK=0 || HOME_ST_OK=1
+          curl -sS -o login3.html -c cookies3.txt http://127.0.0.1:8080/login
+          CSRF4=$(grep -o 'value="[a-f0-9]*"' login3.html | head -n1 | cut -d'"' -f2)
+          CODE_LENA=$(curl -sS -L -o home_lena.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF4" -d "user_id=$LENA" http://127.0.0.1:8080/login/demo)
+          grep -q "werkstatt/sql" home_lena.html && LENA_SQL=1 || LENA_SQL=0
+          grep -q "werkstatt/code" home_lena.html && LENA_CODE=1 || LENA_CODE=0
+          HTMLID=$(sqlite3 "$DB" "SELECT id FROM projects WHERE title = 'Lenas Webseite' AND owner_id = $LENA")
+          CODE_HTMLED=$(curl -sS -o htmled.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/werkstatt/html/$HTMLID)
+          grep -q "hlwrap" htmled.html && HL_HTML_OK=1 || HL_HTML_OK=0
+          CSRF5=$(grep -o 'value="[a-f0-9]*"' htmled.html | head -n1 | cut -d'"' -f2)
+          CODE_HTMLSAVE=$(curl -sS -L -o htmlsave.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF5" -d "title=Lenas Webseite" --data-urlencode "content=<h1>Geaendert</h1>" http://127.0.0.1:8080/werkstatt/html/$HTMLID)
+          grep -q "Gespeichert" htmlsave.html && HTML_SAVE_OK=1 || HTML_SAVE_OK=0
+          grep -q "html-wysiwyg" htmled.html && H_WY_OK=1 || H_WY_OK=0
+          grep -q "data-vtab" htmled.html && H_TABS_OK=1 || H_TABS_OK=0
+          grep -q "html-download" htmled.html && H_DL_OK=1 || H_DL_OK=0
+          grep -q "html-upload" htmled.html && H_UP_OK=1 || H_UP_OK=0
+          grep -q "tag-explain" htmled.html && H_TAG_OK=1 || H_TAG_OK=0
+          grep -q "html-newwin" htmled.html && H_NW_OK=1 || H_NW_OK=0
+          grep -q "werkstatt/html" home_lena.html && LENA_HTML=1 || LENA_HTML=0
+          grep -q "werkstatt/html" home_emma.html && EMMA_HTML=1 || EMMA_HTML=0
+          QID=$(sqlite3 "$DB" "SELECT id FROM quizzes WHERE title = 'SQL-Begriffe'")
+          CODE_QUIZ=$(curl -sS -o quiz.html -w "%{http_code}" -b cookies2.txt http://127.0.0.1:8080/quiz)
+          grep -q "SQL-Begriffe" quiz.html && QUIZ_LIST_OK=1 || QUIZ_LIST_OK=0
+          CODE_PLAY=$(curl -sS -o play.html -w "%{http_code}" -b cookies2.txt http://127.0.0.1:8080/quiz/$QID/spielen)
+          CSRF6=$(grep -o 'value="[a-f0-9]*"' play.html | head -n1 | cut -d'"' -f2)
+          CODE_ANSWER=$(curl -sS -L -o answered.html -w "%{http_code}" -b cookies2.txt -c cookies2.txt -d "csrf=$CSRF6" -d "position=1" -d "answer=1" http://127.0.0.1:8080/quiz/$QID/antwort)
+          grep -q "Frage 2 von 4" answered.html && QUIZ_NEXT_OK=1 || QUIZ_NEXT_OK=0
+          CLAUDIA=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'claudia.fischer'")
+          curl -sS -o login4.html -c cookies4.txt http://127.0.0.1:8080/login
+          CSRF7=$(grep -o 'value="[a-f0-9]*"' login4.html | head -n1 | cut -d'"' -f2)
+          CODE_CLAUDIA=$(curl -sS -L -o home_claudia.html -w "%{http_code}" -b cookies4.txt -c cookies4.txt -d "csrf=$CSRF7" -d "user_id=$CLAUDIA" http://127.0.0.1:8080/login/demo)
+          CODE_SQLAPP_INSTA=$(curl -sS -L -o wsinsta.html -w "%{http_code}r%{num_redirects}" -b cookies4.txt http://127.0.0.1:8080/werkstatt/sql/instacraft/app)
+          grep -q "phone-frame" wsinsta.html && SQLAPP_INSTA_OK=1 || SQLAPP_INSTA_OK=0
+          grep -q "Gefällt mir" wsinsta.html && SQLAPP_INSTA_AC_OK=1 || SQLAPP_INSTA_AC_OK=0
+          SQLAPPLINK_CNT=$(grep -c "App-Ansicht" ws.html)
+          grep -q "function render(string \$view" src/Support.php && RENDERFIX_OK=1 || RENDERFIX_OK=0
+          SQLAPP_INSTA_CNT=$(grep -c "phone-frame" wsinsta.html)
+          WSINSTA_SZ=$(wc -c < wsinsta.html)
+          WSINSTA_HEAD=$(head -c 120 wsinsta.html | tr -d "\n" | tr -d " ")
+          CSRFINSTA=$(grep -o 'value="[a-f0-9]*"' wsinsta.html | head -n1 | cut -d'"' -f2)
+          curl -sS -L -b cookies4.txt -c cookies4.txt -o instalike.html --data-urlencode "csrf=$CSRFINSTA" --data-urlencode "action=like" --data-urlencode "post_id=2" http://127.0.0.1:8080/werkstatt/sql/instacraft/app
+          grep -q "zurückziehen" instalike.html && SQLAPP_LIKE_OK=1 || SQLAPP_LIKE_OK=0
+          CODE_QMANAGE=$(curl -sS -o qmanage.html -w "%{http_code}" -b cookies4.txt http://127.0.0.1:8080/quiz/$QID)
+          grep -q "Neue Frage" qmanage.html && QMANAGE_OK=1 || QMANAGE_OK=0
+          CODE_QRES=$(curl -sS -o qres.html -w "%{http_code}" -b cookies4.txt http://127.0.0.1:8080/quiz/$QID/ergebnisse)
+          # Prüfungsmodus: kompletter Durchlauf (Vorbereitung, Sperre, Abgabe, Korrektur, Herausgabe)
+          STEFAN=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'stefan.schmidt'")
+          curl -sS -o login5.html -c cookies5.txt http://127.0.0.1:8080/login
+          CSRF8=$(grep -o 'value="[a-f0-9]*"' login5.html | head -n1 | cut -d'"' -f2)
+          CODE_STEFAN=$(curl -sS -L -o stefan_home.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "user_id=$STEFAN" http://127.0.0.1:8080/login/demo)
+          CODE_EXAM=$(curl -sS -o exams.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt http://127.0.0.1:8080/pruefungen)
+          grep -q "Neue Prüfung oder Schularbeit anlegen" exams.html && EX_OVER_OK=1 || EX_OVER_OK=0
+          CODE_EXCREATE=$(curl -sS -L -o excreate.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Pruefung HTML" -d "kind=pruefung" -d "level=6" http://127.0.0.1:8080/pruefungen/anlegen)
+          EXID=$(sqlite3 "$DB" "SELECT id FROM exams WHERE title = 'CI Pruefung HTML'")
+          [ -n "$EXID" ] && EX_CREATE_OK=1 || EX_CREATE_OK=0
+          CODE_EXGROUP=$(curl -sS -L -o exgroup.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "name=Gruppe A" http://127.0.0.1:8080/pruefungen/$EXID/gruppe)
+          GID=$(sqlite3 "$DB" "SELECT id FROM exam_groups WHERE exam_id = $EXID")
+          CODE_EXMEMBER=$(curl -sS -L -o exmember.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "group_id=$GID" -d "user_id=$LENA" http://127.0.0.1:8080/pruefungen/$EXID/mitglied)
+          grep -q "Lena Müller" exmember.html && EX_MEMBER_OK=1 || EX_MEMBER_OK=0
+          CODE_EXPROJ=$(curl -sS -L -o exproj.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Vorlage HTML" -d "type=html" http://127.0.0.1:8080/werkstatt/code/projekt)
+          PROJ=$(sqlite3 "$DB" "SELECT id FROM projects WHERE title = 'CI Vorlage HTML' AND owner_id = $STEFAN")
+          CODE_EXTPL=$(curl -sS -L -o extpl.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "group_id=$GID" -d "project_id=$PROJ" http://127.0.0.1:8080/pruefungen/$EXID/vorlage)
+          grep -q "Vorlage: CI Vorlage HTML" extpl.html && EX_TPL_OK=1 || EX_TPL_OK=0
+          CODE_EXTASK1=$(curl -sS -L -o extask1.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=Ueberschrift" -d "be=4" -d "description=Schreibe eine passende Ueberschrift" --data-urlencode "sample_solution=h1 Ueberschrift als HTML" http://127.0.0.1:8080/pruefungen/$EXID/aufgabe)
+          CODE_EXTASK2=$(curl -sS -L -o extask2.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=Absatz" -d "be=4" -d "description=Schreibe einen kurzen Text" --data-urlencode "sample_solution=p Kurzer Text" http://127.0.0.1:8080/pruefungen/$EXID/aufgabe)
+          grep -q "8 BE" extask2.html && EX_TASKS_OK=1 || EX_TASKS_OK=0
+          CODE_EXSTART=$(curl -sS -L -o exstart.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/start)
+          grep -q "Live-Monitor" exstart.html && EX_START_OK=1 || EX_START_OK=0
+          CODE_EXHOME=$(curl -sS -L -o exlock_home.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/)
+          grep -q "Prüfungsmodus aktiv" exlock_home.html && LOCK_OK=1 || LOCK_OK=0
+          CODE_EXQUIZ=$(curl -sS -L -o exlock_quiz.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/quiz)
+          grep -q "gesperrt" exlock_quiz.html && LOCK_REDIRECT_OK=1 || LOCK_REDIRECT_OK=0
+          CODE_EXWORK=$(curl -sS -o ex_work.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/pruefungen/$EXID/arbeit)
+          grep -q "Endgültig abgeben" ex_work.html && EX_WORK_OK=1 || EX_WORK_OK=0
+          CSRF9=$(grep -o 'value="[a-f0-9]*"' ex_work.html | head -n1 | cut -d'"' -f2)
+          T1=$(sqlite3 "$DB" "SELECT id FROM exam_tasks WHERE exam_id = $EXID ORDER BY position LIMIT 1")
+          T2=$(sqlite3 "$DB" "SELECT id FROM exam_tasks WHERE exam_id = $EXID ORDER BY position LIMIT 1 OFFSET 1")
+          CODE_EXSAVE=$(curl -sS -o exsave.json -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF9" -d "task_id=$T1" --data-urlencode "answer=Meine Ueberschrift steht" http://127.0.0.1:8080/pruefungen/$EXID/antwort)
+          grep -q '"ok":true' exsave.json && EXSAVE_OK=1 || EXSAVE_OK=0
+          CODE_EXSUBMIT=$(curl -sS -L -o exsubmit.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt -d "csrf=$CSRF9" http://127.0.0.1:8080/pruefungen/$EXID/abgeben)
+          grep -q "abgegeben" exsubmit.html && EX_SUBMIT_OK=1 || EX_SUBMIT_OK=0
+          CODE_EXEND=$(curl -sS -L -o exend.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/ende)
+          grep -q "API-Korrektur" exend.html && EX_END_OK=1 || EX_END_OK=0
+          CODE_EXCORRECT=$(curl -sS -o ex_correct.html -w "%{http_code}" -b cookies5.txt http://127.0.0.1:8080/pruefungen/$EXID/korrektur/$LENA)
+          grep -q "Musterlösung" ex_correct.html && EX_CORRECT_OK=1 || EX_CORRECT_OK=0
+          CODE_EXGRADE=$(curl -sS -L -o exgrade.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "user_id=$LENA" -d "be_$T1=3" -d "be_$T2=2" --data-urlencode "comment_$T1=Fast perfekt" http://127.0.0.1:8080/pruefungen/$EXID/bewertung)
+          grep -q "Fast perfekt" exgrade.html && EX_GRADE_OK=1 || EX_GRADE_OK=0
+          CODE_EXAPI=$(curl -sS -L -o exapi.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/api-korrektur)
+          grep -q "nicht konfiguriert" exapi.html && EX_API_OK=1 || EX_API_OK=0
+          CODE_EXRELEASE=$(curl -sS -L -o exrelease.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID/herausgeben)
+          grep -q "Herausgegeben" exrelease.html && EX_RELEASE_OK=1 || EX_RELEASE_OK=0
+          CODE_EXRESULT=$(curl -sS -o exresult.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/pruefungen/$EXID/ergebnis)
+          grep -q "Musterlösung" exresult.html && EX_RESULT_OK=1 || EX_RESULT_OK=0
+          grep -q "Fast perfekt" exresult.html && EX_FEEDBACK_OK=1 || EX_FEEDBACK_OK=0
+          EXARROW=$(awk '/ic-arrow-left/{if(!a)a=NR} /panel-head/{if(!h)h=NR} END{print (a && h && a<h) ? 1 : 0}' exresult.html)
+          [ "$EXARROW" = "1" ] && EX_ARROW_OK=1 || EX_ARROW_OK=0
+          CODE_EXUNLOCK=$(curl -sS -o exunlock.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/)
+          grep -q "Prüfungsmodus aktiv" exunlock.html && EX_UNLOCK_OK=0 || EX_UNLOCK_OK=1
+          JONAS=$(sqlite3 "$DB" "SELECT id FROM users WHERE login_name = 'jonas.wagner'")
+          curl -sS -o login6.html -c cookies6.txt http://127.0.0.1:8080/login
+          CSRF10=$(grep -o 'value="[a-f0-9]*"' login6.html | head -n1 | cut -d'"' -f2)
+          CODE_JONAS=$(curl -sS -L -o jonas_home.html -w "%{http_code}" -b cookies6.txt -c cookies6.txt -d "csrf=$CSRF10" -d "user_id=$JONAS" http://127.0.0.1:8080/login/demo)
+          grep -q "Prüfungsmodus aktiv" jonas_home.html && JONAS_LOCK_OK=1 || JONAS_LOCK_OK=0
+          ARBEIT=$(sqlite3 "$DB" "SELECT id FROM exams WHERE kind = 'arbeit' AND title = 'Schularbeit: SQL-Grundlagen'")
+          CODE_ARBEITRES=$(curl -sS -o arbeit_res.html -w "%{http_code}" -b cookies2.txt http://127.0.0.1:8080/pruefungen/$ARBEIT/ergebnis)
+          grep -q "Musterlösung" arbeit_res.html && ARBEIT_RES_OK=1 || ARBEIT_RES_OK=0
+          # Prüfungsmodus Runde: A/B-Schalter, Gruppenstart, Live-Sperre, Korrektur-Diff (#209-#212)
+          CODE_ABTG=$(curl -sS -L -o abtg.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "user_id=$LENA" -d "exam_group=A" -d "back=/pruefungen" http://127.0.0.1:8080/pruefungen/gruppenschalter)
+          grep -q "Gruppen-Schalter A gesetzt" abtg.html && EX_ABTG_OK=1 || EX_ABTG_OK=0
+          curl -sS -L -o abtg2.html -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "user_id=$JONAS" -d "exam_group=B" -d "back=/pruefungen" http://127.0.0.1:8080/pruefungen/gruppenschalter
+          grep -q "Gruppen-Schalter B gesetzt" abtg2.html && EX_ABTG2_OK=1 || EX_ABTG2_OK=0
+          EX_ABTG_DB=$(sqlite3 "$DB" "SELECT exam_group FROM users WHERE id = $LENA")
+          [ "$EX_ABTG_DB" = "A" ] && EX_ABTG_DB_OK=1 || EX_ABTG_DB_OK=0
+          CODE_EXCREATE2=$(curl -sS -L -o excreate2.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=CI Gruppen Pruefung" -d "kind=pruefung" -d "level=6" http://127.0.0.1:8080/pruefungen/anlegen)
+          EXID2=$(sqlite3 "$DB" "SELECT id FROM exams WHERE title = 'CI Gruppen Pruefung'")
+          [ -n "$EXID2" ] && EX_CREATE2_OK=1 || EX_CREATE2_OK=0
+          grep -q "Gruppen A/B übernehmen" excreate2.html && EX_ABPANEL_OK=1 || EX_ABPANEL_OK=0
+          curl -sS -L -o extask3.html -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "title=Gruss" -d "be=2" -d "description=Schreibe einen Gruss" --data-urlencode "sample_solution=Hallo Welt" http://127.0.0.1:8080/pruefungen/$EXID2/aufgabe
+          T3=$(sqlite3 "$DB" "SELECT id FROM exam_tasks WHERE exam_id = $EXID2 ORDER BY position LIMIT 1")
+          CODE_GTOG=$(curl -sS -L -o gtog.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" http://127.0.0.1:8080/pruefungen/$EXID2/gruppen-uebernehmen)
+          grep -q "Übernommen: 1 in Gruppe A, 1 in Gruppe B" gtog.html && EX_GTOG_OK=1 || EX_GTOG_OK=0
+          EX_GTOG_DB=$(sqlite3 "$DB" "SELECT COUNT(*) FROM exam_groups WHERE exam_id = $EXID2")
+          [ "$EX_GTOG_DB" = "2" ] && EX_GTOG_DB_OK=1 || EX_GTOG_DB_OK=0
+          GIDA=$(sqlite3 "$DB" "SELECT id FROM exam_groups WHERE exam_id = $EXID2 AND name = 'Gruppe A'")
+          GIDB=$(sqlite3 "$DB" "SELECT id FROM exam_groups WHERE exam_id = $EXID2 AND name = 'Gruppe B'")
+          curl -sS -L -o extpl2.html -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "group_id=$GIDA" -d "project_id=$PROJ" http://127.0.0.1:8080/pruefungen/$EXID2/vorlage
+          # Start nur Gruppe B: Lena (Gruppe A) bleibt ungesperrt (#210)
+          CODE_GSTARTB=$(curl -sS -L -o gstartb.html -w "%{http_code}" -b cookies5.txt -c cookies5.txt -d "csrf=$CSRF8" -d "groups[]=$GIDB" http://127.0.0.1:8080/pruefungen/$EXID2/start)
+          grep -q "Die Prüfung läuft: 1 Arbeiten ausgeteilt" gstartb.html && EX_GSTARTB_OK=1 || EX_GSTARTB_OK=0
+          EX_GSTARTB_DB=$(sqlite3 "$DB" "SELECT COUNT(*) FROM exam_works WHERE exam_id = $EXID2")
+          [ "$EX_GSTARTB_DB" = "1" ] && EX_GSTARTB_DB_OK=1 || EX_GSTARTB_DB_OK=0
+          grep -q "Gruppe A jetzt starten" gstartb.html && EX_GSTART_UI_OK=1 || EX_GSTART_UI_OK=0
+          curl -sS -L -o afree_home.html -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/
+          grep -q "Prüfungsmodus aktiv" afree_home.html && EX_AFREE_OK=0 || EX_AFREE_OK=1
+          CODE_AQUIZ=$(curl -sS -L -o afree_quiz.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/quiz)
+          grep -q "gesperrt" afree_quiz.html && EX_AQUIZ_OK=0 || EX_AQUIZ_OK=1
+          curl -sS -o lockstat_no.json -b cookies3.txt http://127.0.0.1:8080/pruefungen/lock-status
+          grep -q '"locked":false' lockstat_no.json && EX_LOCKSTAT_NO_OK=1 || EX_LOCKSTAT_NO_OK=0
+          curl -sS -o lockstat_yes.json -b cookies6.txt http://127.0.0.1:8080/pruefungen/lock-status
+          grep -q '"locked":true' lockstat_yes.json && grep -q '"phase":"durchfuehrung"' lockstat_yes.json && EX_LOCKSTAT_OK=1 || EX_LOCKSTAT_OK=0
+          CODE_AWORK=$(curl -sS -L -o awork.html -w "%{http_code}" -b cookies3.txt -c cookies3.txt http://127.0.0.1:8080/pruefungen/$EXID2/arbeit)
+          grep -q "Deine Gruppe ist noch nicht dran" awork.html && EX_GWORK_OK=1 || EX_GWORK_OK=0
+          # Runde 29 (#228): Auswertung aller Marker. Die ci.yml endete zuvor mitten
+          # im A/B-Flow; die *_OK-Marker wurden nirgends geprüft.
+          NET_MARKER_EXPECT0=" LENA_SQL SQLNEST_BAD "
+          FAILED=0
+          DIAGLINE=""
+          for MVAR in $(compgen -v | grep -E '^[A-Z][A-Z0-9_]*_OK$' | sort); do
+            MVAL="${!MVAR}"
+            MEXP=1
+            case "$MVAR" in LENA_SQL|SQLNEST_BAD) MEXP=0 ;; esac
+            DIAGLINE="$DIAGLINE/$MVAR=$MVAL"
+            if [ "$MVAL" != "$MEXP" ]; then
+              echo "::error file=ci.yml::Marker $MVAR=$MVAL (erwartet $MEXP)"
+              FAILED=1
+            fi
+          done
+          echo "::notice::DIAG$DIAGLINE"
+          if [ "$FAILED" = "1" ]; then exit 1; fi
