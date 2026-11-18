@@ -1,0 +1,18 @@
+# Lokale Konfiguration (Produktionszugangsdaten)
+config/config.php
+
+# SQLite-Datenbanken (Demo und Entwicklung)
+database/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# IDE und Betriebssystem
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Composer (falls später genutzt)
+vendor/
