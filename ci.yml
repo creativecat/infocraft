@@ -406,7 +406,7 @@ jobs:
           grep -q "ibook-page-layout" public/assets/css/style.css && IBK_CSS_OK=1 || IBK_CSS_OK=0
           grep -q "href=\"/infobuecher\"" home.html && IBK_NAV_OK=1 || IBK_NAV_OK=0
           [ -f public/assets/vendor/highlight.min.js ] && [ -f public/assets/vendor/mermaid.min.js ] && VENDOR_OK=1 || VENDOR_OK=0
-          grep -q "'88'" src/Support.php && ASSETV_OK=1 || ASSETV_OK=0
+          grep -q "'89'" src/Support.php && ASSETV_OK=1 || ASSETV_OK=0
           # Runde 33 (#241, #242): helle Desktop-Optik und Icon-System.
           grep -q "Helle Desktop-Optik (#241)" public/assets/css/style.css && grep -q "backdrop-filter: saturate(180%) blur(18px)" public/assets/css/style.css && grep -q "border-radius: 980px" public/assets/css/style.css && DESIGN_OK=1 || DESIGN_OK=0
           grep -q ".icn {" public/assets/css/style.css && grep -q "mask-image" public/assets/css/style.css && ICONCSS_OK=1 || ICONCSS_OK=0
@@ -419,6 +419,11 @@ jobs:
           ! grep -q "wiki" public/index.php && ! ls templates/wiki_*.php >/dev/null 2>&1 && ! grep -q "'wiki'" src/Controllers/ModuleController.php && NOWIKI_OK=1 || NOWIKI_OK=0
           ! grep -rlP "\x{25B6}|\x{25C0}|\x{23F9}|\x{2630}" templates/ >/dev/null && ! grep -qP "\x{25B6}" public/assets/js/app.js && EMOJIFREE_OK=1 || EMOJIFREE_OK=0
           grep -q "T137" tools/ui-tests.js && grep -q "0.33.0" CHANGELOG.md && ICONR34_OK=1 || ICONR34_OK=0
+          # Runde 35 (#244): Netzwerk-Werkstatt, Teil 2.
+          grep -q "deviceFooter" public/assets/js/network.js && grep -q "net-png-btn" templates/network_workshop.php && NETR35_OK=1 || NETR35_OK=0
+          grep -q "cableD" public/assets/js/network.js && grep -q ".net-cable" public/assets/css/style.css && CABLE35_OK=1 || CABLE35_OK=0
+          grep -q "ic-brand-java" public/assets/css/style.css && grep -q "ic-brand-python" templates/code_overview.php && BRAND_OK=1 || BRAND_OK=0
+          grep -q "T138" tools/ui-tests.js && grep -q "0.35.0" CHANGELOG.md && ICONR35_OK=1 || ICONR35_OK=0
           CSRFAPP=$(grep -o 'value="[a-f0-9]*"' wsapp.html | head -n1 | cut -d'"' -f2)
           curl -sS -L -b cookies.txt -c cookies.txt -o shopbuy.html --data-urlencode "csrf=$CSRFAPP" --data-urlencode "action=kaufen" --data-urlencode "produkt_id=1" --data-urlencode "menge=2" http://127.0.0.1:8080/werkstatt/sql/shop/app
           grep -q "Bestellung gespeichert" shopbuy.html && SQLAPP_BUY_OK=1 || SQLAPP_BUY_OK=0
