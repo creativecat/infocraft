@@ -3232,3 +3232,19 @@ h2 .icn, h3 .icn { width: 0.9em; height: 0.9em; }
 
 /* Wunsch 4: Missions-Box merkt sich offen/zu (missions.js, localStorage). */
 @media print { .ic-missions-box { display: none; } }
+
+/* ===================== Runde 41: Buehne volle Breite per Seitenpanel-Toggle, Toolbar-Ordnung ===================== */
+
+/* Wunsch (5. Mahnung): Nicht das Modal war gemeint, sondern die Geraete-Buehne
+   selbst: Das Layout-Raster hielt 320 px fuer die Seitenkarten zurueck. Das
+   Seitenpanel ist jetzt standardmaessig ausgeblendet (net.side.hidden=1),
+   ein Toolbar-Button blendet es wieder ein; der Zustand bleibt gemerkt. */
+.net-layout { grid-template-columns: 280px 1fr; gap: 16px; }
+.net-layout.net-side-hidden { grid-template-columns: 1fr; }
+.net-layout.net-side-hidden .net-side { display: none; }
+.net-tool-side { margin-left: auto; }
+.net-toolbar { align-items: center; }
+.net-toolbar .net-add-panel { flex: 0 1 auto; }
+.net-add-panel[open] .net-add-row { max-width: 640px; }
+.net-stage-wrap { padding: 6px; }
+@media print { .net-side, .net-toolbar { display: none; } }
