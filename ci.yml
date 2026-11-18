@@ -237,7 +237,7 @@ jobs:
           grep -Fq ".hlwrap.hl-active > #java-repl-in { color: transparent; }" public/assets/css/style.css && grep -q "T85b die ID-Regel" tools/ui-tests.js && REPL_CLRTXT_OK=1 || REPL_CLRTXT_OK=0
           grep -q "attach(dbQTa, 'sql')" public/assets/js/app.js && grep -q "SQL-Abfrage-Feld im DB-Element" public/assets/js/app.js && grep -q "T84 das SQL-Abfrage-Feld" tools/ui-tests.js && IBK_SQLAC_OK=1 || IBK_SQLAC_OK=0
           grep -q "fitStageTas" public/assets/js/app.js && grep -q "T86c nach dem Laden/Import" tools/ui-tests.js && IBK_FITLOAD_OK=1 || IBK_FITLOAD_OK=0
-          grep -q "'python', 'java', 'asm', 'blocks'" src/Controllers/CodeController.php && grep -q "🧩 Blöcke" templates/code_overview.php && BLK_NEW_OK=1 || BLK_NEW_OK=0
+          grep -q "'python', 'java', 'asm', 'blocks'" src/Controllers/CodeController.php && grep -q ">Blöcke<" templates/code_overview.php && grep -q "ic-brand-java" templates/code_overview.php && BLK_NEW_OK=1 || BLK_NEW_OK=0
           grep -q "window.IC_BLOCKS" public/assets/js/block-editor.js && grep -q "T88 gehe 10 Schritte" tools/ui-tests.js && BLK_VM_OK=1 || BLK_VM_OK=0
           grep -q "Zufallszahl von" public/assets/js/block-editor.js && grep -q "T89d Division durch 0" tools/ui-tests.js && BLK_OPS_OK=1 || BLK_OPS_OK=0
           grep -q "blk-ide" templates/code_project.php && grep -q "blk-stage" templates/code_project.php && grep -q "T95c die Figur zeichnet sich" tools/ui-tests.js && BLK_STAGE_OK=1 || BLK_STAGE_OK=0
