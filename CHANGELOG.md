@@ -1,3 +1,21 @@
+## [0.35.0] - 2026-11-18 (Runde 35)
+### Netzwerk-Werkstatt, Teil 2 (#244)
+- Toolbar ueber der Buehne: Geraete ueber einen Plus-Button mit ausklappbarem
+  Fenster hinzufuegen, PNG-Export der Topologie, Druckansicht.
+- Geraetefenster (Modal) ueber die volle Breite, Missionen einklappbar.
+- Entfernen-Button fuer alle Geraetetypen (auch Access Point, DNS-Server,
+  Webserver, Browser-Geraete), mit Rueckfrage.
+- Kabel als Schnur: Durchhang nach Distanz, gedaempftes Nachschwingen beim
+  Ziehen und Loslassen.
+- Browser im Computer-/Smartphone-Fenster mit realistischer Titelleiste,
+  Fenster-Punkten, Tab und (am Telefon) dunkler Optik; Enter startet Aufruf.
+- Stand-Polling mit sichtbarem Verbindungs-Hinweis und automatischer
+  Wiederaufnahme statt stillem Scheitern.
+- Icons: Geraete und Beispielseiten mit Vektor-Icons statt Emoji, Optionen
+  ohne Emoji; neue Brand-Icons ic-brand-java / ic-brand-python (IcoMoon-Set
+  "Brand", GPL/CC BY 4.0, eingebettete WOFF-Font-Datei).
+- Netzwerk-Manager-Ueberschrift mit aussagekraeftigem Untertitel.
+
 # Changelog
 
 Alle nennenswerten Änderungen an InfoCraft werden in dieser Datei dokumentiert.
