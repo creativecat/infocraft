@@ -30,7 +30,7 @@ function url(string $path = ''): string
  * Zeitstempel erhalten (rsync --times, Docker-Layer): Browser laden dann garantiert
  * die neue Datei statt einer alten Version aus dem Cache.
  */
-const ASSET_VERSION = '88';
+const ASSET_VERSION = '89';
 
 /**
  * Programmversion nach Semantic Versioning (#145): MAJOR.MINOR.PATCH.
