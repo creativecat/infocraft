@@ -3157,3 +3157,22 @@ a .icn, .btn-link .icn { width: 1em; height: 1em; }
 @media print {
   .net-packet, .net-packet-label { display: none; }
 }
+
+/* ===================== Runde 37: Netzwerk-Werkstatt Bugfixes ===================== */
+/* Stammleitung Router-Provider war ein gefuelltes schwarzes Dreieck: SVG-Default-Fuellung abschalten. */
+.net-link { fill: none; }
+.net-provider-trunk { fill: none; }
+/* Provider-Cloud: Name und IP dunkelblau auf hellblauem Kasten (Kontrast), Cloud greifbar. */
+.net-provider-group { cursor: grab; }
+.net-provider-group:active { cursor: grabbing; }
+.net-provider-name { fill: #075985; font-size: 16px; font-weight: 700; }
+.net-provider-ip { fill: #075985; font-size: 13px; }
+/* Router: IP-Text hellgruen auf dunkelgruenem Kasten (Kontrast, Bugfix Runde 37). */
+.net-router-sub { fill: #d1fae5; font-size: 13px; }
+/* Inhalte sollen nicht mehr ueber Container hinauslaufen (Bugfix Runde 37). */
+.net-toolbar { flex-wrap: wrap; gap: 8px; }
+.net-modal-box { max-width: none; }
+.net-pagerow { flex-wrap: wrap; }
+.net-log-line, .net-msg-row, .net-mission-tip { word-break: break-word; overflow-wrap: anywhere; }
+.net-missions li { overflow-wrap: anywhere; }
+.net-dev-menu, .net-field-row { min-width: 0; }
