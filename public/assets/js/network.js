@@ -10,7 +10,7 @@
  *
  * Node-Tests: module.exports; Browser: window.IC_NET.
  *
- * @version 0.30.0
+ * @version 0.35.0
  * @license CC BY-NC-SA 4.0 (InfoCraft)
  */
 (function () {
@@ -19,13 +19,28 @@
   /* =================== Konstanten =================== */
 
   var TYPES = {
-    pc: { icon: '💻', ic: 'ic-display', label: 'Computer' },
-    phone: { icon: '📱', ic: 'ic-mobile', label: 'Smartphone' },
-    printer: { icon: '🖨️', ic: 'ic-printer', label: 'Drucker' },
-    webserver: { icon: '🖥️', ic: 'ic-cloud', label: 'Webserver' },
-    dns: { icon: '🧭', ic: 'ic-compass', label: 'DNS-Server' },
-    ap: { icon: '📶', ic: 'ic-connection', label: 'Access Point' }
+    pc: { ic: 'ic-display', label: 'Computer' },
+    phone: { ic: 'ic-mobile', label: 'Smartphone' },
+    printer: { ic: 'ic-printer', label: 'Drucker' },
+    webserver: { ic: 'ic-cloud', label: 'Webserver' },
+    dns: { ic: 'ic-compass', label: 'DNS-Server' },
+    ap: { ic: 'ic-connection', label: 'Access Point' }
   };
+
+  /* Styles, die der PNG-Export mit ins SVG schreibt (#244): Die Maske der
+   * Icon-Spans wird im standalone-SVG nicht mitgerendert, sie bleiben leer. */
+  var NET_PNG_CSS = ''
+    + '.net-router-box { fill: #0f766e; stroke: #115e59; stroke-width: 2; }'
+    + '.net-router-text { fill: #fff; font-size: 17px; font-weight: 600; }'
+    + '.net-sub { fill: #475569; font-size: 13px; }'
+    + '.net-sub-dim { fill: #94a3b8; }'
+    + '.net-link { fill: none; stroke: #16a34a; stroke-width: 2.5; }'
+    + '.net-link-off { stroke: #d1d5db; stroke-dasharray: 6 5; }'
+    + '.net-device rect { fill: #fff; stroke: #cbd5e1; stroke-width: 1.5; }'
+    + '.net-dev-text { fill: #1f2937; font-size: 16px; font-weight: 600; }'
+    + '.net-port { fill: #e2e8f0; stroke: #94a3b8; stroke-width: 1; }'
+    + '.net-port-on { fill: #34d399; stroke: #0f766e; stroke-width: 1; }'
+    + 'text { font-family: system-ui, sans-serif; }';
 
   var NEWSPAPER = '<h1>Schulzeitung</h1>'
     + '<p>Die Zeitung der Klasse: Hier schreiben wir über alles, was in der Schule passiert.</p>'
@@ -36,10 +51,10 @@
 
   /* Beispielseiten für den Webserver (#229): Schlüssel wie im PHP-Katalog. */
   var EXAMPLES = [
-    { key: 'zeitung', icon: '📰', title: 'Schulzeitung' },
-    { key: 'sport', icon: '⚽', title: 'Sportclub Eichenwald' },
-    { key: 'wetter', icon: '🌤️', title: 'Wetterdienst Schulnet' },
-    { key: 'kochen', icon: '🍝', title: 'Kochblog Klassenküche' }
+    { key: 'zeitung', ic: 'ic-file-text', title: 'Schulzeitung' },
+    { key: 'sport', ic: 'ic-star-full', title: 'Sportclub Eichenwald' },
+    { key: 'wetter', ic: 'ic-cloud', title: 'Wetterdienst Schulnet' },
+    { key: 'kochen', ic: 'ic-coffee', title: 'Kochblog Klassenküche' }
   ];
 
   /* Schichten des OSI-Modells (#232): von oben nach unten. */
@@ -101,6 +116,21 @@
     out.push({ n: 2, name: LAYERS[5].name, text: device.wifi ? 'WLAN-Frames über "' + (device.ssid || net.router.ssid || 'WLAN') + '"' : 'Ethernet-Frames über das Kabel' });
     out.push({ n: 1, name: LAYERS[6].name, text: 'Signale auf der Leitung: Bits' });
     return out;
+  }
+
+  /** Kabel wie eine Schnur (#244): Durchhang (Schnur-Pendel) statt gerader
+   * Linie. Der Ruhe-Durchhang waechst mit der Distanz, extra gibt die
+   * Schwingung beim Ziehen vor (gedaempftes Pendel). */
+  function cableD(x1, y1, x2, y2, extra) {
+    var dx = x2 - x1;
+    var dy = y2 - y1;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var sag = Math.min(12 + dist * 0.14, 55) + (extra || 0);
+    var mx = (x1 + x2) / 2;
+    var my = (y1 + y2) / 2 + sag;
+    return 'M ' + x1.toFixed(1) + ' ' + y1.toFixed(1)
+      + ' Q ' + mx.toFixed(1) + ' ' + my.toFixed(1)
+      + ' ' + x2.toFixed(1) + ' ' + y2.toFixed(1);
   }
 
   function esc(s) {
@@ -282,7 +312,7 @@
         if (data && data.net) { net = saneNet(data.net); lastStand = JSON.stringify(net); } // (#233)
         if (cb) { cb(data || null); }
         render();
-      }).catch(function () { if (cb) { cb(null); } });
+      }).catch(function () { if (connState) { connState(false); } if (cb) { cb(null); } });
     }
 
     /* ---------- Topologie ---------- */
@@ -370,12 +400,12 @@
         var on = online(d);
         // Leitung vom Router-Port zum Gerät (#235)
         var portX = cx - 72 + (i % PORTS) * 21 + 7;
-        var line = svgEl('line', { x1: portX, y1: cy + rh / 2, x2: dx, y2: dy, class: on ? 'net-link' : 'net-link net-link-off' });
+        var line = svgEl('path', { d: cableD(portX, cy + rh / 2, dx, dy, 0), class: 'net-link net-cable' + (on ? '' : ' net-link-off') });
         svg.appendChild(line);
         var gg = svgEl('g', { class: 'net-device' + (on ? '' : ' net-device-off') });
         gg.appendChild(svgEl('rect', { x: dx - 74, y: dy - 30, rx: 10, width: 148, height: 84 }));
         var t1 = svgEl('text', { x: dx, y: dy - 4, class: 'net-dev-text', 'text-anchor': 'middle' });
-        t1.textContent = (TYPES[d.type] ? TYPES[d.type].icon : '❓') + ' ' + d.name;
+        t1.innerHTML = '<span class="icn ' + (TYPES[d.type] ? TYPES[d.type].ic : 'ic-question') + '" aria-hidden="true"></span> ' + esc(d.name);
         gg.appendChild(t1);
         var t2 = svgEl('text', { x: dx, y: dy + 18, class: 'net-sub', 'text-anchor': 'middle' });
         var state = d.wifi ? ' · im WLAN ' + (d.ssid || '') : (d.cable === false ? ' · offline' : (d.type === 'phone' ? ' · kein WLAN' : ' · per Kabel'));
@@ -384,11 +414,30 @@
         var t3 = svgEl('text', { x: dx, y: dy + 38, class: 'net-sub net-sub-dim', 'text-anchor': 'middle' });
         t3.textContent = TYPES[d.type] ? TYPES[d.type].label : '';
         gg.appendChild(t3);
-        (function (dev, devG, lineEl, baseX, baseY) {
+        (function (dev, devG, lineEl, baseX, baseY, portX0, portY0) {
           if (!devG.addEventListener) { return; }
           var dragging = false;
           var moved = false;
           var start = null;
+          var boost = 0;
+          var lastMove = null;
+          function setCable(nx, ny, extra) {
+            lineEl.setAttribute('d', cableD(portX0, portY0, nx, ny, extra));
+          }
+          function swing() {
+            var raf = win() && win().requestAnimationFrame;
+            if (!raf) { return; }
+            var boost0 = boost;
+            var t0 = Date.now();
+            function step() {
+              var t = (Date.now() - t0) / 1000;
+              var extra = boost0 * Math.exp(-t * 4.5) * Math.cos(t * 16);
+              if (dragging || t > 1.4 || !dev.pos) { return; }
+              setCable(dev.pos.x, dev.pos.y, extra);
+              raf(step);
+            }
+            raf(step);
+          }
           function down(ev) {
             var p = stagePoint(ev);
             if (!p) { return; }
@@ -408,8 +457,11 @@
             var ny = Math.max(44, Math.min(518, start.oy + (p.y - start.my)));
             if (Math.abs(nx - start.ox) > 3 || Math.abs(ny - start.oy) > 3) { moved = true; }
             devG.setAttribute('transform', 'translate(' + (nx - baseX) + ',' + (ny - baseY) + ')');
-            lineEl.setAttribute('x2', nx);
-            lineEl.setAttribute('y2', ny);
+            var now = Date.now();
+            var speed = lastMove ? (Math.abs(nx - lastMove.x) + Math.abs(ny - lastMove.y)) / Math.max(now - lastMove.t, 1) : 0;
+            boost = Math.min(boost * 0.75 + speed * 0.9, 48);
+            lastMove = { x: nx, y: ny, t: now };
+            setCable(nx, ny, boost);
             dev._drag = { x: nx, y: ny };
             if (ev.preventDefault) { ev.preventDefault(); }
           }
@@ -420,6 +472,7 @@
               dev.pos = { x: Math.round(dev._drag.x), y: Math.round(dev._drag.y) };
               dev._drag = null;
               act('moveDevice', { id: dev.id, x: dev.pos.x, y: dev.pos.y }); // Position persistieren
+              swing(); // Schnur schwingt nach, bis sie zur Ruhe kommt (#244)
             }
           }
           devG.addEventListener('pointerdown', down);
@@ -427,7 +480,7 @@
           devG.addEventListener('pointerup', up);
           devG.addEventListener('pointercancel', up);
           devG.addEventListener('click', function () { if (!moved) { openModal(dev.id, dev.type); } });
-        })(d, gg, line, dx, dy);
+        })(d, gg, line, dx, dy, portX, cy + rh / 2);
         svg.appendChild(gg);
       }
     }
@@ -454,6 +507,21 @@
       if (cls) { e.setAttribute('class', cls); }
       if (text != null) { e.textContent = text; }
       return e;
+    }
+
+    /** Entfernen-Button fuer jedes Geraetefenster (#244): Auch AP, DNS-Server
+     * und Co. lassen sich jetzt abhaengen. Mit Rueckfrage, gegen Versehen. */
+    function deviceFooter(d) {
+      var box = el('div', 'net-footer-actions');
+      var del = el('button', 'btn net-btn net-danger');
+      del.innerHTML = '<span class="icn ic-bin2" aria-hidden="true"></span> Gerät entfernen';
+      del.addEventListener('click', function () {
+        if (win().confirm && !win().confirm('Gerät "' + d.name + '" wirklich vom Netz trennen und entfernen?')) { return; }
+        act('removeDevice', { id: d.id });
+        closeModal();
+      });
+      box.appendChild(del);
+      return box;
     }
 
     function closeModal() {
@@ -586,7 +654,7 @@
     /* ---------- Browser (Computer und Smartphone) ---------- */
 
     function browserWindow(d) {
-      var box = el('div', null);
+      var box = el('div', 'net-window net-window-' + d.type);
       box.appendChild(head(d.name, d.ip + (d.wifi ? ' · im WLAN ' + (d.ssid || '') : ''), d.type === 'phone' ? 'ic-mobile' : 'ic-display'));
 
       if (d.type === 'phone' && !d.wifi) {
@@ -618,8 +686,19 @@
           act('joinWlan', { id: d.id, ssid: sEl ? sEl.value : '', pass: pEl ? pEl.value : '' });
         });
         box.appendChild(join);
+        box.appendChild(deviceFooter(d));
         return box;
       }
+
+      /* Realistischer Browser im Geraetefenster (#244): Titelleiste mit
+       * Fenster-Punkten und Tab, darunter Adressleiste und Seite. */
+      var shell = el('div', 'net-browser-shell net-shell-' + d.type);
+      var titlebar = el('div', 'net-browser-titlebar');
+      titlebar.appendChild(el('span', 'net-win-dot net-win-r'));
+      titlebar.appendChild(el('span', 'net-win-dot net-win-y'));
+      titlebar.appendChild(el('span', 'net-win-dot net-win-g'));
+      titlebar.appendChild(el('span', 'net-browser-tab', (d.type === 'phone' ? 'Browser' : 'Neuer Tab')));
+      shell.appendChild(titlebar);
 
       var bar = el('div', 'net-urlbar');
       var input = el('input', 'net-input net-url');
@@ -681,7 +760,7 @@
           act('browse', { who: d.name, url: String(url).trim(), server: res.server.id, ip: d.ip, code: 200, path: '/' });
         } else {
           var err = el('div', 'net-error');
-          err.textContent = '⚠️ ' + res.message;
+          err.innerHTML = '<span class="icn ic-warning" aria-hidden="true"></span> ' + esc(res.message);
           view.appendChild(err);
           status.textContent = 'Fehler · Code ' + res.code;
           if (res.code === 404 && res.server) { // 404 landet im Webserver-Log (#218)
@@ -691,11 +770,14 @@
         renderLayers();
       }
       go.addEventListener('click', load);
+      input.addEventListener('keydown', function (ev) { if (ev && ev.key === 'Enter') { load(); } });
       bar.appendChild(input);
       bar.appendChild(go);
-      box.appendChild(bar);
-      box.appendChild(status);
-      box.appendChild(view);
+      shell.appendChild(bar);
+      shell.appendChild(status);
+      shell.appendChild(view);
+      box.appendChild(shell);
+      box.appendChild(deviceFooter(d));
       return box;
     }
 
@@ -752,7 +834,7 @@
       for (var ex = 0; ex < EXAMPLES.length; ex++) {
         (function (example) {
           var b = el('button', 'btn net-btn-sm net-example');
-          b.textContent = example.icon + ' ' + example.title;
+          b.innerHTML = '<span class="icn ' + example.ic + '" aria-hidden="true"></span> ' + example.title;
           b.addEventListener('click', function () {
             act('loadExample', { server: d.id, example: example.key }, function (res) {
               if (res && res.ok) { saveFlag('example-loaded'); }
@@ -791,7 +873,7 @@
       }
 
       var add = el('button', 'btn net-btn');
-      add.textContent = '＋ Neue Webseite (Vorlage Schulzeitung)';
+      add.innerHTML = '<span class="icn ic-plus" aria-hidden="true"></span> Neue Webseite (Vorlage Schulzeitung)';
       add.addEventListener('click', function () {
         act('savePage', { server: d.id, title: 'Schulzeitung', domain: 'schulzeitung.net', html: NEWSPAPER }, function (res) {
           if (res && res.ok) { saveFlag('page-created'); }
@@ -799,7 +881,7 @@
       });
       box.appendChild(add);
       var own = el('button', 'btn net-btn');
-      own.textContent = '＋ Leere Seite mit eigenem HTML';
+      own.innerHTML = '<span class="icn ic-plus" aria-hidden="true"></span> Leere Seite mit eigenem HTML';
       own.addEventListener('click', function () { pageEditor(d, null); });
       box.appendChild(own);
       var hits = el('details', 'net-logs');
@@ -814,6 +896,7 @@
       if (shown === 0) { hits.appendChild(el('p', 'net-muted', 'Noch keine Zugriffe auf diesen Webserver.')); }
       box.appendChild(hits);
       box.appendChild(serverLogSection(d));
+      box.appendChild(deviceFooter(d));
       return box;
     }
 
@@ -860,7 +943,7 @@
       });
       box.appendChild(save);
       var back = el('button', 'btn net-btn net-btn-ghost');
-      back.textContent = '← Zurück zum Webserver';
+      back.innerHTML = '<span class="icn ic-arrow-left" aria-hidden="true"></span> Zurück zum Webserver';
       back.addEventListener('click', function () { openModal(d.id, 'webserver'); });
       box.appendChild(back);
       if (modalBox) {
@@ -892,13 +975,14 @@
       box.appendChild(field('Domain', 'input', '', { id: 'net-dns-domain', maxlength: '40', placeholder: 'z. B. schulzeitung.net' }));
       box.appendChild(field('IP-Adresse', 'input', '', { id: 'net-dns-ip', maxlength: '15', placeholder: 'z. B. 192.168.0.2' }));
       var add = el('button', 'btn net-btn');
-      add.textContent = '＋ Eintrag hinzufügen';
+      add.innerHTML = '<span class="icn ic-plus" aria-hidden="true"></span> Eintrag hinzufügen';
       add.addEventListener('click', function () {
         var dEl = doc.getElementById('net-dns-domain');
         var iEl = doc.getElementById('net-dns-ip');
         act('saveDns', { domain: dEl ? dEl.value : '', ip: iEl ? iEl.value : '' });
       });
       box.appendChild(add);
+      box.appendChild(deviceFooter(d));
       return box;
     }
 
@@ -917,6 +1001,7 @@
         act('setAp', { id: d.id, name: sEl ? sEl.value : '', pass: pEl ? pEl.value : '' });
       });
       box.appendChild(save);
+      box.appendChild(deviceFooter(d));
       return box;
     }
 
@@ -970,10 +1055,7 @@
         act('renameDevice', { id: d.id, name: nEl ? nEl.value : '' });
       });
       box.appendChild(ren);
-      var del = el('button', 'btn net-btn net-danger');
-      del.innerHTML = '<span class="icn ic-bin2" aria-hidden="true"></span> Gerät entfernen';
-      del.addEventListener('click', function () { act('removeDevice', { id: d.id }); closeModal(); });
-      box.appendChild(del);
+      box.appendChild(deviceFooter(d));
       return box;
     }
 
@@ -991,10 +1073,7 @@
         act('renameDevice', { id: d.id, name: nEl ? nEl.value : '' });
       });
       box.appendChild(ren);
-      var del = el('button', 'btn net-btn net-danger');
-      del.innerHTML = '<span class="icn ic-bin2" aria-hidden="true"></span> Gerät entfernen';
-      del.addEventListener('click', function () { act('removeDevice', { id: d.id }); closeModal(); });
-      box.appendChild(del);
+      box.appendChild(deviceFooter(d));
       return box;
     }
 
@@ -1008,6 +1087,54 @@
         act('addDevice', { type: tEl ? tEl.value : 'pc', name: nEl ? nEl.value : '' }, function (res) {
           if (res && res.ok && nEl) { nEl.value = ''; }
         });
+      });
+    }
+
+    /* PNG-Export der Topologie (#244): SVG klonen, Styles einbetten, ueber
+     * Canvas in ein PNG wandeln und als Download anbieten. */
+    function exportPNG() {
+      if (!svg) { return; }
+      var XMLSer = win().XMLSerializer;
+      var Img = win().Image;
+      if (!XMLSer || !Img || !doc.createElement) { return; }
+      var clone = svg.cloneNode(true);
+      if (!clone) { return; }
+      try {
+        var icons = clone.querySelectorAll ? clone.querySelectorAll('.icn') : [];
+        for (var q = 0; q < icons.length; q++) { if (icons[q].parentNode) { icons[q].parentNode.removeChild(icons[q]); } }
+        var styleEl = svgEl('style');
+        styleEl.textContent = NET_PNG_CSS;
+        if (clone.insertBefore) { clone.insertBefore(styleEl, clone.firstChild); }
+        clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        clone.setAttribute('width', '1800');
+        clone.setAttribute('height', '1120');
+        var xml = new XMLSer().serializeToString(clone);
+        var canv = doc.createElement('canvas');
+        if (!canv.getContext) { return; }
+        canv.width = 1800;
+        canv.height = 1120;
+        var ctx = canv.getContext('2d');
+        var img = new Img();
+        img.onload = function () {
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(0, 0, 1800, 1120);
+          ctx.drawImage(img, 0, 0, 1800, 1120);
+          var a = doc.createElement('a');
+          a.download = 'netzwerk-topologie.png';
+          a.href = canv.toDataURL('image/png');
+          if (a.click) { a.click(); }
+        };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+      } catch (e) { /* Export ist Zusaetzkuchen, kein Fehler fuer die Werkstatt */ }
+    }
+    var pngBtn = byId('net-png-btn');
+    if (pngBtn) { pngBtn.addEventListener('click', exportPNG); }
+
+    /* Topologie drucken (#244): Druck-CSS blendet alles andere aus. */
+    var printBtn = byId('net-print-btn');
+    if (printBtn) {
+      printBtn.addEventListener('click', function () {
+        if (win().print) { win().print(); }
       });
     }
     // Stufen-Schalter der Lehrkraft (#232)
@@ -1067,10 +1194,27 @@
     /* ---------- Polling: gemeinsames Klassennetz (#225) ---------- */
 
     var fetchFn = (typeof window !== 'undefined' && window.fetch) || (typeof global !== 'undefined' && global.fetch);
+    var connFails = 0;
+    function connState(ok) {
+      var c = byId('net-conn');
+      if (!c) { return; }
+      if (ok) {
+        if (connFails >= 2) { c.setAttribute('hidden', ''); c.textContent = ''; }
+        connFails = 0;
+        return;
+      }
+      connFails++;
+      if (connFails >= 2) {
+        c.removeAttribute('hidden');
+        c.textContent = 'Verbindung zum Server verloren. Neue St';
+        c.textContent = c.textContent + String.fromCharCode(228) + 'nde werden automatisch abgeholt, sobald sie wieder da ist.';
+      }
+    }
     function poll() {
       if (!fetchFn) { return; }
       fetchFn(cfg.stand).then(function (r) { return r.json(); }).then(function (data) {
-        if (!data || !data.devices) { return; }
+        if (!data || !data.devices) { connState(false); return; }
+        connState(true);
         var fresh = saneNet(data); // (#233)
         var raw = JSON.stringify(fresh);
         // Nichts Neues? Dann gar nichts anfassen: kein Neuaufbau, der
@@ -1079,7 +1223,7 @@
         lastStand = raw;
         net = fresh;
         render({ modal: false });
-      }).catch(function () {});
+      }).catch(function () { connState(false); });
     }
     var win1 = win();
     if (win1.setInterval) { win1.setInterval(poll, 5000); }
@@ -1090,7 +1234,7 @@
   /* =================== Export =================== */
 
   var api = {
-    version: '0.30.0',
+    version: '0.35.0',
     defaultNet: defaultNet,
     resolve: resolve,
     dnsLookup: dnsLookup,
@@ -1100,6 +1244,8 @@
     pageDocument: pageDocument,
     missionsState: missionsState,
     saneNet: saneNet,
+    cableD: cableD,
+    NET_PNG_CSS: NET_PNG_CSS,
     online: online,
     layerTrace: layerTrace,
     LAYERS: LAYERS,
