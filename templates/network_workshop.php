@@ -2,7 +2,9 @@
    Datei: Netzwerk-Werkstatt: simuliertes Klassennetz (#220 bis #226)
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.29.0 */ ?>
+   Runde 35 (#244): Toolbar mit ausklappbarem Geräte-Hinzufügen,
+   PNG-Export, Drucken, einklappbare Missionen.
+   Version: 0.35.0 */ ?>
 <div class="net-layout">
     <aside class="net-side">
         <div class="net-card net-router-card">
@@ -11,26 +13,15 @@
             <div class="net-router-row"><span>Name</span><strong id="net-router-name">Router</strong></div>
             <div class="net-router-row"><span>IP</span><strong>192.168.0.1</strong></div>
             <div class="net-router-row"><span>WLAN</span><strong id="net-router-ssid">noch nicht eingerichtet</strong></div>
-            <label class="net-label" for="net-add-type">Gerät anschließen</label>
-            <div class="net-add-row">
-                <select id="net-add-type">
-                    <option value="pc">💻 Computer</option>
-                    <option value="phone">📱 Smartphone</option>
-                    <option value="printer">🖨️ Drucker</option>
-                    <option value="webserver">🖥️ Webserver</option>
-                    <option value="dns">🧭 DNS-Server</option>
-                    <option value="ap">📶 Access Point</option>
-                </select>
-                <input type="text" id="net-add-name" maxlength="40" placeholder="Name (z. B. HP Pro Desk)">
-                <button type="button" class="btn net-add-btn" id="net-add-btn">＋ Anschließen</button>
-            </div>
+            <p class="net-muted">Neue Geräte fügst du oben über der Bühne hinzu: einfach „Gerät hinzufügen“ aufklappen.</p>
             <div class="net-netinfo" id="net-netinfo"></div>
+            <p class="net-conn" id="net-conn" hidden></p>
         </div>
 
-        <div class="net-card net-missions-card">
-            <h2><span class="icn ic-target" aria-hidden="true"></span> Missionen</h2>
+        <details class="net-card net-missions-card" id="net-missions-card" open>
+            <summary><h2><span class="icn ic-target" aria-hidden="true"></span> Missionen</h2><span class="net-missions-toggle" aria-hidden="true">zum Ausklappen</span></summary>
             <ul class="net-missions" id="net-missions"></ul>
-        </div>
+        </details>
 
         <?php if ($isTeacher): ?>
         <div class="net-card net-level-card">
@@ -43,7 +34,7 @@
             <p class="net-muted">Stufe 2 zeigt im Browser die Reise des Aufrufs durch die Schichten des OSI-Modells.</p>
         </div>
         <details class="net-card net-teacher-card" id="net-teacher-card">
-            <summary><strong><span class="icn ic-user" aria-hidden="true"></span><span class="icn ic-office" aria-hidden="true"></span> Netzwerk-Manager</strong> (Lehrkraft)</summary>
+            <summary><strong><span class="icn ic-user" aria-hidden="true"></span><span class="icn ic-office" aria-hidden="true"></span> Netzwerk-Manager</strong> <span class="net-muted">Klassennetz verwalten: sichern, wiederherstellen, zurücksetzen</span></summary>
             <?php if (!empty($classes)): ?>
             <form method="get" action="<?= url('werkstatt/netzwerk') ?>" class="net-class-pick">
                 <label for="net-class-select">Klasse (gemeinsames Klassennetz):</label>
@@ -70,6 +61,25 @@
     </aside>
 
     <main class="net-main">
+        <div class="net-toolbar">
+            <details class="net-add-panel" id="net-add-panel">
+                <summary class="btn net-toolbar-add"><span class="icn ic-plus" aria-hidden="true"></span> Gerät hinzufügen</summary>
+                <div class="net-add-row">
+                    <select id="net-add-type" aria-label="Gerätetyp">
+                        <option value="pc">Computer</option>
+                        <option value="phone">Smartphone</option>
+                        <option value="printer">Drucker</option>
+                        <option value="webserver">Webserver</option>
+                        <option value="dns">DNS-Server</option>
+                        <option value="ap">Access Point</option>
+                    </select>
+                    <input type="text" id="net-add-name" maxlength="40" placeholder="Name (z. B. HP Pro Desk)">
+                    <button type="button" class="btn net-add-btn" id="net-add-btn"><span class="icn ic-connection" aria-hidden="true"></span> Anschließen</button>
+                </div>
+            </details>
+            <button type="button" class="btn net-tool-btn" id="net-png-btn" title="Topologie als Bilddatei herunterladen"><span class="icn ic-download2" aria-hidden="true"></span> PNG</button>
+            <button type="button" class="btn net-tool-btn" id="net-print-btn" title="Topologie drucken"><span class="icn ic-printer" aria-hidden="true"></span> Drucken</button>
+        </div>
         <div class="net-stage-wrap">
             <svg id="net-svg" class="net-svg" viewBox="0 0 900 560" role="img" aria-label="Netz-Topologie"></svg>
             <div class="net-modal" id="net-modal" hidden>
