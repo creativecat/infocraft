@@ -12,7 +12,7 @@
  *
  * Node-Tests: module.exports; Browser: window.IC_NET.
  *
- * @version 0.39.0
+ * @version 0.40.0
  * @license CC BY-NC-SA 4.0 (InfoCraft)
  */
 (function () {
@@ -34,12 +34,12 @@
   var NET_PNG_CSS = ''
     + '.net-router-box { fill: #0f766e; stroke: #115e59; stroke-width: 2; }'
     + '.net-router-text { fill: #fff; font-size: 17px; font-weight: 600; }'
-    + '.net-sub { fill: #475569; font-size: 13px; }'
+    + '.net-sub { fill: #475569; font-size: 11px; }'
     + '.net-sub-dim { fill: #94a3b8; }'
     + '.net-link { fill: none; stroke: #16a34a; stroke-width: 2.5; }'
     + '.net-link-off { stroke: #d1d5db; stroke-dasharray: 6 5; }'
     + '.net-device rect { fill: #fff; stroke: #cbd5e1; stroke-width: 1.5; }'
-    + '.net-dev-text { fill: #1f2937; font-size: 16px; font-weight: 600; }'
+    + '.net-dev-text { fill: #1f2937; font-size: 13px; font-weight: 600; }'
     + '.net-port { fill: #e2e8f0; stroke: #94a3b8; stroke-width: 1; }'
     + '.net-port-on { fill: #34d399; stroke: #0f766e; stroke-width: 1; }'
     + '.net-provider-box { fill: #e0f2fe; stroke: #0284c7; stroke-width: 2; }'
@@ -570,11 +570,14 @@
         var gg = svgEl('g', { class: 'net-device' + (on ? '' : ' net-device-off') });
         gg.appendChild(svgEl('rect', { x: dx - 74, y: dy - 30, rx: 10, width: 148, height: 84 }));
         var t1 = svgEl('text', { x: dx, y: dy - 4, class: 'net-dev-text', 'text-anchor': 'middle' });
-        var dispName = (d.name || '').length > 18 ? (d.name || '').slice(0, 17) + '…' : (d.name || '');
+        var rawName = d.name || '';
+        var dispName = rawName.length > 13 ? rawName.slice(0, 12) + '…' : rawName;
         t1.innerHTML = '<span class="icn ' + (TYPES[d.type] ? TYPES[d.type].ic : 'ic-question') + '" aria-hidden="true"></span> ' + esc(dispName);
         gg.appendChild(t1);
         var t2 = svgEl('text', { x: dx, y: dy + 18, class: 'net-sub', 'text-anchor': 'middle' });
-        var state = d.wifi ? ' · im WLAN ' + (d.ssid || '') : (d.cable === false ? ' · offline' : (d.type === 'phone' ? ' · kein WLAN' : ' · per Kabel'));
+        var ssid = d.ssid || '';
+        var ssidShort = ssid.length > 10 ? ssid.slice(0, 9) + '…' : ssid;
+        var state = d.wifi ? ' · WLAN ' + ssidShort : (d.cable === false ? ' · offline' : (d.type === 'phone' ? ' · kein WLAN' : ' · Kabel'));
         t2.textContent = d.ip + state;
         gg.appendChild(t2);
         var t3 = svgEl('text', { x: dx, y: dy + 38, class: 'net-sub net-sub-dim', 'text-anchor': 'middle' });
