@@ -4468,7 +4468,7 @@ setTimeout(function () {
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
                   ok(support130.indexOf("APP_VERSION = '0.33.0'") !== -1
-                    && support130.indexOf("ASSET_VERSION = '88'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '89'") !== -1
                     && changelog130.indexOf('## [0.33.0]') !== -1
                     && changelog130.indexOf('## [0.31.0]') !== -1
                     && changelog130.indexOf('## [0.30.0]') !== -1,
@@ -4704,7 +4704,7 @@ setTimeout(function () {
                     return Promise.resolve({ json: function () { return Promise.resolve({ ok: true, net: netSample }); } });
                   };
                   netMod.attach(netDoc);
-                  var svgLines = svg133.children.filter(function (c) { return c.tagName === 'LINE'; }).length;
+                  var svgLines = svg133.children.filter(function (c) { return c.tagName === 'PATH' && String(c.getAttribute('class') || '').indexOf('net-cable') !== -1; }).length;
                   var svgGroups = svg133.children.filter(function (c) { return c.tagName === 'G'; }).length;
                   ok(svgLines === 4 && svgGroups === 5,
                     'T133m Topologie zeichnet alle Geräte und den Router mit Leitungen (#220)');
@@ -4952,7 +4952,7 @@ setTimeout(function () {
                   netDoc4.register(new FakeEl('select'), 'net-add-type');
                   netDoc4.register(new FakeEl('input'), 'net-add-name');
                   netMod.attach(netDoc4);
-                  var lines135 = svg135.children.filter(function (c) { return c.tagName === 'LINE'; });
+                  var lines135 = svg135.children.filter(function (c) { return c.tagName === 'PATH'; });
                   var groups135 = svg135.children.filter(function (c) { return c.tagName === 'G'; });
                   var routerG135 = groups135[0];
                   var portRects135 = routerG135.children.filter(function (c) {
@@ -4961,10 +4961,13 @@ setTimeout(function () {
                   var portsOn135 = portRects135.filter(function (c) {
                     return String(c.getAttribute('class') || '').indexOf('net-port-on') !== -1;
                   });
+                  var d135 = String(lines135[0].getAttribute('d') || '');
+                  var dEnd135 = d135.split(' ').slice(-2).map(Number);
+                  var dStart135 = d135.indexOf('M ') === 0 ? Number(d135.split(' ')[1]) : null;
                   ok(lines135.length === 4
-                    && Number(lines135[0].getAttribute('x2')) === 600 && Number(lines135[0].getAttribute('y2')) === 150
+                    && dEnd135[0] === 600 && dEnd135[1] === 150
                     && portRects135.length === 8 && portsOn135.length === 4
-                    && Number(lines135[0].getAttribute('x1')) === 385,
+                    && dStart135 === 385,
                     'T135d gespeicherte Position wird gezeichnet, Leitung dockt am eigenen Router-Port an (#236, #238)');
                   var devG135 = groups135[1];
                   ok(devG135.handlers.pointerdown && devG135.handlers.pointermove && devG135.handlers.pointerup
@@ -5044,8 +5047,8 @@ setTimeout(function () {
                     && sup135.indexOf("'html' => 'ic-embed2'") !== -1
                     && sup135.indexOf("'netzwerk' => 'ic-earth'") !== -1
                     && sup135.indexOf("'infobuecher' => 'ic-book'") !== -1
-                    && sup135.indexOf("ASSET_VERSION = '88'") !== -1,
-                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 88');
+                    && sup135.indexOf("ASSET_VERSION = '89'") !== -1,
+                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 89');
 
 
                   /* T137a (Runde 34): Icon-Wechsel nach Vorgabe. */
@@ -5095,6 +5098,64 @@ setTimeout(function () {
                     && blkStop137.indexOf('ic-stop') !== -1
                     && blkStop137.indexOf('⏹') === -1,
                     'T137e Takt- und Stoppknoepfe mit Vektor-Icons statt ▶/⏹');
+                  /* T138a-f (Runde 35, #244): Netzwerk-Werkstatt, Teil 2. */
+                  var netJs138 = fs136.readFileSync(require.resolve('../public/assets/js/network.js'), 'utf8');
+                  var netTpl138 = fs136.readFileSync(require.resolve('../templates/network_workshop.php'), 'utf8');
+                  var netCss138 = fs136.readFileSync(require.resolve('../public/assets/css/style.css'), 'utf8');
+                  var codeOv138 = fs136.readFileSync(require.resolve('../templates/code_overview.php'), 'utf8');
+
+                  /* T138a: Entfernen-Button fuer ALLE Geraetefenster. */
+                  ok(netJs138.indexOf('function deviceFooter') !== -1
+                    && (netJs138.split('box.appendChild(deviceFooter(d));').length - 1) >= 5
+                    && netJs138.indexOf('removeDevice') !== -1,
+                    'T138a Entfernen-Button in allen Geraetefenstern (AP, DNS, Webserver, Browser, Drucker)');
+
+                  /* T138b: PNG-Export und Drucken der Topologie. */
+                  ok(netJs138.indexOf('function exportPNG') !== -1
+                    && netJs138.indexOf("toDataURL('image/png')") !== -1
+                    && netJs138.indexOf('netzwerk-topologie.png') !== -1
+                    && netTpl138.indexOf('net-png-btn') !== -1
+                    && netTpl138.indexOf('net-print-btn') !== -1
+                    && netJs138.indexOf('win().print') !== -1,
+                    'T138b PNG-Export und Druck-Button fuer die Topologie');
+
+                  /* T138c: Kabel wie Schnuere mit Durchhang und Nachschwingen. */
+                  ok(typeof require('../public/assets/js/network.js').cableD === 'function'
+                    && netJs138.indexOf(' Q ') !== -1
+                    && netJs138.indexOf('swing()') !== -1
+                    && netCss138.indexOf('.net-cable') !== -1
+                    && netCss138.indexOf('stroke-linecap: round') !== -1,
+                    'T138c Kabel als Schnur: Kurve mit Durchhang, gedaempftes Nachschwingen');
+
+                  /* T138d: Brand-Icons Java/Python (IcoMoon "Brand") statt Emoji. */
+                  ok(netCss138.indexOf('icobrand') !== -1
+                    && netCss138.indexOf('.ic-brand-java::before') !== -1
+                    && netCss138.indexOf('.ic-brand-python::before') !== -1
+                    && codeOv138.indexOf('ic-brand-java') !== -1
+                    && codeOv138.indexOf('ic-brand-python') !== -1
+                    && codeOv138.indexOf('\u2615') === -1
+                    && codeOv138.indexOf('\ud83d\udc0d') === -1,
+                    'T138d Brand-Icons ic-brand-java/ic-brand-python eingebaut, Optionen ohne Emoji');
+
+                  /* T138e: Toolbar mit ausklappbarem Hinzufuegen, Missionen einklappbar,
+                     Geraete-Emoji raus, volle Breite des Geraetefensters. */
+                  ok(netTpl138.indexOf('net-add-panel') !== -1
+                    && netTpl138.indexOf('net-missions-card') !== -1
+                    && netTpl138.indexOf('\ud83d\udcbb') === -1
+                    && netTpl138.indexOf('\ud83d\udcf1') === -1
+                    && netTpl138.indexOf('\uff0b') === -1
+                    && netJs138.indexOf('\uff0b') === -1
+                    && netCss138.indexOf('width: min(1080px, 96vw)') !== -1,
+                    'T138e Toolbar: Plus-Panel ausklappbar, Missionen einklappbar, Fenster volle Breite, kein Emoji');
+
+                  /* T138f: Server-Verbindung beim Stand-Polling sichtbar absichern. */
+                  ok(netJs138.indexOf('function connState') !== -1
+                    && netJs138.indexOf('Verbindung zum Server verloren') !== -1
+                    && netTpl138.indexOf('net-conn') !== -1
+                    && netCss138.indexOf('.net-conn') !== -1
+                    && netCss138.indexOf('@media print') !== -1,
+                    'T138f Polling mit sichtbarem Verbindungs-Hinweis, Druck-CSS vorhanden');
+
 
                   global.document = netSavedDoc;
                   global.window = netSavedWindow;
