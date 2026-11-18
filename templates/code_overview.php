@@ -3,7 +3,7 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Runde 39 (#265): Missionen als schwebende Box (missions.js).
-   Version: 0.39.0 */ ?>
+   Version: 0.40.0 */ ?>
 <?php $classNames = []; foreach ($classes as $class) { $classNames[$class->id] = $class->name; } ?>
 <?php /* Ordner mit Unterordnern: Diese zeigen keinen 'Noch keine Projekte'-Platzhalter,
      * auch wenn sie selbst keine direkten Projekte enthalten (#45). */ $folderHasChildren = [];

@@ -7,7 +7,7 @@
    Runde 36 (#245): ARIA-Labels für Toolbar und Bedienelemente.
    Runde 39 (#265): Router-Karte kompakt einklappbar, Missionen als
    schwebende Box über der Bühne (modulare Komponente missions.js).
-   Version: 0.39.0 */ ?>
+   Version: 0.40.0 */ ?>
 <div class="net-layout">
     <aside class="net-side">
         <details class="net-card net-router-card" id="net-router-card">

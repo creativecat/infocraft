@@ -1,3 +1,20 @@
+## [0.40.0] - 2026-11-18 (Runde 40)
+### Netzwerk-Werkstatt: Fenster ueber volle Bildschirmbreite, macOS-Fenster-Optik, Kachel-Beschriftung, Missions-Merken
+- Geraete-Fenster (4. Mahnung): Das Modal lag absolut INNERHALB der
+  Buehnen-Spalte und konnte deshalb nie breiter als diese werden. Es liegt
+  jetzt fixiert ueber dem ganzen Bildschirm (position: fixed, z-index 80)
+  und fuellt den Viewport bis auf einen schmalen Rand.
+- Geraete-Kacheln: Beschriftungen laufen nicht mehr aus der Kachel: Namen
+  werden bei 13 Zeichen gekuerzt, WLAN-Namen bei 10, Schrift der Hauptzeile
+  16 -> 13 px, der Zusatzzeilen 13 -> 11 px (network.js + style.css).
+- Fenster im macOS-Design: Milchglas-Hintergrund (backdrop-filter) fuer
+  Modal und Browser-Fenster, Ampel-Punkte in Titelleisten-Groesse 12 px
+  mit feiner Innenkante, grosse weiche Schatten, abgerundete Ecken 14/18 px,
+  Kopfzeile des Geraetefensters bleibt beim Scrollen stehen (sticky).
+- Missions-Box (Netzwerk und Code): Der Zustand aufgeklappt/zugeklappt wird
+  je Seite im localStorage gemerkt (missions.js bootState, Schluessel
+  ic.missions.open<Pfad>) und beim Laden wiederhergestellt.
+
 ## [0.39.0] - 2026-11-18 (Runde 39)
 ### Modulare Missionen, Netzwerk-Feinschliff, Diagramm-Icon-Fix (#265)
 - Modulare Missions-Box (#265): Neue gemeinsame Komponente

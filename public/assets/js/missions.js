@@ -11,7 +11,7 @@
  * legt eine Box mit data-missions-Flags ins Template, init() füllt sie beim
  * Laden selbst. Node-Tests: module.exports; Browser: window.IC_MISSIONS.
  *
- * @version 0.39.0
+ * @version 0.40.0
  * @license CC BY-NC-SA 4.0 (InfoCraft)
  */
 (function (global) {
@@ -98,8 +98,37 @@
     return null;
   }
 
+  /** Runde 40: Ist die Box offen oder zu? Merken (localStorage, je Seite). */
+  function storageKey(scope) {
+    var loc = null;
+    if (scope && scope.location && scope.location.pathname) { loc = scope.location; }
+    else if (typeof global !== 'undefined' && global.location && global.location.pathname) { loc = global.location; }
+    return 'ic.missions.open' + (loc ? loc.pathname : '');
+  }
+
+  function bootState(doc) {
+    var boxes = doc.querySelectorAll ? doc.querySelectorAll('.ic-missions-box') : [];
+    for (var i = 0; i < boxes.length; i++) {
+      (function (box) {
+        var key = storageKey(global);
+        var ls = (typeof global !== 'undefined' && global.localStorage) ? global.localStorage : null;
+        try {
+          var saved = ls ? ls.getItem(key) : null;
+          if (saved === '0') { box.removeAttribute('open'); }
+          else if (saved === '1') { box.setAttribute('open', 'open'); }
+        } catch (e) {}
+        if (box.addEventListener) {
+          box.addEventListener('toggle', function () {
+            try { if (ls) { ls.setItem(key, box.open ? '1' : '0'); } } catch (e) {}
+          });
+        }
+      })(boxes[i]);
+    }
+  }
+
   /** Code-Werkstatt: Box mit data-missions beim Laden selbst füllen. */
   function init(doc) {
+    bootState(doc);
     var boxes = doc.querySelectorAll ? doc.querySelectorAll('.ic-missions-box[data-missions]') : [];
     for (var i = 0; i < boxes.length; i++) {
       var box = boxes[i];
@@ -118,13 +147,15 @@
   }
 
   var api = {
-    version: '0.39.0',
+    version: '0.40.0',
     GRADS: GRADS,
     CODE_MISSIONS: CODE_MISSIONS,
     stateFor: stateFor,
     render: render,
     setCount: setCount,
-    init: init
+    init: init,
+    bootState: bootState,
+    storageKey: storageKey
   };
   global.IC_MISSIONS = api;
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
