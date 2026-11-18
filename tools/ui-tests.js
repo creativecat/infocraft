@@ -4467,13 +4467,13 @@ setTimeout(function () {
                     'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
-                  ok(support130.indexOf("APP_VERSION = '0.40.0'") !== -1
-                    && support130.indexOf("ASSET_VERSION = '94'") !== -1
+                  ok(support130.indexOf("APP_VERSION = '0.41.0'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '95'") !== -1
                     && changelog130.indexOf('## [0.33.0]') !== -1
                     && changelog130.indexOf('## [0.31.0]') !== -1
                     && changelog130.indexOf('## [0.30.0]') !== -1
                     && changelog130.indexOf('## [0.36.0]') !== -1,
-                    'T130r Version 0.40.0 mit Asset-Stand 94 und Changelog-Eintrag (Historie bleibt)');
+                    'T130r Version 0.41.0 mit Asset-Stand 95 und Changelog-Eintrag (Historie bleibt)');
                   ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
                     && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
                     && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
@@ -5005,11 +5005,11 @@ setTimeout(function () {
                     && htmlCtrl135.indexOf("redirect('/werkstatt/netzwerk')") !== -1
                     && htmlTpl135.indexOf('Zur Netzwerk-Werkstatt') !== -1,
                     'T135j Rueckweg aus dem HTML-Editor: Knopf im Editor, Redirect nach dem Speichern (#239)');
-                  ok(sup135.indexOf("APP_VERSION = '0.40.0'") !== -1
+                  ok(sup135.indexOf("APP_VERSION = '0.41.0'") !== -1
                     && changelog135.indexOf('## [0.33.0]') !== -1
                     && changelog135.indexOf('—') === -1
                     && changelog135.indexOf('## [0.31.0]') !== -1,
-                    'T135k Version 0.40.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
+                    'T135k Version 0.41.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
 
                   /* T136 (#241): helle Desktop-Optik im Stylesheet:
                    * Design-Sektion, Milchglas, Pill-Knoepfe, Fokus-Ring. */
@@ -5048,8 +5048,8 @@ setTimeout(function () {
                     && sup135.indexOf("'html' => 'ic-embed2'") !== -1
                     && sup135.indexOf("'netzwerk' => 'ic-earth'") !== -1
                     && sup135.indexOf("'infobuecher' => 'ic-book'") !== -1
-                    && sup135.indexOf("ASSET_VERSION = '94'") !== -1,
-                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 94');
+                    && sup135.indexOf("ASSET_VERSION = '95'") !== -1,
+                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 95');
 
 
                   /* T137a (Runde 34): Icon-Wechsel nach Vorgabe. */
@@ -5335,8 +5335,8 @@ setTimeout(function () {
                     && typeof missionsMod139.storageKey === 'function'
                     && missionsSrc139.indexOf('ic.missions.open') !== -1
                     && missionsSrc139.indexOf('bootState') !== -1
-                    && netJs138.indexOf('@version 0.40.0') !== -1,
-                    'T140a Missions-Box merkt sich auf/zu im localStorage, network.js auf 0.40.0');
+                    && netJs138.indexOf('@version 0.40.0') === -1,
+                    'T140a Missions-Box merkt sich auf/zu im localStorage, network.js nicht mehr auf 0.40.0');
                   ok(netCss138.indexOf('position: fixed; inset: 0; padding: 14px; z-index: 80') !== -1
                     && netCss138.indexOf('height: 100%; max-height: calc(100vh - 28px); border-radius: 18px;') !== -1,
                     'T140b Geraetefenster liegt ueber dem Bildschirm (fixed) und fuellt ihn bis auf Rand (R39-Regel ueberholt)');
@@ -5350,6 +5350,23 @@ setTimeout(function () {
                     && netJs138.indexOf('ssid.length > 10') !== -1
                     && netCss138.indexOf('.net-sub { font-size: 11px; }') !== -1,
                     'T140d Kachel-Beschriftungen: Namen/SSID gekuerzt, Schrift kleiner');
+
+                  /* T141 (Runde 41): Buehne volle Breite per Seitenpanel-Toggle, Toolbar-Ordnung. */
+                  ok(netJs138.indexOf('net-side-toggle') !== -1
+                    && netJs138.indexOf('net.side.hidden') !== -1
+                    && netJs138.indexOf('applySide') !== -1
+                    && netJs138.indexOf('@version 0.41.0') !== -1
+                    && netJs138.indexOf("version: '0.41.0',") !== -1,
+                    'T141a network.js: Seitenpanel-Zustand (Standard: ausgeblendet) gemerkt, Version 0.41.0');
+                  ok(netTpl138.indexOf('net-side-toggle') !== -1
+                    && netTpl138.indexOf('ic-list2') !== -1
+                    && netTpl138.indexOf('Version: 0.41.0') !== -1,
+                    'T141b Template: Toolbar-Button Seitenpanel mit Umschalt-Icon');
+                  ok(netCss138.indexOf('.net-layout.net-side-hidden { grid-template-columns: 1fr; }') !== -1
+                    && netCss138.indexOf('.net-tool-side { margin-left: auto; }') !== -1
+                    && netCss138.indexOf('.net-toolbar .net-add-panel { flex: 0 1 auto; }') !== -1
+                    && netCss138.indexOf('grid-template-columns: 280px 1fr;') !== -1,
+                    'T141c Stylesheet: Raster volle Breite ohne Panel, Toolbar-Gruppe rechts, Panel-Panel begrenzt');
 
                   global.document = netSavedDoc;
                   global.window = netSavedWindow;
