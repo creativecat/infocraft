@@ -4467,13 +4467,13 @@ setTimeout(function () {
                     'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
-                  ok(support130.indexOf("APP_VERSION = '0.38.0'") !== -1
-                    && support130.indexOf("ASSET_VERSION = '92'") !== -1
+                  ok(support130.indexOf("APP_VERSION = '0.39.0'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '93'") !== -1
                     && changelog130.indexOf('## [0.33.0]') !== -1
                     && changelog130.indexOf('## [0.31.0]') !== -1
                     && changelog130.indexOf('## [0.30.0]') !== -1
                     && changelog130.indexOf('## [0.36.0]') !== -1,
-                    'T130r Version 0.38.0 mit Asset-Stand 92 und Changelog-Eintrag (Historie bleibt)');
+                    'T130r Version 0.39.0 mit Asset-Stand 93 und Changelog-Eintrag (Historie bleibt)');
                   ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
                     && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
                     && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
@@ -4673,7 +4673,7 @@ setTimeout(function () {
                     'T133k Frontend pollt das Klassennetz und trägt Browser-, Webserver-UI (#221, #222, #225)');
                   ok(netCss.indexOf('.net-device') !== -1
                     && netCss.indexOf('.net-link-off') !== -1
-                    && netCss.indexOf('.net-mission-done') !== -1,
+                    && netCss.indexOf('.ic-mission-done') !== -1,
                     'T133l Stylesheet: Topologie, Offline-Leitungen, erledigte Missionen (#220, #226)');
                   /* UI-Attach: frisches Fake-DOM wie das Werkstatt-Template. */
                   var netDoc = new FakeDoc();
@@ -5005,11 +5005,11 @@ setTimeout(function () {
                     && htmlCtrl135.indexOf("redirect('/werkstatt/netzwerk')") !== -1
                     && htmlTpl135.indexOf('Zur Netzwerk-Werkstatt') !== -1,
                     'T135j Rueckweg aus dem HTML-Editor: Knopf im Editor, Redirect nach dem Speichern (#239)');
-                  ok(sup135.indexOf("APP_VERSION = '0.38.0'") !== -1
+                  ok(sup135.indexOf("APP_VERSION = '0.39.0'") !== -1
                     && changelog135.indexOf('## [0.33.0]') !== -1
                     && changelog135.indexOf('—') === -1
                     && changelog135.indexOf('## [0.31.0]') !== -1,
-                    'T135k Version 0.38.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
+                    'T135k Version 0.39.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
 
                   /* T136 (#241): helle Desktop-Optik im Stylesheet:
                    * Design-Sektion, Milchglas, Pill-Knoepfe, Fokus-Ring. */
@@ -5048,8 +5048,8 @@ setTimeout(function () {
                     && sup135.indexOf("'html' => 'ic-embed2'") !== -1
                     && sup135.indexOf("'netzwerk' => 'ic-earth'") !== -1
                     && sup135.indexOf("'infobuecher' => 'ic-book'") !== -1
-                    && sup135.indexOf("ASSET_VERSION = '92'") !== -1,
-                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 91');
+                    && sup135.indexOf("ASSET_VERSION = '93'") !== -1,
+                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 93');
 
 
                   /* T137a (Runde 34): Icon-Wechsel nach Vorgabe. */
@@ -5141,13 +5141,14 @@ setTimeout(function () {
                   /* T138e: Toolbar mit ausklappbarem Hinzufuegen, Missionen einklappbar,
                      Geraete-Emoji raus, volle Breite des Geraetefensters. */
                   ok(netTpl138.indexOf('net-add-panel') !== -1
-                    && netTpl138.indexOf('net-missions-card') !== -1
+                    && netTpl138.indexOf('net-missions-box') !== -1
                     && netTpl138.indexOf('\ud83d\udcbb') === -1
                     && netTpl138.indexOf('\ud83d\udcf1') === -1
                     && netTpl138.indexOf('\uff0b') === -1
                     && netJs138.indexOf('\uff0b') === -1
-                    && netCss138.indexOf('width: min(1080px, 96vw)') !== -1,
-                    'T138e Toolbar: Plus-Panel ausklappbar, Missionen einklappbar, Fenster volle Breite, kein Emoji');
+                    && netCss138.indexOf('width: min(1680px, 97vw)') !== -1
+                    && netTpl138.indexOf('net-router-card') !== -1,
+                    'T138e Toolbar: Plus-Panel ausklappbar, Missionen als schwebende Box, Router kompakt, Fenster fast volle Breite, kein Emoji');
 
                   /* T138f: Server-Verbindung beim Stand-Polling sichtbar absichern. */
                   ok(netJs138.indexOf('function connState') !== -1
@@ -5248,7 +5249,7 @@ setTimeout(function () {
                   ok(netJs138.indexOf("action === 'browse' || action === 'printPage'") !== -1
                     && netJs138.indexOf('render({ modal: false })') !== -1
                     && netCss138.indexOf('.net-pagerow { flex-wrap: wrap; }') !== -1
-                    && netCss138.indexOf('.net-log-line, .net-msg-row, .net-mission-tip { word-break: break-word; overflow-wrap: anywhere; }') !== -1,
+                    && netCss138.indexOf('.net-log-line, .net-msg-row, .ic-mission-tip { word-break: break-word; overflow-wrap: anywhere; }') !== -1,
                     'T138o browse/printPage bauen das Modal nicht neu, Overflow gebändigt');
 
                   /* T138p (Runde 38): Performance, Kostuem-Icons, Refactoring, Seeds. */
@@ -5289,6 +5290,44 @@ setTimeout(function () {
                     && migrator138.indexOf('softwareentwicklung') !== -1,
                     'T138p7 Lehrplan-Decks: Schichten/MAC/Ports (Jgst 7), Informationssicherheit (Jgst 10), Rekursion/Graphen, Formale Sprachen, Betriebssysteme, ML, Softwareentwicklung (#246-#255)');
 
+                  /* T139 (Runde 39): Modulare Missions-Box, Netzwerk-Feinschliff, Diagramm-Icon, Plus-Icon. */
+                  var missionsMod139 = require('../public/assets/js/missions.js');
+                  var missionsSrc139 = fs136.readFileSync(require.resolve('../public/assets/js/missions.js'), 'utf8');
+                  var codeOv139 = fs136.readFileSync(require.resolve('../templates/code_overview.php'), 'utf8');
+                  var codeCtrl139 = fs136.readFileSync(require.resolve('../src/Controllers/CodeController.php'), 'utf8');
+                  var diaOv139 = fs136.readFileSync(require.resolve('../templates/diagram_overview.php'), 'utf8');
+                  var codeState139 = missionsMod139.stateFor(missionsMod139.CODE_MISSIONS, ['has-project', 'has-java', 'has-asm']);
+                  var codeDone139 = codeState139.filter(function (m) { return m.done; }).length;
+                  ok(typeof missionsMod139.render === 'function'
+                    && typeof missionsMod139.init === 'function'
+                    && missionsSrc139.indexOf('ic-mission-badge') !== -1
+                    && missionsSrc139.indexOf('CODE_MISSIONS') !== -1,
+                    'T139a missions.js: eine Komponente, IC_MISSIONS-Export, einheitliche Klassen (#265)');
+                  ok(codeState139.length === 6 && codeDone139 === 3
+                    && codeState139[0].grad <= codeState139[codeState139.length - 1].grad,
+                    'T139b Code-Missionen: sechs Aufgaben, Flags haken automatisch ab, leicht vor anspruchsvoll (#265)');
+                  ok(netJs138.indexOf('IC_MISSIONS') !== -1
+                    && netJs138.indexOf('ic-mission-badge') !== -1
+                    && netJs138.indexOf('net-missions-count') !== -1,
+                    'T139c Netzwerk-Werkstatt delegiert an IC_MISSIONS und zaehlt den Fortschritt (#265)');
+                  ok(netTpl138.indexOf('ic-missions-box') !== -1
+                    && netTpl138.indexOf('missions.js') !== -1
+                    && codeOv139.indexOf('data-missions') !== -1
+                    && codeOv139.indexOf('ic-missions-box') !== -1
+                    && codeCtrl139.indexOf('missionFlags') !== -1,
+                    'T139d Beide Werkstaetten tragen die schwebende Missions-Box, Code-Flags aus dem Controller (#265)');
+                  ok(netCss138.indexOf('.ic-missions-box { position: fixed;') !== -1
+                    && netCss138.indexOf('.ic-mission-done') !== -1
+                    && netCss138.indexOf('.net-router-card summary') !== -1,
+                    'T139e Stylesheet: fliegende Box, Router-Karte kompakt einklappbar (#265)');
+                  ok(diaOv139.indexOf("card-icon\"><?= $diagram->kind") !== -1
+                    && diaOv139.indexOf("card-icon\"><?= e($diagram") === -1,
+                    'T139f Diagramm-Karten: Icon wird nicht mehr escapen, kein Quelltext in der Karte');
+                  var plusThin139 = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><path d="M480 96h64v384h384v64h-384v384h-64v-384h-384v-64h384z"/></svg>').toString('base64');
+                  ok(netCss138.indexOf(plusThin139) !== -1
+                    && netCss138.indexOf('.panel-head .icn { width: 0.85em;') !== -1
+                    && netCss138.indexOf('MzIwdi0zMjBoLTM4NHYzMjBoLTMyMHY') === -1,
+                    'T139g Plus-Icon als duenner Strich-Plus, Kopf-Icons textgross');
 
                   global.document = netSavedDoc;
                   global.window = netSavedWindow;
