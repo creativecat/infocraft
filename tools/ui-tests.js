@@ -4467,12 +4467,13 @@ setTimeout(function () {
                     'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
-                  ok(support130.indexOf("APP_VERSION = '0.33.0'") !== -1
-                    && support130.indexOf("ASSET_VERSION = '89'") !== -1
+                  ok(support130.indexOf("APP_VERSION = '0.36.0'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '90'") !== -1
                     && changelog130.indexOf('## [0.33.0]') !== -1
                     && changelog130.indexOf('## [0.31.0]') !== -1
-                    && changelog130.indexOf('## [0.30.0]') !== -1,
-                    'T130r Version 0.33.0 mit Asset-Stand 88 und Changelog-Eintrag (Historie bleibt)');
+                    && changelog130.indexOf('## [0.30.0]') !== -1
+                    && changelog130.indexOf('## [0.36.0]') !== -1,
+                    'T130r Version 0.36.0 mit Asset-Stand 90 und Changelog-Eintrag (Historie bleibt)');
                   ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
                     && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
                     && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
@@ -4643,7 +4644,7 @@ setTimeout(function () {
                   var m2 = missionState.filter(function (m) { return m.id === 'm2'; })[0];
                   var m4 = missionState.filter(function (m) { return m.id === 'm4'; })[0];
                   ok(m1.done === true && m2.done === true && m4.done === false
-                    && missionState.length === 8,
+                    && missionState.length === 11,
                     'T133g Missionen prüfen Zustand und Fortschritts-Flags (#226)');
                   var netRead = function (f) { return require('fs').readFileSync(require.resolve(f), 'utf8'); };
                   var netModelPhp = netRead('../src/Models/Network.php');
@@ -4708,7 +4709,7 @@ setTimeout(function () {
                   var svgGroups = svg133.children.filter(function (c) { return c.tagName === 'G'; }).length;
                   ok(svgLines === 4 && svgGroups === 5,
                     'T133m Topologie zeichnet alle Geräte und den Router mit Leitungen (#220)');
-                  ok(missions133.children.length === 8,
+                  ok(missions133.children.length === 11,
                     'T133n die Missionsliste zeigt alle acht Missionen (#226)');
                   var routerG133 = svg133.children.filter(function (c) { return c.tagName === 'G'; })[0];
                   routerG133.handlers.click[0]();
@@ -4891,7 +4892,7 @@ setTimeout(function () {
                   netDoc3.register(new FakeEl('input'), 'net-add-name');
                   netMod.attach(netDoc3);
                   var groups134k = svg134k.children.filter(function (c) { return c.tagName === 'G'; });
-                  ok(groups134k.length === 1 && missions134k.children.length === 8
+                  ok(groups134k.length === 1 && missions134k.children.length === 11
                     && String(netinfo134k.textContent).indexOf('0 Geräte im Netz') !== -1,
                     'T134l attach() mit kaputtem data-net zeichnet Router und Missionen statt grauer Bühne (#233)');
                   ok(netJs.indexOf('attach(window.document)') !== -1,
@@ -4952,7 +4953,7 @@ setTimeout(function () {
                   netDoc4.register(new FakeEl('select'), 'net-add-type');
                   netDoc4.register(new FakeEl('input'), 'net-add-name');
                   netMod.attach(netDoc4);
-                  var lines135 = svg135.children.filter(function (c) { return c.tagName === 'PATH'; });
+                  var lines135 = svg135.children.filter(function (c) { return c.tagName === 'PATH' && String(c.getAttribute('class') || '').indexOf('net-cable') !== -1; });
                   var groups135 = svg135.children.filter(function (c) { return c.tagName === 'G'; });
                   var routerG135 = groups135[0];
                   var portRects135 = routerG135.children.filter(function (c) {
@@ -5004,11 +5005,11 @@ setTimeout(function () {
                     && htmlCtrl135.indexOf("redirect('/werkstatt/netzwerk')") !== -1
                     && htmlTpl135.indexOf('Zur Netzwerk-Werkstatt') !== -1,
                     'T135j Rueckweg aus dem HTML-Editor: Knopf im Editor, Redirect nach dem Speichern (#239)');
-                  ok(sup135.indexOf("APP_VERSION = '0.33.0'") !== -1
+                  ok(sup135.indexOf("APP_VERSION = '0.36.0'") !== -1
                     && changelog135.indexOf('## [0.33.0]') !== -1
                     && changelog135.indexOf('—') === -1
                     && changelog135.indexOf('## [0.31.0]') !== -1,
-                    'T135k Version 0.33.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
+                    'T135k Version 0.36.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
 
                   /* T136 (#241): helle Desktop-Optik im Stylesheet:
                    * Design-Sektion, Milchglas, Pill-Knoepfe, Fokus-Ring. */
@@ -5047,7 +5048,7 @@ setTimeout(function () {
                     && sup135.indexOf("'html' => 'ic-embed2'") !== -1
                     && sup135.indexOf("'netzwerk' => 'ic-earth'") !== -1
                     && sup135.indexOf("'infobuecher' => 'ic-book'") !== -1
-                    && sup135.indexOf("ASSET_VERSION = '89'") !== -1,
+                    && sup135.indexOf("ASSET_VERSION = '90'") !== -1,
                     'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 89');
 
 
@@ -5155,6 +5156,80 @@ setTimeout(function () {
                     && netCss138.indexOf('.net-conn') !== -1
                     && netCss138.indexOf('@media print') !== -1,
                     'T138f Polling mit sichtbarem Verbindungs-Hinweis, Druck-CSS vorhanden');
+
+                  /* T138g-k (Runde 36, #245): Provider-Netze, Messenger, Paketflug. */
+                  var netEng138 = require('../public/assets/js/network.js');
+
+                  /* T138g: Provider-Zone mit Stammleitung und Website-Anbietern. */
+                  ok(netJs138.indexOf('net-provider-box') !== -1
+                    && netJs138.indexOf('net-provider-trunk') !== -1
+                    && netJs138.indexOf("setZone") !== -1
+                    && netJs138.indexOf('Website-Anbieter') !== -1
+                    && netCss138.indexOf('.net-provider-box') !== -1
+                    && netEng138.routeHops(netEng138.saneNet(netEng138.defaultNet()), '1', '2').length === 0,
+                    'T138g Provider-Cloud mit Stammleitung, setZone-Umzug, routeHops leer ohne Geräte');
+
+                  /* T138h: routeHops kennt LAN- und Provider-Weg. */
+                  var netHops = netEng138.saneNet(netEng138.defaultNet());
+                  netHops.devices.push({ id: '1', type: 'pc', name: 'PC', ip: '192.168.0.2', cable: true, wifi: false, zone: 'lan' });
+                  netHops.devices.push({ id: '2', type: 'webserver', name: 'Web', ip: '192.168.0.3', cable: true, wifi: false, zone: 'lan' });
+                  netHops.devices.push({ id: '3', type: 'webserver', name: 'Anbieter', ip: '62.153.20.2', cable: true, wifi: false, zone: 'wan' });
+                  ok(JSON.stringify(netEng138.routeHops(netHops, '1', '2')) === JSON.stringify(['dev:1', 'router', 'dev:2'])
+                    && JSON.stringify(netEng138.routeHops(netHops, '1', '3')) === JSON.stringify(['dev:1', 'router', 'provider', 'dev:3']),
+                    'T138h routeHops: LAN über den Router, Provider-Zone über die Cloud');
+
+                  /* T138i: Messenger zwischen Geräten (Engine, DOM-frei). */
+                  netHops.messages.push({ id: '1', from: '1', fromName: 'PC', to: '2', toName: 'Web', text: 'Hallo', t: '09:00', spoof: false, realFrom: '' });
+                  ok(netEng138.messagesFor(netHops, '2').length === 1
+                    && netEng138.messagesFor(netHops, '2')[0].text === 'Hallo'
+                    && netEng138.messagesFor(netHops, '1').length === 1
+                    && netEng138.messagesFor(netHops, '3').length === 0
+                    && netEng138.messengerReady(netHops, netHops.devices[0]) === true
+                    && netEng138.messengerReady(netHops, netHops.devices[2]) === false,
+                    'T138i messagesFor/messengerReady: Verlauf je Gerät, Messenger nur auf PC/Smartphone');
+
+                  /* T138j: Messenger- und Phishing-Oberfläche im Code + Modell. */
+                  ok(netJs138.indexOf('function messengerSection') !== -1
+                    && netJs138.indexOf('sendMessage') !== -1
+                    && netJs138.indexOf('spoofMessage') !== -1
+                    && netJs138.indexOf('Phishing-Demo') !== -1
+                    && netJs138.indexOf('net-msg-spoof') !== -1
+                    && netCss138.indexOf('.net-messenger') !== -1
+                    && netCss138.indexOf('.net-msg-spoof') !== -1,
+                    'T138j Messenger-UI mit Senden, Phishing-Demo nur für die Lehrkraft sichtbar');
+
+                  /* T138k: Paketflug auf den Kabeln. */
+                  ok(netJs138.indexOf('function flyPacket') !== -1
+                    && netJs138.indexOf('function animateRoute') !== -1
+                    && netJs138.indexOf('getPointAtLength') !== -1
+                    && netJs138.indexOf('net-packet') !== -1
+                    && netCss138.indexOf('.net-packet') !== -1,
+                    'T138k Paket fliegt sichtbar auf den Kabeln (Hinweg GET, Rückweg HTML)');
+
+                  /* T138l: Missions-Stufen mit Fachwort-Tipps und neuen Missionen. */
+                  var netMiss = netEng138.missionsState(netHops, []);
+                  var grads = netMiss.map(function (m) { return m.grad; });
+                  var sorted = grads.every(function (g, i) { return i === 0 || grads[i - 1] <= g; });
+                  ok(netMiss.length === 11
+                    && sorted
+                    && netMiss.every(function (m) { return m.tip && m.tip.length > 10 && m.gradLabel; })
+                    && !!netEng138.missionsState(netHops, ['msg-sent']).filter(function (m) { return m.id === 'm9'; })[0].done
+                    && netMiss.filter(function (m) { return m.id === 'm11'; })[0].done === true,
+                    'T138l Missionen sortiert nach Schwierigkeit, mit Fachwort-Tipp, Messenger/Provider-Mission dabei');
+
+                  /* T138m: ARIA-Labels und Editor-Optionen ohne Emoji. */
+                  var tasksTpl138 = fs136.readFileSync(require.resolve('../templates/tasks_edit.php'), 'utf8');
+                  var adminTpl138 = fs136.readFileSync(require.resolve('../templates/admin_settings.php'), 'utf8');
+                  var presTpl138 = fs136.readFileSync(require.resolve('../templates/praesentation_edit.php'), 'utf8');
+                  var modCtrl138 = fs136.readFileSync(require.resolve('../src/Controllers/ModuleController.php'), 'utf8');
+                  ok(netTpl138.indexOf('aria-label="Topologie als PNG herunterladen"') !== -1
+                    && netTpl138.indexOf('aria-modal="true"') !== -1
+                    && netJs138.indexOf("setAttribute('aria-label'") !== -1
+                    && tasksTpl138.indexOf('ic-brand-java') !== -1 && tasksTpl138.indexOf('\u2615') === -1
+                    && adminTpl138.indexOf('ic-brand-python') !== -1 && adminTpl138.indexOf('\ud83d\udc0d') === -1
+                    && presTpl138.indexOf('ic-code') !== -1 && presTpl138.indexOf('\ud83d\udcbb') === -1
+                    && /'code',\s*'title' => 'Code-Werkstatt'[\s\S]{0,400}'level' => 8/.test(modCtrl138),
+                    'T138m ARIA-Labels in der Werkstatt, Java/Python/Code-Optionen mit Icons, Code-Werkstatt ab Jgst. 8');
 
 
                   global.document = netSavedDoc;

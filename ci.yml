@@ -266,7 +266,7 @@ jobs:
           grep -q "blk-dragging" public/assets/js/block-editor.js && grep -q "T111 beim Ziehen" tools/ui-tests.js && BLK_DRAGVIS_OK=1 || BLK_DRAGVIS_OK=0
           grep -q "Einfuege-Linie" public/assets/js/block-editor.js && grep -q "T111b die Einfuege-Linie" tools/ui-tests.js && BLK_INS_OK=1 || BLK_INS_OK=0
           grep -q "blk-hint-pulse" public/assets/css/style.css && grep -q "blk-mode-btn" public/assets/css/style.css && BLK_STYLE_OK=1 || BLK_STYLE_OK=0
-          grep -q "letima development" src/Support.php && grep -q "APP_VERSION = '0.33.0'" src/Support.php && grep -q "Keep a Changelog" CHANGELOG.md && grep -q "APP_VERSION" templates/layout.php && BLK_HEAD_OK=1 || BLK_HEAD_OK=0
+          grep -q "letima development" src/Support.php && grep -q "APP_VERSION = '0.36.0'" src/Support.php && grep -q "Keep a Changelog" CHANGELOG.md && grep -q "APP_VERSION" templates/layout.php && BLK_HEAD_OK=1 || BLK_HEAD_OK=0
           grep -q "drag.ghost.style.transform = 'translate('" public/assets/js/block-editor.js && grep -q "_bubW" public/assets/js/block-editor.js && grep -q "children.length > 200" public/assets/js/block-editor.js && grep -q "T113 der gezogene Block folgt" tools/ui-tests.js && BLK_OPT_OK=1 || BLK_OPT_OK=0
           grep -q "switchMode" public/assets/js/block-editor.js && grep -q "blk-switch-btn" templates/code_project.php && grep -q "T109m die Moduswahl" tools/ui-tests.js && BLK_SWITCH_OK=1 || BLK_SWITCH_OK=0
           grep -q "pro: true" public/assets/js/block-editor.js && grep -q "T109e im Lernmodus fehlt die Variablen-Kategorie" tools/ui-tests.js && BLK_LEARN_OK=1 || BLK_LEARN_OK=0
@@ -406,7 +406,7 @@ jobs:
           grep -q "ibook-page-layout" public/assets/css/style.css && IBK_CSS_OK=1 || IBK_CSS_OK=0
           grep -q "href=\"/infobuecher\"" home.html && IBK_NAV_OK=1 || IBK_NAV_OK=0
           [ -f public/assets/vendor/highlight.min.js ] && [ -f public/assets/vendor/mermaid.min.js ] && VENDOR_OK=1 || VENDOR_OK=0
-          grep -q "'89'" src/Support.php && ASSETV_OK=1 || ASSETV_OK=0
+          grep -q "'90'" src/Support.php && ASSETV_OK=1 || ASSETV_OK=0
           # Runde 33 (#241, #242): helle Desktop-Optik und Icon-System.
           grep -q "Helle Desktop-Optik (#241)" public/assets/css/style.css && grep -q "backdrop-filter: saturate(180%) blur(18px)" public/assets/css/style.css && grep -q "border-radius: 980px" public/assets/css/style.css && DESIGN_OK=1 || DESIGN_OK=0
           grep -q ".icn {" public/assets/css/style.css && grep -q "mask-image" public/assets/css/style.css && ICONCSS_OK=1 || ICONCSS_OK=0
@@ -424,6 +424,12 @@ jobs:
           grep -q "cableD" public/assets/js/network.js && grep -q ".net-cable" public/assets/css/style.css && CABLE35_OK=1 || CABLE35_OK=0
           grep -q "ic-brand-java" public/assets/css/style.css && grep -q "ic-brand-python" templates/code_overview.php && BRAND_OK=1 || BRAND_OK=0
           grep -q "T138" tools/ui-tests.js && grep -q "0.35.0" CHANGELOG.md && ICONR35_OK=1 || ICONR35_OK=0
+          # Runde 36 (#245): Netzwerk-Werkstatt, Teil 3 (Provider, Messenger, Paketflug).
+          grep -q "net-provider-box" public/assets/js/network.js && grep -q "setZone" src/Models/Network.php && PROV36_OK=1 || PROV36_OK=0
+          grep -q "messengerSection" public/assets/js/network.js && grep -q "spoofMessage" src/Models/Network.php && MSG36_OK=1 || MSG36_OK=0
+          grep -q "flyPacket" public/assets/js/network.js && grep -q "net-packet" public/assets/css/style.css && PKT36_OK=1 || PKT36_OK=0
+          grep -q "net-mission-badge" public/assets/js/network.js && grep -q "gradLabel" public/assets/js/network.js && MISSGRAD_OK=1 || MISSGRAD_OK=0
+          grep -q "aria-modal" templates/network_workshop.php && grep -q "ic-brand-java" templates/tasks_edit.php && ARIAR36_OK=1 || ARIAR36_OK=0
           CSRFAPP=$(grep -o 'value="[a-f0-9]*"' wsapp.html | head -n1 | cut -d'"' -f2)
           curl -sS -L -b cookies.txt -c cookies.txt -o shopbuy.html --data-urlencode "csrf=$CSRFAPP" --data-urlencode "action=kaufen" --data-urlencode "produkt_id=1" --data-urlencode "menge=2" http://127.0.0.1:8080/werkstatt/sql/shop/app
           grep -q "Bestellung gespeichert" shopbuy.html && SQLAPP_BUY_OK=1 || SQLAPP_BUY_OK=0
