@@ -1,0 +1,1 @@
+-- Diese Vorlage wurde umbenannt: Inhalte liegen jetzt in sql/templates/instacraft.sql (#45 Nacharbeit).
