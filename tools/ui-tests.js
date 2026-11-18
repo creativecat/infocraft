@@ -4465,12 +4465,12 @@ setTimeout(function () {
                     'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
-                  ok(support130.indexOf("APP_VERSION = '0.31.0'") !== -1
-                    && support130.indexOf("ASSET_VERSION = '86'") !== -1
+                  ok(support130.indexOf("APP_VERSION = '0.32.0'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '87'") !== -1
+                    && changelog130.indexOf('## [0.32.0]') !== -1
                     && changelog130.indexOf('## [0.31.0]') !== -1
-                    && changelog130.indexOf('## [0.30.0]') !== -1
-                    && changelog130.indexOf('## [0.29.0]') !== -1,
-                    'T130r Version 0.31.0 mit Asset-Stand 86 und Changelog-Eintrag (Historie bleibt)');
+                    && changelog130.indexOf('## [0.30.0]') !== -1,
+                    'T130r Version 0.32.0 mit Asset-Stand 87 und Changelog-Eintrag (Historie bleibt)');
                   ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
                     && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
                     && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
@@ -4997,11 +4997,51 @@ setTimeout(function () {
                     && htmlCtrl135.indexOf("redirect('/werkstatt/netzwerk')") !== -1
                     && htmlTpl135.indexOf('Zur Netzwerk-Werkstatt') !== -1,
                     'T135j Rueckweg aus dem HTML-Editor: Knopf im Editor, Redirect nach dem Speichern (#239)');
-                  ok(sup135.indexOf("APP_VERSION = '0.31.0'") !== -1
-                    && changelog135.indexOf('## [0.31.0]') !== -1
+                  ok(sup135.indexOf("APP_VERSION = '0.32.0'") !== -1
+                    && changelog135.indexOf('## [0.32.0]') !== -1
                     && changelog135.indexOf('—') === -1
-                    && changelog135.indexOf('## [0.30.0]') !== -1,
-                    'T135k Version 0.31.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
+                    && changelog135.indexOf('## [0.31.0]') !== -1,
+                    'T135k Version 0.32.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
+
+                  /* T136 (#241): helle Desktop-Optik im Stylesheet:
+                   * Design-Sektion, Milchglas, Pill-Knoepfe, Fokus-Ring. */
+                  var fs136 = require('fs');
+                  var css136 = fs136.readFileSync(require.resolve('../public/assets/css/style.css'), 'utf8');
+                  ok(css136.indexOf('Helle Desktop-Optik (#241)') !== -1
+                    && css136.indexOf('--bg: #f5f5f7') !== -1
+                    && css136.indexOf('backdrop-filter: saturate(180%) blur(18px)') !== -1
+                    && css136.indexOf('border-radius: 980px') !== -1
+                    && css136.indexOf('box-shadow: 0 0 0 3.5px rgba(0, 113, 227, 0.22)') !== -1,
+                    'T136 Design-Sektion: helle Tokens, Milchglas, Pill-Knoepfe, blauer Fokus-Ring');
+
+                  /* T136b (#242): Icon-System als SVG-Masken, Vektor-Icons
+                   * statt Emoji in Navigation, Topbar und Startkarten. */
+                  var layout136 = fs136.readFileSync(require.resolve('../templates/layout.php'), 'utf8');
+                  var home136 = fs136.readFileSync(require.resolve('../templates/home.php'), 'utf8');
+                  var masks136 = css136.split('data:image/svg+xml;base64').length - 1;
+                  ok(css136.indexOf('.icn {') !== -1
+                    && css136.indexOf('-webkit-mask-image') !== -1
+                    && masks136 >= 40,
+                    'T136b Icon-System: .icn-Basis und mindestens 40 SVG-Masken im Stylesheet');
+                  ok(layout136.indexOf('ic-hammer') !== -1
+                    && layout136.indexOf('ic-menu') !== -1
+                    && layout136.indexOf('ic-presentation') !== -1
+                    && layout136.indexOf('ic-exit') !== -1
+                    && layout136.indexOf("<?= ic_module_icon($module['slug']) ?>") !== -1
+                    && layout136.indexOf('🏠') === -1
+                    && layout136.indexOf('☰') === -1,
+                    'T136c Navigation und Topbar nutzen Vektor-Icons, Start-Emoji ist raus');
+                  ok(home136.indexOf("<?= ic_module_icon($module['slug']) ?>") !== -1
+                    && home136.indexOf("<?= $module['icon'] ?>") === -1,
+                    'T136d Startkarten zeigen Icon-Klassen statt Modul-Emoji');
+
+                  /* T136e (#242): Modul-Slug -> Icon-Klasse zentral gepflegt. */
+                  ok(sup135.indexOf('function ic_module_icon') !== -1
+                    && sup135.indexOf("'html' => 'ic-palette'") !== -1
+                    && sup135.indexOf("'netzwerk' => 'ic-earth'") !== -1
+                    && sup135.indexOf("'infobuecher' => 'ic-book'") !== -1
+                    && sup135.indexOf("ASSET_VERSION = '87'") !== -1,
+                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 87');
 
                   global.document = netSavedDoc;
                   global.window = netSavedWindow;
