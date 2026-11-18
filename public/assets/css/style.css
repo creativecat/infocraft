@@ -3038,3 +3038,87 @@ body {
 h1 .icn, h2 .icn, .section-title .icn { width: 1.15em; height: 1.15em; vertical-align: -0.18em; color: var(--primary); }
 a .icn, .btn-link .icn { width: 1em; height: 1em; }
 .empty .icn { width: 2.2rem; height: 2.2rem; color: var(--muted); }
+
+
+/* ==========================================================================
+   Runde 35 (#244): Netzwerk-Werkstatt, Teil 2: Toolbar, Schnur-Kabel,
+   PNG/Druck, Browser-Chrome, Brand-Icons Java/Python (IcoMoon "Brand").
+   Lizenz: GPL/CC BY 4.0 (icomoon.io),InfoCraft-Klassen .ic-brand-*.
+   ========================================================================== */
+
+/* Toolbar ueber der Buehne (#244) */
+.net-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; margin-bottom: 10px; }
+.net-toolbar .net-add-panel { flex: 1 1 280px; }
+.net-add-panel summary { cursor: pointer; user-select: none; }
+.net-add-panel summary::-webkit-details-marker { display: none; }
+.net-add-panel summary::before { content: none; }
+.net-add-panel[open] summary { border-color: var(--primary, #0071e3); }
+.net-add-panel .net-add-row { margin-top: 8px; }
+.net-add-panel .net-add-row select { flex: 1 1 140px; }
+.net-tool-btn { white-space: nowrap; }
+
+/* Geraetefenster ueber die volle Breite (#244) */
+.net-modal-box { max-width: none; width: min(1080px, 96vw); }
+
+/* Kabel wie Schnuere: Kurve mit Durchhang (#244) */
+.net-cable { fill: none; stroke-linecap: round; }
+
+/* Verbindungs-Hinweis des Stand-Pollings (#244) */
+.net-conn { margin: 6px 0 0; font-size: 0.8rem; color: #b45309; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 6px 10px; }
+.net-conn[hidden] { display: none; }
+
+/* Missionen-Karte: einklappbar (#244) */
+.net-missions-card summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 8px; }
+.net-missions-card summary::-webkit-details-marker { display: none; }
+.net-missions-card summary h2 { display: inline-block; margin: 0; }
+.net-missions-toggle { font-size: 0.75rem; color: var(--muted, #6b7280); }
+.net-missions-card[open] .net-missions-toggle::after { content: ' (einklappen)'; }
+
+/* Realistischer Browser im Geraetefenster (#244) */
+.net-browser-shell { border: 1px solid var(--border, #e5e7eb); border-radius: 12px; overflow: hidden; background: #fff; }
+.net-browser-titlebar { display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #eef1f5; border-bottom: 1px solid var(--border, #e5e7eb); }
+.net-win-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.net-win-r { background: #ff5f57; }
+.net-win-y { background: #febc2e; }
+.net-win-g { background: #28c840; }
+.net-browser-tab { margin-left: 8px; font-size: 0.8rem; background: #fff; border: 1px solid var(--border, #e5e7eb); border-radius: 8px 8px 0 0; padding: 3px 12px; color: var(--muted, #6b7280); }
+.net-shell-phone .net-browser-titlebar { background: #111827; }
+.net-shell-phone .net-browser-tab { background: #1f2937; color: #d1d5db; border-color: #374151; }
+.net-shell-phone .net-urlbar { background: #1f2937; padding: 6px; border-radius: 999px; margin: 8px 8px 0; }
+.net-shell-phone .net-url { background: #374151; color: #f9fafb; border-color: #4b5563; }
+.net-shell-phone .net-view { border: 0; }
+.net-footer-actions { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border, #e5e7eb); }
+
+/* Druckansicht: nur die Topologie (#244) */
+@media print {
+  body * { visibility: hidden; }
+  .net-stage-wrap, .net-stage-wrap * { visibility: visible; }
+  .net-stage-wrap { position: absolute; left: 0; top: 0; width: 100%; padding: 0; border: 0; }
+  .net-svg { background: #fff; }
+}
+
+/* Brand-Icons Java und Python (IcoMoon-Set "Brand", GPL/CC BY 4.0, #244).
+ * Font statt Maske: Die Logos haben eigene Markenfarben. */
+@font-face {
+  font-family: 'icobrand';
+  src: url("data:font/woff;base64,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") format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+.ic-brand-java, .ic-brand-python {
+  display: inline-block;
+  font-family: 'icobrand' !important;
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  width: 1em;
+  text-align: center;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.ic-brand-java::before { content: "\e900"; color: #007396; }
+.ic-brand-python::before { content: "\e901"; color: #3776ab; }
