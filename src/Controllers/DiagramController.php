@@ -38,7 +38,7 @@ final class DiagramController
             redirect('/login');
         }
         render('diagram_overview', [
-            'title' => 'Diagramme',
+            'title' => 'Diagramm-Werkstatt',
             'hint' => 'Struktur sichtbar machen: Klassendiagramme, Struktogramme (Nassi-Shneiderman) und Datenflussdiagramme zeichnen oder automatisch aus Java-, Python- und SQL-Skripten erzeugen.',
             'active' => 'module-diagramme',
             'diagrams' => ClassDiagram::all($user->id),

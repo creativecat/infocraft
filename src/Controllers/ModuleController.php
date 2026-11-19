@@ -102,7 +102,7 @@ final class ModuleController
             ],
             'diagramme' => [
                 'slug' => 'diagramme',
-                'title' => 'Diagramme',
+                'title' => 'Diagramm-Werkstatt',
                 'icon' => '📐',
                 'phase' => 'Phase 4',
                 'status' => 'fertig',

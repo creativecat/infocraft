@@ -3,10 +3,12 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
+
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('pruefungen/' . $exam->id . '/korrektur') ?>" title="Alle Arbeiten"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <?php /** @var \Infocraft\Models\User $student */ ?>
 <section class="panel">
     <div class="panel-head">
-        <a class="btn btn-ghost" href="<?= url('pruefungen/' . $exam->id . '/korrektur') ?>" title="Alle Arbeiten"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
         <h3>Arbeit von <?= e($student->fullName()) ?> <span class="pill"><?= e($exam->title) ?></span></h3>
     </div>
     <?php if ($work !== null): ?>

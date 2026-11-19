@@ -27,12 +27,9 @@ if ($isKlassendiagramm && stripos(ltrim($exportSource), 'classDiagram') !== 0) {
     $exportSource = "classDiagram\n" . $exportSource;
 }
 ?>
-<section class="panel">
-    <div class="panel-head">
-        <a class="btn btn-ghost" href="<?= url('diagramme') ?>" title="Zurück"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
-        <h3><span class="icn ic-design" aria-hidden="true"></span> <?= e($diagram->title) ?> <span class="pill" id="diagram-kind-pill"><?= e($diagram->kindLabel()) ?></span></h3>
-    </div>
-</section>
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('diagramme') ?>" title="Zurück zur Diagramm-Werkstatt"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
+<h2 class="section-title"><span class="icn ic-design" aria-hidden="true"></span> <?= e($diagram->title) ?> <span class="pill" id="diagram-kind-pill"><?= e($diagram->kindLabel()) ?></span></h2>
 
 <div class="diagram-workbench">
 <section class="panel">

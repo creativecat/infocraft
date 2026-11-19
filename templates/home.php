@@ -2,13 +2,7 @@
    Datei: Startseite
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
-   Version: 0.15.0 */ ?>
-<section class="hero">
-    <div class="hero-emoji"><span class="icn ic-hammer" aria-hidden="true"></span></div>
-    <h1>Willkommen<?= $user !== null ? ', ' . e($user->firstName) : '' ?>!</h1>
-    <p>InfoCraft ist die digitale Informatik-Werkstatt: SQL, HTML, Java/Python, Quiz und Aufgaben, alles auf dem bayerischen LehrplanPLUS.</p>
-</section>
-
+   Version: 0.42.0 */ ?>
 <?php /* #183: Ankündigung der Administration, prominent über den Modulen. */ ?>
 <?php if (($announcement ?? '') !== ''): ?>
 <div class="notice ic-annc" role="status">
@@ -24,10 +18,6 @@
         <div class="card-icon"><span class="icn <?= ic_module_icon($module['slug']) ?>" aria-hidden="true"></span></div>
         <h2><?= e($cardTitle) ?></h2>
         <p class="card-desc"><?= e($module['description']) ?></p>
-        <div class="card-meta">
-            <span class="status status-<?= e($module['status']) ?>"><?= e($module['status']) ?></span>
-            <span class="muted"><?= e($module['phase']) ?></span>
-        </div>
     </a>
     <?php endforeach; ?>
 </div>

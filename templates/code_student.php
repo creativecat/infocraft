@@ -3,13 +3,15 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
+
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück zur Code-Werkstatt"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <section class="hero">
     <div class="hero-emoji"><span class="icn ic-briefcase" aria-hidden="true"></span></div>
     <h1>Projekte von <?= e($student->fullName()) ?></h1>
     <p><?= $className !== '' ? 'Klasse ' . e($className) : 'Ohne Klasse' ?> · Als Lehrkraft kannst du jedes Projekt öffnen, ansehen und bearbeiten.</p>
 </section>
 
-<p><a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück zur Code-Werkstatt"><span class="icn ic-arrow-left" aria-hidden="true"></span></a></p>
 
 <div class="cards">
     <?php foreach ($projects as $project): ?>
