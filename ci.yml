@@ -368,7 +368,7 @@ jobs:
           grep -q "sharedContext" src/Models/InfoBook.php && grep -q "linkPagesShared" src/Controllers/InfoBookController.php && grep -Fq "['link'] = 0;" src/Models/InfoBook.php && R26LINKS_OK=1 || R26LINKS_OK=0
           grep -q "Wer sieht was" templates/ibook_book.php && grep -q "Vorschau deiner Seite" templates/ibook_page.php && R26HINT_OK=1 || R26HINT_OK=0
           grep -q "T130" tools/ui-tests.js && grep -q "advRead130" tools/ui-tests.js && grep -q '## \[0.26.0\]' CHANGELOG.md && R26TEST_OK=1 || R26TEST_OK=0
-          grep -Fq "ic-arrow-left" templates/ibook_book.php && grep -Fq "Deine InfoBooks" templates/ibook_book.php && grep -Fq "ic-arrow-left" templates/ibook_page.php && grep -Fq "Deine InfoBooks" templates/ibook_page.php && R27BTN_OK=1 || R27BTN_OK=0
+          grep -Fq "ic-back-arrow" templates/ibook_book.php && grep -Fq "Deine InfoBooks" templates/ibook_book.php && grep -Fq "ic-back-arrow" templates/ibook_page.php && grep -Fq "Deine InfoBooks" templates/ibook_page.php && R27BTN_OK=1 || R27BTN_OK=0
           grep -Fq 'personalBooks($user->id, false)' src/Controllers/InfoBookController.php && grep -Fq 'return $book->classId === null && $book->ownerId === $user->id;' src/Controllers/InfoBookController.php && R27STUBK_OK=1 || R27STUBK_OK=0
           grep -Fq 'elseif ($book->classId === null && $book->ownerId === $user->id)' src/Controllers/InfoBookController.php && grep -Fq 'elseif ($book->classId === null && $book->ownerId === $user->id)' templates/ibook_nav.php && R27SECT_OK=1 || R27SECT_OK=0
           grep -q "navShowArea" templates/ibook_nav.php && grep -Fq 'if (!empty($navShowArea[$navAreaKey]))' templates/ibook_nav.php && R27NAV_OK=1 || R27NAV_OK=0
@@ -550,7 +550,7 @@ jobs:
           CODE_EXRESULT=$(curl -sS -o exresult.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/pruefungen/$EXID/ergebnis)
           grep -q "Musterlösung" exresult.html && EX_RESULT_OK=1 || EX_RESULT_OK=0
           grep -q "Fast perfekt" exresult.html && EX_FEEDBACK_OK=1 || EX_FEEDBACK_OK=0
-          EXARROW=$(awk '/ic-arrow-left/{if(!a)a=NR} /panel-head/{if(!h)h=NR} END{print (a && h && a<h) ? 1 : 0}' exresult.html)
+          EXARROW=$(awk '/page-back/{if(!a)a=NR} /ic-back-arrow/{if(!b)b=NR} END{print (a && b) ? 1 : 0}' exresult.html)
           [ "$EXARROW" = "1" ] && EX_ARROW_OK=1 || EX_ARROW_OK=0
           CODE_EXUNLOCK=$(curl -sS -o exunlock.html -w "%{http_code}" -b cookies3.txt http://127.0.0.1:8080/)
           grep -q "Prüfungsmodus aktiv" exunlock.html && EX_UNLOCK_OK=0 || EX_UNLOCK_OK=1
