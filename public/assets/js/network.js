@@ -12,7 +12,7 @@
  *
  * Node-Tests: module.exports; Browser: window.IC_NET.
  *
- * @version 0.42.0
+ * @version 0.43.0
  * @license CC BY-NC-SA 4.0 (InfoCraft)
  */
 (function () {
@@ -1642,7 +1642,7 @@
   /* =================== Export =================== */
 
   var api = {
-    version: '0.42.0',
+    version: '0.43.0',
     defaultNet: defaultNet,
     resolve: resolve,
     dnsLookup: dnsLookup,

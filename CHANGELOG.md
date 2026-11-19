@@ -1,3 +1,22 @@
+## [0.43.0] - 2026-11-19 (Runde 43)
+### Zwei Button-Varianten, Flying Windows ohne Button-Huellen
+- Netzwerk-Werkstatt: Die drei Flying-Window-Oeffner (Router-Infos, Stufe,
+  Netzwerk-Manager) sind keine weissen Karten mehr, sondern schlichte
+  Geist-Buttons, optisch identisch mit den uebrigen Werkzeug-Knoepfen.
+- Button-System ganz oben vereinheitlicht auf GENAU ZWEI Varianten:
+  1. Primaer (blaue Flaeche) fuer die jeweilige Hauptaktion, z. B. Speichern,
+     Anlegen, Ausfuehren, Senden.
+  2. Sekundaer/Geist (transparenter Hintergrund, dunkle Haarlinie) fuer
+  alles andere, inklusive der kleinen Icon-Buttons (Navigation, Termine).
+  Weg sind die Sonderfuellungen: Der Basis-Button hatte bislang gar keinen
+  Hintergrund (browserspezifisch grau), Icon-Buttons waren weiss, der
+  Demo-Button hellblau, Textformat-Knoepfe grau - alle tragen jetzt die
+  einheitliche Sekundaer-Optik.
+- Sinnfarben bleiben der Form uebergeordnet (keine dritte Variante):
+  Loesch-Button (btn-danger) ist ein Sekundaer-Button mit roter Schrift,
+  die aktive Unterrichtsstufe und der aktive Modus im Block-Editor heben
+  sich in Primärblau hervor statt bisher Tuerkis bzw. weiss.
+
 ## [0.42.0] - 2026-11-19 (Runde 42)
 ### Einheitlicher Zurueck-Button, Flying Windows, Startseite entschlackt
 - Zurueckbutton auf JEDER Unterseite einheitlich LINKS OBEN als solistischer
