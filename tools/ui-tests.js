@@ -4423,7 +4423,7 @@ setTimeout(function () {
                     'T130e die klassische Werkstatt hat denselben Sprung zu ihren Aufgaben oben (#200)');
                   var tplBook130 = advRead130('../templates/ibook_book.php');
                   var tplPage130 = advRead130('../templates/ibook_page.php');
-                  ok(tplBook130.indexOf('ic-arrow-left') !== -1 && tplBook130.indexOf('Alle InfoBooks') !== -1 && tplPage130.indexOf('ic-arrow-left') !== -1 && tplPage130.indexOf('Alle InfoBooks') !== -1
+                  ok(tplBook130.indexOf('ic-back-arrow') !== -1 && tplBook130.indexOf('Alle InfoBooks') !== -1 && tplPage130.indexOf('ic-back-arrow') !== -1 && tplPage130.indexOf('Alle InfoBooks') !== -1
                     && tplBook130.indexOf('Auth::isTeacher()') !== -1 && tplPage130.indexOf('Auth::isTeacher()') !== -1,
                     'T130f der InfoBooks-Knopf verzweigt je Rolle und fuehrt Lehrkraefte auf die Uebersicht (#201, Runde 27: alle Rollen)');
                   var ctrl130 = advRead130('../src/Controllers/InfoBookController.php');
@@ -4467,13 +4467,13 @@ setTimeout(function () {
                     'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
-                  ok(support130.indexOf("APP_VERSION = '0.41.0'") !== -1
-                    && support130.indexOf("ASSET_VERSION = '95'") !== -1
+                  ok(support130.indexOf("APP_VERSION = '0.42.0'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '96'") !== -1
                     && changelog130.indexOf('## [0.33.0]') !== -1
                     && changelog130.indexOf('## [0.31.0]') !== -1
                     && changelog130.indexOf('## [0.30.0]') !== -1
                     && changelog130.indexOf('## [0.36.0]') !== -1,
-                    'T130r Version 0.41.0 mit Asset-Stand 95 und Changelog-Eintrag (Historie bleibt)');
+                    'T130r Version 0.42.0 mit Asset-Stand 96 und Changelog-Eintrag (Historie bleibt)');
                   ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
                     && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
                     && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
@@ -4501,7 +4501,7 @@ setTimeout(function () {
                   ok(ctrl130.indexOf('Nur Lehrkräfte können InfoBooks teilen.') !== -1
                     && ctrl130.indexOf('Nur Lehrkräfte verteilen Seiten.') !== -1,
                     'T131f Teilen und Verteilen bleiben Lehrkraeften vorbehalten (#205)');
-                  ok(tplBook130.indexOf('ic-arrow-left') !== -1 && tplBook130.indexOf('Deine InfoBooks') !== -1 && tplPage130.indexOf('Deine InfoBooks') !== -1,
+                  ok(tplBook130.indexOf('ic-back-arrow') !== -1 && tplBook130.indexOf('Deine InfoBooks') !== -1 && tplPage130.indexOf('Deine InfoBooks') !== -1,
                     'T131g der Knopf heisst fuer Schuelerinnen und Schueler Deine InfoBooks und fuehrt dorthin (#205)');
                   ok(tplNav131.indexOf('elseif ($book->classId === null && $book->ownerId === $user->id)') !== -1
                     && tplNav131.indexOf('<input type="hidden" name="area" value="gemeinsam">') !== -1,
@@ -5005,11 +5005,11 @@ setTimeout(function () {
                     && htmlCtrl135.indexOf("redirect('/werkstatt/netzwerk')") !== -1
                     && htmlTpl135.indexOf('Zur Netzwerk-Werkstatt') !== -1,
                     'T135j Rueckweg aus dem HTML-Editor: Knopf im Editor, Redirect nach dem Speichern (#239)');
-                  ok(sup135.indexOf("APP_VERSION = '0.41.0'") !== -1
+                  ok(sup135.indexOf("APP_VERSION = '0.42.0'") !== -1
                     && changelog135.indexOf('## [0.33.0]') !== -1
                     && changelog135.indexOf('—') === -1
                     && changelog135.indexOf('## [0.31.0]') !== -1,
-                    'T135k Version 0.41.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
+                    'T135k Version 0.42.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
 
                   /* T136 (#241): helle Desktop-Optik im Stylesheet:
                    * Design-Sektion, Milchglas, Pill-Knoepfe, Fokus-Ring. */
@@ -5048,8 +5048,8 @@ setTimeout(function () {
                     && sup135.indexOf("'html' => 'ic-embed2'") !== -1
                     && sup135.indexOf("'netzwerk' => 'ic-earth'") !== -1
                     && sup135.indexOf("'infobuecher' => 'ic-book'") !== -1
-                    && sup135.indexOf("ASSET_VERSION = '95'") !== -1,
-                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 95');
+                    && sup135.indexOf("ASSET_VERSION = '96'") !== -1,
+                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 96');
 
 
                   /* T137a (Runde 34): Icon-Wechsel nach Vorgabe. */
@@ -5335,7 +5335,8 @@ setTimeout(function () {
                     && typeof missionsMod139.storageKey === 'function'
                     && missionsSrc139.indexOf('ic.missions.open') !== -1
                     && missionsSrc139.indexOf('bootState') !== -1
-                    && netJs138.indexOf('@version 0.40.0') === -1,
+                    && netJs138.indexOf('@version 0.40.0') === -1
+                    && netJs138.indexOf('@version 0.41.0') === -1,
                     'T140a Missions-Box merkt sich auf/zu im localStorage, network.js nicht mehr auf 0.40.0');
                   ok(netCss138.indexOf('position: fixed; inset: 0; padding: 14px; z-index: 80') !== -1
                     && netCss138.indexOf('height: 100%; max-height: calc(100vh - 28px); border-radius: 18px;') !== -1,
@@ -5351,22 +5352,56 @@ setTimeout(function () {
                     && netCss138.indexOf('.net-sub { font-size: 11px; }') !== -1,
                     'T140d Kachel-Beschriftungen: Namen/SSID gekuerzt, Schrift kleiner');
 
-                  /* T141 (Runde 41): Buehne volle Breite per Seitenpanel-Toggle, Toolbar-Ordnung. */
-                  ok(netJs138.indexOf('net-side-toggle') !== -1
-                    && netJs138.indexOf('net.side.hidden') !== -1
-                    && netJs138.indexOf('applySide') !== -1
-                    && netJs138.indexOf('@version 0.41.0') !== -1
-                    && netJs138.indexOf("version: '0.41.0',") !== -1,
-                    'T141a network.js: Seitenpanel-Zustand (Standard: ausgeblendet) gemerkt, Version 0.41.0');
-                  ok(netTpl138.indexOf('net-side-toggle') !== -1
-                    && netTpl138.indexOf('ic-list2') !== -1
-                    && netTpl138.indexOf('Version: 0.41.0') !== -1,
-                    'T141b Template: Toolbar-Button Seitenpanel mit Umschalt-Icon');
-                  ok(netCss138.indexOf('.net-layout.net-side-hidden { grid-template-columns: 1fr; }') !== -1
-                    && netCss138.indexOf('.net-tool-side { margin-left: auto; }') !== -1
-                    && netCss138.indexOf('.net-toolbar .net-add-panel { flex: 0 1 auto; }') !== -1
-                    && netCss138.indexOf('grid-template-columns: 280px 1fr;') !== -1,
-                    'T141c Stylesheet: Raster volle Breite ohne Panel, Toolbar-Gruppe rechts, Panel-Panel begrenzt');
+                  /* T141 (Runde 42, ueberarbeitet): Keine Sidebar mehr, Router/Stufe/Manager als Flying Windows neben dem Geraete-Button. */
+                  ok(netJs138.indexOf('net-side-toggle') === -1
+                    && netJs138.indexOf('net.side.hidden') === -1
+                    && netJs138.indexOf('applySide') === -1
+                    && netJs138.indexOf('@version 0.42.0') !== -1
+                    && netJs138.indexOf("version: '0.42.0',") !== -1,
+                    'T141a network.js: Seitenpanel-Logik restlos entfernt, Version 0.42.0');
+                  ok(netTpl138.indexOf('net-side-toggle') === -1
+                    && netTpl138.indexOf('net-fly') !== -1
+                    && netTpl138.indexOf('net-level-fly') !== -1
+                    && netTpl138.indexOf('net-router-card') !== -1
+                    && netTpl138.indexOf('Version: 0.42.0') !== -1,
+                    'T141b Template: Router-Infos, Stufe und Netzwerk-Manager als Flying Windows, kein Toggle');
+                  ok(netCss138.indexOf('.net-fly-panel') !== -1
+                    && netCss138.indexOf('.net-layout { display: block; margin-top: 12px; }') !== -1
+                    && netCss138.indexOf('net-side-hidden') === -1
+                    && netCss138.indexOf('.net-tool-side { margin-left: auto; }') !== -1,
+                    'T141c Stylesheet: Flying-Window-Panels, Buehne ohne Raster volle Breite, Druck/PNG rechts');
+
+                  /* T142 (Runde 42): Einheitlicher Zurueckbutton, Fensterhoehe, Startseite entschlackt. */
+                  var tpl142list = ['code_project', 'code_student', 'exam_correct', 'exam_correction', 'exam_manage', 'exam_result',
+                    'praesentation_edit', 'praesentation_moderator', 'praesentation_view', 'tasks_ai', 'tasks_correction',
+                    'tasks_edit', 'sql_adventures', 'sql_adventure', 'sql_app_instacraft', 'sql_app_shop', 'html_editor',
+                    'ibook_present', 'diagram_edit', 'teacher_class_progress'];
+                  var backOk142 = true;
+                  var noOld142 = true;
+                  for (var i142 = 0; i142 < tpl142list.length; i142++) {
+                    var src142 = advRead130('../templates/' + tpl142list[i142] + '.php');
+                    if (src142.indexOf('page-back') === -1 || src142.indexOf('ic-back-arrow') === -1) { backOk142 = false; }
+                    var oldArrows142 = src142.split('ic-arrow-left').length - 1;
+                    var slideArrows142 = src142.split('slide-prev').length - 1 + src142.split('mod-prev').length - 1;
+                    if (oldArrows142 > slideArrows142) { noOld142 = false; }
+                  }
+                  ok(backOk142 && noOld142 && netCss138.indexOf('.page-back') !== -1,
+                    'T142a alle Unterseiten: Zurueckbutton solo LINKS (page-back + filigranes ic-back-arrow), altes Icon raus');
+                  ok(netCss138.indexOf('max-height: calc(100vh - 140px)') !== -1
+                    && netCss138.indexOf('max-height: calc(100vh - 185px)') !== -1,
+                    'T142b Netzwerk-Fenster begrenzt auf Viewporthoehe (Buehne und SVG)');
+                  var home142 = advRead130('../templates/home.php');
+                  var modTpl142 = advRead130('../templates/module.php');
+                  var modCtrl142 = advRead130('../src/Controllers/ModuleController.php').concat(advRead130('../src/Controllers/DiagramController.php'));
+                  ok(home142.indexOf('Willkommen') === -1 && home142.indexOf('hero-emoji') === -1
+                    && home142.indexOf("status-<?= e($module['status'])") === -1 && home142.indexOf("$module['phase']") === -1
+                    && modTpl142.indexOf("$module['status']") === -1 && modTpl142.indexOf("$module['phase']") === -1
+                    && modCtrl142.indexOf("'title' => 'Diagramm-Werkstatt',") !== -1,
+                    'T142c Startseite ohne Hero und Status-/Phasen-Tags, Modul heisst Diagramm-Werkstatt');
+                  var diaEdit142 = advRead130('../templates/diagram_edit.php');
+                  ok(diaEdit142.indexOf('page-back') !== -1 && diaEdit142.indexOf('section-title') !== -1
+                    && (diaEdit142.indexOf('panel-head') === -1 || diaEdit142.indexOf('panel-head') > diaEdit142.indexOf('diagram-workbench')),
+                    'T142d Diagramm-Bearbeitung: Zurueckbutton solo statt Panel-Kopfcontainer');
 
                   global.document = netSavedDoc;
                   global.window = netSavedWindow;
