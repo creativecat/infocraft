@@ -15,9 +15,11 @@
 /** @var \Infocraft\Models\SchoolClass $class */
 /** @var list<array{student: \Infocraft\Models\User, quizzes: list<array{title: string, best: ?string, tries: int}>, quizDone: int, tasks: list<array{title: string, type: string, done: bool, submittedAt: ?string}>, tasksDone: int, projects: list<array{title: string, type: string, language: string, updatedAt: string}>}> $rows */
 ?>
+<?php /* Zurückbutton: Runde 42 */ ?>
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('unterricht/klassen') ?>" title="Zurück zu meinen Klassen"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <section class="panel">
     <div class="panel-head">
-        <a class="btn btn-ghost" href="<?= url('unterricht/klassen') ?>" title="Zurück zu meinen Klassen"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
         <h3><span class="icn ic-stats-bars" aria-hidden="true"></span> Fortschritt: Klasse <?= e($class->name) ?></h3>
     </div>
     <p class="muted">Eine Zeile je Schülerin und Schüler: Quiz-Bestwerte, erledigte Aufgaben und die zuletzt bearbeiteten Projekte aus der Werkstatt.</p>

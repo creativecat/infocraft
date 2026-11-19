@@ -3,6 +3,9 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.24.0 */ ?>
+
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('werkstatt/sql') ?>" title="Zurück zur Werkstatt"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <section class="hero">
     <div class="hero-emoji"><span class="icn ic-map" aria-hidden="true"></span></div>
     <h1>SQL-Abenteuer</h1>
@@ -48,4 +51,3 @@
     <?php endforeach; ?>
 </div>
 
-<p><a class="btn btn-ghost" href="<?= url('werkstatt/sql') ?>"><span class="icn ic-arrow-left" aria-hidden="true"></span> Zurück zur Werkstatt</a></p>

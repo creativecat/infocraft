@@ -21,6 +21,9 @@ foreach ($classes as $class) {
     $classNames[$class->id] = $class->name;
 }
 ?>
+
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <section class="hero hero-compact">
     <div class="hero-emoji"><span class="icn ic-pencil" aria-hidden="true"></span></div>
     <div class="hero-text">
@@ -106,7 +109,6 @@ foreach ($classes as $class) {
             <div class="btn-row"><button class="btn btn-primary" type="submit" title="Speichern"><span class="icn ic-floppy-disk" aria-hidden="true"></span></button></div>
         </form>
         <div class="btn-row">
-            <a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
             <a class="btn btn-ghost" href="<?= url('aufgaben/' . (int) $task->id . '/export') ?>" title="Aufgabe als Datei sichern oder an Kolleginnen und Kollegen weitergeben (inkl. ToDos, Vorlagen, Musterlösung)"><span class="icn ic-arrow-down" aria-hidden="true"></span></a>
             <?php if ($task->presentationProjectId !== null): ?>
             <a class="btn btn-primary" href="<?= url('werkstatt/' . ($task->type === 'html' ? 'html' : 'code') . '/' . (int) $task->presentationProjectId) ?>" title="Präsentationsmodus läuft: zurück in die temporäre Kopie"><span class="icn ic-film" aria-hidden="true"></span> läuft</a>

@@ -3,6 +3,9 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.26.0 */ ?>
+
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('werkstatt/sql/abenteuer') ?>" title="Zurück zur Abenteuer-Übersicht"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <?php $sqlTableNames = array_map(static fn (array $t): string => (string) $t['name'], $tables); ?>
 <?php
 $solvedCount = 0;
@@ -182,4 +185,3 @@ $percent = $total > 0 ? (int) round($solvedCount * 100 / $total) : 0;
     </div>
 </section>
 
-<p><a class="btn btn-ghost" href="<?= url('werkstatt/sql/abenteuer') ?>"><span class="icn ic-map" aria-hidden="true"></span> Zurück zur Abenteuer-Übersicht</a></p>

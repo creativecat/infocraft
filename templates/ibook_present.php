@@ -3,6 +3,9 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.23.0 */ ?>
+
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id) ?>" title="Zurück zum InfoBook"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <?php /* InfoBook im Präsentationsmodus (#62, #177, #188): eine Folie je
    Seite, mit Bildern, Audio, Video und Einbettungen direkt abspielbar.
    #188: Statt Autoplay mit Zeitsteuerung erscheinen die Elemente einer
@@ -14,7 +17,6 @@
    Inline-Script. */ ?>
 <div class="slide-stage" id="slide-stage" data-ibook="<?= (int) $book->id ?>">
     <div class="slide-toolbar">
-        <a class="btn btn-ghost" href="<?= url('infobuecher/' . (int) $book->id) ?>" title="Zurück zum InfoBook"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
         <span class="muted"><?= e($book->title) ?></span>
         <div class="slide-counter"><button class="btn btn-ghost" type="button" id="slide-prev" title="Zurück (Pfeiltaste links): letzten Schritt wieder ausblenden"><span class="icn ic-arrow-left" aria-hidden="true"></span></button><span id="slide-counter"></span><button class="btn btn-ghost" type="button" id="slide-next" title="Weiter (Klick, Leertaste oder Pfeiltaste rechts): nächsten Schritt einblenden"><span class="icn ic-arrow-right" aria-hidden="true"></span></button></div>
         <span class="slide-stepinfo" id="slide-stepinfo" aria-live="polite"></span>

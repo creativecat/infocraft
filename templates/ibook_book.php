@@ -28,9 +28,9 @@ $secTitleIsArea = $activeSection !== null && (string) $activeSection['title'] ==
          * Schuelerinnen und Schueler sehen dort ihre eigenen und das
          * Klassen-InfoBook. */ ?>
         <?php if (\Infocraft\Auth::isTeacher()): ?>
-        <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht aller InfoBooks"><span class="icn ic-arrow-left" aria-hidden="true"></span> Alle InfoBooks</a>
+        <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht aller InfoBooks"><span class="icn ic-back-arrow" aria-hidden="true"></span> Alle InfoBooks</a>
         <?php else: ?>
-        <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht deiner InfoBooks"><span class="icn ic-arrow-left" aria-hidden="true"></span> Deine InfoBooks</a>
+        <a class="btn btn-ghost" href="<?= url('infobuecher') ?>" title="Zur Übersicht deiner InfoBooks"><span class="icn ic-back-arrow" aria-hidden="true"></span> Deine InfoBooks</a>
         <?php endif; ?>
         <div class="ibook-topnav-title">
             <nav class="ibook-crumbs" aria-label="Position in diesem InfoBook">

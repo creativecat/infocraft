@@ -3,6 +3,9 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
+
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('werkstatt/sql/' . e($template->slug)) ?>" title="Zurück zur SQL-Werkstatt"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <?php $appUrl = url('werkstatt/sql/' . e($template->slug) . '/app'); ?>
 <section class="panel">
     <div class="panel-head">
@@ -11,7 +14,6 @@
             <p class="muted">Ein Mobil-Frontend auf deiner SQL-Datenbank (#47): Likes, Kommentare und Follower landen in denselben Tabellen, die du in der Werkstatt mit SELECT abfragst - und umgekehrt.</p>
         </div>
         <div class="btn-row">
-            <a class="btn btn-ghost" href="<?= url('werkstatt/sql/' . e($template->slug)) ?>"><span class="icn ic-arrow-left" aria-hidden="true"></span> Werkstatt</a>
             <a class="btn btn-ghost" href="<?= $appUrl ?>"><span class="icn ic-loop2" aria-hidden="true"></span> Aktualisieren</a>
         </div>
     </div>
