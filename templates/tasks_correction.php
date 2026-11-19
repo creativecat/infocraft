@@ -12,6 +12,9 @@
 /** @var list<array{student: \Infocraft\Models\User, submission: array{content: string, submittedAt: string, selfRating: int, firstName: string, lastName: string, projectId: int|null}|null, grading: array{grade: string, comment: string, source: string, checked: bool}|null, dueAt: string|null, late: bool, project: \Infocraft\Models\Project|null}> $rows */
 $topic = $task->topicId > 0 ? \Infocraft\Models\TaskTopic::find($task->topicId) : null;
 ?>
+
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <section class="hero">
     <div class="hero-emoji"><span class="icn ic-checkmark" aria-hidden="true"></span></div>
     <h1>Korrektur: <?= e($task->title) ?></h1>
@@ -20,7 +23,6 @@ $topic = $task->topicId > 0 ? \Infocraft\Models\TaskTopic::find($task->topicId) 
 
 <section class="panel">
     <div class="panel-head">
-        <a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
         <h3><span class="pill"><?= e($task->type) ?> · Jgst. <?= (int) $task->level ?><?= $topic !== null ? ' · <span class="icn ic-folder" aria-hidden="true"></span> ' . e($topic->name) : '' ?><?= $task->maxPoints > 0 ? ' · max. ' . (int) $task->maxPoints . ' Punkte' : '' ?><?= $task->lateLock === 1 ? ' · <span class="icn ic-lock" aria-hidden="true"></span> Frist-Sperre' : '' ?></span> <?= e($task->title) ?></h3>
     </div>
     <?php if ($task->description !== ''): ?><div class="task-desc"><?= $task->descriptionHtml() ?></div><?php endif; ?>

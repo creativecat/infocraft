@@ -3,6 +3,9 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
+
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <?php /** @var \Infocraft\Models\User $user */ ?>
 <section class="hero">
     <div class="hero-emoji"><span class="icn ic-android" aria-hidden="true"></span></div>
@@ -10,7 +13,6 @@
     <p>Hinterlege einen KI-Zugang für die Korrekturhilfe: Die KI bewertet abgegebene Aufgaben vor und schlägt Note und Feedback vor. Es sieht nur anonymisierte Arbeiten (Pseudonyme statt Namen). Deine Zugangsdaten bleiben auf deinem Server.</p>
 </section>
 
-<p><a class="btn btn-ghost" href="<?= url('aufgaben') ?>" title="Zurück zum Aufgabenpool"><span class="icn ic-arrow-left" aria-hidden="true"></span></a></p>
 
 <section class="panel">
     <h3>Meine KI-Zugangsdaten</h3>

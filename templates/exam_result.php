@@ -5,7 +5,7 @@
    Version: 0.15.0 */ ?>
 <?php /** @var \Infocraft\Models\Exam $exam */ ?>
 <?php $percent = $totals['total'] > 0 ? $totals['reached'] / $totals['total'] * 100.0 : 0.0; ?>
-<p><a class="btn btn-ghost" href="<?= url('pruefungen') ?>" title="Zur Übersicht"><span class="icn ic-arrow-left" aria-hidden="true"></span></a></p>
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('pruefungen') ?>" title="Zur Übersicht"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
 <section class="panel">
     <div class="panel-head">
         <h3>Ergebnis: <?= e($exam->title) ?></h3>

@@ -3,9 +3,11 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.18.0 */ ?>
+
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück zur Code-Werkstatt"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <section class="panel">
     <div class="panel-head">
-        <a class="btn btn-ghost" href="<?= url('werkstatt/code') ?>" title="Zurück"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
         <h3><?= $project->type === 'html' ? '<span class="icn ic-earth" aria-hidden="true"></span>' : '<span class="icn ic-laptop" aria-hidden="true"></span>' ?> <?= e($project->title) ?></h3>
         <?php if (($presentationTask ?? null) !== null): ?>
         <span class="pill" title="Präsentationsmodus: Du arbeitest in einer temporären Kopie dieser Aufgabe. Die Aufgabenvorlage und die Materialien bleiben unangetastet, dein Code wird nur hier gespeichert. Mit „Präsentation beenden“ wird die Kopie gelöscht."><span class="icn ic-film" aria-hidden="true"></span> Präsentationsmodus ℹ</span>

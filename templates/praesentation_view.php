@@ -3,12 +3,14 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
+
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <?php /** Präsentationsmodus: Folie für Folie, Vollbild (Taste F), Pfeiltasten.
  * Code-Folien tragen Syntax-Highlighting (highlight.js) und sind für
  * Lehrkräfte direkt hier editierbar und speicherbar. */ ?>
 <div class="slide-stage" id="slide-stage" data-pid="<?= (int) $presentation->id ?>">
     <div class="slide-toolbar">
-        <a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
         <?php if ($mayEdit): ?>
         <a class="btn btn-ghost" href="<?= url('praesentationen/' . (int) $presentation->id) ?>" title="Bearbeiten"><span class="icn ic-pencil" aria-hidden="true"></span></a>
         <?php endif; ?>

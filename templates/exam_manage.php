@@ -3,10 +3,12 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
+
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('pruefungen') ?>" title="Übersicht der Prüfungen"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <?php /** @var \Infocraft\Models\Exam $exam */ ?>
 <section class="panel">
     <div class="panel-head">
-        <a class="btn btn-ghost" href="<?= url('pruefungen') ?>" title="Übersicht"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
         <h3><?= e($exam->title) ?> <span class="pill"><?= $exam->kind === 'pruefung' ? '<span class="icn ic-lock" aria-hidden="true"></span> Prüfung' : '<span class="icn ic-file-text" aria-hidden="true"></span> Schularbeit' ?></span> <span class="status status-<?= e($exam->phase === 'vorbereitung' ? 'geplant' : ($exam->phase === 'herausgegeben' ? 'fertig' : 'in-arbeit')) ?>"><?= e($exam->phase) ?></span></h3>
         <span class="muted">ab Jahrgangsstufe <?= e($exam->level) ?><?= $exam->description !== '' ? ' · ' . e($exam->description) : '' ?></span>
     </div>

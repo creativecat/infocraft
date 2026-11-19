@@ -3,13 +3,15 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
+
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <?php /** Moderatorenbildschirm (nur für Lehrkräfte): Steuerzentrale mit aktueller
  * und nächster Folie, Folienliste, Timer und Uhr. Zusammen mit der Präsentations-
  * ansicht im zweiten Fenster (gleicher Browser) über einen BroadcastChannel
  * synchron: Pfeiltasten steuern beide Fenster. */ ?>
 <section class="panel">
     <div class="mod-toolbar">
-        <a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
         <h3 class="mod-title"><span class="icn ic-film" aria-hidden="true"></span> <?= e($presentation->title) ?></h3>
         <span class="pill">Moderator</span>
         <button class="btn btn-ghost" type="button" id="mod-open" title="Präsentationsansicht im neuen Fenster öffnen (z. B. für den Beamer)"><span class="icn ic-enlarge2" aria-hidden="true"></span></button>

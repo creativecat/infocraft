@@ -3,11 +3,13 @@
    Autor: Matthias Glienke, letima development
    Lizenz: CC BY-NC-SA 4.0
    Version: 0.15.0 */ ?>
+
+<p class="page-back"><a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen"><span class="icn ic-back-arrow" aria-hidden="true"></span></a></p>
+
 <section class="panel">
     <div class="panel-head">
         <h3><span class="icn ic-film" aria-hidden="true"></span> Präsentation bearbeiten</h3>
         <div class="btn-row">
-            <a class="btn btn-ghost" href="<?= url('praesentationen') ?>" title="Alle Präsentationen"><span class="icn ic-arrow-left" aria-hidden="true"></span></a>
             <a class="btn btn-primary" href="<?= url('praesentationen/' . (int) $presentation->id . '/zeigen') ?>"><span class="icn ic-play" aria-hidden="true"></span> Präsentieren</a>
         </div>
     </div>
