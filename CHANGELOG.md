@@ -1,3 +1,29 @@
+## [0.42.0] - 2026-11-19 (Runde 42)
+### Einheitlicher Zurueck-Button, Flying Windows, Startseite entschlackt
+- Zurueckbutton auf JEDER Unterseite einheitlich LINKS OBEN als solistischer
+  Ghost-Button mit neuem filigranen ic-back-arrow-Icon (duenner Pfeil statt
+  des alten blockigen ic-arrow-left). Betroffene Templates u. a.: Code-Werkstatt
+  (Projekt/Schueleransicht), Pruefungen (Verwaltung/Korrektur/Arbeit/Ergebnis),
+  Praesentationen (Bearbeiten/Moderation/Ansicht), Aufgaben (KI/Korrektur/
+  Bearbeiten), SQL (Werkstatt/Abenteuer/InstaCraft/Shop), HTML-Editor,
+  InfoBooks (Buch/Seite/Präsentation), Diagramm-Bearbeitung, Klassen-Fortschritt.
+- Netzwerk-Werkstatt: Router-Infos (und fuer die Lehrkraft Stufe und
+  Netzwerk-Manager) sind keine Sidebar-Sektionen mehr, sondern Flying Windows:
+  normale Buttons neben "Geraet hinzufuegen", der Inhalt klappt darunter
+  auf (details/net-fly, Milchglas-Optik wie die Modals, schliesst bei Klick
+  daneben nicht zwingend, bleibt solange geoeffnet). Die Geraete-Buehne nutzt
+  damit dauerhaft die volle Breite.
+- Netzwerk-Fenster: Arbeitsflaeche begrenzt auf die Viewport-Hoehe
+  (net-stage-wrap max-height calc(100vh - 140px), net-svg skaliert mit).
+- Diagramm-Bearbeitung: Der leere Panel-Kopfcontainer um den Zurueckbutton
+  ist weg; Zurueckbutton steht solo, dafuer klare section-title-Überschrift
+  mit Icon und Typ-Pill.
+- Modul "Diagramme" heisst jetzt "Diagramm-Werkstatt" (Modul-Karte und
+  Seitenkopf, ModuleController + DiagramController).
+- Startseite: Hero-Bereich (Begruessung und Beschreibung) entfernt, die
+  Modul-Karten beginnen direkt. Status- und Phasen-Tags ("in-arbeit",
+  "Phase xy") von den Modul-Karten und der Modul-Platzhalterseite entfernt.
+
 ## [0.41.0] - 2026-11-18 (Runde 41)
 ### Netzwerk-Werkstatt: Geraete-Buehne nutzt die volle Seitenbreite
 - Klargestellt (5. Mahnung): Gemeint war die Buehne mit den Geraeten,
