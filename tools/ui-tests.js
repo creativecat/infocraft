@@ -4467,13 +4467,13 @@ setTimeout(function () {
                     'T130q die Sichtbarkeitsfilter bleiben verdrahtet: Abschnitte nur des eigenen Buchs, Schueler-Filter (#204)');
                   var support130 = advRead130('../src/Support.php');
                   var changelog130 = advRead130('../CHANGELOG.md');
-                  ok(support130.indexOf("APP_VERSION = '0.42.0'") !== -1
-                    && support130.indexOf("ASSET_VERSION = '96'") !== -1
+                  ok(support130.indexOf("APP_VERSION = '0.43.0'") !== -1
+                    && support130.indexOf("ASSET_VERSION = '97'") !== -1
                     && changelog130.indexOf('## [0.33.0]') !== -1
                     && changelog130.indexOf('## [0.31.0]') !== -1
                     && changelog130.indexOf('## [0.30.0]') !== -1
                     && changelog130.indexOf('## [0.36.0]') !== -1,
-                    'T130r Version 0.42.0 mit Asset-Stand 96 und Changelog-Eintrag (Historie bleibt)');
+                    'T130r Version 0.43.0 mit Asset-Stand 97 und Changelog-Eintrag (Historie bleibt)');
                   ok(tplAdv130.indexOf('—') === -1 && tplWs130.indexOf('—') === -1
                     && tplBook130.indexOf('—') === -1 && tplPage130.indexOf('—') === -1
                     && panel130.indexOf('—') === -1 && ctrl130.indexOf('—') === -1 && model130.indexOf('—') === -1,
@@ -5005,11 +5005,11 @@ setTimeout(function () {
                     && htmlCtrl135.indexOf("redirect('/werkstatt/netzwerk')") !== -1
                     && htmlTpl135.indexOf('Zur Netzwerk-Werkstatt') !== -1,
                     'T135j Rueckweg aus dem HTML-Editor: Knopf im Editor, Redirect nach dem Speichern (#239)');
-                  ok(sup135.indexOf("APP_VERSION = '0.42.0'") !== -1
+                  ok(sup135.indexOf("APP_VERSION = '0.43.0'") !== -1
                     && changelog135.indexOf('## [0.33.0]') !== -1
                     && changelog135.indexOf('—') === -1
                     && changelog135.indexOf('## [0.31.0]') !== -1,
-                    'T135k Version 0.42.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
+                    'T135k Version 0.43.0 mit Changelog-Eintrag, Historie bleibt, keine langen Gedankenstriche');
 
                   /* T136 (#241): helle Desktop-Optik im Stylesheet:
                    * Design-Sektion, Milchglas, Pill-Knoepfe, Fokus-Ring. */
@@ -5048,8 +5048,8 @@ setTimeout(function () {
                     && sup135.indexOf("'html' => 'ic-embed2'") !== -1
                     && sup135.indexOf("'netzwerk' => 'ic-earth'") !== -1
                     && sup135.indexOf("'infobuecher' => 'ic-book'") !== -1
-                    && sup135.indexOf("ASSET_VERSION = '96'") !== -1,
-                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 96');
+                    && sup135.indexOf("ASSET_VERSION = '97'") !== -1,
+                    'T136e ic_module_icon() mappt Slugs, ASSET_VERSION 97');
 
 
                   /* T137a (Runde 34): Icon-Wechsel nach Vorgabe. */
@@ -5336,7 +5336,9 @@ setTimeout(function () {
                     && missionsSrc139.indexOf('ic.missions.open') !== -1
                     && missionsSrc139.indexOf('bootState') !== -1
                     && netJs138.indexOf('@version 0.40.0') === -1
-                    && netJs138.indexOf('@version 0.41.0') === -1,
+                    && netJs138.indexOf('@version 0.41.0') === -1
+                    && netJs138.indexOf('@version 0.42.0') === -1
+                    && netJs138.indexOf('@version 0.43.0') !== -1,
                     'T140a Missions-Box merkt sich auf/zu im localStorage, network.js nicht mehr auf 0.40.0');
                   ok(netCss138.indexOf('position: fixed; inset: 0; padding: 14px; z-index: 80') !== -1
                     && netCss138.indexOf('height: 100%; max-height: calc(100vh - 28px); border-radius: 18px;') !== -1,
@@ -5356,14 +5358,14 @@ setTimeout(function () {
                   ok(netJs138.indexOf('net-side-toggle') === -1
                     && netJs138.indexOf('net.side.hidden') === -1
                     && netJs138.indexOf('applySide') === -1
-                    && netJs138.indexOf('@version 0.42.0') !== -1
-                    && netJs138.indexOf("version: '0.42.0',") !== -1,
-                    'T141a network.js: Seitenpanel-Logik restlos entfernt, Version 0.42.0');
+                    && netJs138.indexOf('@version 0.43.0') !== -1
+                    && netJs138.indexOf("version: '0.43.0',") !== -1,
+                    'T141a network.js: Seitenpanel-Logik restlos entfernt, Version 0.43.0');
                   ok(netTpl138.indexOf('net-side-toggle') === -1
                     && netTpl138.indexOf('net-fly') !== -1
                     && netTpl138.indexOf('net-level-fly') !== -1
                     && netTpl138.indexOf('net-router-card') !== -1
-                    && netTpl138.indexOf('Version: 0.42.0') !== -1,
+                    && netTpl138.indexOf('Version: 0.43.0') !== -1,
                     'T141b Template: Router-Infos, Stufe und Netzwerk-Manager als Flying Windows, kein Toggle');
                   ok(netCss138.indexOf('.net-fly-panel') !== -1
                     && netCss138.indexOf('.net-layout { display: block; margin-top: 12px; }') !== -1
@@ -5402,6 +5404,25 @@ setTimeout(function () {
                   ok(diaEdit142.indexOf('page-back') !== -1 && diaEdit142.indexOf('section-title') !== -1
                     && (diaEdit142.indexOf('panel-head') === -1 || diaEdit142.indexOf('panel-head') > diaEdit142.indexOf('diagram-workbench')),
                     'T142d Diagramm-Bearbeitung: Zurueckbutton solo statt Panel-Kopfcontainer');
+
+                  /* T143 (Runde 43): Flying Windows ohne Huelle, genau zwei Button-Varianten. */
+                  ok(netTpl138.indexOf('net-card net-router-card') === -1
+                    && netTpl138.indexOf('net-card net-level-card') === -1
+                    && netTpl138.indexOf('net-card net-teacher-card') === -1
+                    && netTpl138.indexOf('btn btn-ghost net-toolbar-add') !== -1
+                    && netTpl138.indexOf('btn btn-ghost net-level-btn') !== -1
+                    && netTpl138.indexOf('class="btn btn-ghost" title="Router-Infos') !== -1,
+                    'T143a Wrapper fuer die einzelnen Buttons weg: Flying Windows sind schlichte Geist-Buttons');
+                  ok(netCss138.indexOf('.net-fly summary { list-style: none; cursor: pointer; user-select: none; }') !== -1
+                    && netCss138.indexOf('.net-fly .net-card') === -1
+                    && netCss138.indexOf('.icon-btn { background: transparent;') !== -1
+                    && netCss138.indexOf('.wy-btn {\n    border: 1px solid rgba(0, 0, 0, 0.12); background: transparent;') !== -1
+                    && netCss138.indexOf('border: 1px solid rgba(0, 0, 0, 0.12); background: transparent; color: var(--text);') !== -1,
+                    'T143b Basis-Button ist Einheitsgeist (transparent + Haarlinie), weisse Fuellungen raus');
+                  ok(netCss138.indexOf('.btn-danger { background: transparent; border-color: rgba(0, 0, 0, 0.12); color: #b91c1c; }') !== -1
+                    && netCss138.indexOf('.net-level-btn.net-level-active { border-color: var(--primary, #0071e3); background: rgba(0, 113, 227, 0.1);') !== -1
+                    && netCss138.indexOf('.blk-switch-btn.active { background: rgba(0, 113, 227, 0.12);') !== -1,
+                    'T143c Gefahr-Textton rot, aktive Umschalter in Primärblau: zwei Varianten plus Sinnfarben');
 
                   global.document = netSavedDoc;
                   global.window = netSavedWindow;
