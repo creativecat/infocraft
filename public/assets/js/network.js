@@ -12,7 +12,7 @@
  *
  * Node-Tests: module.exports; Browser: window.IC_NET.
  *
- * @version 0.41.0
+ * @version 0.42.0
  * @license CC BY-NC-SA 4.0 (InfoCraft)
  */
 (function () {
@@ -339,33 +339,6 @@
     var modalBox = doc.getElementById('net-modal-box');
     var openId = null;
     var flags = readFlags();
-
-    /* Runde 41: Seitenpanel ein-/ausblenden, Buehne dann volle Breite.
-     * Zustand im localStorage (net.side.hidden), Standard: ausgeblendet. */
-    var SIDE_KEY = 'net.side.hidden';
-    var layoutEl = doc.querySelector ? doc.querySelector('.net-layout') : null;
-    var sideToggle = doc.getElementById('net-side-toggle');
-    function sideHidden() {
-      try {
-        var raw = win().localStorage ? win().localStorage.getItem(SIDE_KEY) : null;
-        return raw === null ? true : raw === '1';
-      } catch (e) { return true; }
-    }
-    function applySide(hidden) {
-      if (!layoutEl) { return; }
-      if (layoutEl.classList) {
-        if (hidden) { layoutEl.classList.add('net-side-hidden'); } else { layoutEl.classList.remove('net-side-hidden'); }
-      } else if (hidden) { layoutEl.setAttribute('class', 'net-layout net-side-hidden'); } else { layoutEl.setAttribute('class', 'net-layout'); }
-      if (sideToggle) {
-        sideToggle.setAttribute('aria-pressed', hidden ? 'true' : 'false');
-        sideToggle.setAttribute('title', hidden ? 'Seitenpanel einblenden' : 'Seitenpanel ausblenden: Buehne nutzt die volle Breite');
-      }
-      try { if (win().localStorage) { win().localStorage.setItem(SIDE_KEY, hidden ? '1' : '0'); } } catch (e) {}
-    }
-    applySide(sideHidden());
-    if (sideToggle && sideToggle.addEventListener) {
-      sideToggle.addEventListener('click', function () { applySide(!sideHidden()); });
-    }
 
     function readFlags() {
       try {
@@ -1669,7 +1642,7 @@
   /* =================== Export =================== */
 
   var api = {
-    version: '0.41.0',
+    version: '0.42.0',
     defaultNet: defaultNet,
     resolve: resolve,
     dnsLookup: dnsLookup,

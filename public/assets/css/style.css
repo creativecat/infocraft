@@ -3240,11 +3240,38 @@ h2 .icn, h3 .icn { width: 0.9em; height: 0.9em; }
    Seitenpanel ist jetzt standardmaessig ausgeblendet (net.side.hidden=1),
    ein Toolbar-Button blendet es wieder ein; der Zustand bleibt gemerkt. */
 .net-layout { grid-template-columns: 280px 1fr; gap: 16px; }
-.net-layout.net-side-hidden { grid-template-columns: 1fr; }
-.net-layout.net-side-hidden .net-side { display: none; }
 .net-tool-side { margin-left: auto; }
 .net-toolbar { align-items: center; }
 .net-toolbar .net-add-panel { flex: 0 1 auto; }
 .net-add-panel[open] .net-add-row { max-width: 640px; }
 .net-stage-wrap { padding: 6px; }
 @media print { .net-side, .net-toolbar { display: none; } }
+
+/* ===================== Runde 42: Einheitlicher Zurueck-Button, Flying Windows in der Netzwerk-Werkstatt, Startseite entschlackt ===================== */
+
+/* Wunsch 1: Ueberall derselbe duenne Zurueck-Pfeil, links oben, solo. */
+.ic-back-arrow { -webkit-mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDI0IDEwMjQiPjxwYXRoIGQ9Ik01MzYgMjAwTDE2OCA1MTJsMzY4IDMxMmg5NkwyNjQgNTEybDQwMC0zMTJoLTEyOHpNOTYgNDgwaDgwMHY2NEg5NnoiLz48L3N2Zz4="); mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDI0IDEwMjQiPjxwYXRoIGQ9Ik01MzYgMjAwTDE2OCA1MTJsMzY4IDMxMmg5NkwyNjQgNTEybDQwMC0zMTJoLTEyOHpNOTYgNDgwaDgwMHY2NEg5NnoiLz48L3N2Zz4="); }
+.page-back { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; }
+.page-back .icn { width: 0.95rem; height: 0.95rem; }
+.section-title { margin: 4px 0 14px; font-size: 1.15rem; }
+.section-title .icn { width: 0.9em; height: 0.9em; color: var(--primary, #0071e3); vertical-align: -0.12em; }
+
+/* Wunsch 2a/2c: Router-Infos, Stufe und Netzwerk-Manager als Flying Windows:
+   Buttons neben "Geraet hinzufuegen", Inhalt klappt darunter auf. */
+.net-layout { display: block; margin-top: 12px; }
+.net-fly { position: relative; }
+.net-fly summary { list-style: none; cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--border, #e5e7eb); border-radius: 10px; background: var(--paper, #fff); font: inherit; font-weight: 600; font-size: 0.9rem; }
+.net-fly summary::-webkit-details-marker { display: none; }
+.net-fly[open] summary { border-color: var(--primary, #0071e3); }
+.net-fly-panel { position: absolute; top: calc(100% + 10px); left: 0; z-index: 40; min-width: 300px; max-width: 400px; margin: 0; padding: 14px; border-radius: 14px; background: rgba(248, 250, 252, 0.92); backdrop-filter: blur(24px) saturate(1.5); -webkit-backdrop-filter: blur(24px) saturate(1.5); border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 30px 90px rgba(2, 8, 23, 0.35); }
+.net-fly-panel h2 { margin: 0 0 6px; font-size: 1rem; }
+.net-fly .net-card { background: transparent; border: 0; padding: 0; box-shadow: none; }
+.net-fly-panel .net-teacher-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+@media print { .net-fly { display: none; } }
+
+/* Wunsch 2b: Buehne endet maximal am unteren Viewport-Rand. */
+.net-svg { max-height: calc(100vh - 185px); }
+.net-stage-wrap { max-height: calc(100vh - 140px); overflow: hidden; }
+
+/* Wunsch 6/7: Startseite ohne Hero-Begruessung und ohne Status-/Phase-Tags. */
+.card-meta { display: flex; gap: 6px; }
